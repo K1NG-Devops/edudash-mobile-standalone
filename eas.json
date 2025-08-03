@@ -20,12 +20,8 @@
     "production": {
       "autoIncrement": true,
       "cache": {
-        "disabled": false
-      },
-      "env": {
-        "NODE_ENV": "production"
-      },
-      "node": "20.11.0"
+        "disabled": true
+      }
     }
   },
   "submit": {
