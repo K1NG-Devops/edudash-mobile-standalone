@@ -1,0 +1,27 @@
+/// <reference types="react-native" />
+
+// This file ensures proper React Native type resolution
+declare module '*.png' {
+  const value: any;
+  export = value;
+}
+
+declare module '*.jpg' {
+  const value: any;
+  export = value;
+}
+
+declare module '*.jpeg' {
+  const value: any;
+  export = value;
+}
+
+declare module '*.gif' {
+  const value: any;
+  export = value;
+}
+
+declare module '*.svg' {
+  const value: any;
+  export = value;
+}

@@ -1,0 +1,138 @@
+# .easignore - Exclude unnecessary files from EAS builds
+
+# Dependencies (will be installed on EAS servers)
+node_modules/
+*.lock
+yarn.lock
+package-lock.json
+.npm/
+.yarn/
+
+# Development and build artifacts
+.expo/
+dist/
+build/
+.next/
+.vercel/
+.turbo/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+server.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output/
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary folders
+tmp/
+temp/
+
+# Development monitoring
+monitor-server.sh
+
+# Test files
+__tests__/
+*.test.js
+*.test.ts
+*.test.tsx
+*.spec.js
+*.spec.ts
+*.spec.tsx
+
+# Documentation
+README.md
+FIXES_APPLIED.md
+docs/
+
+# Git
+.git/
+.gitignore
+.gitmodules
+
+# Validation scripts
+validate-setup.js
+
+# Large asset files that should be optimized
+# (uncomment if you have large assets)
+# *.mp4
+# *.mov
+# *.avi
+# *.mkv
+# *.webm
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Parent project files (ensure we don't accidentally include them)
+../web/
+../node_modules/
+../dist/
+../.next/
+../.vercel/
+../build/
