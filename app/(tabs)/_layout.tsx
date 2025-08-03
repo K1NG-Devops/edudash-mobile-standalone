@@ -105,7 +105,7 @@ class TabLayout extends React.Component {
             name={tab.name}
             options={{
               title: tab.title,
-              tabBarIcon: ({ color }) => <IconSymbol size={24} name={tab.icon} color={color} />,
+              tabBarIcon: ({ color }) => <IconSymbol size={24} name={tab.icon as any} color={color} />,
             }}
           />
         ))}

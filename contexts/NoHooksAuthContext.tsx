@@ -16,7 +16,7 @@ export interface UserProfile {
   updated_at: string;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: any | null;
   profile: UserProfile | null;
   session: any | null;

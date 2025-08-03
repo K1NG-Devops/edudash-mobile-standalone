@@ -138,7 +138,7 @@ class HomeScreen extends React.Component<{}, HomeScreenState> {
               {content.stats.map((stat, index) => (
                 <View key={index} style={styles.statCard}>
                   <View style={[styles.statIcon, { backgroundColor: stat.color }]}>
-                    <IconSymbol name={stat.icon} size={24} color="white" />
+                    <IconSymbol name={stat.icon as any} size={24} color="white" />
                   </View>
                   <Text style={styles.statValue}>{stat.value}</Text>
                   <Text style={styles.statLabel}>{stat.label}</Text>
@@ -156,7 +156,7 @@ class HomeScreen extends React.Component<{}, HomeScreenState> {
               {content.actions.map((action, index) => (
                 <TouchableOpacity key={index} style={styles.actionCard}>
                   <View style={styles.actionIcon}>
-                    <IconSymbol name={action.icon} size={24} color="#3B82F6" />
+                    <IconSymbol name={action.icon as any} size={24} color="#3B82F6" />
                   </View>
                   <Text style={styles.actionTitle}>{action.title}</Text>
                   <IconSymbol name="chevron.right" size={20} color="#9CA3AF" />

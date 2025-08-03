@@ -84,7 +84,7 @@ class ProfileScreen extends React.Component {
                     ]}
                   >
                     <View style={styles.itemIcon}>
-                      <IconSymbol name={item.icon} size={20} color="#6B7280" />
+                      <IconSymbol name={item.icon as any} size={20} color="#6B7280" />
                     </View>
                     <Text style={styles.itemLabel}>{item.label}</Text>
                     {item.value ? (

@@ -3,13 +3,20 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Act
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
-import { StudentHomeworkSubmission, Student } from '@/types/types';
+import { StudentHomeworkSubmission } from '@/types/types';
+
+// Minimal student interface for homework display
+interface StudentBasic {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
 import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
 interface HomeworkScreenState {
   homework: StudentHomeworkSubmission[];
-  children: Student[];
+  children: StudentBasic[];
   loading: boolean;
   refreshing: boolean;
   selectedChild: string | null;
@@ -149,7 +156,7 @@ class HomeworkScreen extends React.Component<{}, HomeworkScreenState> {
             </Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <IconSymbol name={statusIcon} size={16} color="white" />
+            <IconSymbol name={statusIcon as any} size={16} color="white" />
           </View>
         </View>
 

@@ -63,7 +63,7 @@ class AuthWelcomeScreen extends React.Component {
                   <View style={styles.featureGrid}>
                     <View style={styles.featureCard}>
                       <View style={styles.featureIcon}>
-                        <Ionicons name="brain" size={24} color="#667eea" />
+                        <Ionicons name="bulb" size={24} color="#667eea" />
                       </View>
                       <Text style={styles.featureTitle}>AI-Generated Lessons</Text>
                       <Text style={styles.featureDescription}>
