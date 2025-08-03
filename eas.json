@@ -20,11 +20,12 @@
     "production": {
       "autoIncrement": true,
       "cache": {
-        "disabled": true
+        "disabled": false
       },
       "env": {
         "NODE_ENV": "production"
-      }
+      },
+      "node": "20.x.x"
     }
   },
   "submit": {
