@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "EduDash Pro",
+    "slug": "edudash-pro-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "edudashpro",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.edudashpro.mobile"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.edudashpro"
+      "package": "com.edudashpro.mobile"
     },
     "web": {
       "bundler": "metro",
@@ -44,6 +44,12 @@
       "eas": {
         "projectId": "33a263ac-0d01-480c-bc1b-384873cd2b47"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/33a263ac-0d01-480c-bc1b-384873cd2b47"
     }
   }
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { router } from 'expo-router';
 
 export interface UserProfile {
   id: string;
@@ -82,6 +83,28 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
           await this.loadProfile(session.user.id);
         } else if (event === 'SIGNED_OUT') {
           this.setState({ profile: null });
+          // Navigate to welcome screen after sign out - try multiple approaches for platform compatibility
+          setTimeout(() => {
+            try {
+              // Try replace first
+              router.replace('/');
+            } catch (error) {
+              console.warn('Replace failed, trying push:', error);
+              try {
+                // Fallback to push
+                router.push('/');
+              } catch (pushError) {
+                console.warn('Push failed, trying dismissAll:', pushError);
+                try {
+                  // Last resort - dismiss all and navigate
+                  router.dismissAll();
+                  router.navigate('/');
+                } catch (navError) {
+                  console.error('All navigation methods failed:', navError);
+                }
+              }
+            }
+          }, 100);
         }
       }
     );
@@ -89,25 +112,51 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
   }
 
   componentWillUnmount() {
-    if (this.authListener) {
-      this.authListener.unsubscribe();
+    if (this.authListener && this.authListener.subscription) {
+      this.authListener.subscription.unsubscribe();
     }
   }
 
   loadProfile = async (userId: string) => {
     try {
+      console.log('🔍 [DEBUG] Loading profile for userId:', userId);
+      console.log('🔍 [DEBUG] Current profile state before load:', this.state.profile?.role || 'none');
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', userId)
         .single();
       
+      console.log('🔍 [DEBUG] Profile query result:', { data: data ? 'Data received' : 'No data', error });
+      
       if (!error && data) {
-        console.log('Loaded profile:', data.name, data.role);
-        this.setState({ profile: data });
+        console.log('✅ [DEBUG] Profile loaded successfully:');
+        console.log('  - Name:', data.name || 'Unknown');
+        console.log('  - Role:', data.role || 'Unknown');
+        console.log('  - Preschool ID:', data.preschool_id || 'None');
+        console.log('  - Email:', data.email || 'Unknown');
+        console.log('  - Is Active:', data.is_active);
+        console.log('  - Auth User ID:', data.auth_user_id);
+        
+        // Set loading to true during profile update to prevent race conditions
+        this.setState({ loading: true }, () => {
+          // Update profile and then set loading to false
+          this.setState({ 
+            profile: data,
+            loading: false 
+          }, () => {
+            console.log('✅ [DEBUG] Profile state updated. New role:', this.state.profile?.role);
+            console.log('✅ [DEBUG] Profile state updated. New preschool_id:', this.state.profile?.preschool_id);
+          });
+        });
+      } else {
+        console.error('❌ [DEBUG] Failed to load profile:', error);
+        this.setState({ loading: false });
       }
     } catch (error) {
-      console.warn('Failed to load profile', error);
+      console.error('❌ [DEBUG] Exception in loadProfile:', error);
+      this.setState({ loading: false });
     }
   };
 

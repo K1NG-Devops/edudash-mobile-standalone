@@ -9,6 +9,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 const { width, height } = Dimensions.get('window');
 
 class WelcomeScreen extends React.Component {
+  private hasRedirected = false;
+
   componentDidUpdate() {
     // This will be called by the parent when auth state changes
     // We handle redirect logic in renderContent
@@ -17,10 +19,19 @@ class WelcomeScreen extends React.Component {
   renderContent = (auth: any) => {
     const { user, loading } = auth;
 
-    // Auto-redirect if user is logged in
-    if (user && !loading) {
-      router.replace('/(tabs)');
+    // Auto-redirect if user is logged in (but avoid during render)
+    if (user && !loading && !this.hasRedirected) {
+      this.hasRedirected = true;
+      // Use setTimeout to avoid setState during render
+      setTimeout(() => {
+        router.replace('/(tabs)/dashboard');
+      }, 0);
       return null;
+    }
+
+    // Reset redirect flag if user is signed out
+    if (!user && !loading) {
+      this.hasRedirected = false;
     }
 
     if (loading) {

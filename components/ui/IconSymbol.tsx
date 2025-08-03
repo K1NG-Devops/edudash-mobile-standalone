@@ -16,10 +16,14 @@ type IconSymbolName = keyof typeof MAPPING;
 const MAPPING = {
   // Navigation
   'house.fill': 'home',
+  'house': 'home',
   'chevron.right': 'chevron-right',
   'chevron.left': 'chevron-left',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
+  'arrow.up.right': 'trending-up',
+  'magnifyingglass': 'search',
+  'xmark': 'close',
   
   // User & Authentication
   'person.circle.fill': 'account-circle',
@@ -30,6 +34,7 @@ const MAPPING = {
   
   // Education
   'book.fill': 'book',
+  'book': 'menu-book',
   'graduationcap.fill': 'school',
   'doc.text.fill': 'description',
   'building.2.fill': 'business',
@@ -42,6 +47,7 @@ const MAPPING = {
   // Communication
   'message.fill': 'message',
   'bell': 'notifications',
+  'bell.fill': 'notifications',
   
   // Actions
   'plus.circle.fill': 'add-circle',
@@ -58,9 +64,26 @@ const MAPPING = {
   'lock.shield': 'security',
   'hand.raised': 'pan-tool',
   'calendar': 'event',
+  'gearshape.fill': 'settings',
+  'gearshape': 'settings',
+  'creditcard.fill': 'payment',
+  'creditcard': 'payment',
+  'location.fill': 'place',
+  'location': 'place',
+  'figure.run': 'directions-run',
+  'folder.fill': 'folder',
+  'moon.fill': 'nights-stay',
+  'sun.max.fill': 'wb-sunny',
+  'star.fill': 'star',
+  'star': 'star-border',
+  'line.3.horizontal': 'menu',
   
   // AI & Brain
   'brain.head.profile': 'psychology',
+  
+  // Parent Dashboard Specific Icons
+  'heart.fill': 'favorite',
+  'trophy.fill': 'emoji-events',
 } as IconMapping;
 
 /**
