@@ -74,7 +74,7 @@ export default function ParentSignupScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>Join as Parent</Text>
             <Text style={styles.subtitle}>
-              Connect with your child's school and track their progress
+              Connect with your child&apos;s school and track their progress
             </Text>
           </View>
 
@@ -128,17 +128,17 @@ export default function ParentSignupScreen() {
                 editable={!loading}
               />
               <Text style={styles.helpText}>
-                Get this code from your child's teacher or school administrator
+                Get this code from your child&apos;s teacher or school administrator
               </Text>
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Child's Name *</Text>
+              <Text style={styles.label}>Child&apos;s Name *</Text>
               <TextInput
                 style={styles.input}
                 value={formData.childName}
                 onChangeText={(text) => setFormData({ ...formData, childName: text })}
-                placeholder="Enter your child's full name"
+                placeholder="Enter your child&apos;s full name"
                 autoCapitalize="words"
                 editable={!loading}
               />
@@ -149,8 +149,8 @@ export default function ParentSignupScreen() {
               <Text style={styles.infoText}>
                 1. Your registration will be sent to the school for approval{'\n'}
                 2. The school will verify your details{'\n'}
-                3. You'll receive login credentials via email{'\n'}
-                4. Start tracking your child's progress!
+                3. You&apos;ll receive login credentials via email{'\n'}
+                4. Start tracking your child&apos;s progress!
               </Text>
             </View>
 

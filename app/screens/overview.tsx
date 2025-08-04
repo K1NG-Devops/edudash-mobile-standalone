@@ -22,7 +22,7 @@ class OverviewScreen extends React.Component {
                 <View style={styles.headerContent}>
                   <Text style={styles.headerTitle}>School Overview</Text>
                   <Text style={styles.headerSubtitle}>
-                    Complete insights into your school's performance
+                    Complete insights into your school&apos;s performance
                   </Text>
                 </View>
               </LinearGradient>

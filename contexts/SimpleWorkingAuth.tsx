@@ -279,6 +279,15 @@ export const AuthProvider = (props: AuthProviderProps) => {
   return <AuthProviderClass {...props} />;
 };
 
+// Hook to use auth context
+export const useAuth = (): AuthContextType => {
+  const context = React.useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
 // Consumer component to use auth without hooks
 export class AuthConsumer extends React.Component<{
   children: (auth: AuthContextType) => React.ReactNode;

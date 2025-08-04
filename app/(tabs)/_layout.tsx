@@ -77,6 +77,18 @@ export default function TabLayout() {
           href: null, // This hides the tab from the tab bar
         }}
       />
+      <Tabs.Screen
+        name="videocalls"
+        options={{
+          href: null, // This hides the tab from the tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          href: null, // This hides the tab from the tab bar
+        }}
+      />
     </Tabs>
   );
 }

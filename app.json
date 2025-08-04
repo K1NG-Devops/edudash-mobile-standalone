@@ -49,7 +49,13 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/33a263ac-0d01-480c-bc1b-384873cd2b47"
+      "url": "https://u.expo.dev/33a263ac-0d01-480c-bc1b-384873cd2b47",
+      "fallbackToCacheTimeout": 10000,
+      "checkAutomatically": "ON_LOAD",
+      "codeSigningMetadata": {
+        "keyid": "main",
+        "alg": "rsa-v1_5-sha256"
+      }
     }
   }
 }

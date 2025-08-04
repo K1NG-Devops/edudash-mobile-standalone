@@ -268,10 +268,18 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
           },
           {
             id: 'payments',
-            title: 'Payments & Fees',
-            subtitle: 'School billing & payments',
+            title: 'Payments  Fees',
+            subtitle: 'School billing  payments',
             icon: 'creditcard.fill',
             route: '/payments',
+            color: '#2563EB',
+          },
+          {
+            id: 'videocalls',
+            title: 'Video Calls',
+            subtitle: 'Schedule  join meetings',
+            icon: 'video.fill',
+            route: '/(tabs)/videocalls',
             color: '#2563EB',
           },
           {
@@ -418,22 +426,22 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
               contentContainerStyle={styles.menuContainer}
             >
               {menuItems.map(this.renderMenuItem)}
-              
-              {/* Sign Out Button */}
-              <TouchableOpacity
-                style={styles.signOutButton}
-                onPress={this.props.onSignOut}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.menuIcon, { backgroundColor: '#EF444415' }]}>
-                  <IconSymbol name="rectangle.portrait.and.arrow.right" size={22} color="#EF4444" />
-                </View>
-                <View style={styles.menuContent}>
-                  <Text style={[styles.menuTitle, { color: '#EF4444' }]}>Sign Out</Text>
-                  <Text style={styles.menuSubtitle}>Exit your account</Text>
-                </View>
-              </TouchableOpacity>
             </ScrollView>
+
+            {/* Sign Out Button */}
+            <TouchableOpacity
+              style={styles.signOutButton}
+              onPress={this.props.onSignOut}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#EF444415' }]}>
+                <IconSymbol name="rectangle.portrait.and.arrow.right" size={22} color="#EF4444" />
+              </View>
+              <View style={styles.menuContent}>
+                <Text style={[styles.menuTitle, { color: '#EF4444' }]}>Sign Out</Text>
+                <Text style={styles.menuSubtitle}>Exit your account</Text>
+              </View>
+            </TouchableOpacity>
           </Animated.View>
         </View>
       </Modal>
@@ -457,7 +465,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: screenWidth * 0.85,
+    width: Math.min(320, screenWidth * 0.78), // Cap at 320px or 78% of screen width
     height: screenHeight,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
@@ -521,6 +529,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
+    paddingBottom: 80, // Extra padding to ensure space above sign out button
   },
   menuItem: {
     flexDirection: 'row',
@@ -583,10 +592,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 4,
-    marginTop: 16,
-    marginBottom: 32,
+    paddingHorizontal: 24,
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
 });

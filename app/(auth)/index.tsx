@@ -184,7 +184,7 @@ class AuthWelcomeScreen extends React.Component {
                       >
                         <Ionicons name="heart-outline" size={32} color="white" />
                         <Text style={styles.roleCardTitle}>Parent</Text>
-                        <Text style={styles.roleCardSubtitle}>Monitor child's progress</Text>
+                        <Text style={styles.roleCardSubtitle}>Monitor child&apos;s progress</Text>
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>

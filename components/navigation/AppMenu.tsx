@@ -261,6 +261,14 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
             color: '#2563EB',
           },
           {
+            id: 'videocalls',
+            title: 'Video Calls',
+            subtitle: 'Schedule & join meetings',
+            icon: 'video.fill',
+            route: '/videocalls',
+            color: '#2563EB',
+          },
+          {
             id: 'payments',
             title: 'Payments',
             subtitle: 'Fees & billing',

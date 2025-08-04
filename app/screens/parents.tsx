@@ -167,7 +167,7 @@ class ParentDashboard extends React.Component<{}, ParentDashboardState> {
                 <View>
                   <Text style={styles.greeting}>Good morning! 👋</Text>
                   <Text style={styles.headerSubtitle}>
-                    Let's see how {selectedChild?.name} is doing today
+                    Let&apos;s see how {selectedChild?.name} is doing today
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.notificationButton}>
@@ -304,7 +304,7 @@ class ParentDashboard extends React.Component<{}, ParentDashboardState> {
 
           {/* Today's Activity */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Today's Activity</Text>
+            <Text style={styles.sectionTitle}>Today&apos;s Activity</Text>
             <View style={styles.activityCard}>
               <View style={styles.activityHeader}>
                 <IconSymbol name="clock.fill" size={20} color="#667eea" />

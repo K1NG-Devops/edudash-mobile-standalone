@@ -17,6 +17,7 @@ import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '@/lib/supabase';
+import EnhancedParentDashboard from '@/components/dashboard/EnhancedParentDashboard';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -349,7 +350,7 @@ componentDidMount() {
           <View style={styles.headerTextSection}>
             <Text style={styles.greeting}>{this.getGreeting()} 👋</Text>
             <Text style={styles.subtitle}>
-              {selectedChild ? `Let's see how ${selectedChild.name.split(' ')[0]} is doing today` : 'Welcome to your dashboard'}
+              {selectedChild ? `Let&apos;s see how ${selectedChild.name.split(' ')[0]} is doing today` : 'Welcome to your dashboard'}
             </Text>
             {this.state.tenantName && (
               <View style={styles.tenantInfo}>
@@ -416,7 +417,7 @@ componentDidMount() {
                   {this.state.loading ? (
                     <>
                       <Text style={styles.emptyStateTitle}>Loading...</Text>
-                      <Text style={styles.emptyStateText}>Fetching your child's information</Text>
+                      <Text style={styles.emptyStateText}>Fetching your child&apos;s information</Text>
                     </>
                   ) : this.state.error ? (
                     <>
@@ -593,7 +594,7 @@ componentDidMount() {
           {/* Today's Mood Card */}
           <View style={styles.moodCard}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Today's Mood</Text>
+              <Text style={styles.cardTitle}>Today&apos;s Mood</Text>
               <TouchableOpacity>
                 <IconSymbol name="heart.fill" size={20} color="#EF4444" />
               </TouchableOpacity>
@@ -671,21 +672,106 @@ componentDidMount() {
               {profile?.role === 'teacher' ? '👩‍🏫 Teacher Dashboard' : '👨‍💼 Admin Dashboard'}
             </Text>
             
-            <View style={styles.adminCard}>
-              <Text style={styles.adminCardTitle}>Quick Actions</Text>
-              <Text style={styles.adminCardText}>
-                {profile?.role === 'teacher' 
-                  ? 'Manage your classes, students, and lessons'
-                  : 'Manage school operations, users, and settings'
-                }
-              </Text>
+            {/* Quick Actions Grid */}
+            <View style={styles.teacherQuickActions}>
+              {profile?.role === 'teacher' && (
+                <>
+                  <TouchableOpacity 
+                    style={styles.teacherActionCard}
+                    onPress={() => router.push('/(teacher)/reports')}
+                  >
+                    <View style={styles.teacherActionIcon}>
+                      <IconSymbol name="doc.text.fill" size={24} color="#3B82F6" />
+                    </View>
+                    <Text style={styles.teacherActionTitle}>Child Evaluations</Text>
+                    <Text style={styles.teacherActionSubtitle}>Reports & assessments for students</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.teacherActionCard}
+                    onPress={() => router.push('/(tabs)/videocalls')}
+                  >
+                    <View style={styles.teacherActionIcon}>
+                      <IconSymbol name="video.fill" size={24} color="#10B981" />
+                    </View>
+                    <Text style={styles.teacherActionTitle}>Video Calls</Text>
+                    <Text style={styles.teacherActionSubtitle}>Schedule parent meetings</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.teacherActionCard}
+                    onPress={() => router.push('/(tabs)/messages')}
+                  >
+                    <View style={styles.teacherActionIcon}>
+                      <IconSymbol name="message.fill" size={24} color="#F59E0B" />
+                    </View>
+                    <Text style={styles.teacherActionTitle}>Messages</Text>
+                    <Text style={styles.teacherActionSubtitle}>Communicate with parents</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.teacherActionCard}
+                    onPress={() => console.log('Class Management')}
+                  >
+                    <View style={styles.teacherActionIcon}>
+                      <IconSymbol name="person.3.fill" size={24} color="#8B5CF6" />
+                    </View>
+                    <Text style={styles.teacherActionTitle}>My Classes</Text>
+                    <Text style={styles.teacherActionSubtitle}>Manage students & activities</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              
+              {profile?.role !== 'teacher' && (
+                <>
+                  <TouchableOpacity style={styles.teacherActionCard}>
+                    <View style={styles.teacherActionIcon}>
+                      <IconSymbol name="gear" size={24} color="#6B7280" />
+                    </View>
+                    <Text style={styles.teacherActionTitle}>Settings</Text>
+                    <Text style={styles.teacherActionSubtitle}>System configuration</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.teacherActionCard}>
+                    <View style={styles.teacherActionIcon}>
+                      <IconSymbol name="person.2.fill" size={24} color="#6B7280" />
+                    </View>
+                    <Text style={styles.teacherActionTitle}>Users</Text>
+                    <Text style={styles.teacherActionSubtitle}>Manage teachers & parents</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
             
+            {/* Today's Summary for Teachers */}
+            {profile?.role === 'teacher' && (
+              <View style={styles.teacherSummaryCard}>
+                <Text style={styles.teacherSummaryTitle}>📊 Today&apos;s Overview</Text>
+                <View style={styles.teacherSummaryRow}>
+                  <View style={styles.teacherSummaryItem}>
+                    <Text style={styles.teacherSummaryNumber}>0</Text>
+                    <Text style={styles.teacherSummaryLabel}>Reports Created</Text>
+                  </View>
+                  <View style={styles.teacherSummaryItem}>
+                    <Text style={styles.teacherSummaryNumber}>0</Text>
+                    <Text style={styles.teacherSummaryLabel}>Messages Sent</Text>
+                  </View>
+                  <View style={styles.teacherSummaryItem}>
+                    <Text style={styles.teacherSummaryNumber}>0</Text>
+                    <Text style={styles.teacherSummaryLabel}>Video Calls</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+            
+            {/* Recent Activity */}
             <View style={styles.adminCard}>
-              <Text style={styles.adminCardTitle}>Coming Soon</Text>
+              <Text style={styles.adminCardTitle}>Recent Activity</Text>
               <Text style={styles.adminCardText}>
-                Full {profile?.role || 'admin'} functionality is being developed.
-                This will include class management, student tracking, and reporting tools.
+                {profile?.role === 'teacher' 
+                  ? 'Your recent reports, messages, and student interactions will appear here.'
+                  : 'System activity and user management updates will be shown here.'
+                }
               </Text>
             </View>
           </View>
@@ -704,7 +790,7 @@ componentDidMount() {
           // Route based on user role
           switch (profile?.role) {
             case 'parent':
-              return this.renderParentDashboard(profile, signOut);
+              return <EnhancedParentDashboard profile={profile} onSignOut={signOut} />;
             case 'teacher':
             case 'admin':
             case 'superadmin':
@@ -712,9 +798,9 @@ componentDidMount() {
             case 'preschool_admin':
               return this.renderAdminDashboard(profile, signOut);
             default:
-              // If no role or unknown role, show parent dashboard as fallback
-              console.log('⚠️ Unknown role, showing parent dashboard as fallback');
-              return this.renderParentDashboard(profile, signOut);
+              // If no role or unknown role, show enhanced parent dashboard as fallback
+              console.log('⚠️ Unknown role, showing enhanced parent dashboard as fallback');
+              return <EnhancedParentDashboard profile={profile} onSignOut={signOut} />;
           }
         }}
       </AuthConsumer>
@@ -1203,6 +1289,91 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1E40AF',
+  },
+  // Teacher dashboard styles
+  teacherQuickActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    gap: 12,
+  },
+  teacherActionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '48%',
+    alignItems: 'center',
+    minHeight: 120,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  teacherActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  teacherActionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  teacherActionSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  teacherSummaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  teacherSummaryTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  teacherSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  teacherSummaryItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  teacherSummaryNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#3B82F6',
+    marginBottom: 4,
+  },
+  teacherSummaryLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });
 

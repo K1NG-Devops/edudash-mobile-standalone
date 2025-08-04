@@ -9,7 +9,8 @@ interface WithAuthRedirectState {
 export function withAuthRedirect<P extends object>(
   WrappedComponent: React.ComponentType<P & { user: any; profile: any; signOut: () => Promise<void> }>
 ) {
-  return class extends React.Component<P, WithAuthRedirectState> {
+  class AuthRedirectWrapper extends React.Component<P, WithAuthRedirectState> {
+    static displayName = `withAuthRedirect(${WrappedComponent.displayName || WrappedComponent.name || 'Component'})`;
     state: WithAuthRedirectState = {
       lastUserState: null,
     };
@@ -51,5 +52,7 @@ export function withAuthRedirect<P extends object>(
         </AuthConsumer>
       );
     }
-  };
+  }
+  
+  return AuthRedirectWrapper;
 }
