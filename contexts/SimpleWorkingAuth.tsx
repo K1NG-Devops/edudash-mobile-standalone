@@ -6,14 +6,41 @@ import { router } from 'expo-router';
 export interface UserProfile {
   id: string;
   email: string;
-  name: string | null;
-  role: 'superadmin' | 'admin' | 'principal' | 'teacher' | 'parent';
+  name: string;
+  role: 'superadmin' | 'preschool_admin' | 'teacher' | 'parent';
+  preschool_id: string | null;
+  avatar_url: string | null;
   phone: string | null;
-  address: string | null;
-  home_address: string | null;
   is_active: boolean;
   auth_user_id: string;
-  preschool_id: string | null;  
+  
+  // Address information
+  home_address: string | null;
+  home_city: string | null;
+  home_postal_code: string | null;
+  
+  // Work information
+  work_company: string | null;
+  work_position: string | null;
+  work_address: string | null;
+  work_phone: string | null;
+  
+  // Emergency contacts
+  emergency_contact_1_name: string | null;
+  emergency_contact_1_phone: string | null;
+  emergency_contact_1_relationship: string | null;
+  emergency_contact_2_name: string | null;
+  emergency_contact_2_phone: string | null;
+  emergency_contact_2_relationship: string | null;
+  
+  // Additional parent information
+  relationship_to_child: string | null;
+  pickup_authorized: string | null;
+  
+  // Profile completion tracking
+  profile_completed_at: string | null;
+  profile_completion_status: 'incomplete' | 'in_progress' | 'complete';
+  
   created_at: string;
   updated_at: string;
 }

@@ -104,7 +104,7 @@ componentDidMount() {
       if (userProfile.preschool_id) {
         const { data: tenant, error: tenantError } = await supabase
           .from('preschools')
-          .select('name, slug')
+          .select('name')
           .eq('id', userProfile.preschool_id)
           .single();
 
@@ -149,7 +149,7 @@ componentDidMount() {
       if (parentProfile.preschool_id) {
         const { data: tenant, error: tenantError } = await supabase
           .from('preschools')
-          .select('name, slug')
+          .select('name')
           .eq('id', parentProfile.preschool_id)
           .single();
 

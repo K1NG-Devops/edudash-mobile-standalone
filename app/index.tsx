@@ -84,6 +84,13 @@ class WelcomeScreen extends React.Component {
               </TouchableOpacity>
 
               <TouchableOpacity
+                style={[styles.button, styles.requestAccessButton]}
+                onPress={() => router.push('/(auth)/request-access')}
+              >
+                <Text style={styles.requestAccessButtonText}>Request Preschool Access</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={styles.parentSignupButton}
                 onPress={() => router.push('/(auth)/parent-signup')}
               >
@@ -198,6 +205,16 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
+  },
+  requestAccessButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+  },
+  requestAccessButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
   },
   parentSignupButton: {
     alignItems: 'center',

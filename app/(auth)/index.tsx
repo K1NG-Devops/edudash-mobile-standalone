@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,7 +29,7 @@ class AuthWelcomeScreen extends React.Component {
                 showsVerticalScrollIndicator={false}
               >
                 <LinearGradient
-                  colors={['#667eea', '#764ba2']}
+                  colors={['#1e3a8a', '#1e40af', '#3b82f6']}
                   style={styles.headerGradient}
                 >
                   {/* Hero Section */}
@@ -63,7 +63,7 @@ class AuthWelcomeScreen extends React.Component {
                   <View style={styles.featureGrid}>
                     <View style={styles.featureCard}>
                       <View style={styles.featureIcon}>
-                        <Ionicons name="bulb" size={24} color="#667eea" />
+                        <Ionicons name="bulb" size={24} color="#1e40af" />
                       </View>
                       <Text style={styles.featureTitle}>AI-Generated Lessons</Text>
                       <Text style={styles.featureDescription}>
@@ -73,7 +73,7 @@ class AuthWelcomeScreen extends React.Component {
 
                     <View style={styles.featureCard}>
                       <View style={styles.featureIcon}>
-                        <Ionicons name="analytics" size={24} color="#667eea" />
+                        <Ionicons name="analytics" size={24} color="#1e40af" />
                       </View>
                       <Text style={styles.featureTitle}>Smart Analytics</Text>
                       <Text style={styles.featureDescription}>
@@ -83,7 +83,7 @@ class AuthWelcomeScreen extends React.Component {
 
                     <View style={styles.featureCard}>
                       <View style={styles.featureIcon}>
-                        <Ionicons name="people" size={24} color="#667eea" />
+                        <Ionicons name="people" size={24} color="#1e40af" />
                       </View>
                       <Text style={styles.featureTitle}>Multi-Tenant Support</Text>
                       <Text style={styles.featureDescription}>
@@ -93,7 +93,7 @@ class AuthWelcomeScreen extends React.Component {
 
                     <View style={styles.featureCard}>
                       <View style={styles.featureIcon}>
-                        <Ionicons name="phone-portrait" size={24} color="#667eea" />
+                        <Ionicons name="phone-portrait" size={24} color="#1e40af" />
                       </View>
                       <Text style={styles.featureTitle}>Mobile-First Design</Text>
                       <Text style={styles.featureDescription}>
@@ -111,31 +111,66 @@ class AuthWelcomeScreen extends React.Component {
                   </Text>
 
                   <View style={styles.roleCards}>
-                    <TouchableOpacity 
-                      style={styles.roleCard}
-                      onPress={() => router.push('/(auth)/sign-up')}
-                    >
-                      <LinearGradient
-                        colors={['#4facfe', '#00f2fe']}
-                        style={styles.roleCardGradient}
+                    <View style={styles.principalCardContainer}>
+                      <TouchableOpacity 
+                        style={[styles.roleCard, styles.principalCard]}
+                        onPress={() => router.push('/(auth)/request-access')}
+                        activeOpacity={0.8}
                       >
-                        <Ionicons name="school-outline" size={32} color="white" />
-                        <Text style={styles.roleCardTitle}>Principal</Text>
-                        <Text style={styles.roleCardSubtitle}>Manage schools and staff</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
+                        <LinearGradient
+                          colors={['#1e40af', '#3b82f6', '#60a5fa']}
+                          style={[styles.roleCardGradient, styles.principalCardGradient]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          {/* Sparkle Animation Container */}
+                          <View style={styles.sparkleContainer}>
+                            <Ionicons name="sparkles" size={20} color="rgba(255,255,255,0.7)" style={styles.sparkle1} />
+                            <Ionicons name="sparkles" size={16} color="rgba(255,255,255,0.5)" style={styles.sparkle2} />
+                            <Ionicons name="sparkles" size={12} color="rgba(255,255,255,0.6)" style={styles.sparkle3} />
+                          </View>
+                          
+                          <View style={styles.iconContainer}>
+                            <Ionicons name="school" size={36} color="white" />
+                          </View>
+                          
+                          <Text style={styles.roleCardTitle}>🎓 Principal</Text>
+                          <Text style={styles.principalHook}>Own a Preschool?</Text>
+                          
+                          <View style={styles.ctaContainer}>
+                            <Text style={styles.requestAccessText}>🚀 JOIN THE REVOLUTION</Text>
+                            <Text style={styles.requestSubtext}>Get Your School On Board</Text>
+                          </View>
+                          
+                          <View style={styles.benefitBadge}>
+                            <Text style={styles.benefitText}>✨ FREE SETUP</Text>
+                          </View>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                      
+                      <View style={styles.principalNoteContainer}>
+                        <Text style={styles.principalNote}>
+                          💡 <Text style={styles.principalNoteHighlight}>Already approved?</Text> <Text 
+                            style={styles.signInLink}
+                            onPress={() => router.push('/(auth)/sign-in')}
+                          >
+                            Sign in here →
+                          </Text>
+                        </Text>
+                      </View>
+                    </View>
 
                     <TouchableOpacity 
                       style={styles.roleCard}
                       onPress={() => router.push('/(auth)/sign-up')}
                     >
                       <LinearGradient
-                        colors={['#a8edea', '#fed6e3']}
+                        colors={['#374151', '#4b5563', '#6b7280']}
                         style={styles.roleCardGradient}
                       >
-                        <Ionicons name="person-outline" size={32} color="#333" />
-                        <Text style={[styles.roleCardTitle, { color: '#333' }]}>Teacher</Text>
-                        <Text style={[styles.roleCardSubtitle, { color: '#666' }]}>Create lessons and track progress</Text>
+                        <Ionicons name="person-outline" size={32} color="white" />
+                        <Text style={styles.roleCardTitle}>Teacher</Text>
+                        <Text style={styles.roleCardSubtitle}>Create lessons and track progress</Text>
                       </LinearGradient>
                     </TouchableOpacity>
 
@@ -144,12 +179,12 @@ class AuthWelcomeScreen extends React.Component {
                       onPress={() => router.push('/(auth)/parent-signup')}
                     >
                       <LinearGradient
-                        colors={['#ffecd2', '#fcb69f']}
+                        colors={['#1f2937', '#374151', '#4b5563']}
                         style={styles.roleCardGradient}
                       >
-                        <Ionicons name="heart-outline" size={32} color="#333" />
-                        <Text style={[styles.roleCardTitle, { color: '#333' }]}>Parent</Text>
-                        <Text style={[styles.roleCardSubtitle, { color: '#666' }]}>Monitor child's progress</Text>
+                        <Ionicons name="heart-outline" size={32} color="white" />
+                        <Text style={styles.roleCardTitle}>Parent</Text>
+                        <Text style={styles.roleCardSubtitle}>Monitor child's progress</Text>
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
@@ -162,7 +197,7 @@ class AuthWelcomeScreen extends React.Component {
                     onPress={() => router.push('/(auth)/sign-in')}
                   >
                     <LinearGradient
-                      colors={['#667eea', '#764ba2']}
+                      colors={['#1e40af', '#3b82f6']}
                       style={styles.primaryButtonGradient}
                     >
                       <Text style={styles.primaryButtonText}>Sign In to Your Account</Text>
@@ -421,10 +456,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#667eea',
+    borderColor: '#1e40af',
   },
   secondaryButtonText: {
-    color: '#667eea',
+    color: '#1e40af',
     fontSize: 18,
     fontWeight: '600',
   },
@@ -449,13 +484,130 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   footerLink: {
-    color: '#667eea',
+    color: '#1e40af',
     fontSize: 14,
     fontWeight: '500',
   },
   footerDivider: {
     color: '#cbd5e1',
     fontSize: 14,
+  },
+
+  // Principal Card Specific Styles
+  principalCardContainer: {
+    marginBottom: 24,
+  },
+  principalCard: {
+    transform: [{ scale: 1.02 }],
+    shadowColor: '#1e40af',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 15,
+  },
+  principalCardGradient: {
+    padding: 28,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  sparkleContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
+  sparkle1: {
+    position: 'absolute',
+    top: 20,
+    right: 30,
+  },
+  sparkle2: {
+    position: 'absolute',
+    top: 60,
+    left: 25,
+  },
+  sparkle3: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+  },
+  iconContainer: {
+    marginBottom: 8,
+  },
+  principalHook: {
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.95)',
+    textAlign: 'center',
+    fontWeight: '600',
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  ctaContainer: {
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  requestAccessText: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+    marginBottom: 4,
+  },
+  requestSubtext: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  benefitBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  benefitText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  principalNoteContainer: {
+    backgroundColor: 'rgba(74, 172, 254, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(74, 172, 254, 0.2)',
+  },
+  principalNote: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  principalNoteHighlight: {
+    color: '#1e293b',
+    fontWeight: '700',
+  },
+  signInLink: {
+    color: '#4facfe',
+    fontWeight: '800',
+    textDecorationLine: 'underline',
   },
 
   // Loading State

@@ -49,7 +49,7 @@ export default function TabLayout() {
         options={{
           title: 'Register',
           tabBarIcon: ({ color, focused }) => (
-            <IconSymbol size={28} name={focused ? 'location.fill' : 'location'} color={color} />
+            <IconSymbol size={28} name={focused ? 'person.fill' : 'person'} color={color} />
           ),
         }}
       />
