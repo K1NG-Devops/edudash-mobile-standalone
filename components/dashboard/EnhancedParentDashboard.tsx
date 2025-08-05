@@ -148,18 +148,33 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
     try {
       setLoading(true);
 
+      console.log('🔍 DEBUG: Fetching children for auth_user_id:', profile.auth_user_id);
+      console.log('🔍 DEBUG: Profile data:', JSON.stringify(profile, null, 2));
+
       // Get parent's internal ID
       const { data: parentProfile, error: parentError } = await supabase
         .from('users')
-        .select('id, preschool_id')
+        .select('id, preschool_id, name, email')
         .eq('auth_user_id', profile.auth_user_id)
         .single();
 
+      console.log('🔍 DEBUG: Parent profile query result:', { parentProfile, parentError });
+
       if (parentError || !parentProfile) {
+        console.error('❌ DEBUG: Parent profile not found:', parentError);
         throw new Error('Parent profile not found');
       }
 
+      console.log('👤 DEBUG: Found parent profile:', {
+        internal_id: parentProfile.id,
+        name: parentProfile.name,
+        email: parentProfile.email,
+        preschool_id: parentProfile.preschool_id
+      });
+
       // Fetch children with class and teacher info
+      console.log('👶 DEBUG: Querying students with parent_id:', parentProfile.id);
+      
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select(`
@@ -169,6 +184,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
           date_of_birth,
           class_id,
           is_active,
+          parent_id,
           classes (
             name,
             teacher_id,
@@ -179,6 +195,12 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         `)
         .eq('parent_id', parentProfile.id)
         .eq('is_active', true);
+
+      console.log('👶 DEBUG: Students query result:', {
+        studentsData,
+        studentsError,
+        studentsCount: studentsData?.length || 0
+      });
 
       if (studentsError) {
         throw studentsError;
