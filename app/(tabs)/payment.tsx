@@ -688,14 +688,20 @@ componentDidMount() {
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerContent}>
-                <View>
-                  <Text style={styles.headerTitle}>Payments</Text>
-                  <Text style={styles.headerSubtitle}>
+                <View style={styles.headerTextContainer}>
+                  <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+                    Payments
+                  </Text>
+                  <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
                     Manage school fees and view history
                   </Text>
                 </View>
                 <View style={styles.headerIcon}>
-                  <IconSymbol name="creditcard.fill" size={32} color="#374151" />
+                  <IconSymbol 
+                    name="creditcard.fill" 
+                    size={screenWidth < 350 ? 28 : 32} 
+                    color="#374151" 
+                  />
                 </View>
               </View>
             </View>
@@ -812,28 +818,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    flexWrap: 'wrap', // Allow wrap
-    gap: 10, // Added gap for spacing
+    flexWrap: 'nowrap', // Force single line
+    minHeight: 56, // Minimum height to match icon
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: screenWidth < 350 ? 18 : screenWidth < 400 ? 20 : 22,
     fontWeight: 'bold',
     color: '#1F2937',
-    marginBottom: 2,
+    marginBottom: 1,
+    flexShrink: 1, // Allow text to shrink if needed
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: screenWidth < 350 ? 11 : screenWidth < 400 ? 12 : 13,
     color: '#6B7280',
+    flexShrink: 1, // Allow text to shrink if needed
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginRight: 12, // Space between text and icon
+    minWidth: 0, // Allow shrinking below content size
   },
   headerIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: screenWidth < 350 ? 48 : 56,
+    height: screenWidth < 350 ? 48 : 56,
+    borderRadius: screenWidth < 350 ? 24 : 28,
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    flexShrink: 0, // Don't shrink the icon
   },
   summaryContainer: {
     paddingHorizontal: 24,
