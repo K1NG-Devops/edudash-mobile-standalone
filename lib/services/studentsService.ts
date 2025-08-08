@@ -26,9 +26,20 @@ export class StudentsService {
     try {
       const { data, error } = await supabase
         .from('students')
-        .select('*')
+        .select(`
+          *,
+          parent:users!students_parent_id_fkey(name, email, phone),
+          class:classes!students_class_id_fkey(
+            id,
+            name,
+            room_number,
+            teacher:users!classes_teacher_id_fkey(id, name, email)
+          )
+        `)
         .eq('preschool_id', preschoolId)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('class.teacher_id', teacherId)
+        .order('first_name');
 
       if (error) throw error;
       return { data, error: null };

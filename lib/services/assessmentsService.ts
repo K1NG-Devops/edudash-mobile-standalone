@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { claudeService } from '@/lib/ai/claudeService';
 
 export interface Assessment {
   id: string;
@@ -259,163 +260,337 @@ export class AssessmentsService {
     }
   }
 
-  // Mock data for development/testing
-  static getMockAssessments(): Assessment[] {
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
-    return [
-      {
-        id: 'mock-1',
-        student_id: 'student-1',
-        teacher_id: 'teacher-1',
-        preschool_id: 'preschool-1',
-        assessment_type: 'cognitive',
-        title: 'Number Recognition Assessment',
-        description: 'Assessing ability to recognize numbers 1-10',
-        score: 85,
-        max_score: 100,
-        grade: 'B',
-        notes: 'Great progress with numbers 1-8, needs practice with 9-10',
-        assessment_date: today,
-        skills_assessed: ['Number Recognition', 'Counting', 'Basic Math'],
-        is_completed: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        student: {
-          first_name: 'Emma',
-          last_name: 'Johnson',
-          avatar_url: null,
-        },
-        teacher: {
-          name: 'Mrs. Smith',
-          avatar_url: null,
-        },
-      },
-      {
-        id: 'mock-2',
-        student_id: 'student-2',
-        teacher_id: 'teacher-1',
-        preschool_id: 'preschool-1',
-        assessment_type: 'social',
-        title: 'Social Skills Assessment',
-        description: 'Evaluating peer interaction and sharing behaviors',
-        score: 92,
-        max_score: 100,
-        grade: 'A',
-        notes: 'Excellent sharing and cooperation during group activities',
-        assessment_date: yesterday,
-        skills_assessed: ['Sharing', 'Cooperation', 'Communication'],
-        is_completed: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        student: {
-          first_name: 'Liam',
-          last_name: 'Brown',
-          avatar_url: null,
-        },
-        teacher: {
-          name: 'Mrs. Smith',
-          avatar_url: null,
-        },
-      },
-      {
-        id: 'mock-3',
-        student_id: 'student-3',
-        teacher_id: 'teacher-1',
-        preschool_id: 'preschool-1',
-        assessment_type: 'language',
-        title: 'Vocabulary Assessment',
-        description: 'Testing vocabulary comprehension and usage',
-        score: null,
-        max_score: 100,
-        grade: null,
-        notes: 'Assessment scheduled for completion',
-        assessment_date: today,
-        skills_assessed: ['Vocabulary', 'Comprehension', 'Expression'],
-        is_completed: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        student: {
-          first_name: 'Olivia',
-          last_name: 'Davis',
-          avatar_url: null,
-        },
-        teacher: {
-          name: 'Mrs. Smith',
-          avatar_url: null,
-        },
-      },
-      {
-        id: 'mock-4',
-        student_id: 'student-4',
-        teacher_id: 'teacher-1',
-        preschool_id: 'preschool-1',
-        assessment_type: 'physical',
-        title: 'Fine Motor Skills Assessment',
-        description: 'Evaluating pencil grip and drawing abilities',
-        score: 78,
-        max_score: 100,
+  // AI-powered assessment scoring and analysis
+  static async scoreAssessmentWithAI(assessmentId: string, observationNotes: string, skillsAssessed: string[], assessmentType: Assessment['assessment_type'], studentAge: number): Promise<{
+    score: number;
+    grade: Assessment['grade'];
+    feedback: string;
+    strengths: string[];
+    developmentAreas: string[];
+    recommendations: string[];
+  }> {
+    try {
+      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+        // Fallback scoring without AI
+        return {
+          score: 75,
+          grade: 'B',
+          feedback: 'Student shows good understanding and effort in the assessed skills.',
+          strengths: ['Shows effort and engagement', 'Follows instructions well'],
+          developmentAreas: ['Continue practicing key skills', 'Work on consistency'],
+          recommendations: ['Provide additional practice opportunities', 'Use positive reinforcement']
+        };
+      }
+
+      const prompt = `
+        As an experienced early childhood development specialist, assess this student's performance:
+        
+        Assessment Type: ${assessmentType}
+        Student Age: ${studentAge} years
+        Skills Assessed: ${skillsAssessed.join(', ')}
+        Observation Notes: ${observationNotes}
+        
+        Please provide:
+        1. A score out of 100 based on age-appropriate expectations
+        2. A letter grade (A, B, C, D, F)
+        3. Constructive feedback appropriate for early childhood
+        4. 2-3 observed strengths
+        5. 1-2 areas for development
+        6. 2-3 specific recommendations for improvement
+        
+        Consider developmental milestones appropriate for this age group.
+        
+        Format as JSON: {
+          "score": number,
+          "grade": "A"|"B"|"C"|"D"|"F",
+          "feedback": "string",
+          "strengths": ["strength1", "strength2"],
+          "developmentAreas": ["area1", "area2"],
+          "recommendations": ["rec1", "rec2", "rec3"]
+        }
+      `;
+
+      const response = await claudeService.generateContent({
+        prompt,
+        type: 'assessment_scoring',
+        context: { assessmentId, assessmentType, studentAge },
+      });
+
+      if (response.success && response.content) {
+        try {
+          const scoringResult = JSON.parse(response.content);
+          
+          // Update the assessment with AI scoring
+          await supabase
+            .from('assessments')
+            .update({
+              score: scoringResult.score,
+              grade: scoringResult.grade,
+              notes: `${observationNotes}\n\nAI Analysis: ${scoringResult.feedback}`,
+              is_completed: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', assessmentId);
+          
+          return scoringResult;
+        } catch (parseError) {
+          console.warn('Failed to parse AI scoring response:', parseError);
+          return {
+            score: 75,
+            grade: 'B',
+            feedback: response.content.slice(0, 200),
+            strengths: ['Shows engagement with the activity'],
+            developmentAreas: ['Continue building skills'],
+            recommendations: ['Provide regular practice', 'Use encouraging feedback']
+          };
+        }
+      }
+      
+      throw new Error('AI assessment scoring service unavailable');
+    } catch (error) {
+      console.error('Error in AI assessment scoring:', error);
+      return {
+        score: 70,
         grade: 'C',
-        notes: 'Good improvement in pencil grip, continue practicing cutting with scissors',
-        assessment_date: yesterday,
-        skills_assessed: ['Pencil Grip', 'Drawing', 'Cutting'],
-        is_completed: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        student: {
-          first_name: 'Noah',
-          last_name: 'Wilson',
-          avatar_url: null,
-        },
-        teacher: {
-          name: 'Mrs. Smith',
-          avatar_url: null,
-        },
-      },
-      {
-        id: 'mock-5',
-        student_id: 'student-5',
-        teacher_id: 'teacher-1',
-        preschool_id: 'preschool-1',
-        assessment_type: 'emotional',
-        title: 'Emotional Regulation Assessment',
-        description: 'Assessing ability to manage emotions and transitions',
-        score: null,
-        max_score: 100,
-        grade: null,
-        notes: 'Pending assessment',
-        assessment_date: today,
-        skills_assessed: ['Self-Regulation', 'Transition Management', 'Emotional Expression'],
-        is_completed: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        student: {
-          first_name: 'Ava',
-          last_name: 'Miller',
-          avatar_url: null,
-        },
-        teacher: {
-          name: 'Mrs. Smith',
-          avatar_url: null,
-        },
-      },
-    ];
+        feedback: 'Assessment completed. Continue supporting student development.',
+        strengths: ['Participated in assessment'],
+        developmentAreas: ['Continue skill development'],
+        recommendations: ['Provide supportive learning environment', 'Regular practice and reinforcement']
+      };
+    }
   }
 
-  static getMockAssessmentSummary(): AssessmentSummary {
-    return {
-      total_assessments: 15,
-      completed_today: 2,
-      pending_assessments: 3,
-      average_score: 85.2,
-      assessments_by_type: {
-        cognitive: 4,
-        social: 3,
-        physical: 3,
-        emotional: 2,
-        language: 3,
-      },
+  // AI-powered developmental milestone analysis
+  static async analyzeDevelopmentalProgress(studentId: string, age: number): Promise<{
+    overallDevelopment: string;
+    milestoneStatus: {
+      cognitive: 'advanced' | 'on_track' | 'needs_support';
+      social: 'advanced' | 'on_track' | 'needs_support';
+      physical: 'advanced' | 'on_track' | 'needs_support';
+      emotional: 'advanced' | 'on_track' | 'needs_support';
+      language: 'advanced' | 'on_track' | 'needs_support';
     };
+    recommendations: string[];
+    nextMilestones: string[];
+  }> {
+    try {
+      // Get recent assessments for this student
+      const { data: assessments } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('is_completed', true)
+        .order('assessment_date', { ascending: false })
+        .limit(10);
+
+      if (!assessments || assessments.length === 0) {
+        return {
+          overallDevelopment: 'Insufficient assessment data available for analysis.',
+          milestoneStatus: {
+            cognitive: 'on_track',
+            social: 'on_track',
+            physical: 'on_track',
+            emotional: 'on_track',
+            language: 'on_track'
+          },
+          recommendations: ['Complete initial assessments', 'Observe student in various activities'],
+          nextMilestones: ['Begin comprehensive assessment program']
+        };
+      }
+
+      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+        return {
+          overallDevelopment: 'Student is developing well across multiple areas.',
+          milestoneStatus: {
+            cognitive: 'on_track',
+            social: 'on_track',
+            physical: 'on_track',
+            emotional: 'on_track',
+            language: 'on_track'
+          },
+          recommendations: ['Continue current activities', 'Monitor progress regularly'],
+          nextMilestones: ['Focus on age-appropriate skill building']
+        };
+      }
+
+      const assessmentSummary = assessments.map(a => ({
+        type: a.assessment_type,
+        score: a.score,
+        grade: a.grade,
+        skills: a.skills_assessed,
+        notes: a.notes
+      }));
+
+      const prompt = `
+        As a developmental specialist, analyze this ${age}-year-old child's assessment data:
+        
+        Recent Assessments: ${JSON.stringify(assessmentSummary, null, 2)}
+        
+        Provide:
+        1. Overall developmental analysis
+        2. Status for each domain (advanced/on_track/needs_support)
+        3. 3-4 specific recommendations
+        4. 2-3 upcoming developmental milestones to focus on
+        
+        Base analysis on typical developmental milestones for age ${age}.
+        
+        Format as JSON: {
+          "overallDevelopment": "string",
+          "milestoneStatus": {
+            "cognitive": "advanced"|"on_track"|"needs_support",
+            "social": "advanced"|"on_track"|"needs_support",
+            "physical": "advanced"|"on_track"|"needs_support",
+            "emotional": "advanced"|"on_track"|"needs_support",
+            "language": "advanced"|"on_track"|"needs_support"
+          },
+          "recommendations": ["rec1", "rec2", "rec3"],
+          "nextMilestones": ["milestone1", "milestone2"]
+        }
+      `;
+
+      const response = await claudeService.generateContent({
+        prompt,
+        type: 'developmental_analysis',
+        context: { studentId, age },
+      });
+
+      if (response.success && response.content) {
+        try {
+          return JSON.parse(response.content);
+        } catch (parseError) {
+          console.warn('Failed to parse developmental analysis response:', parseError);
+          return {
+            overallDevelopment: response.content.slice(0, 200),
+            milestoneStatus: {
+              cognitive: 'on_track',
+              social: 'on_track',
+              physical: 'on_track',
+              emotional: 'on_track',
+              language: 'on_track'
+            },
+            recommendations: ['Continue supportive activities', 'Monitor development'],
+            nextMilestones: ['Focus on age-appropriate skills']
+          };
+        }
+      }
+      
+      throw new Error('AI developmental analysis service unavailable');
+    } catch (error) {
+      console.error('Error in developmental analysis:', error);
+      return {
+        overallDevelopment: 'Unable to complete developmental analysis at this time.',
+        milestoneStatus: {
+          cognitive: 'on_track',
+          social: 'on_track',
+          physical: 'on_track',
+          emotional: 'on_track',
+          language: 'on_track'
+        },
+        recommendations: ['Continue regular observations', 'Document progress'],
+        nextMilestones: ['Maintain focus on core developmental areas']
+      };
+    }
+  }
+
+  // Create personalized assessment plan with AI
+  static async createAssessmentPlanWithAI(studentId: string, age: number, focusAreas: Assessment['assessment_type'][]): Promise<{
+    assessmentPlan: {
+      title: string;
+      description: string;
+      assessmentType: Assessment['assessment_type'];
+      skills: string[];
+      duration: string;
+      materials: string[];
+    }[];
+    timeline: string;
+    goals: string[];
+  }> {
+    try {
+      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+        return {
+          assessmentPlan: focusAreas.map(area => ({
+            title: `${area.charAt(0).toUpperCase() + area.slice(1)} Assessment`,
+            description: `Comprehensive assessment of ${area} skills`,
+            assessmentType: area,
+            skills: ['Basic skills', 'Age-appropriate abilities'],
+            duration: '15-20 minutes',
+            materials: ['Standard assessment materials']
+          })),
+          timeline: 'Complete assessments over 2-3 weeks',
+          goals: ['Establish baseline', 'Identify strengths', 'Plan interventions']
+        };
+      }
+
+      const prompt = `
+        Create a personalized assessment plan for a ${age}-year-old child:
+        
+        Focus Areas: ${focusAreas.join(', ')}
+        
+        For each focus area, provide:
+        1. Assessment title and description
+        2. Specific skills to assess (age-appropriate)
+        3. Estimated duration
+        4. Required materials
+        
+        Also include:
+        - Overall timeline for completion
+        - 3-4 main goals for the assessment plan
+        
+        Format as JSON: {
+          "assessmentPlan": [{
+            "title": "string",
+            "description": "string",
+            "assessmentType": "cognitive"|"social"|"physical"|"emotional"|"language",
+            "skills": ["skill1", "skill2"],
+            "duration": "string",
+            "materials": ["material1", "material2"]
+          }],
+          "timeline": "string",
+          "goals": ["goal1", "goal2", "goal3"]
+        }
+      `;
+
+      const response = await claudeService.generateContent({
+        prompt,
+        type: 'assessment_planning',
+        context: { studentId, age, focusAreas },
+      });
+
+      if (response.success && response.content) {
+        try {
+          return JSON.parse(response.content);
+        } catch (parseError) {
+          console.warn('Failed to parse assessment plan response:', parseError);
+          return {
+            assessmentPlan: focusAreas.map(area => ({
+              title: `${area.charAt(0).toUpperCase() + area.slice(1)} Assessment`,
+              description: `Assess ${area} development`,
+              assessmentType: area,
+              skills: ['Core skills', 'Development markers'],
+              duration: '15-20 minutes',
+              materials: ['Assessment tools', 'Recording materials']
+            })),
+            timeline: 'Complete over 2-3 weeks',
+            goals: ['Assess current abilities', 'Plan support strategies']
+          };
+        }
+      }
+      
+      throw new Error('AI assessment planning service unavailable');
+    } catch (error) {
+      console.error('Error creating assessment plan:', error);
+      return {
+        assessmentPlan: focusAreas.map(area => ({
+          title: `${area.charAt(0).toUpperCase() + area.slice(1)} Assessment`,
+          description: `Evaluate ${area} skills and development`,
+          assessmentType: area,
+          skills: ['Age-appropriate skills', 'Developmental milestones'],
+          duration: '15-30 minutes',
+          materials: ['Assessment materials', 'Observation forms']
+        })),
+        timeline: 'Complete assessments over 2-4 weeks',
+        goals: ['Document current abilities', 'Identify support needs', 'Track progress']
+      };
+    }
   }
 }

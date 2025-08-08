@@ -801,48 +801,153 @@ export class PaymentService {
   }
 
   /**
-   * Mock data generator for testing
+   * Generate comprehensive financial summary with AI insights
    */
-  static generateMockFees(studentIds: string[]): PaymentFee[] {
-    const feeTypes = ['tuition', 'activity', 'meal', 'transport', 'material'] as const;
-    const mockFees: PaymentFee[] = [];
+  static async generateFinancialInsightsWithAI(preschoolId: string, parentId?: string, period = 'monthly'): Promise<{
+    summary: {
+      totalRevenue: number;
+      outstandingAmount: number;
+      paidOnTime: number;
+      overduePayments: number;
+      collectionRate: number;
+    };
+    insights: {
+      paymentTrends: string;
+      recommendations: string[];
+      riskAssessment: string;
+      forecastedRevenue: number;
+    };
+  }> {
+    try {
+      // Get payment data for analysis
+      let paymentsQuery = supabase
+        .from('payments')
+        .select(`
+          id,
+          amount,
+          status,
+          due_date,
+          paid_at,
+          created_at,
+          student:students(id, full_name)
+        `)
+        .eq('preschool_id', preschoolId)
+        .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
 
-    studentIds.forEach((studentId, index) => {
-      // Generate 2-4 fees per student
-      const numFees = Math.floor(Math.random() * 3) + 2;
-      
-      for (let i = 0; i < numFees; i++) {
-        const feeType = feeTypes[Math.floor(Math.random() * feeTypes.length)];
-        const amount = Math.floor(Math.random() * 1000) + 100;
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + Math.floor(Math.random() * 60) - 30); // ±30 days from now
-        
-        mockFees.push({
-          id: `fee_${studentId}_${i}`,
-          preschool_id: 'mock_preschool',
-          student_id: studentId,
-          fee_type: feeType,
-          title: this.getFeeTitle(feeType),
-          description: this.getFeeDescription(feeType),
-          amount: amount,
-          currency: 'ZAR',
-          due_date: dueDate.toISOString().split('T')[0],
-          is_recurring: feeType === 'tuition',
-          recurring_frequency: feeType === 'tuition' ? 'monthly' : undefined,
-          is_overdue: dueDate < new Date(),
-          is_paid: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          student: {
-            id: studentId,
-            first_name: `Child`,
-            last_name: `${index + 1}`
-          }
-        });
+      if (parentId) {
+        paymentsQuery = paymentsQuery.eq('students.parent_id', parentId);
       }
-    });
 
-    return mockFees;
+      const { data: payments } = await paymentsQuery;
+      const paymentData = payments || [];
+
+      // Calculate basic metrics
+      const totalRevenue = paymentData
+        .filter(p => p.status === 'completed')
+        .reduce((sum, p) => sum + p.amount, 0);
+
+      const overduePayments = paymentData
+        .filter(p => p.status === 'pending' && new Date(p.due_date) < new Date())
+        .length;
+
+      const paidOnTime = paymentData
+        .filter(p => p.status === 'completed' && p.paid_at && new Date(p.paid_at) <= new Date(p.due_date))
+        .length;
+
+      const outstandingAmount = paymentData
+        .filter(p => p.status === 'pending')
+        .reduce((sum, p) => sum + p.amount, 0);
+
+      const collectionRate = paymentData.length > 0 
+        ? (paymentData.filter(p => p.status === 'completed').length / paymentData.length) * 100
+        : 0;
+
+      const summary = {
+        totalRevenue,
+        outstandingAmount,
+        paidOnTime,
+        overduePayments,
+        collectionRate: Math.round(collectionRate * 100) / 100
+      };
+
+      // Generate AI insights if enabled
+      let insights = {
+        paymentTrends: 'Payment data shows consistent revenue patterns.',
+        recommendations: ['Continue monitoring payment schedules', 'Send gentle reminders for overdue payments'],
+        riskAssessment: 'Low risk - payment collection is stable.',
+        forecastedRevenue: totalRevenue * 1.1
+      };
+
+      if (process.env.EXPO_PUBLIC_AI_ENABLED === 'true' && paymentData.length > 0) {
+        const paymentSummary = {
+          totalPayments: paymentData.length,
+          completedPayments: paymentData.filter(p => p.status === 'completed').length,
+          averagePaymentAmount: totalRevenue / (paymentData.filter(p => p.status === 'completed').length || 1),
+          overdueRate: overduePayments / paymentData.length,
+          onTimePaymentRate: paidOnTime / paymentData.length,
+          monthlyTrend: 'increasing' // This could be calculated from actual data
+        };
+
+        try {
+          const { claudeService } = await import('@/services/ai/claude-service');
+          const prompt = `
+            As a financial analyst for an early childhood education center, analyze this payment data:
+            
+            Payment Summary: ${JSON.stringify(paymentSummary, null, 2)}
+            Period: Last ${period === 'monthly' ? '3 months' : '12 months'}
+            
+            Provide:
+            1. Payment trends analysis (2-3 sentences)
+            2. 3-4 specific recommendations for improving collection
+            3. Risk assessment (financial health evaluation)
+            4. Forecasted revenue for next month (as number)
+            
+            Format as JSON: {
+              "paymentTrends": "string",
+              "recommendations": ["rec1", "rec2", "rec3"],
+              "riskAssessment": "string",
+              "forecastedRevenue": number
+            }
+          `;
+
+          const response = await claudeService.generateContent({
+            prompt,
+            type: 'financial_analysis',
+            context: { preschoolId, period },
+          });
+
+          if (response.success && response.content) {
+            try {
+              insights = JSON.parse(response.content);
+            } catch (parseError) {
+              console.warn('Failed to parse AI financial insights:', parseError);
+              insights.paymentTrends = response.content.slice(0, 200);
+            }
+          }
+        } catch (error) {
+          console.warn('AI financial insights unavailable:', error);
+        }
+      }
+
+      return { summary, insights };
+    } catch (error) {
+      console.error('Error generating financial insights:', error);
+      return {
+        summary: {
+          totalRevenue: 0,
+          outstandingAmount: 0,
+          paidOnTime: 0,
+          overduePayments: 0,
+          collectionRate: 0
+        },
+        insights: {
+          paymentTrends: 'Unable to analyze payment trends at this time.',
+          recommendations: ['Review payment processes', 'Contact support for assistance'],
+          riskAssessment: 'Analysis unavailable - please check data connectivity.',
+          forecastedRevenue: 0
+        }
+      };
+    }
   }
 
   private static getFeeTitle(feeType: string): string {

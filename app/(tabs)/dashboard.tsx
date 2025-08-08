@@ -1,23 +1,23 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  RefreshControl, 
-  Dimensions, 
-  Image,
-  StatusBar 
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
-import { router } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
-import EnhancedParentDashboard from '@/components/dashboard/EnhancedParentDashboard';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import ParentDashboard from '@/components/dashboard/ParentDashboard';
+import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
+import SchoolAdminDashboard from '@/components/dashboard/SchoolAdminDashboard';
+import { TeacherDataService } from '@/lib/services/teacherDataService';
+import React from 'react';
+import {
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -102,22 +102,26 @@ componentDidMount() {
 
   fetchTenantInfo = async (userProfile: UserProfile) => {
     try {
+      console.log('🏫 [DEBUG] Fetching tenant info for preschool_id:', userProfile.preschool_id);
       if (userProfile.preschool_id) {
         const { data: tenant, error: tenantError } = await supabase
           .from('preschools')
-          .select('name')
+          .select('name, id')
           .eq('id', userProfile.preschool_id)
           .single();
 
+        console.log('🏫 [DEBUG] Tenant query result:', { tenant, tenantError });
+
         if (!tenantError && tenant) {
+          console.log('🏫 [DEBUG] Setting tenant name:', tenant.name);
           this.setState({ 
             tenantName: tenant.name,
-            tenantSlug: tenant.slug 
+            tenantSlug: tenant.id || tenant.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown'
           });
         }
       }
     } catch (error) {
-      console.log('Failed to fetch tenant info:', error);
+      console.log('❌ Failed to fetch tenant info:', error);
     }
   };
 
@@ -150,14 +154,14 @@ componentDidMount() {
       if (parentProfile.preschool_id) {
         const { data: tenant, error: tenantError } = await supabase
           .from('preschools')
-          .select('name')
+          .select('name, id')
           .eq('id', parentProfile.preschool_id)
           .single();
 
         if (!tenantError && tenant) {
           this.setState({ 
             tenantName: tenant.name,
-            tenantSlug: tenant.slug 
+            tenantSlug: tenant.id || tenant.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown'
           });
         }
       }
@@ -281,10 +285,10 @@ componentDidMount() {
   private handleQuickAction = (action: string) => {
     switch (action) {
       case 'home':
-        router.push('/(tabs)/index');
+        router.push('/(tabs)/dashboard');
         break;
       case 'homework':
-        router.push('/(tabs)/homework');
+        router.push('/screens/homework' as any);
         break;
       case 'activities':
         router.push('/(tabs)/activities');
@@ -312,323 +316,32 @@ componentDidMount() {
   };
 
   private renderParentDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
-    // Fetch children data when profile is available (only once)
-    if (profile?.auth_user_id && this.children.length === 0 && !this.state.loading && !this.state.error) {
-      this.fetchChildrenData(profile.auth_user_id);
+    // Always fetch tenant info for parent users if we have a profile and preschool_id
+    if (profile && profile.preschool_id && !this.state.tenantName) {
+      console.log('🏫 [DEBUG] Triggering tenant fetch for parent dashboard');
+      this.fetchTenantInfo(profile);
     }
-    
-    const selectedChild = this.getSelectedChild();
 
+    // Use the new ParentDashboard component with real data
     return (
-      <View style={styles.container}>
-        {/* Mobile Header */}
-        <MobileHeader
-          user={{
-            name: profile?.name || 'Parent',
-            role: 'parent',
-            avatar: profile?.avatar_url,
-          }}
-          onNotificationsPress={() => console.log('Notifications')}
-          onSearchPress={() => console.log('Search')}
-          onSignOut={signOut}
-          onNavigate={this.handleNavigate}
-          notificationCount={3}
-        />
-
-        <ScrollView
-          style={styles.scrollView}
-          refreshControl={
-            <RefreshControl 
-              refreshing={this.state.refreshing} 
-              onRefresh={() => this.onRefresh(profile?.auth_user_id)} 
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* Header Text */}
-          <View style={styles.headerTextSection}>
-            <Text style={styles.greeting}>{this.getGreeting()} 👋</Text>
-            <Text style={styles.subtitle}>
-              {selectedChild ? `Let&apos;s see how ${selectedChild.name.split(' ')[0]} is doing today` : 'Welcome to your dashboard'}
-            </Text>
-            {this.state.tenantName && (
-              <View style={styles.tenantInfo}>
-                <Text style={styles.tenantLabel}>🏫 {this.state.tenantName}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Child Selector Card or Empty State */}
-          {selectedChild ? (
-            <TouchableOpacity 
-              style={styles.childSelectorCard}
-              onPress={this.toggleChildSelector}
-            >
-              <LinearGradient
-                colors={['#8B5CF6', '#A855F7', '#C084FC']}
-                style={styles.childCard}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.childCardHeader}>
-                  <View style={styles.childInfo}>
-                    <View style={styles.childNameRow}>
-                      <Text style={styles.childName}>{selectedChild.name}</Text>
-                      {this.children.length > 1 && (
-                        <IconSymbol 
-                          name="chevron.down" 
-                          size={20} 
-                          color="rgba(255, 255, 255, 0.8)" 
-                        />
-                      )}
-                    </View>
-                    <Text style={styles.childDetails}>
-                      🎂 {selectedChild.age} years old
-                    </Text>
-                    <Text style={styles.childDetails}>
-                      👩‍🏫 {selectedChild.teacher}
-                    </Text>
-                  </View>
-                  <View style={styles.childEmoji}>
-                    <Text style={styles.emojiLarge}>{selectedChild.emoji}</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.childCardFooter}>
-                  <View style={styles.childBadge}>
-                    <Text style={styles.childBadgeText}>{selectedChild.grade}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.attendanceButton}>
-                    <Text style={styles.attendanceText}>Attendance: {selectedChild.attendance}%</Text>
-                  </TouchableOpacity>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.emptyStateCard}>
-              <LinearGradient
-                colors={['#F3F4F6', '#E5E7EB', '#D1D5DB']}
-                style={styles.childCard}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.emptyStateContent}>
-                  {this.state.loading ? (
-                    <>
-                      <Text style={styles.emptyStateTitle}>Loading...</Text>
-                      <Text style={styles.emptyStateText}>Fetching your child&apos;s information</Text>
-                    </>
-                  ) : this.state.error ? (
-                    <>
-                      <Text style={styles.emptyStateTitle}>No Data Available</Text>
-                      <Text style={styles.emptyStateText}>{this.state.error}</Text>
-                      <Text style={styles.emptyStateText}>Pull down to refresh</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.emptyStateTitle}>Welcome!</Text>
-                      <Text style={styles.emptyStateText}>Setting up your dashboard...</Text>
-                    </>
-                  )}
-                </View>
-              </LinearGradient>
-            </View>
-          )}
-
-          {/* Child Selector Dropdown */}
-          {this.state.showChildSelector && this.children.length > 1 && (
-            <View style={styles.childDropdown}>
-              {this.children.map((child) => (
-                <TouchableOpacity
-                  key={child.id}
-                  style={[
-                    styles.childDropdownItem,
-                    child.id === this.state.selectedChildId && styles.childDropdownItemSelected
-                  ]}
-                  onPress={() => this.selectChild(child.id)}
-                >
-                  <View style={styles.childDropdownEmoji}>
-                    <Text style={styles.childDropdownEmojiText}>{child.emoji}</Text>
-                  </View>
-                  <View style={styles.childDropdownInfo}>
-                    <Text style={styles.childDropdownName}>{child.name}</Text>
-                    <Text style={styles.childDropdownDetails}>
-                      {child.age} years • {child.grade} • {child.teacher}
-                    </Text>
-                  </View>
-                  {child.id === this.state.selectedChildId && (
-                    <IconSymbol name="checkmark" size={16} color="#10B981" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Quick Actions */}
-          <View style={styles.quickActions}>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('home')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="house.fill" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Home
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('homework')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="doc.text.fill" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Homework
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('activities')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="location.fill" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Activities
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('calendar')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="calendar" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Lessons
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('messages')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="message.fill" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Messages
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Key Metrics Section */}
-          <View style={styles.metricsSection}>
-            <View style={styles.metricsRow}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricValue}>{this.state.skillsGained}</Text>
-                <Text style={styles.metricTitle}>Skills Gained</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricValue}>{this.state.activitiesCompleted}</Text>
-                <Text style={styles.metricTitle}>Activities</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricValue}>{this.state.attendanceRate}%</Text>
-                <Text style={styles.metricTitle}>Attendance</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Recent Achievements */}
-          <View style={styles.achievementsSection}>
-            <Text style={styles.sectionTitle}>🏆 Recent Achievements</Text>
-            <View style={styles.achievementsList}>
-              {this.state.recentAchievements.map((achievement, index) => (
-                <View key={index} style={styles.achievementBadge}>
-                  <Text style={styles.achievementText}>{achievement}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Recent Updates */}
-          <View style={styles.updatesSection}>
-            <Text style={styles.sectionTitle}>📢 Recent Updates</Text>
-            {this.state.recentUpdates.slice(0, 3).map((update) => (
-              <TouchableOpacity key={update.id} style={styles.updateItem}>
-                <View style={styles.updateIcon}>
-                  <IconSymbol name={update.icon} size={16} color="#3B82F6" />
-                </View>
-                <View style={styles.updateContent}>
-                  <Text style={styles.updateTitle}>{update.title}</Text>
-                  <Text style={styles.updateDescription}>{update.description}</Text>
-                  <Text style={styles.updateTimestamp}>{update.timestamp}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Upcoming Events */}
-          <View style={styles.eventsSection}>
-            <Text style={styles.sectionTitle}>📅 Upcoming Events</Text>
-            {this.state.upcomingEvents.slice(0, 3).map((event) => (
-              <TouchableOpacity key={event.id} style={styles.eventItem}>
-                <View style={styles.eventDate}>
-                  <Text style={styles.eventDateText}>{event.date}</Text>
-                  <Text style={styles.eventTimeText}>{event.time}</Text>
-                </View>
-                <View style={styles.eventContent}>
-                  <Text style={styles.eventTitle}>{event.title}</Text>
-                  {event.location && (
-                    <Text style={styles.eventLocation}>📍 {event.location}</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-
-          {/* Today's Mood Card */}
-          <View style={styles.moodCard}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Today&apos;s Mood</Text>
-              <TouchableOpacity>
-                <IconSymbol name="heart.fill" size={20} color="#EF4444" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.starsContainer}>
-              {this.renderStars(this.state.todaysMood)}
-            </View>
-          </View>
-
-          {/* Weekly Progress Card */}
-          <View style={styles.progressCard}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Weekly Progress</Text>
-              <View style={styles.progressTrend}>
-                <IconSymbol name="arrow.up.right" size={16} color="#10B981" />
-                <Text style={styles.progressPercentage}>{this.state.weeklyProgress}%</Text>
-              </View>
-            </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${this.state.weeklyProgress}%` }]} />
-            </View>
-          </View>
-
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
-      </View>
+      <ParentDashboard
+        userId={profile?.auth_user_id || ''}
+        userProfile={{
+          name: profile?.name || 'Parent',
+          role: 'parent',
+          avatar: profile?.avatar_url,
+        }}
+        tenantName={this.state.tenantName || undefined}
+        onSignOut={signOut}
+      />
     );
   };
 
   // Method to render admin/teacher dashboard
   private renderAdminDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
-    // Fetch tenant info for admin/teacher users if not already loaded
-    if (profile && !this.state.tenantName && !this.state.loading) {
+    // Always fetch tenant info for admin/teacher users if we have a profile and preschool_id
+    if (profile && profile.preschool_id && !this.state.tenantName) {
+      console.log('🏫 [DEBUG] Triggering tenant fetch for admin dashboard');
       this.fetchTenantInfo(profile);
     }
 
@@ -641,8 +354,8 @@ componentDidMount() {
             role: profile?.role || 'admin',
             avatar: profile?.avatar_url,
           }}
+          schoolName={this.state.tenantName || undefined}
           onNotificationsPress={() => console.log('Notifications')}
-          onSearchPress={() => console.log('Search')}
           onSignOut={signOut}
           onNavigate={this.handleNavigate}
           notificationCount={3}
@@ -790,17 +503,38 @@ componentDidMount() {
           // Route based on user role
           switch (profile?.role) {
             case 'parent':
-              return <EnhancedParentDashboard profile={profile} onSignOut={signOut} />;
-            case 'teacher':
-            case 'admin':
+              return this.renderParentDashboard(profile, signOut);
             case 'superadmin':
-            case 'principal':
+              return (
+                <SuperAdminDashboard
+                  userId={profile?.auth_user_id || ''}
+                  userProfile={{
+                    name: profile?.name || 'Super Admin',
+                    role: 'superadmin',
+                    avatar: profile?.avatar_url,
+                  }}
+                  onSignOut={signOut}
+                />
+              );
             case 'preschool_admin':
+              return (
+                <SchoolAdminDashboard
+                  userId={profile?.auth_user_id || ''}
+                  userProfile={{
+                    name: profile?.name || 'School Admin',
+                    role: 'preschool_admin',
+                    avatar: profile?.avatar_url,
+                  }}
+                  schoolName={this.state.tenantName || undefined}
+                  onSignOut={signOut}
+                />
+              );
+            case 'teacher':
               return this.renderAdminDashboard(profile, signOut);
             default:
-              // If no role or unknown role, show enhanced parent dashboard as fallback
-              console.log('⚠️ Unknown role, showing enhanced parent dashboard as fallback');
-              return <EnhancedParentDashboard profile={profile} onSignOut={signOut} />;
+              // If no role or unknown role, show parent dashboard as fallback
+              console.log('⚠️ Unknown role, showing parent dashboard as fallback');
+              return this.renderParentDashboard(profile, signOut);
           }
         }}
       </AuthConsumer>

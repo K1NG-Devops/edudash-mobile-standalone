@@ -1,16 +1,15 @@
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { getRoleColors } from '@/constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Platform,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Colors, getRoleColors } from '@/constants/Colors';
 import { MobileSidebar } from './MobileSidebar';
 
 interface MobileHeaderProps {
@@ -19,8 +18,8 @@ interface MobileHeaderProps {
     role: string;
     avatar?: string;
   };
+  schoolName?: string; // Add school name prop
   onNotificationsPress?: () => void;
-  onSearchPress?: () => void;
   onNavigate?: (route: string) => void;
   onSignOut?: () => void;
   notificationCount?: number;
@@ -38,15 +37,26 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
   };
 
   private getRoleTitle = (role: string) => {
+    console.log('🏫 [DEBUG] getRoleTitle called with role:', role);
+    console.log('🏫 [DEBUG] schoolName prop:', this.props.schoolName);
+    
+    // If we have a school name, prioritize showing it for school roles
+    if (this.props.schoolName && (role === 'preschool_admin' || role === 'principal' || role === 'teacher')) {
+      console.log('🏫 [DEBUG] Returning school name:', this.props.schoolName);
+      return this.props.schoolName;
+    }
+    
     switch (role) {
       case 'superadmin':
         return 'Platform Admin';
+      case 'preschool_admin':
+        return 'School Principal';
       case 'principal':
         return 'School Principal';
       case 'teacher':
         return 'Teacher';
       case 'parent':
-        return 'Parent';
+        return this.props.schoolName || 'Parent Dashboard';
       default:
         return 'EduDash Pro';
     }
@@ -88,7 +98,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
   };
 
   render() {
-    const { user, onNotificationsPress, onSearchPress, notificationCount } = this.props;
+    const { user, onNotificationsPress, notificationCount } = this.props;
     const { sidebarVisible } = this.state;
     const roleColors = getRoleColors(user?.role || 'default', this.state.colorScheme);
     const firstName = user?.name?.split(' ')[0] || 'User';
@@ -102,7 +112,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
             translucent={false}
           />
           <LinearGradient
-            colors={[...roleColors.gradient, 'rgba(0,0,0,0.1)']}
+            colors={[roleColors.gradient[0], roleColors.gradient[1], 'rgba(0,0,0,0.1)']}
             style={styles.header}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -111,7 +121,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
             <View style={styles.glassOverlay} />
             
             <View style={styles.headerContent}>
-              {/* Left side - Avatar & Greeting */}
+              {/* Left side - Avatar & User Info */}
               <View style={styles.leftSection}>
                 <TouchableOpacity
                   style={styles.avatarButton}
@@ -127,10 +137,25 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                 </TouchableOpacity>
                 
                 <View style={styles.greetingSection}>
-                  <Text style={styles.userName}>{firstName}</Text>
-                  <View style={styles.roleContainer}>
-                    <View style={styles.roleBadge}>
-                      <Text style={styles.roleTitle}>{this.getRoleTitle(user?.role)}</Text>
+                  {/* Show EduDash Pro for superadmin, otherwise school name */}
+                  {user?.role === 'superadmin' ? (
+                    <Text style={styles.brandName}>EduDash Pro</Text>
+                  ) : this.props.schoolName && (
+                    <Text style={styles.schoolName}>{this.props.schoolName}</Text>
+                  )}
+                  
+                  {/* User info below */}
+                  <View style={styles.userInfoRow}>
+                    <Text style={styles.userName}>{firstName}</Text>
+                    <View style={styles.roleContainer}>
+                      <View style={styles.roleBadge}>
+                        <Text style={styles.roleTitle}>
+                          {user?.role === 'preschool_admin' ? 'Principal' : 
+                           user?.role === 'teacher' ? 'Teacher' :
+                           user?.role === 'parent' ? 'Parent' :
+                           user?.role === 'superadmin' ? 'Platform Admin' : 'User'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -150,17 +175,6 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                     color="#FFFFFF" 
                   />
                 </TouchableOpacity>
-                
-                {/* Search Button */}
-                {onSearchPress && (
-                  <TouchableOpacity
-                    style={styles.modernActionButton}
-                    onPress={onSearchPress}
-                    activeOpacity={0.7}
-                  >
-                    <IconSymbol name="magnifyingglass" size={18} color="#FFFFFF" />
-                  </TouchableOpacity>
-                )}
 
                 {/* Notifications Button */}
                 {onNotificationsPress && (
@@ -357,5 +371,23 @@ userName: {
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#FFFFFF',
+  },
+  // New styles for redesigned header
+  schoolName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  brandName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  userInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });

@@ -1,20 +1,19 @@
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { getRoleColors } from '@/constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  Dimensions,
-  Image,
-  Modal,
-  StatusBar,
-  Animated,
+    Animated,
+    Dimensions,
+    Image,
+    Modal,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Colors, getRoleColors } from '@/constants/Colors';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -22,7 +21,7 @@ interface MenuItem {
   id: string;
   title: string;
   subtitle?: string;
-  icon: string;
+  icon?: string;
   route?: string;
   action?: () => void;
   badge?: number;
@@ -95,7 +94,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Platform Analytics',
             subtitle: 'Usage & revenue insights',
             icon: 'chart.line.uptrend.xyaxis',
-            route: '/analytics',
+            route: '/(tabs)/activities',
             color: '#DC2626',
           },
           {
@@ -115,12 +114,84 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             color: '#DC2626',
           },
           {
+            id: 'system',
+            title: 'System Settings',
+            subtitle: 'Platform configuration',
+            icon: 'gear',
+            route: '/(tabs)/activities',
+            color: '#DC2626',
+          },
+          {
             id: 'settings',
             title: 'Platform Settings',
             subtitle: 'Global configuration',
             icon: 'gearshape.fill',
-            route: '/settings',
+            route: '/screens/settings',
             color: '#DC2626',
+          },
+          { id: 'divider1', title: '', divider: true },
+          ...commonItems,
+          { id: 'divider2', title: '', divider: true },
+        ];
+
+      case 'preschool_admin':
+        return [
+          {
+            id: 'teachers',
+            title: 'Teacher Management',
+            subtitle: 'Manage teaching staff',
+            icon: 'person.2.fill',
+            route: '/teachers',
+            color: '#059669',
+          },
+          {
+            id: 'students',
+            title: 'Student Directory',
+            subtitle: 'All student information',
+            icon: 'graduationcap.fill',
+            route: '/students',
+            color: '#059669',
+          },
+          {
+            id: 'parents',
+            title: 'Parent Communications',
+            subtitle: 'Parent engagement tools',
+            icon: 'person.3.fill',
+            route: '/parents',
+            badge: 8,
+            color: '#059669',
+          },
+          {
+            id: 'reports',
+            title: 'School Reports',
+            subtitle: 'Performance analytics',
+            icon: 'doc.text.fill',
+            route: '/reports',
+            color: '#059669',
+          },
+          {
+            id: 'calendar',
+            title: 'School Calendar',
+            subtitle: 'Events & schedules',
+            icon: 'calendar',
+            route: '/calendar',
+            color: '#059669',
+          },
+          {
+            id: 'activities',
+            title: 'School Reports',
+            subtitle: 'Academic reports & analytics',
+            icon: 'figure.run',
+            route: '/(tabs)/activities',
+            color: '#059669',
+          },
+          {
+            id: 'settings',
+            title: 'School Settings',
+            subtitle: 'Configure school',
+            icon: 'gearshape.fill',
+            route: '/screens/settings',
+            color: '#059669',
           },
           { id: 'divider1', title: '', divider: true },
           ...commonItems,
@@ -171,11 +242,19 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             color: '#059669',
           },
           {
+            id: 'activities',
+            title: 'School Reports',
+            subtitle: 'Academic reports & analytics',
+            icon: 'figure.run',
+            route: '/(tabs)/activities',
+            color: '#059669',
+          },
+          {
             id: 'settings',
             title: 'School Settings',
             subtitle: 'Configure school',
             icon: 'gearshape.fill',
-            route: '/settings',
+            route: '/screens/settings',
             color: '#059669',
           },
           { id: 'divider1', title: '', divider: true },
@@ -226,7 +305,23 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             route: '/schedule',
             color: '#7C3AED',
           },
+          {
+            id: 'activities',
+            title: 'Activities & Events',
+            subtitle: 'Class activities & programs',
+            icon: 'figure.run',
+            route: '/(tabs)/activities',
+            color: '#7C3AED',
+          },
           { id: 'divider1', title: '', divider: true },
+          {
+            id: 'settings',
+            title: 'Settings',
+            subtitle: 'App preferences & config',
+            icon: 'gearshape.fill',
+            route: '/screens/settings',
+            color: '#6366F1',
+          },
           ...commonItems,
           { id: 'divider2', title: '', divider: true },
         ];
@@ -296,7 +391,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Settings',
             subtitle: 'App preferences & config',
             icon: 'gearshape.fill',
-            route: '/(tabs)/settings',
+            route: '/screens/settings',
             color: '#6366F1',
           },
           ...commonItems,
@@ -434,13 +529,21 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
               onPress={this.props.onSignOut}
               activeOpacity={0.7}
             >
-              <View style={[styles.menuIcon, { backgroundColor: '#EF444415' }]}>
-                <IconSymbol name="rectangle.portrait.and.arrow.right" size={22} color="#EF4444" />
-              </View>
-              <View style={styles.menuContent}>
-                <Text style={[styles.menuTitle, { color: '#EF4444' }]}>Sign Out</Text>
-                <Text style={styles.menuSubtitle}>Exit your account</Text>
-              </View>
+              <LinearGradient
+                colors={['#FEE2E2', '#FECACA']}
+                style={styles.signOutGradient}
+              >
+                <View style={[styles.menuIcon, { backgroundColor: '#EF444420' }]}>
+                  <IconSymbol name="rectangle.portrait.and.arrow.right" size={24} color="#DC2626" />
+                </View>
+                <View style={styles.menuContent}>
+                  <Text style={[styles.menuTitle, { color: '#DC2626', fontWeight: '700' }]}>Sign Out</Text>
+                  <Text style={[styles.menuSubtitle, { color: '#991B1B' }]}>Exit your account</Text>
+                </View>
+                <View style={styles.signOutArrow}>
+                  <IconSymbol name="chevron.right" size={16} color="#DC2626" />
+                </View>
+              </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -589,16 +692,21 @@ const styles = StyleSheet.create({
     marginLeft: 60,
   },
   signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    overflow: 'hidden',
+  },
+  signOutGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderTopWidth: 2,
+    borderTopColor: '#FCA5A5',
+  },
+  signOutArrow: {
+    marginLeft: 8,
   },
 });

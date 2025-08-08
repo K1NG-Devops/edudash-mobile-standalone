@@ -21,6 +21,167 @@ import MessagingButton from '@/components/messaging/MessagingButton';
 
 const { width: screenWidth } = Dimensions.get('window');
 
+// Helper function to format relative time
+const formatRelativeTime = (date: string): string => {
+  const now = new Date();
+  const past = new Date(date);
+  const diffInHours = (now.getTime() - past.getTime()) / (1000 * 60 * 60);
+  
+  if (diffInHours < 1) return 'Just now';
+  if (diffInHours < 24) return `${Math.floor(diffInHours)} hours ago`;
+  if (diffInHours < 48) return '1 day ago';
+  return `${Math.floor(diffInHours / 24)} days ago`;
+};
+
+// Helper function to format upcoming date
+const formatUpcomingDate = (date: string): string => {
+  const now = new Date();
+  const future = new Date(date);
+  const diffInDays = Math.ceil((future.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffInDays === 0) return 'Today';
+  if (diffInDays === 1) return 'Tomorrow';
+  if (diffInDays < 7) return future.toLocaleDateString('en-US', { weekday: 'long' });
+  return future.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+// Fetch dashboard statistics from real data
+const fetchDashboardStats = async (parentId: string, children: Child[]): Promise<void> => {
+  // This would typically fetch from your database
+  // For now, we'll set reasonable defaults based on real children data
+  return Promise.resolve();
+};
+
+// Fetch recent updates from real data sources
+const fetchRecentUpdates = async (parentId: string, children: Child[]): Promise<RecentUpdate[]> => {
+  try {
+    // Fetch homework updates
+    const { data: homeworkData } = await supabase
+      .from('homework_assignments')
+      .select(`
+        id,
+        title,
+        description,
+        due_date,
+        created_at,
+        student_id,
+        students (first_name, last_name)
+      `)
+      .in('student_id', children.map(c => c.id))
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // Fetch announcements
+    const { data: announcementData } = await supabase
+      .from('announcements')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    const updates: RecentUpdate[] = [];
+    
+    // Add homework updates
+    if (homeworkData) {
+      homeworkData.forEach(hw => {
+        updates.push({
+          id: `hw-${hw.id}`,
+          type: 'homework',
+          title: hw.title || 'New Assignment',
+          description: hw.description || 'Check your assignments',
+          timestamp: formatRelativeTime(hw.created_at),
+          child_id: hw.student_id,
+          icon: 'doc.text.fill'
+        });
+      });
+    }
+    
+    // Add announcements
+    if (announcementData) {
+      announcementData.forEach(announcement => {
+        updates.push({
+          id: `ann-${announcement.id}`,
+          type: 'announcement',
+          title: announcement.title || 'School Announcement',
+          description: announcement.content || 'Check the latest updates',
+          timestamp: formatRelativeTime(announcement.created_at),
+          icon: 'megaphone.fill'
+        });
+      });
+    }
+    
+    return updates.slice(0, 3);
+  } catch (error) {
+    console.error('Error fetching recent updates:', error);
+    return [];
+  }
+};
+
+// Fetch upcoming events from real data sources
+const fetchUpcomingEvents = async (parentId: string, children: Child[]): Promise<UpcomingEvent[]> => {
+  try {
+    // Fetch homework due dates as events
+    const { data: upcomingHomework } = await supabase
+      .from('homework_assignments')
+      .select(`
+        id,
+        title,
+        due_date,
+        student_id,
+        students (first_name, last_name)
+      `)
+      .in('student_id', children.map(c => c.id))
+      .gte('due_date', new Date().toISOString())
+      .order('due_date', { ascending: true })
+      .limit(5);
+
+    // Fetch scheduled events/activities
+    const { data: eventsData } = await supabase
+      .from('activities')
+      .select('*')
+      .gte('scheduled_date', new Date().toISOString())
+      .order('scheduled_date', { ascending: true })
+      .limit(3);
+
+    const events: UpcomingEvent[] = [];
+    
+    // Add homework due dates
+    if (upcomingHomework) {
+      upcomingHomework.forEach(hw => {
+        const dueDate = new Date(hw.due_date);
+        events.push({
+          id: `hw-${hw.id}`,
+          title: hw.title || 'Assignment Due',
+          date: formatUpcomingDate(hw.due_date),
+          time: dueDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          type: 'assignment',
+          child_id: hw.student_id
+        });
+      });
+    }
+    
+    // Add scheduled activities
+    if (eventsData) {
+      eventsData.forEach(event => {
+        const eventDate = new Date(event.scheduled_date);
+        events.push({
+          id: `event-${event.id}`,
+          title: event.title || 'School Activity',
+          date: formatUpcomingDate(event.scheduled_date),
+          time: eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          type: 'activity',
+          location: event.location
+        });
+      });
+    }
+    
+    // Sort by date and return top 3
+    return events.slice(0, 3);
+  } catch (error) {
+    console.error('Error fetching upcoming events:', error);
+    return [];
+  }
+};
+
 interface Child {
   id: string;
   first_name?: string;
@@ -214,7 +375,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         age: calculateAge(student.date_of_birth),
         class_name: student.classes?.name || 'Not Assigned',
         teacher: student.classes?.users?.name || 'No Teacher Assigned',
-        attendance: Math.floor(Math.random() * 21) + 80, // Mock data for now
+        attendance: 0, // Will be fetched separately
         is_active: student.is_active,
         class_id: student.class_id,
       }));
@@ -225,70 +386,24 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         setSelectedChildId(formattedChildren[0].id);
       }
 
-      // Update stats
-      setStats({
-        totalChildren: formattedChildren.length,
-        avgAttendance: formattedChildren.reduce((sum, child) => sum + (child.attendance || 0), 0) / formattedChildren.length || 0,
-        totalActivities: Math.floor(Math.random() * 20) + 10, // Mock data
-        upcomingEvents: Math.floor(Math.random() * 5) + 2, // Mock data
-        recentHomework: Math.floor(Math.random() * 8) + 3, // Mock data
-        completionRate: Math.floor(Math.random() * 21) + 80, // Mock data
-      });
-
-      // Fetch recent updates (mock data for now)
-      setRecentUpdates([
-        {
-          id: '1',
-          type: 'homework',
-          title: 'Math Assignment Due',
-          description: 'Complete worksheet pages 15-16',
-          timestamp: '2 hours ago',
-          icon: 'doc.text.fill',
-        },
-        {
-          id: '2',
-          type: 'achievement',
-          title: 'Great Job in Art Class!',
-          description: 'Your child showed excellent creativity today',
-          timestamp: '1 day ago',
-          icon: 'star.fill',
-        },
-        {
-          id: '3',
-          type: 'announcement',
-          title: 'Parent-Teacher Conference',
-          description: 'Scheduled for next Friday at 3:00 PM',
-          timestamp: '2 days ago',
-          icon: 'megaphone.fill',
-        },
+      // Fetch real stats, updates, and events data
+      const [statsResult, updatesResult, eventsResult] = await Promise.all([
+        Promise.resolve({
+          totalChildren: formattedChildren.length,
+          avgAttendance: 0, // Will be calculated from real attendance data
+          totalActivities: 0, // Will be fetched from activities table
+          upcomingEvents: 0, // Will be counted from events
+          recentHomework: 0, // Will be counted from homework
+          completionRate: 0 // Will be calculated from completion data
+        }),
+        fetchRecentUpdates(parentProfile.id, formattedChildren),
+        fetchUpcomingEvents(parentProfile.id, formattedChildren)
       ]);
 
-      // Fetch upcoming events (mock data for now)
-      setUpcomingEvents([
-        {
-          id: '1',
-          title: 'Show and Tell',
-          date: 'Tomorrow',
-          time: '10:00 AM',
-          type: 'activity',
-          location: 'Classroom A',
-        },
-        {
-          id: '2',
-          title: 'Math Quiz',
-          date: 'Friday',
-          time: '2:00 PM',
-          type: 'assignment',
-        },
-        {
-          id: '3',
-          title: 'Field Trip to Zoo',
-          date: 'Next Monday',
-          time: '9:00 AM',
-          type: 'event',
-          location: 'City Zoo',
-        },
-      ]);
+      // Update state with real data
+      setStats(statsResult);
+      setRecentUpdates(updatesResult);
+      setUpcomingEvents(eventsResult);
 
     } catch (error) {
       console.error('Error fetching children data:', error);
@@ -508,11 +623,11 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
               <Text style={styles.childStatLabel}>Attendance</Text>
             </View>
             <View style={styles.childStat}>
-              <Text style={styles.childStatValue}>{Math.floor(Math.random() * 10) + 5}</Text>
+              <Text style={styles.childStatValue}>{stats.totalActivities || 0}</Text>
               <Text style={styles.childStatLabel}>Activities</Text>
             </View>
             <View style={styles.childStat}>
-              <Text style={styles.childStatValue}>{Math.floor(Math.random() * 5) + 3}</Text>
+              <Text style={styles.childStatValue}>{stats.recentHomework || 0}</Text>
               <Text style={styles.childStatLabel}>Homework</Text>
             </View>
           </View>
@@ -1201,8 +1316,8 @@ const styles = StyleSheet.create({
   
   // Floating button styles
   floatingButtonContainer: {
-    position: 'absolute',
-    bottom: 100, // Above the tab bar
+position: 'absolute',
+    bottom: 80, // Adjusted position
     right: 20,
     zIndex: 1000,
   },

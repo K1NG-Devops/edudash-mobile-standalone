@@ -1,7 +1,7 @@
-import React from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
+import React from 'react';
 
 export interface UserProfile {
   id: string;
@@ -54,6 +54,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, userData: any) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error?: string }>;
+  updatePassword: (password: string) => Promise<{ error?: string }>;
   hasRole: (role: string) => boolean;
   isRole: (role: string) => boolean;
 }
@@ -85,57 +87,80 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
   }
 
   async componentDidMount() {
-    // Get initial session
-    const { data } = await supabase.auth.getSession();
-    this.setState({
-      session: data.session,
-      user: data.session?.user || null,
-    });
+    try {
+      // Get initial session
+      const { data } = await supabase.auth.getSession();
+      
+      console.log('🔍 [AUTH-DEBUG] Session data:', {
+        hasSession: !!data.session,
+        hasUser: !!data.session?.user,
+        userId: data.session?.user?.id || 'none',
+        userEmail: data.session?.user?.email || 'none'
+      });
+      
+      this.setState({
+        session: data.session,
+        user: data.session?.user || null,
+      });
 
-    if (data.session?.user) {
-      await this.loadProfile(data.session.user.id);
-    }
-    this.setState({ loading: false });
-
-    // Listen for auth changes
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event);
-        this.setState({
-          session,
-          user: session?.user || null,
-        });
-
-        if (event === 'SIGNED_IN' && session?.user) {
-          await this.loadProfile(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          this.setState({ profile: null });
-          // Navigate to welcome screen after sign out - try multiple approaches for platform compatibility
-          setTimeout(() => {
-            try {
-              // Try replace first
-              router.replace('/');
-            } catch (error) {
-              console.warn('Replace failed, trying push:', error);
-              try {
-                // Fallback to push
-                router.push('/');
-              } catch (pushError) {
-                console.warn('Push failed, trying dismissAll:', pushError);
-                try {
-                  // Last resort - dismiss all and navigate
-                  router.dismissAll();
-                  router.navigate('/');
-                } catch (navError) {
-                  console.error('All navigation methods failed:', navError);
-                }
-              }
-            }
-          }, 100);
-        }
+      // Only load profile if we have a session, and set loading to false after
+      if (data.session?.user) {
+        console.log('🔍 [AUTH-DEBUG] User found, loading profile for ID:', data.session.user.id);
+        await this.loadProfile(data.session.user.id);
+      } else {
+        console.log('🔍 [AUTH-DEBUG] No user session found');
+        this.setState({ loading: false });
       }
-    );
-    this.authListener = listener;
+
+      // Listen for auth changes
+      const { data: listener } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log('🔄 Auth state changed:', event);
+          
+          // Prevent duplicate profile loading
+          if (event === 'SIGNED_IN' && session?.user) {
+            // Only load profile if the user changed
+            if (this.state.user?.id !== session.user.id) {
+              console.log('🆕 New user signed in, loading profile...');
+              this.setState({
+                session,
+                user: session.user,
+              });
+              await this.loadProfile(session.user.id);
+            } else {
+              console.log('🔄 Same user, updating session only');
+              this.setState({
+                session,
+                user: session.user,
+              });
+            }
+          } else if (event === 'SIGNED_OUT') {
+            console.log('👋 User signed out');
+            this.setState({ 
+              session: null,
+              user: null,
+              profile: null,
+              loading: false
+            });
+            
+            // Disable automatic redirect on sign out to prevent interference
+            // with password reset and other flows. The welcome screen (index.tsx)
+            // will handle showing appropriate auth screens when needed.
+            console.log('🚫 Skipping automatic redirect on SIGNED_OUT - letting app handle navigation');
+          } else {
+            // For other events, just update session/user
+            this.setState({
+              session,
+              user: session?.user || null,
+            });
+          }
+        }
+      );
+      this.authListener = listener;
+    } catch (error) {
+      console.error('❌ Error in componentDidMount:', error);
+      this.setState({ loading: false });
+    }
   }
 
   componentWillUnmount() {
@@ -149,16 +174,50 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
       console.log('🔍 [DEBUG] Loading profile for userId:', userId);
       console.log('🔍 [DEBUG] Current profile state before load:', this.state.profile?.role || 'none');
       
+      // Set loading state immediately
+      this.setState({ loading: true });
+      
+      // Use direct query with auth.uid() check
+      console.log('📡 [DEBUG] Executing query: SELECT * FROM users WHERE auth_user_id =', userId);
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', userId)
         .single();
       
-      console.log('🔍 [DEBUG] Profile query result:', { data: data ? 'Data received' : 'No data', error });
+      console.log('🔍 [DEBUG] Profile query result:', { 
+        hasData: !!data, 
+        dataKeys: data ? Object.keys(data) : 'none',
+        error: error?.message || 'none',
+        errorCode: error?.code || 'none',
+        errorDetails: error?.details || 'none',
+        errorHint: error?.hint || 'none'
+      });
+      
+      if (error) {
+        console.error('❌ [DEBUG] Supabase error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // If we get a policy error, let's try a different approach
+        if (error.message?.includes('policy') || error.message?.includes('recursion')) {
+          console.log('🔄 [DEBUG] Policy/recursion error detected, trying alternative approach');
+          // For now, set a basic profile to prevent blocking
+          this.setState({ 
+            profile: null,
+            loading: false 
+          });
+          return;
+        }
+      }
       
       if (!error && data) {
         console.log('✅ [DEBUG] Profile loaded successfully:');
+        console.log('  - ID:', data.id || 'Unknown');
         console.log('  - Name:', data.name || 'Unknown');
         console.log('  - Role:', data.role || 'Unknown');
         console.log('  - Preschool ID:', data.preschool_id || 'None');
@@ -166,24 +225,60 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
         console.log('  - Is Active:', data.is_active);
         console.log('  - Auth User ID:', data.auth_user_id);
         
-        // Set loading to true during profile update to prevent race conditions
-        this.setState({ loading: true }, () => {
-          // Update profile and then set loading to false
-          this.setState({ 
-            profile: data,
-            loading: false 
-          }, () => {
-            console.log('✅ [DEBUG] Profile state updated. New role:', this.state.profile?.role);
-            console.log('✅ [DEBUG] Profile state updated. New preschool_id:', this.state.profile?.preschool_id);
-          });
+        // Create a complete profile with all fields from database
+        const profileData: UserProfile = {
+          id: data.id,
+          email: data.email,
+          name: data.name,
+          role: data.role as 'superadmin' | 'preschool_admin' | 'teacher' | 'parent',
+          preschool_id: data.preschool_id,
+          auth_user_id: data.auth_user_id,
+          is_active: data.is_active,
+          avatar_url: data.avatar_url,
+          phone: data.phone,
+          home_address: data.home_address,
+          home_city: data.home_city,
+          home_postal_code: data.home_postal_code,
+          work_company: data.work_company,
+          work_position: data.work_position,
+          work_address: data.work_address,
+          work_phone: data.work_phone,
+          emergency_contact_1_name: data.emergency_contact_1_name,
+          emergency_contact_1_phone: data.emergency_contact_1_phone,
+          emergency_contact_1_relationship: data.emergency_contact_1_relationship,
+          emergency_contact_2_name: data.emergency_contact_2_name,
+          emergency_contact_2_phone: data.emergency_contact_2_phone,
+          emergency_contact_2_relationship: data.emergency_contact_2_relationship,
+          relationship_to_child: data.relationship_to_child,
+          pickup_authorized: data.pickup_authorized,
+          profile_completed_at: data.profile_completed_at,
+          profile_completion_status: (data.profile_completion_status as 'incomplete' | 'in_progress' | 'complete') || 'incomplete',
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        };
+        
+        // Update profile state
+        this.setState({ 
+          profile: profileData,
+          loading: false 
+        }, () => {
+          console.log('✅ [DEBUG] Profile state updated. New role:', this.state.profile?.role);
+          console.log('✅ [DEBUG] Profile state updated. New preschool_id:', this.state.profile?.preschool_id);
         });
       } else {
-        console.error('❌ [DEBUG] Failed to load profile:', error);
-        this.setState({ loading: false });
+        console.error('❌ [DEBUG] Failed to load profile - no data returned');
+        console.log('❌ [DEBUG] User ID we searched for:', userId);
+        this.setState({ 
+          profile: null,
+          loading: false 
+        });
       }
     } catch (error) {
       console.error('❌ [DEBUG] Exception in loadProfile:', error);
-      this.setState({ loading: false });
+      this.setState({ 
+        profile: null,
+        loading: false 
+      });
     }
   };
 
@@ -230,10 +325,109 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
   signOut = async () => {
     try {
+      console.log('🚪 Starting sign out process...');
       this.setState({ loading: true });
-      await supabase.auth.signOut();
+      
+      // Clear local state immediately to ensure UI updates
+      this.setState({ 
+        session: null,
+        user: null,
+        profile: null,
+      });
+      
+      // Call Supabase sign out
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('❌ Supabase sign out error:', error);
+        // Even if Supabase sign out fails, we've already cleared local state
+      } else {
+        console.log('✅ Supabase sign out successful');
+      }
+      
+      // Force navigation to sign-in screen
+      setTimeout(() => {
+        try {
+          console.log('🧭 Navigating to sign-in screen...');
+          router.replace('/(auth)/sign-in');
+        } catch (navError) {
+          console.warn('Navigation error:', navError);
+          // Try alternative navigation methods
+          try {
+            router.push('/(auth)/sign-in');
+          } catch (pushError) {
+            console.warn('Push navigation failed:', pushError);
+            // As a last resort, try to go to the root
+            try {
+              router.replace('/');
+            } catch (rootError) {
+              console.error('All navigation attempts failed:', rootError);
+            }
+          }
+        }
+      }, 50);
+      
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('❌ Sign out process error:', error);
+      // Even on error, clear the local state
+      this.setState({ 
+        session: null,
+        user: null,
+        profile: null,
+      });
+    } finally {
+      this.setState({ loading: false });
+    }
+  };
+
+  resetPassword = async (email: string): Promise<{ error?: string }> => {
+    try {
+      this.setState({ loading: true });
+      
+      // For development, use a web URL that will redirect back to the app
+      // In production, use the native deep link
+      const isDevelopment = __DEV__;
+      
+      const redirectTo = isDevelopment 
+        ? 'http://localhost:8081/reset-password'  // Web version for development
+        : 'edudashpro://auth/reset-password';     // Deep link for production
+      
+      console.log('🔧 Reset password redirect URL:', redirectTo);
+      console.log('🔧 Development mode:', isDevelopment);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
+      
+      if (error) {
+        return { error: error.message };
+      }
+      
+      return {};
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return { error: 'An unexpected error occurred' };
+    } finally {
+      this.setState({ loading: false });
+    }
+  };
+
+  updatePassword = async (password: string): Promise<{ error?: string }> => {
+    try {
+      this.setState({ loading: true });
+      
+      const { error } = await supabase.auth.updateUser({
+        password,
+      });
+      
+      if (error) {
+        return { error: error.message };
+      }
+      
+      return {};
+    } catch (error) {
+      console.error('Update password error:', error);
+      return { error: 'An unexpected error occurred' };
     } finally {
       this.setState({ loading: false });
     }
@@ -263,6 +457,8 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
       signUp: this.signUp,
       signOut: this.signOut,
       refreshProfile: this.refreshProfile,
+      resetPassword: this.resetPassword,
+      updatePassword: this.updatePassword,
       hasRole: this.hasRole,
       isRole: this.isRole,
     };

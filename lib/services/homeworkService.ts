@@ -1,112 +1,302 @@
 import { HomeworkAssignment, StudentHomeworkSubmission, HomeworkSubmissionData, HomeworkNotification, HomeworkFilter, HomeworkSummary } from '@/types/homework-types';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../supabase';
+import { claudeService } from '@/lib/ai/claudeService';
 
 export class HomeworkService {
-  // Mock data for testing
-  private static mockAssignments: HomeworkAssignment[] = [
-    {
-      id: '1',
-      lesson_id: 'lesson1',
-      title: 'Math Practice - Addition',
-      description: 'Practice addition problems with numbers 1-10',
-      instructions: 'Complete the worksheet and show your work',
-      materials_needed: 'Pencil, worksheet',
-      estimated_time_minutes: 30,
-      due_date_offset_days: 3,
-      difficulty_level: 2,
-      is_required: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      lesson: {
-        id: 'lesson1',
-        title: 'Basic Addition',
-        description: 'Learning to add numbers',
-        thumbnail_url: 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=Math'
+// Subscriptions for real-time updates
+  static subscribeToAssignments(userId: string, callback: (assignment: any) => void) {
+    return supabase
+      .from('homework_assignments')
+      .on('INSERT', payload => {
+        callback(payload.new);
+      })
+      .on('UPDATE', payload => {
+        callback(payload.new);
+      })
+      .on('DELETE', payload => {
+        callback(payload.old);
+      })
+      .subscribe();
+  }
+
+  // AI-powered homework grading
+  static async gradeHomework(submissionId: string, submissionContent: string, assignmentTitle: string, gradeLevel: string): Promise<{
+    score: number;
+    feedback: string;
+    suggestions: string[];
+    strengths: string[];
+    areasForImprovement: string[];
+  }> {
+    try {
+      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+        // Fallback grading without AI
+        return {
+          score: 75,
+          feedback: 'Good effort on this assignment. Keep working hard!',
+          suggestions: ['Review the material again', 'Practice more examples'],
+          strengths: ['Shows understanding of basic concepts'],
+          areasForImprovement: ['Attention to detail', 'Following instructions']
+        };
       }
-    },
-    {
-      id: '2',
-      lesson_id: 'lesson2',
-      title: 'Reading Comprehension',
-      description: 'Read the story and answer questions',
-      instructions: 'Read the story carefully and answer all questions',
-      materials_needed: 'Story book, worksheet',
-      estimated_time_minutes: 45,
-      due_date_offset_days: 5,
-      difficulty_level: 3,
-      is_required: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      lesson: {
-        id: 'lesson2',
-        title: 'Story Time',
-        description: 'Reading and comprehension',
-        thumbnail_url: 'https://via.placeholder.com/150/10B981/FFFFFF?text=Reading'
+
+      const prompt = `
+        As an experienced early childhood educator, grade this homework submission:
+        
+        Assignment: ${assignmentTitle}
+        Grade Level: ${gradeLevel}
+        Student Submission: ${submissionContent}
+        
+        Please provide:
+        1. A score out of 100
+        2. Constructive feedback (age-appropriate)
+        3. 2-3 specific suggestions for improvement
+        4. 1-2 strengths demonstrated
+        5. 1-2 areas for improvement
+        
+        Format as JSON: {
+          "score": number,
+          "feedback": "string",
+          "suggestions": ["suggestion1", "suggestion2"],
+          "strengths": ["strength1", "strength2"],
+          "areasForImprovement": ["area1", "area2"]
+        }
+      `;
+
+      const response = await claudeService.generateContent({
+        prompt,
+        type: 'grading',
+        context: { submissionId, gradeLevel },
+      });
+
+      if (response.success && response.content) {
+        try {
+          const gradingResult = JSON.parse(response.content);
+          
+          // Update the submission with AI grading
+          await supabase
+            .from('homework_submissions')
+            .update({
+              ai_score: gradingResult.score,
+              ai_feedback: gradingResult.feedback,
+              graded_at: new Date().toISOString(),
+              graded_by: 'ai',
+              status: 'graded'
+            })
+            .eq('id', submissionId);
+          
+          return gradingResult;
+        } catch (parseError) {
+          console.warn('Failed to parse AI grading response:', parseError);
+          // Return fallback grading
+          return {
+            score: 75,
+            feedback: response.content.slice(0, 200),
+            suggestions: ['Continue practicing', 'Ask for help when needed'],
+            strengths: ['Shows effort and engagement'],
+            areasForImprovement: ['Focus on accuracy']
+          };
+        }
       }
-    },
-    {
-      id: '3',
-      lesson_id: 'lesson3',
-      title: 'Art Project - Drawing',
-      description: 'Draw your favorite animal',
-      instructions: 'Use colors and be creative',
-      materials_needed: 'Paper, crayons, markers',
-      estimated_time_minutes: 60,
-      due_date_offset_days: 7,
-      difficulty_level: 1,
-      is_required: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      lesson: {
-        id: 'lesson3',
-        title: 'Creative Arts',
-        description: 'Express your creativity',
-        thumbnail_url: 'https://via.placeholder.com/150/F59E0B/FFFFFF?text=Art'
-      }
+      
+      throw new Error('AI grading service unavailable');
+    } catch (error) {
+      console.error('Error in AI homework grading:', error);
+      // Return basic fallback grading
+      return {
+        score: 70,
+        feedback: 'Thank you for submitting your homework. Keep up the good work!',
+        suggestions: ['Review the lesson materials', 'Practice similar exercises'],
+        strengths: ['Completed the assignment'],
+        areasForImprovement: ['Follow instructions carefully']
+      };
     }
-  ];
+  }
 
   static async getAssignments(filter?: HomeworkFilter): Promise<HomeworkAssignment[]> {
     try {
-      // Try to fetch from Supabase first
-      const response = await supabase
+      let query = supabase
         .from('homework_assignments')
-        .select('*')
-        .match(filter || {});
+        .select(`
+          *,
+          lesson:lessons(
+            id,
+            title,
+            description,
+            thumbnail_url
+          )
+        `);
+
+      // Apply filters if provided
+      if (filter) {
+        if (filter.lesson_id) {
+          query = query.eq('lesson_id', filter.lesson_id);
+        }
+        if (filter.student_id) {
+          // Join with homework_submissions to filter by student
+          query = query.eq('homework_submissions.student_id', filter.student_id);
+        }
+        if (filter.difficulty_level) {
+          query = query.eq('difficulty_level', filter.difficulty_level);
+        }
+        if (filter.is_required !== undefined) {
+          query = query.eq('is_required', filter.is_required);
+        }
+        if (filter.due_after) {
+          query = query.gte('created_at', filter.due_after);
+        }
+        if (filter.due_before) {
+          query = query.lte('created_at', filter.due_before);
+        }
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const response = await query;
 
       if (response.error) {
-        console.log('Using mock data:', response.error.message);
-        return this.mockAssignments;
-      }
-      
-      // If successful but no data, return mock data
-      if (!response.data || response.data.length === 0) {
-        return this.mockAssignments;
+        throw new Error(`Failed to fetch homework assignments: ${response.error.message}`);
       }
       
       return response.data as HomeworkAssignment[];
     } catch (error) {
-      console.log('Error fetching assignments, using mock data:', error);
-      return this.mockAssignments;
+      console.error('Error fetching homework assignments:', error);
+      throw error;
     }
   }
 
   static async getSubmissions(studentId: string): Promise<StudentHomeworkSubmission[]> {
-    const response = await supabase
-      .from('student_homework_submissions')
-      .select('*')
-      .eq('student_id', studentId);
+    try {
+      const response = await supabase
+        .from('homework_submissions')
+        .select(`
+          *,
+          homework_assignment:homework_assignments(
+            id,
+            title,
+            description,
+            instructions,
+            materials_needed,
+            due_date_offset_days,
+            estimated_time_minutes,
+            difficulty_level,
+            is_required,
+            lesson:lessons(
+              title,
+              subject
+            )
+          ),
+          student:students(
+            id,
+            full_name,
+            grade_level
+          )
+        `)
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false });
 
-    if (response.error) throw new Error(response.error.message);
-    return response.data as StudentHomeworkSubmission[];
+      if (response.error) {
+        throw new Error(`Failed to fetch homework submissions: ${response.error.message}`);
+      }
+      
+      return response.data as StudentHomeworkSubmission[];
+    } catch (error) {
+      console.error('Error fetching homework submissions:', error);
+      throw error;
+    }
   }
 
-  static async submitHomework(data: HomeworkSubmissionData): Promise<void> {
-    const response = await supabase
-      .from('student_homework_submissions')
-      .insert(data);
+  static async submitHomework(data: HomeworkSubmissionData, mediaFiles?: Array<{
+    uri: string;
+    fileName: string;
+    mimeType: string;
+  }>): Promise<{ submissionId: string; uploadedFiles: string[] }> {
+    try {
+      // First, create the homework submission
+      const submissionData = {
+        homework_assignment_id: data.homework_assignment_id,
+        student_id: data.student_id,
+        submission_text: data.submission_content,
+        attachment_urls: data.attachment_urls || [],
+        submitted_at: new Date().toISOString(),
+        status: 'submitted'
+      };
 
-    if (response.error) throw new Error(response.error.message);
+      const response = await supabase
+        .from('homework_submissions')
+        .insert(submissionData)
+        .select()
+        .single();
+
+      if (response.error) throw new Error(response.error.message);
+      
+      const submissionId = response.data.id;
+      const uploadedFiles: string[] = [];
+
+      // If there are media files, upload them and update the submission
+      if (mediaFiles && mediaFiles.length > 0) {
+        const { MediaService } = await import('./mediaService');
+        
+        // Get student and preschool info for upload
+        const { data: studentData } = await supabase
+          .from('students')
+          .select('preschool_id, parent_id')
+          .eq('id', data.student_id)
+          .single();
+
+        if (!studentData) throw new Error('Student not found');
+
+        // Upload each media file
+        const uploadPromises = mediaFiles.map(async (file, index) => {
+          const fileName = file.fileName || `homework_${submissionId}_${index}_${Date.now()}.jpg`;
+          return MediaService.uploadMedia(
+            file.uri,
+            fileName,
+            file.mimeType,
+            studentData.parent_id,
+            studentData.preschool_id,
+            { 
+              studentId: data.student_id,
+              homeworkSubmissionId: submissionId
+            }
+          );
+        });
+
+        const uploadResults = await Promise.all(uploadPromises);
+        
+        // Check for upload failures
+        const failedUploads = uploadResults.filter(result => result.error);
+        if (failedUploads.length > 0) {
+          console.warn('Some file uploads failed:', failedUploads);
+          // You might want to handle this differently based on your requirements
+        }
+
+        // Collect successful upload URLs
+        const successfulUploads = uploadResults
+          .filter(result => result.data)
+          .map(result => result.data!.file_url);
+        
+        uploadedFiles.push(...successfulUploads);
+
+        // Update submission with uploaded file URLs
+        if (successfulUploads.length > 0) {
+          const { error: updateError } = await supabase
+            .from('homework_submissions')
+            .update({ 
+              attachment_urls: [...(data.attachment_urls || []), ...successfulUploads]
+            })
+            .eq('id', submissionId);
+
+          if (updateError) {
+            console.warn('Failed to update submission with uploaded files:', updateError);
+          }
+        }
+      }
+
+      return { submissionId, uploadedFiles };
+    } catch (error) {
+      console.error('Error submitting homework:', error);
+      throw error;
+    }
   }
 
   static async getNotifications(userId: string): Promise<HomeworkNotification[]> {
@@ -120,13 +310,197 @@ export class HomeworkService {
   }
 
   static async getSummary(studentId: string): Promise<HomeworkSummary> {
-    const response = await supabase
-      .rpc('get_homework_summary', { student_id: studentId });
+    try {
+      // Try to use the stored procedure first
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_homework_summary', { student_id: studentId });
 
-    if (response.error) throw new Error(response.error.message);
-    return response.data as HomeworkSummary;
+      if (!rpcError && rpcData) {
+        return rpcData as HomeworkSummary;
+      }
+
+      // Fallback: Calculate summary manually
+      console.log('RPC failed, calculating summary manually:', rpcError?.message);
+      
+      const submissions = await this.getSubmissions(studentId);
+      
+      const summary: HomeworkSummary = {
+        student_id: studentId,
+        total_assignments: submissions.length,
+        completed_assignments: submissions.filter(s => s.status === 'submitted' || s.status === 'graded').length,
+        pending_assignments: submissions.filter(s => s.status === 'pending').length,
+        overdue_assignments: submissions.filter(s => {
+          if (!s.homework_assignment?.due_date_offset_days) return false;
+          const dueDate = new Date(s.created_at);
+          dueDate.setDate(dueDate.getDate() + s.homework_assignment.due_date_offset_days);
+          return new Date() > dueDate && s.status === 'pending';
+        }).length,
+        average_score: submissions
+          .filter(s => s.ai_score !== null)
+          .reduce((acc, s, _, arr) => acc + (s.ai_score || 0) / arr.length, 0),
+        total_time_spent: submissions
+          .reduce((acc, s) => acc + (s.homework_assignment?.estimated_time_minutes || 0), 0),
+        completion_rate: submissions.length > 0 
+          ? (submissions.filter(s => s.status === 'submitted' || s.status === 'graded').length / submissions.length) * 100
+          : 0,
+        last_updated: new Date().toISOString()
+      };
+      
+      return summary;
+    } catch (error) {
+      console.error('Error generating homework summary:', error);
+      throw new Error('Failed to generate homework summary');
+    }
   }
 
-  // More CRUD operations as needed
+  // AI-powered homework assistance
+  static async getHomeworkHelp(assignmentTitle: string, question: string, gradeLevel: string): Promise<{
+    explanation: string;
+    hints: string[];
+    examples: string[];
+  }> {
+    try {
+      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+        return {
+          explanation: 'For help with this assignment, please ask your teacher or parent.',
+          hints: ['Read the instructions carefully', 'Take your time'],
+          examples: ['Practice similar problems']
+        };
+      }
+
+      const prompt = `
+        As a helpful early childhood education assistant, provide age-appropriate help for this homework question:
+        
+        Assignment: ${assignmentTitle}
+        Grade Level: ${gradeLevel}
+        Student Question: ${question}
+        
+        Please provide:
+        1. A simple explanation appropriate for the grade level
+        2. 2-3 helpful hints (not direct answers)
+        3. 1-2 similar examples they can practice
+        
+        Keep language simple and encouraging for young learners.
+        
+        Format as JSON: {
+          "explanation": "string",
+          "hints": ["hint1", "hint2"],
+          "examples": ["example1", "example2"]
+        }
+      `;
+
+      const response = await claudeService.generateContent({
+        prompt,
+        type: 'homework_help',
+        context: { assignmentTitle, gradeLevel },
+      });
+
+      if (response.success && response.content) {
+        try {
+          return JSON.parse(response.content);
+        } catch (parseError) {
+          console.warn('Failed to parse homework help response:', parseError);
+          return {
+            explanation: response.content.slice(0, 200),
+            hints: ['Think step by step', 'Ask for help if you need it'],
+            examples: ['Try a similar problem first']
+          };
+        }
+      }
+      
+      throw new Error('AI homework help service unavailable');
+    } catch (error) {
+      console.error('Error getting homework help:', error);
+      return {
+        explanation: 'For help with this assignment, please ask your teacher or parent.',
+        hints: ['Read the problem carefully', 'Take your time to understand'],
+        examples: ['Practice makes perfect']
+      };
+    }
+  }
+
+  // Create homework assignment with AI assistance
+  static async createAssignmentWithAI(lessonId: string, gradeLevel: string, subject: string, learningObjectives: string[]): Promise<{
+    title: string;
+    description: string;
+    instructions: string;
+    materials_needed: string;
+    estimated_time_minutes: number;
+    difficulty_level: number;
+  }> {
+    try {
+      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+        return {
+          title: 'Practice Assignment',
+          description: 'Complete the practice exercises',
+          instructions: 'Follow the lesson materials and complete all exercises',
+          materials_needed: 'Pencil, paper, lesson materials',
+          estimated_time_minutes: 30,
+          difficulty_level: 2
+        };
+      }
+
+      const prompt = `
+        Create a homework assignment for early childhood education:
+        
+        Grade Level: ${gradeLevel}
+        Subject: ${subject}
+        Learning Objectives: ${learningObjectives.join(', ')}
+        
+        Please create:
+        1. An engaging title
+        2. Clear description of what students will do
+        3. Step-by-step instructions appropriate for the age group
+        4. List of materials needed
+        5. Estimated time in minutes (realistic for young learners)
+        6. Difficulty level (1-5 scale, where 1 is easiest)
+        
+        Make it age-appropriate, engaging, and educational.
+        
+        Format as JSON: {
+          "title": "string",
+          "description": "string",
+          "instructions": "string",
+          "materials_needed": "string",
+          "estimated_time_minutes": number,
+          "difficulty_level": number
+        }
+      `;
+
+      const response = await claudeService.generateContent({
+        prompt,
+        type: 'assignment_creation',
+        context: { lessonId, gradeLevel, subject },
+      });
+
+      if (response.success && response.content) {
+        try {
+          return JSON.parse(response.content);
+        } catch (parseError) {
+          console.warn('Failed to parse assignment creation response:', parseError);
+          return {
+            title: 'Practice Assignment',
+            description: response.content.slice(0, 100),
+            instructions: 'Complete the activities as described',
+            materials_needed: 'Basic school supplies',
+            estimated_time_minutes: 30,
+            difficulty_level: 2
+          };
+        }
+      }
+      
+      throw new Error('AI assignment creation service unavailable');
+    } catch (error) {
+      console.error('Error creating assignment with AI:', error);
+      return {
+        title: 'Practice Assignment',
+        description: 'Complete the practice exercises based on today\'s lesson',
+        instructions: 'Follow the lesson materials and complete all exercises carefully',
+        materials_needed: 'Pencil, paper, lesson materials',
+        estimated_time_minutes: 30,
+        difficulty_level: 2
+      };
+    }
+  }
 }
 

@@ -1,7 +1,35 @@
 {
+  "cursor.chat.systemPrompt": "You are an expert Next.js developer working on EduDash Pro, a multi-tenant educational platform. Always consider mobile-first design, TypeScript best practices, and Supabase multi-tenancy patterns.",
+  
+  "cursor.cpp.disabledLanguages": [],
+  "cursor.general.enableCursorRules": true,
+  
+  "typescript.preferences.strictFunctionTypes": true,
+  "typescript.preferences.strictNullChecks": true,
+  
+  "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
-    "source.sortMembers": "explicit"
+    "source.sortMembers": "explicit",
+    "source.fixAll.eslint": "explicit"
+  },
+  
+  "files.associations": {
+    "*.cursorrules": "markdown"
+  },
+  
+  "editor.rulers": [80, 120],
+  "editor.wordWrap": "on",
+  
+  "tailwindCSS.experimental.classRegex": [
+    ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["cva\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ],
+  
+  "emmet.includeLanguages": {
+    "typescript": "html",
+    "typescriptreact": "html"
   }
 }

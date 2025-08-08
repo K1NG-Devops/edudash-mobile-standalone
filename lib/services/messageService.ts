@@ -9,7 +9,16 @@ import {
 } from '@/types/types';
 
 export class MessageService {
-  // Get user's messages (inbox)
+// Get user's messages (inbox) with real-time subscription
+  static subscribeToUserMessages(userId: string, preschoolId: string, callback: (message: any) => void) {
+    return supabase
+      .from(`message_recipients:recipient_id=eq.${userId}`)
+      .on('INSERT', payload => {
+        callback(payload.new);
+      })
+      .subscribe();
+  }
+
   static async getUserMessages(userId: string, preschoolId: string, limit = 50, offset = 0) {
     try {
       const { data, error } = await supabase
@@ -35,7 +44,16 @@ export class MessageService {
     }
   }
 
-  // Get user's sent messages
+// Get user's sent messages with real-time subscription
+  static subscribeToSentMessages(userId: string, preschoolId: string, callback: (message: any) => void) {
+    return supabase
+      .from(`messages:sender_id=eq.${userId}`)
+      .on('INSERT', payload => {
+        callback(payload.new);
+      })
+      .subscribe();
+  }
+
   static async getSentMessages(userId: string, preschoolId: string, limit = 50, offset = 0) {
     try {
       const { data, error } = await supabase

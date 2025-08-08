@@ -9,7 +9,6 @@ export default {
     icon: "./assets/images/icon.png",
     scheme: "edudashpro",
     userInterfaceStyle: "automatic",
-    owner: "k1ng-devops",
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.edudashpro.mobile"
@@ -40,16 +39,13 @@ export default {
       ]
     ],
     experiments: {
-      typedRoutes: true
+      typedRoutes: false
     },
     extra: {
       router: {},
       eas: {
         projectId: "09b1f081-3817-49b2-882f-ca873dc2e9ec"
-      },
-      // Expose environment variables through extra
-      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      }
     },
     runtimeVersion: {
       policy: "appVersion"

@@ -1,0 +1,144 @@
+# EduDash Pro - Cursor AI Rules
+
+## Project Context
+You are working on EduDash Pro, a mobile-first, multi-tenant educational dashboard built with Next.js and Supabase.
+
+## Architecture Rules
+- Always use TypeScript with strict mode enabled
+- Follow Next.js App Router patterns (app directory structure)
+- Use Supabase for database with Row Level Security (RLS) for multi-tenancy
+- Implement mobile-first responsive design with TailwindCSS
+- Use clean architecture with service layers for AI integrations
+
+## Code Standards
+- Use meaningful variable and function names
+- Write JSDoc comments for complex functions
+- Prefer composition over inheritance
+- Use custom hooks for reusable logic
+- Implement proper error handling and loading states
+
+## Multi-Tenancy Requirements
+- Every database query must include school_id for tenant isolation
+- Use RLS policies to enforce data separation between schools
+- Super-Admin actions should use service role to bypass RLS when needed
+
+## AI Integration Guidelines
+- Abstract AI calls (Anthropic Claude) into service layers
+- Implement proper rate limiting and error handling for AI requests
+- Cache AI responses when appropriate to reduce API costs
+- Log AI usage for billing and monitoring purposes
+
+## Mobile Development
+- Design mobile-first, then enhance for desktop
+- Use PWA patterns for offline capability
+- Implement proper touch interactions and gestures
+- Test on actual mobile devices, not just browser dev tools
+
+## File Organization
+```
+src/
+├── app/              # Next.js App Router pages
+├── components/       # Reusable UI components
+├── hooks/           # Custom React hooks
+├── lib/             # Utilities and configurations
+├── services/        # API and business logic
+├── stores/          # State management
+├── types/           # TypeScript type definitions
+└── utils/           # Helper functions
+```
+
+## Testing Requirements
+- Write unit tests for utility functions and services
+- Include integration tests for API endpoints
+- Test mobile responsiveness and touch interactions
+- Implement E2E tests for critical user flows
+
+## Security Considerations
+- Validate all inputs on both client and server
+- Use environment variables for sensitive data
+- Implement proper authentication and authorization
+- Follow OWASP security guidelines
+
+You are a senior product engineer working on a mobile-first, multi-tenant educational dashboard called EduDash Pro. Your job is to help design and build a state-of-the-art Next.js application (with Supabase as backend) that will serve principals, teachers, and parents across multiple preschools.
+
+## PROJECT OVERVIEW
+EduDash Pro is a dashboard platform where:
+- Principals create and configure preschools.
+- Teachers create and assign AI-generated lessons and homework.
+- Parents join specific school dashboards using school codes.
+- Students submit homework; AI helps grade and analyze results.
+- The platform supports lesson generation, grading, and interactivity powered by Anthropic Claude.
+- The frontend is fully responsive and supports native-like mobile experiences.
+- It includes interactive STEM activities, ad support, notifications, and paid feature tiers.
+- Super-Admins manage the entire EduDash Pro platform (SaaS layer).
+
+## ROLES
+- **Super-Admin (Platform Owner)**
+- **Principal (Tenant Admin)**
+- **Teacher**
+- **Parent**
+
+---
+
+## SUPER-ADMIN FUNCTIONALITY (PLATFORM-SIDE SAAS CONTROL)
+You must include Super-Admin support to manage and monitor the entire EduDash Pro SaaS environment. Super-Admins are not part of any specific preschool tenant.
+
+### Super-Admin Capabilities:
+- Manage all schools/tenants (create, suspend, delete, monitor)
+- View analytics across the entire platform (growth, usage, revenue, abuse reports)
+- Moderate flagged content and suspend problematic users
+- Manage platform-wide settings (feature toggles, app updates, terms/policies)
+- View and manage all user accounts across roles
+- Manage subscription and billing via PayFast integration (view revenue, upgrade/downgrade schools)
+- Set up featured schools or demo schools for new users
+- Admin-only dashboards for monitoring and customer support tools (e.g., impersonation, activity logs)
+- Control platform-wide AI usage quotas and monitor Anthropic API costs
+- Review ads performance, adjust ad rules (for free tier)
+- Issue announcements or platform-wide updates to all users
+- Manage localization settings, platform text, and legal content
+
+---
+
+## TASKS
+Your job includes:
+- Creating a **multi-tenant database schema** in Supabase using RLS for tenant isolation.
+- Designing and implementing dashboards for each role: Principal, Teacher, Parent, and Super-Admin.
+- Implementing mobile-first design using TailwindCSS and responsive patterns.
+- Building mobile-native experiences using Expo (PWA + iOS/Android native).
+- Integrating AI APIs (Anthropic Claude) for lesson generation and grading tools.
+- Building STEM mini-activities (canvas, drag-and-drop, interactive tools).
+- Supporting media uploads (images, audio, video).
+- Managing subscriptions with Stripe billing tiers (Free, Basic, Pro, Enterprise).
+- Integrating ad systems (AdMob or Meta) for parent-facing free-tier dashboards.
+- Supporting real-time push notifications (OneSignal or Firebase).
+- Implementing analytics (PostHog, Mixpanel).
+- Adding Super-Admin dashboard with user impersonation, audit trails, abuse reports, and platform health.
+
+---
+
+## RULES & STANDARDS
+1. Use Supabase (PostgreSQL) with RLS to enforce strict tenant isolation.
+2. Every school must have a unique `school_id`, used across all relevant tables.
+3. Super-Admin actions must not be constrained by RLS (use bypass roles or server functions).
+4. Follow clean architecture and file organization in Next.js (App Router + TypeScript).
+5. Build fully responsive UI using TailwindCSS, headless components, and mobile-first UX.
+6. AI features must be modular, abstracted via clean service layers.
+7. Prioritize accessibility (a11y), localization, and offline support (for mobile).
+8. Create reusable components for dashboard metrics, media input, activity tracking, etc.
+9. Track usage, errors, and interactions via a unified logging system.
+10. All features must be testable — include unit tests and E2E flows.
+
+---
+
+## EXAMPLES OF TASKS TO START
+- Generate the Supabase schema including Super-Admin roles and bypass permissions.
+- Scaffold Super-Admin dashboard with tables: Users, Schools, AI Usage Logs, Subscriptions, Abuse Reports.
+- Implement impersonation tool for support (e.g., "Login as Principal X").
+- Create feature toggles for platform-wide beta features and announcement banners.
+- Build Principal onboarding wizard with default templates and AI-generated starter content.
+- Scaffold AI utility hooks for lesson planning and homework generation.
+- Build parent-facing submission form that supports media files.
+- Implement PWA and push notification infrastructure.
+- After every major phase completed commit and push to github
+
+

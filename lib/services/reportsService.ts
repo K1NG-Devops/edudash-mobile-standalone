@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../supabase';
+import { claudeService } from '@/lib/ai/claudeService';
 
 export interface ClassroomReport {
   id: string;
@@ -378,67 +379,263 @@ export class ReportsService {
     }
   }
 
-  // Get mock reports data for development/testing
-  static getMockReports(): ClassroomReport[] {
-    return [
-      {
-        id: 'mock-1',
-        preschool_id: 'preschool-1',
-        teacher_id: 'teacher-1',
-        student_id: 'student-1',
-        report_type: 'daily',
-        report_date: '2025-08-03',
-        activities_summary: [],
-        total_activities: 3,
-        behavior_notes: 'Very active and social',
-        learning_highlights: 'Improved in math skills',
-        skills_developed: ['math', 'reading'],
-        is_sent_to_parents: true,
-        sent_at: '2025-08-03',
-        created_at: '2025-08-03',
-        updated_at: '2025-08-03',
-        teacher: {
-          name: 'Mr. Smith',
-          avatar_url: null,
-        },
-        student: {
-          first_name: 'Alice',
-          last_name: 'Johnson',
-        },
-      },
-      {
-        id: 'mock-2',
-        preschool_id: 'preschool-1',
-        teacher_id: 'teacher-1',
-        student_id: 'student-2',
-        report_type: 'weekly',
-        report_date: '2025-07-30',
-        activities_summary: [],
-        total_activities: 5,
-        behavior_notes: 'Quiet and observant',
-        learning_highlights: 'Great progress in art',
-        skills_developed: ['art', 'creativity'],
-        is_sent_to_parents: false,
-        created_at: '2025-07-30',
-        updated_at: '2025-07-30',
-        teacher: {
-          name: 'Miss Green',
-          avatar_url: null,
-        },
-        student: {
-          first_name: 'Bob',
-          last_name: 'Brown',
-        },
+  // AI-powered report generation
+  static async generateReportWithAI(studentId: string, teacherId: string, reportType: 'daily' | 'weekly' | 'monthly', observationNotes: string[], activities: any[]): Promise<{
+    learning_highlights: string;
+    behavior_notes: string;
+    skills_developed: string[];
+    areas_for_improvement: string;
+    parent_message: string;
+    next_steps: string;
+    mood_rating: number;
+    participation_level: 'low' | 'moderate' | 'high' | 'excellent';
+  }> {
+    try {
+      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+        // Fallback report generation without AI
+        return {
+          learning_highlights: 'Student participated in learning activities today.',
+          behavior_notes: 'Student showed good behavior and followed classroom routines.',
+          skills_developed: ['Social skills', 'Following instructions'],
+          areas_for_improvement: 'Continue encouraging participation in group activities.',
+          parent_message: 'Your child had a good day at school today!',
+          next_steps: 'Continue supporting learning at home.',
+          mood_rating: 4,
+          participation_level: 'moderate'
+        };
       }
-    ];
+
+      // Get student information for context
+      const { data: studentInfo } = await supabase
+        .from('students')
+        .select('full_name, age, grade_level')
+        .eq('id', studentId)
+        .single();
+
+      const studentName = studentInfo?.full_name || 'Student';
+      const studentAge = studentInfo?.age || 4;
+      const gradeLevel = studentInfo?.grade_level || 'Pre-K';
+
+      const prompt = `
+        As an experienced early childhood educator, create a ${reportType} report for ${studentName} (age ${studentAge}, ${gradeLevel}):
+        
+        Observation Notes: ${observationNotes.join('. ')}
+        Activities Completed: ${activities.map(a => a.title || a.name).join(', ')}
+        
+        Please provide:
+        1. Learning highlights (2-3 sentences about educational progress)
+        2. Behavior observations (positive and constructive)
+        3. 2-4 skills that were developed or practiced
+        4. Areas for improvement (constructive and encouraging)
+        5. A warm message to parents about their child's day/week
+        6. Specific next steps for continued development
+        7. Mood rating (1-5 scale, where 5 is excellent)
+        8. Participation level (low/moderate/high/excellent)
+        
+        Keep the tone positive, professional, and age-appropriate.
+        
+        Format as JSON: {
+          "learning_highlights": "string",
+          "behavior_notes": "string",
+          "skills_developed": ["skill1", "skill2"],
+          "areas_for_improvement": "string",
+          "parent_message": "string",
+          "next_steps": "string",
+          "mood_rating": number,
+          "participation_level": "low"|"moderate"|"high"|"excellent"
+        }
+      `;
+
+      const response = await claudeService.generateContent({
+        prompt,
+        type: 'report_generation',
+        context: { studentId, reportType, studentAge, gradeLevel },
+      });
+
+      if (response.success && response.content) {
+        try {
+          return JSON.parse(response.content);
+        } catch (parseError) {
+          console.warn('Failed to parse AI report response:', parseError);
+          return {
+            learning_highlights: response.content.slice(0, 150),
+            behavior_notes: 'Student showed positive engagement in classroom activities.',
+            skills_developed: ['Participation', 'Social interaction'],
+            areas_for_improvement: 'Continue encouraging active participation.',
+            parent_message: `${studentName} had a wonderful day learning and playing!`,
+            next_steps: 'Support continued learning through play at home.',
+            mood_rating: 4,
+            participation_level: 'moderate'
+          };
+        }
+      }
+      
+      throw new Error('AI report generation service unavailable');
+    } catch (error) {
+      console.error('Error generating AI report:', error);
+      return {
+        learning_highlights: 'Student engaged in educational activities and showed progress.',
+        behavior_notes: 'Student demonstrated positive behavior and social skills.',
+        skills_developed: ['Social skills', 'Learning engagement'],
+        areas_for_improvement: 'Continue supporting skill development.',
+        parent_message: 'Your child had a great day at school!',
+        next_steps: 'Keep encouraging learning through play at home.',
+        mood_rating: 4,
+        participation_level: 'moderate'
+      };
+    }
   }
 
-  static getMockReportsSummary() {
-    return {
-      daily_reports_today: 1,
-      weekly_reports_this_week: 1,
-      pending_reports: 1,
-    };
+  // Generate comprehensive progress summary with AI
+  static async generateProgressSummaryWithAI(studentId: string, periodDays: number = 30): Promise<{
+    overallProgress: string;
+    strengthAreas: string[];
+    developmentAreas: string[];
+    parentRecommendations: string[];
+    milestoneProgress: string;
+    socialEmotionalGrowth: string;
+  }> {
+    try {
+      // Get recent reports for analysis
+      const { data: reports } = await supabase
+        .from('classroom_reports')
+        .select('*')
+        .eq('student_id', studentId)
+        .gte('report_date', new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000).toISOString())
+        .order('report_date', { ascending: false });
+
+      if (!reports || reports.length === 0) {
+        return {
+          overallProgress: 'Insufficient data to generate progress summary.',
+          strengthAreas: ['Regular attendance'],
+          developmentAreas: ['Continue building foundational skills'],
+          parentRecommendations: ['Maintain consistent daily routines'],
+          milestoneProgress: 'Assessment in progress.',
+          socialEmotionalGrowth: 'Developing social skills through group activities.'
+        };
+      }
+
+      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+        return {
+          overallProgress: 'Student is making steady progress across developmental areas.',
+          strengthAreas: ['Active participation', 'Social interaction'],
+          developmentAreas: ['Fine motor skills', 'Language development'],
+          parentRecommendations: ['Continue reading together', 'Practice counting at home'],
+          milestoneProgress: 'On track for age-appropriate milestones.',
+          socialEmotionalGrowth: 'Showing growth in emotional regulation and peer relationships.'
+        };
+      }
+
+      const reportSummary = reports.map(r => ({
+        date: r.report_date,
+        highlights: r.learning_highlights,
+        behavior: r.behavior_notes,
+        skills: r.skills_developed,
+        mood: r.mood_rating,
+        participation: r.participation_level
+      }));
+
+      const prompt = `
+        As an early childhood development specialist, analyze this student's progress over the past ${periodDays} days:
+        
+        Recent Reports: ${JSON.stringify(reportSummary, null, 2)}
+        
+        Provide a comprehensive analysis including:
+        1. Overall progress summary (3-4 sentences)
+        2. 3-4 key strength areas observed
+        3. 2-3 areas for continued development
+        4. 3-4 specific recommendations for parents
+        5. Milestone progress assessment
+        6. Social-emotional growth observations
+        
+        Format as JSON: {
+          "overallProgress": "string",
+          "strengthAreas": ["area1", "area2", "area3"],
+          "developmentAreas": ["area1", "area2"],
+          "parentRecommendations": ["rec1", "rec2", "rec3"],
+          "milestoneProgress": "string",
+          "socialEmotionalGrowth": "string"
+        }
+      `;
+
+      const response = await claudeService.generateContent({
+        prompt,
+        type: 'progress_summary',
+        context: { studentId, periodDays },
+      });
+
+      if (response.success && response.content) {
+        try {
+          return JSON.parse(response.content);
+        } catch (parseError) {
+          console.warn('Failed to parse progress summary response:', parseError);
+          return {
+            overallProgress: response.content.slice(0, 200),
+            strengthAreas: ['Active engagement', 'Positive attitude'],
+            developmentAreas: ['Continued skill building'],
+            parentRecommendations: ['Support learning at home', 'Encourage practice'],
+            milestoneProgress: 'Making good progress toward age-appropriate goals.',
+            socialEmotionalGrowth: 'Developing positive relationships and self-confidence.'
+          };
+        }
+      }
+      
+      throw new Error('AI progress summary service unavailable');
+    } catch (error) {
+      console.error('Error generating progress summary:', error);
+      return {
+        overallProgress: 'Student continues to grow and learn in our program.',
+        strengthAreas: ['Regular participation', 'Positive interactions'],
+        developmentAreas: ['Skill development', 'Confidence building'],
+        parentRecommendations: ['Continue supportive routines at home', 'Practice new skills together'],
+        milestoneProgress: 'Working toward age-appropriate developmental milestones.',
+        socialEmotionalGrowth: 'Building social skills and emotional awareness.'
+      };
+    }
+  }
+
+  // Create automated daily report with AI assistance
+  static async createAIDailyReport(teacherId: string, studentId: string, preschoolId: string, observationNotes: string[], activities: any[]): Promise<{ data: ClassroomReport | null; error: any }> {
+    try {
+      const reportDate = new Date().toISOString().split('T')[0];
+      
+      // Generate AI-powered report content
+      const aiReport = await this.generateReportWithAI(studentId, teacherId, 'daily', observationNotes, activities);
+      
+      // Create the report with AI-generated content
+      const reportData = {
+        preschool_id: preschoolId,
+        teacher_id: teacherId,
+        student_id: studentId,
+        report_type: 'daily' as const,
+        report_date: reportDate,
+        activities_summary: activities,
+        total_activities: activities.length,
+        behavior_notes: aiReport.behavior_notes,
+        mood_rating: aiReport.mood_rating,
+        participation_level: aiReport.participation_level,
+        learning_highlights: aiReport.learning_highlights,
+        skills_developed: aiReport.skills_developed,
+        areas_for_improvement: aiReport.areas_for_improvement,
+        parent_message: aiReport.parent_message,
+        next_steps: aiReport.next_steps,
+        is_sent_to_parents: false,
+      };
+
+      const { data: report, error } = await supabase
+        .from('classroom_reports')
+        .upsert(reportData, {
+          onConflict: 'student_id,report_date,report_type'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: report, error: null };
+    } catch (error) {
+      console.error('Error creating AI daily report:', error);
+      return { data: null, error };
+    }
   }
 
 }

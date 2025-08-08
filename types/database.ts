@@ -7,6 +7,36 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       activities: {
@@ -53,64 +83,14 @@ export type Database = {
           },
         ]
       }
-      addresses: {
-        Row: {
-          address_type: string | null
-          city: string
-          country: string | null
-          created_at: string | null
-          id: string
-          is_primary: boolean | null
-          postal_code: string | null
-          province: string
-          street_address: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          address_type?: string | null
-          city: string
-          country?: string | null
-          created_at?: string | null
-          id?: string
-          is_primary?: boolean | null
-          postal_code?: string | null
-          province: string
-          street_address: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          address_type?: string | null
-          city?: string
-          country?: string | null
-          created_at?: string | null
-          id?: string
-          is_primary?: boolean | null
-          postal_code?: string | null
-          province?: string
-          street_address?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "addresses_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       age_groups: {
         Row: {
           created_at: string | null
           description: string | null
           id: string
-          max_age: number
+          max_age: number | null
           max_age_months: number | null
-          min_age: number
+          min_age: number | null
           min_age_months: number | null
           name: string
           preschool_id: string | null
@@ -119,9 +99,9 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
-          max_age?: number
+          max_age?: number | null
           max_age_months?: number | null
-          min_age?: number
+          min_age?: number | null
           min_age_months?: number | null
           name: string
           preschool_id?: string | null
@@ -130,9 +110,9 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
-          max_age?: number
+          max_age?: number | null
           max_age_months?: number | null
-          min_age?: number
+          min_age?: number | null
           min_age_months?: number | null
           name?: string
           preschool_id?: string | null
@@ -147,64 +127,6 @@ export type Database = {
           },
         ]
       }
-      class_assignments: {
-        Row: {
-          academic_year: string | null
-          assigned_at: string | null
-          assigned_by: string
-          class_id: string
-          created_at: string | null
-          id: string
-          status: string | null
-          teacher_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          academic_year?: string | null
-          assigned_at?: string | null
-          assigned_by: string
-          class_id: string
-          created_at?: string | null
-          id?: string
-          status?: string | null
-          teacher_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          academic_year?: string | null
-          assigned_at?: string | null
-          assigned_by?: string
-          class_id?: string
-          created_at?: string | null
-          id?: string
-          status?: string | null
-          teacher_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "class_assignments_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "class_assignments_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "classes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "class_assignments_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       classes: {
         Row: {
           age_group_id: string
@@ -212,6 +134,7 @@ export type Database = {
           current_enrollment: number | null
           icon_url: string | null
           id: string
+          is_active: boolean | null
           max_capacity: number | null
           name: string
           preschool_id: string
@@ -224,6 +147,7 @@ export type Database = {
           current_enrollment?: number | null
           icon_url?: string | null
           id?: string
+          is_active?: boolean | null
           max_capacity?: number | null
           name: string
           preschool_id: string
@@ -236,6 +160,7 @@ export type Database = {
           current_enrollment?: number | null
           icon_url?: string | null
           id?: string
+          is_active?: boolean | null
           max_capacity?: number | null
           name?: string
           preschool_id?: string
@@ -243,6 +168,13 @@ export type Database = {
           teacher_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "classes_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "classes_preschool_id_fkey"
             columns: ["preschool_id"]
@@ -259,117 +191,168 @@ export type Database = {
           },
         ]
       }
-      emergency_contacts: {
+      homework_assignments: {
         Row: {
-          contact_address: string | null
-          contact_email: string | null
-          contact_name: string
-          contact_phone: string
+          class_id: string | null
           created_at: string | null
+          description: string | null
+          difficulty_level: number | null
+          due_date_offset_days: number
+          estimated_time_minutes: number | null
           id: string
-          is_authorized_pickup: boolean | null
-          priority_order: number | null
-          relationship: string | null
-          student_id: string
+          instructions: string | null
+          is_active: boolean | null
+          is_required: boolean | null
+          lesson_id: string | null
+          materials_needed: string | null
+          preschool_id: string
+          teacher_id: string
+          title: string
           updated_at: string | null
         }
         Insert: {
-          contact_address?: string | null
-          contact_email?: string | null
-          contact_name: string
-          contact_phone: string
+          class_id?: string | null
           created_at?: string | null
+          description?: string | null
+          difficulty_level?: number | null
+          due_date_offset_days?: number
+          estimated_time_minutes?: number | null
           id?: string
-          is_authorized_pickup?: boolean | null
-          priority_order?: number | null
-          relationship?: string | null
-          student_id: string
+          instructions?: string | null
+          is_active?: boolean | null
+          is_required?: boolean | null
+          lesson_id?: string | null
+          materials_needed?: string | null
+          preschool_id: string
+          teacher_id: string
+          title: string
           updated_at?: string | null
         }
         Update: {
-          contact_address?: string | null
-          contact_email?: string | null
-          contact_name?: string
-          contact_phone?: string
+          class_id?: string | null
           created_at?: string | null
+          description?: string | null
+          difficulty_level?: number | null
+          due_date_offset_days?: number
+          estimated_time_minutes?: number | null
           id?: string
-          is_authorized_pickup?: boolean | null
-          priority_order?: number | null
-          relationship?: string | null
-          student_id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          is_required?: boolean | null
+          lesson_id?: string | null
+          materials_needed?: string | null
+          preschool_id?: string
+          teacher_id?: string
+          title?: string
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "emergency_contacts_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "homework_assignments_class_id_fkey"
+            columns: ["class_id"]
             isOneToOne: false
-            referencedRelation: "student_complete_info"
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "emergency_contacts_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "homework_assignments_lesson_id_fkey"
+            columns: ["lesson_id"]
             isOneToOne: false
-            referencedRelation: "students"
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homework_assignments_preschool_id_fkey"
+            columns: ["preschool_id"]
+            isOneToOne: false
+            referencedRelation: "preschools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homework_assignments_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
       }
-      invitation_uses: {
+      homework_submissions: {
         Row: {
-          approved_at: string | null
-          approved_by: string | null
-          child_name: string | null
+          attachment_urls: string[] | null
+          created_at: string | null
+          grade: string | null
+          graded_at: string | null
+          homework_assignment_id: string
           id: string
-          invitation_code_id: string
-          parent_email: string | null
+          parent_id: string | null
+          reviewed_by: string | null
           status: string | null
-          used_at: string | null
-          user_id: string | null
+          student_id: string
+          submission_text: string | null
+          submitted_at: string | null
+          teacher_feedback: string | null
+          updated_at: string | null
         }
         Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          child_name?: string | null
+          attachment_urls?: string[] | null
+          created_at?: string | null
+          grade?: string | null
+          graded_at?: string | null
+          homework_assignment_id: string
           id?: string
-          invitation_code_id: string
-          parent_email?: string | null
+          parent_id?: string | null
+          reviewed_by?: string | null
           status?: string | null
-          used_at?: string | null
-          user_id?: string | null
+          student_id: string
+          submission_text?: string | null
+          submitted_at?: string | null
+          teacher_feedback?: string | null
+          updated_at?: string | null
         }
         Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          child_name?: string | null
+          attachment_urls?: string[] | null
+          created_at?: string | null
+          grade?: string | null
+          graded_at?: string | null
+          homework_assignment_id?: string
           id?: string
-          invitation_code_id?: string
-          parent_email?: string | null
+          parent_id?: string | null
+          reviewed_by?: string | null
           status?: string | null
-          used_at?: string | null
-          user_id?: string | null
+          student_id?: string
+          submission_text?: string | null
+          submitted_at?: string | null
+          teacher_feedback?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "invitation_uses_approved_by_fkey"
-            columns: ["approved_by"]
+            foreignKeyName: "homework_submissions_homework_assignment_id_fkey"
+            columns: ["homework_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "homework_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homework_submissions_parent_id_fkey"
+            columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invitation_uses_invitation_code_id_fkey"
-            columns: ["invitation_code_id"]
+            foreignKeyName: "homework_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
             isOneToOne: false
-            referencedRelation: "school_invitation_codes"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invitation_uses_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "homework_submissions_student_id_fkey"
+            columns: ["student_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -488,6 +471,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "lessons_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lessons_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
@@ -510,251 +500,56 @@ export type Database = {
           },
         ]
       }
-      parent_access_codes: {
+      message_drafts: {
         Row: {
-          code: string
-          created_at: string | null
-          created_by: string | null
-          expires_at: string
-          id: string
-          max_usage: number | null
-          parent_email: string
-          preschool_id: string | null
-          status: string | null
-          student_name: string
-          updated_at: string | null
-          usage_count: number | null
-          used_at: string | null
-        }
-        Insert: {
-          code: string
-          created_at?: string | null
-          created_by?: string | null
-          expires_at: string
-          id?: string
-          max_usage?: number | null
-          parent_email: string
-          preschool_id?: string | null
-          status?: string | null
-          student_name: string
-          updated_at?: string | null
-          usage_count?: number | null
-          used_at?: string | null
-        }
-        Update: {
-          code?: string
-          created_at?: string | null
-          created_by?: string | null
-          expires_at?: string
-          id?: string
-          max_usage?: number | null
-          parent_email?: string
-          preschool_id?: string | null
-          status?: string | null
-          student_name?: string
-          updated_at?: string | null
-          usage_count?: number | null
-          used_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "parent_access_codes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "parent_access_codes_preschool_id_fkey"
-            columns: ["preschool_id"]
-            isOneToOne: false
-            referencedRelation: "preschools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      parent_details: {
-        Row: {
+          attachment_urls: string[] | null
+          content: string
           created_at: string | null
           id: string
-          primary_parent_email: string | null
-          primary_parent_job_title: string | null
-          primary_parent_name: string | null
-          primary_parent_phone: string | null
-          primary_parent_workplace: string | null
-          secondary_parent_email: string | null
-          secondary_parent_name: string | null
-          secondary_parent_phone: string | null
+          message_type: string
+          preschool_id: string
+          recipient_data: Json | null
+          scheduled_send_at: string | null
+          subject: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          attachment_urls?: string[] | null
+          content: string
           created_at?: string | null
           id?: string
-          primary_parent_email?: string | null
-          primary_parent_job_title?: string | null
-          primary_parent_name?: string | null
-          primary_parent_phone?: string | null
-          primary_parent_workplace?: string | null
-          secondary_parent_email?: string | null
-          secondary_parent_name?: string | null
-          secondary_parent_phone?: string | null
+          message_type: string
+          preschool_id: string
+          recipient_data?: Json | null
+          scheduled_send_at?: string | null
+          subject: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          attachment_urls?: string[] | null
+          content?: string
           created_at?: string | null
           id?: string
-          primary_parent_email?: string | null
-          primary_parent_job_title?: string | null
-          primary_parent_name?: string | null
-          primary_parent_phone?: string | null
-          primary_parent_workplace?: string | null
-          secondary_parent_email?: string | null
-          secondary_parent_name?: string | null
-          secondary_parent_phone?: string | null
+          message_type?: string
+          preschool_id?: string
+          recipient_data?: Json | null
+          scheduled_send_at?: string | null
+          subject?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "parent_details_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      premium_features: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          feature_type: string
-          id: string
-          is_active: boolean | null
-          name: string
-          tier_required: string
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          feature_type: string
-          id?: string
-          is_active?: boolean | null
-          name: string
-          tier_required: string
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          feature_type?: string
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          tier_required?: string
-        }
         Relationships: []
-      }
-      preschool_onboarding_requests: {
-        Row: {
-          address: string | null
-          admin_email: string
-          admin_name: string
-          city: string | null
-          contact_person_name: string | null
-          created_at: string | null
-          description: string | null
-          email: string | null
-          expected_students: number | null
-          expected_teachers: number | null
-          id: string
-          message: string | null
-          notes: string | null
-          number_of_students: number | null
-          number_of_teachers: number | null
-          phone: string | null
-          postal_code: string | null
-          preferred_slug: string | null
-          preschool_name: string
-          province: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          school_type: string | null
-          status: string | null
-        }
-        Insert: {
-          address?: string | null
-          admin_email: string
-          admin_name: string
-          city?: string | null
-          contact_person_name?: string | null
-          created_at?: string | null
-          description?: string | null
-          email?: string | null
-          expected_students?: number | null
-          expected_teachers?: number | null
-          id?: string
-          message?: string | null
-          notes?: string | null
-          number_of_students?: number | null
-          number_of_teachers?: number | null
-          phone?: string | null
-          postal_code?: string | null
-          preferred_slug?: string | null
-          preschool_name: string
-          province?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          school_type?: string | null
-          status?: string | null
-        }
-        Update: {
-          address?: string | null
-          admin_email?: string
-          admin_name?: string
-          city?: string | null
-          contact_person_name?: string | null
-          created_at?: string | null
-          description?: string | null
-          email?: string | null
-          expected_students?: number | null
-          expected_teachers?: number | null
-          id?: string
-          message?: string | null
-          notes?: string | null
-          number_of_students?: number | null
-          number_of_teachers?: number | null
-          phone?: string | null
-          postal_code?: string | null
-          preferred_slug?: string | null
-          preschool_name?: string
-          province?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          school_type?: string | null
-          status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "preschool_onboarding_requests_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       preschools: {
         Row: {
           address: string | null
           billing_email: string | null
           created_at: string | null
-          current_invitation_code: string | null
           domain: string | null
           email: string
           id: string
-          invitation_code_expires_at: string | null
           logo_url: string | null
           max_students: number | null
           max_teachers: number | null
@@ -774,11 +569,9 @@ export type Database = {
           address?: string | null
           billing_email?: string | null
           created_at?: string | null
-          current_invitation_code?: string | null
           domain?: string | null
           email: string
           id?: string
-          invitation_code_expires_at?: string | null
           logo_url?: string | null
           max_students?: number | null
           max_teachers?: number | null
@@ -798,11 +591,9 @@ export type Database = {
           address?: string | null
           billing_email?: string | null
           created_at?: string | null
-          current_invitation_code?: string | null
           domain?: string | null
           email?: string
           id?: string
-          invitation_code_expires_at?: string | null
           logo_url?: string | null
           max_students?: number | null
           max_teachers?: number | null
@@ -819,192 +610,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
-      }
-      school_invitation_codes: {
-        Row: {
-          code: string
-          created_at: string | null
-          created_by: string
-          description: string | null
-          expires_at: string
-          id: string
-          is_active: boolean | null
-          max_uses: number | null
-          preschool_id: string
-          status: string | null
-          updated_at: string | null
-          usage_count: number | null
-        }
-        Insert: {
-          code: string
-          created_at?: string | null
-          created_by: string
-          description?: string | null
-          expires_at: string
-          id?: string
-          is_active?: boolean | null
-          max_uses?: number | null
-          preschool_id: string
-          status?: string | null
-          updated_at?: string | null
-          usage_count?: number | null
-        }
-        Update: {
-          code?: string
-          created_at?: string | null
-          created_by?: string
-          description?: string | null
-          expires_at?: string
-          id?: string
-          is_active?: boolean | null
-          max_uses?: number | null
-          preschool_id?: string
-          status?: string | null
-          updated_at?: string | null
-          usage_count?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "school_invitation_codes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "school_invitation_codes_preschool_id_fkey"
-            columns: ["preschool_id"]
-            isOneToOne: false
-            referencedRelation: "preschools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      student_medical_info: {
-        Row: {
-          allergies: string | null
-          created_at: string | null
-          current_medications: string | null
-          dietary_restrictions: string | null
-          doctor_address: string | null
-          doctor_name: string | null
-          doctor_phone: string | null
-          id: string
-          medical_conditions: string | null
-          medical_notes: string | null
-          student_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          allergies?: string | null
-          created_at?: string | null
-          current_medications?: string | null
-          dietary_restrictions?: string | null
-          doctor_address?: string | null
-          doctor_name?: string | null
-          doctor_phone?: string | null
-          id?: string
-          medical_conditions?: string | null
-          medical_notes?: string | null
-          student_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          allergies?: string | null
-          created_at?: string | null
-          current_medications?: string | null
-          dietary_restrictions?: string | null
-          doctor_address?: string | null
-          doctor_name?: string | null
-          doctor_phone?: string | null
-          id?: string
-          medical_conditions?: string | null
-          medical_notes?: string | null
-          student_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_medical_info_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: true
-            referencedRelation: "student_complete_info"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_medical_info_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: true
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      student_registrations: {
-        Row: {
-          created_at: string | null
-          id: string
-          preschool_id: string
-          registered_by: string
-          school_invitation_code_id: string | null
-          student_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          preschool_id: string
-          registered_by: string
-          school_invitation_code_id?: string | null
-          student_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          preschool_id?: string
-          registered_by?: string
-          school_invitation_code_id?: string | null
-          student_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_registrations_preschool_id_fkey"
-            columns: ["preschool_id"]
-            isOneToOne: false
-            referencedRelation: "preschools"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_registrations_registered_by_fkey"
-            columns: ["registered_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_registrations_school_invitation_code_id_fkey"
-            columns: ["school_invitation_code_id"]
-            isOneToOne: false
-            referencedRelation: "school_invitation_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_registrations_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "student_complete_info"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_registrations_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       students: {
         Row: {
@@ -1129,6 +734,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "students_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "students_class_id_fkey"
             columns: ["class_id"]
             isOneToOne: false
@@ -1147,254 +759,6 @@ export type Database = {
             columns: ["preschool_id"]
             isOneToOne: false
             referencedRelation: "preschools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      teacher_class_schedules: {
-        Row: {
-          class_assignment_id: string
-          completed_at: string | null
-          created_at: string | null
-          duration_minutes: number | null
-          id: string
-          lesson_id: string
-          notes: string | null
-          scheduled_date: string
-          scheduled_time: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          class_assignment_id: string
-          completed_at?: string | null
-          created_at?: string | null
-          duration_minutes?: number | null
-          id?: string
-          lesson_id: string
-          notes?: string | null
-          scheduled_date: string
-          scheduled_time?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          class_assignment_id?: string
-          completed_at?: string | null
-          created_at?: string | null
-          duration_minutes?: number | null
-          id?: string
-          lesson_id?: string
-          notes?: string | null
-          scheduled_date?: string
-          scheduled_time?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teacher_class_schedules_class_assignment_id_fkey"
-            columns: ["class_assignment_id"]
-            isOneToOne: false
-            referencedRelation: "class_assignments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teacher_class_schedules_lesson_id_fkey"
-            columns: ["lesson_id"]
-            isOneToOne: false
-            referencedRelation: "lessons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tenant_invitations: {
-        Row: {
-          accepted_at: string | null
-          accepted_by: string | null
-          created_at: string | null
-          email: string
-          expires_at: string
-          id: string
-          invitation_token: string
-          invited_by: string
-          preschool_id: string
-          role: string
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          accepted_at?: string | null
-          accepted_by?: string | null
-          created_at?: string | null
-          email: string
-          expires_at: string
-          id?: string
-          invitation_token: string
-          invited_by: string
-          preschool_id: string
-          role: string
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          accepted_at?: string | null
-          accepted_by?: string | null
-          created_at?: string | null
-          email?: string
-          expires_at?: string
-          id?: string
-          invitation_token?: string
-          invited_by?: string
-          preschool_id?: string
-          role?: string
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_invitations_accepted_by_fkey"
-            columns: ["accepted_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_invitations_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_invitations_preschool_id_fkey"
-            columns: ["preschool_id"]
-            isOneToOne: false
-            referencedRelation: "preschools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tenant_onboarding_steps: {
-        Row: {
-          completed_at: string | null
-          completed_by: string | null
-          created_at: string | null
-          data: Json | null
-          id: string
-          preschool_id: string
-          status: string | null
-          step_name: string
-          updated_at: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          completed_by?: string | null
-          created_at?: string | null
-          data?: Json | null
-          id?: string
-          preschool_id: string
-          status?: string | null
-          step_name: string
-          updated_at?: string | null
-        }
-        Update: {
-          completed_at?: string | null
-          completed_by?: string | null
-          created_at?: string | null
-          data?: Json | null
-          id?: string
-          preschool_id?: string
-          status?: string | null
-          step_name?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_onboarding_steps_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_onboarding_steps_preschool_id_fkey"
-            columns: ["preschool_id"]
-            isOneToOne: false
-            referencedRelation: "preschools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tenant_settings: {
-        Row: {
-          created_at: string | null
-          id: string
-          preschool_id: string
-          setting_key: string
-          setting_value: Json | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          preschool_id: string
-          setting_key: string
-          setting_value?: Json | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          preschool_id?: string
-          setting_key?: string
-          setting_value?: Json | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_settings_preschool_id_fkey"
-            columns: ["preschool_id"]
-            isOneToOne: false
-            referencedRelation: "preschools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_preferences: {
-        Row: {
-          created_at: string | null
-          email_digest: string | null
-          id: string
-          notifications_enabled: boolean | null
-          theme: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          email_digest?: string | null
-          id?: string
-          notifications_enabled?: boolean | null
-          theme?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          email_digest?: string | null
-          id?: string
-          notifications_enabled?: boolean | null
-          theme?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_preferences_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1517,109 +881,20 @@ export type Database = {
       }
     }
     Views: {
-      student_complete_info: {
-        Row: {
-          additional_notes: string | null
-          age_group_id: string | null
-          allergies: string | null
-          city: string | null
-          class_id: string | null
-          created_at: string | null
-          current_medications: string | null
-          date_of_birth: string | null
-          doctor_name: string | null
-          doctor_phone: string | null
-          emergency_contact_name: string | null
-          emergency_contact_phone: string | null
-          enrollment_date: string | null
-          first_name: string | null
-          gender: string | null
-          id: string | null
-          is_active: boolean | null
-          last_name: string | null
-          medical_allergies: string | null
-          medical_conditions: string | null
-          parent_id: string | null
-          postal_code: string | null
-          preschool_id: string | null
-          previous_school_experience: string | null
-          primary_emergency_contact: string | null
-          primary_emergency_phone: string | null
-          primary_emergency_relation: string | null
-          primary_parent_email: string | null
-          primary_parent_name: string | null
-          primary_parent_phone: string | null
-          province: string | null
-          secondary_parent_name: string | null
-          special_needs: string | null
-          street_address: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "students_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "classes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "students_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "students_preschool_id_fkey"
-            columns: ["preschool_id"]
-            isOneToOne: false
-            referencedRelation: "preschools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
-      assign_teacher_to_class: {
-        Args: {
-          p_academic_year?: string
-          p_assigned_by: string
-          p_class_id: string
-          p_teacher_id: string
-        }
-        Returns: {
-          message: string
-          assignment_id: string
-          success: boolean
-        }[]
-      }
-      can_view_user: {
-        Args: { checked_user_id: string }
-        Returns: boolean
-      }
-      create_school_invitation_code: {
-        Args: {
-          p_created_by: string
-          p_description?: string
-          p_expires_days?: number
-          p_max_uses?: number
-          p_preschool_id: string
-        }
-        Returns: {
-          id: string
-          code: string
-          expires_at: string
-          success: boolean
-          message: string
-        }[]
+      calculate_student_age: {
+        Args: { birth_date: string }
+        Returns: number
       }
       create_tenant_with_admin: {
         Args: {
-          p_admin_name: string
-          p_email: string
           p_name: string
-          p_subscription_plan?: string
+          p_email: string
+          p_admin_name: string
           p_tenant_slug: string
+          p_subscription_plan?: string
         }
         Returns: string
       }
@@ -1627,44 +902,29 @@ export type Database = {
         Args: { class_id_param: string }
         Returns: undefined
       }
-      drop_policy_if_exists: {
-        Args: { policy_name: string; table_name: string }
-        Returns: undefined
+      get_overdue_fees_count: {
+        Args: { parent_uuid: string }
+        Returns: number
       }
-      execute_sql: {
-        Args: { sql_query: string }
-        Returns: Record<string, unknown>[]
-      }
-      generate_school_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_school_invitation_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_teacher_classes: {
-        Args: { p_teacher_id: string }
+      get_student_class_info: {
+        Args: { student_uuid: string }
         Returns: {
-          assignment_status: string
-          student_count: number
-          age_group_name: string
-          room_number: string
           class_name: string
-          academic_year: string
-          class_id: string
+          teacher_name: string
+          room_number: string
+          age_group_name: string
         }[]
       }
-      get_teacher_daily_schedule: {
-        Args: { p_date?: string; p_teacher_id: string }
+      get_unread_messages_count: {
+        Args: { user_uuid: string }
+        Returns: number
+      }
+      get_user_permissions: {
+        Args: { user_id: string }
         Returns: {
-          duration_minutes: number
-          schedule_id: string
-          class_name: string
-          lesson_title: string
-          scheduled_time: string
-          status: string
-          lesson_category: string
+          permission_name: string
+          category: string
+          description: string
         }[]
       }
       get_user_tenant_id: {
@@ -1681,41 +941,60 @@ export type Database = {
       }
       register_student_with_code: {
         Args: {
-          p_age_group_id: string
-          p_allergies?: string
           p_code: string
-          p_date_of_birth: string
-          p_emergency_contact_name?: string
-          p_emergency_contact_phone?: string
           p_parent_id: string
-          p_special_needs?: string
           p_student_first_name: string
           p_student_last_name: string
+          p_date_of_birth: string
+          p_age_group_id: string
+          p_allergies?: string
+          p_special_needs?: string
+          p_emergency_contact_name?: string
+          p_emergency_contact_phone?: string
         }
         Returns: {
-          student_id: string
-          message: string
           success: boolean
+          message: string
+          student_id: string
           registration_id: string
         }[]
       }
       use_school_invitation_code: {
-        Args: { p_child_name: string; p_code: string; p_parent_email: string }
+        Args: {
+          code_param: string
+          parent_email_param: string
+          child_name_param: string
+        }
         Returns: {
-          preschool_id: string
           success: boolean
           message: string
+          preschool_id: string
+        }[]
+      }
+      user_has_permission: {
+        Args: { user_id: string; permission_name: string }
+        Returns: boolean
+      }
+      validate_parent_code: {
+        Args: { p_code: string }
+        Returns: {
+          id: string
+          preschool_id: string
+          student_name: string
+          parent_email: string
+          expires_at: string
+          is_valid: boolean
         }[]
       }
       validate_school_invitation_code: {
-        Args: { p_code: string }
+        Args: { invitation_code: string }
         Returns: {
-          tenant_slug: string
           is_valid: boolean
-          expires_at: string
-          id: string
           preschool_id: string
           preschool_name: string
+          tenant_slug: string
+          expires_at: string
+          id: string
         }[]
       }
     }
@@ -1846,8 +1125,10 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
-

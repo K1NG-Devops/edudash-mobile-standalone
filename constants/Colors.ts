@@ -45,6 +45,7 @@ export const Colors = {
     
     // Role colors
     superadmin: superAdminColor,
+    preschool_admin: principalColor,
     principal: principalColor,
     teacher: teacherColor,
     parent: parentColor,
@@ -74,6 +75,7 @@ export const Colors = {
     
     // Role colors
     superadmin: '#F87171', // Red-400
+    preschool_admin: '#34D399', // Emerald-400
     principal: '#34D399', // Emerald-400
     teacher: '#A78BFA', // Violet-400
     parent: '#60A5FA', // Blue-400
@@ -95,6 +97,7 @@ export const getRoleColors = (role: string, theme: 'light' | 'dark' = 'light') =
           ? 'rgba(220, 38, 38, 0.1)' 
           : 'rgba(248, 113, 113, 0.1)',
       };
+    case 'preschool_admin':
     case 'principal':
       return {
         primary: colors.principal,

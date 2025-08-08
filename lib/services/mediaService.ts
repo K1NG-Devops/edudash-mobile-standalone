@@ -126,7 +126,29 @@ export class MediaService {
     }
   }
 
-  // Upload media to Supabase Storage
+  // File validation
+  static validateFile(fileSize: number, mimeType: string): { isValid: boolean; error?: string } {
+    const maxSize = 50 * 1024 * 1024; // 50MB limit
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'video/mp4', 'video/quicktime', 'video/x-msvideo',
+      'audio/mpeg', 'audio/wav', 'audio/ogg',
+      'application/pdf', 'text/plain',
+      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+
+    if (fileSize > maxSize) {
+      return { isValid: false, error: 'File size exceeds 50MB limit' };
+    }
+
+    if (!allowedTypes.includes(mimeType)) {
+      return { isValid: false, error: 'File type not supported' };
+    }
+
+    return { isValid: true };
+  }
+
+  // Upload media to Supabase Storage with progress tracking
   static async uploadMedia(
     fileUri: string,
     fileName: string,
@@ -137,7 +159,9 @@ export class MediaService {
       messageId?: string;
       classroomActivityId?: string;
       studentId?: string;
+      homeworkSubmissionId?: string;
       isBase64?: boolean;
+      onProgress?: (progress: number) => void;
     }
   ) {
     try {

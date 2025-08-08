@@ -10,6 +10,7 @@ import { Database } from '@/types/database';
 console.log('🔧 Supabase Config Debug:');
 console.log('- EXPO_PUBLIC_SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Found' : '❌ Missing');
 console.log('- EXPO_PUBLIC_SUPABASE_ANON_KEY:', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? '✅ Found' : '❌ Missing');
+console.log('- EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY:', process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ? '✅ Found' : '❌ Missing');
 
 // Set to true for local development testing
 const USE_LOCAL_DB = false;
@@ -91,6 +92,27 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
+
+// Admin client for service role operations (development only)
+// WARNING: This exposes the service role key to the client - only for development!
+const supabaseServiceRoleKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+
+export const supabaseAdmin = supabaseServiceRoleKey 
+  ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+  : null;
+
+if (supabaseServiceRoleKey) {
+  console.log('✅ Supabase Admin client configured with service role');
+  console.log('🔑 Service role key (first 20 chars):', supabaseServiceRoleKey.substring(0, 20) + '...');
+} else {
+  console.warn('⚠️ Service role key not found - admin operations will not work');
+  console.log('🔍 Available env vars:', Object.keys(process.env).filter(key => key.includes('SUPABASE')));
+}
 
 // Helper function to get current user with role
 export const getCurrentUserWithRole = async () => {

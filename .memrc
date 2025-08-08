@@ -1,0 +1,30 @@
+# EduDash Pro Memory Monitoring Aliases
+# Source this file in your ~/.zshrc or run: source .memrc
+
+# Quick memory status
+alias memstat='./scripts/memory-status.sh'
+
+# Start memory monitoring (5 second intervals)
+alias memwatch='./scripts/monitor-memory.sh'
+
+# Start memory monitoring with custom interval
+alias memwatch-fast='./scripts/monitor-memory.sh 2'
+alias memwatch-slow='./scripts/monitor-memory.sh 10'
+
+# Show memory log
+alias memlog='tail -f /tmp/edudash-memory.log'
+
+# Quick memory info
+alias mem='free -h && echo "" && echo "Swap usage:" && swapon --show'
+
+# Show processes by memory usage
+alias topmem='ps aux --sort=-%mem | head -10'
+
+# Show development processes
+alias devproc='pgrep -fl "expo|node|chrome" | head -10'
+
+# Clear memory log
+alias memclear='rm -f /tmp/edudash-memory.log && echo "Memory log cleared"'
+
+echo "🚀 EduDash Pro memory aliases loaded!"
+echo "Commands: memstat, memwatch, mem, topmem, devproc"
