@@ -154,7 +154,6 @@ const AdminDashboardScreen: React.FC<AdminDashboardProps> = ({ profile, onSignOu
           avatar: profile?.avatar_url,
         }}
         onNotificationsPress={() => console.log('Notifications')}
-        onSearchPress={() => console.log('Search')}
         onSignOut={onSignOut}
         onNavigate={(screen) => router.push(screen as any)}
         notificationCount={5}

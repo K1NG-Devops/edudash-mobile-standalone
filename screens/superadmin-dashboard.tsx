@@ -201,7 +201,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ profile, onSi
           avatar: profile?.avatar_url,
         }}
         onNotificationsPress={() => handleNavigate('notifications')}
-        onSearchPress={() => handleNavigate('search')}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
         notificationCount={stats.supportTickets}

@@ -35,7 +35,6 @@ export function TabLayout({ children, user, onSignOut, notificationCount }: TabL
           onNavigate={handleNavigate}
           onSignOut={onSignOut}
           onNotificationsPress={handleNotificationsPress}
-          onSearchPress={handleSearchPress}
           notificationCount={notificationCount}
         />
       )}

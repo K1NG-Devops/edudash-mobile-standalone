@@ -276,7 +276,6 @@ const RegisterChildContent: React.FC<RegisterChildContentProps> = ({ profile, on
           avatar: profile?.avatar_url,
         }}
         onNotificationsPress={() => console.log('Notifications')}
-        onSearchPress={() => console.log('Search')}
         onSignOut={onSignOut}
         onNavigate={(route) => router.push(route as any)}
         notificationCount={0}

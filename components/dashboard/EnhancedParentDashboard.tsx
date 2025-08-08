@@ -781,7 +781,6 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
           avatar: profile?.avatar_url,
         }}
         onNotificationsPress={() => console.log('Notifications')}
-        onSearchPress={() => console.log('Search')}
         onSignOut={onSignOut}
         onNavigate={(route) => router.push(route as any)}
         notificationCount={recentUpdates.length}
