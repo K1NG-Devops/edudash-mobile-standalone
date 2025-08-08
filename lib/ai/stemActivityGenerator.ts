@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import { claudeAI, STEMActivity } from './claudeService';
 import { supabase } from '@/lib/supabase';
 

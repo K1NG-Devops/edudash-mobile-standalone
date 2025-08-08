@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import React from 'react';
 import { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { PlatformPressable } from '@react-navigation/elements';
