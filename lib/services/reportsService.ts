@@ -87,7 +87,7 @@ export class ReportsService {
           preschool_id: preschoolId,
           teacher_id: teacherId,
           student_id: studentId,
-        report_type: reportType as 'daily' | 'weekly' | 'monthly',
+          report_type: reportType as 'daily' | 'weekly' | 'monthly',
           report_date: reportDate,
           ...reportData,
         })
@@ -633,7 +633,7 @@ export class ReportsService {
         .single();
 
       if (error) throw error;
-      return { data: report, error: null };
+      return { data: (report as unknown as ClassroomReport), error: null };
     } catch (error) {
       console.error('Error creating AI daily report:', error);
       return { data: null, error };
