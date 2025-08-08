@@ -1,4 +1,6 @@
 import { supabase } from '../supabase';
+import { createLogger } from '@/lib/utils/logger';
+const log = createLogger('payment');
 import { 
   PaymentFee, 
   Payment, 
@@ -103,8 +105,8 @@ export class PaymentService {
       const { data: existingPayments } = await supabase
         .from('payments')
         .select('*')
-        .eq('student_id', student.id)
-        .eq('status', 'completed')
+        .eq('payment_fee_id', null) -- placeholder, adapt to your association
+        .eq('payment_status', 'completed')
         .gte('created_at', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
         .lt('created_at', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
       
@@ -118,17 +120,12 @@ export class PaymentService {
           preschool_id: preschoolId,
           student_id: student.id,
           fee_type: 'tuition',
-          title: `${new Date(currentYear, currentMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} School Fee`,
-          description: `Monthly school fee for ${student.first_name} ${student.last_name} (Age ${age})`,
           amount: monthlyFee,
           currency: 'ZAR',
+          description: `Monthly school fee for ${student.first_name} ${student.last_name} (Age ${age})`,
           due_date: dueDate.toISOString().split('T')[0],
-          is_recurring: true,
-          recurring_frequency: 'monthly',
-          is_overdue: isOverdue,
-          is_paid: false,
-          created_at: currentDate.toISOString(),
-          updated_at: currentDate.toISOString()
+          recurring_type: 'monthly',
+          status: isOverdue ? 'overdue' : 'pending'
         };
         
         // Add to persist list

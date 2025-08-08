@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { createLogger } from '@/lib/utils/logger';
+const log = createLogger('message');
 import { 
   Message, 
   MessageRecipient, 
@@ -9,14 +11,17 @@ import {
 } from '@/types/types';
 
 export class MessageService {
-// Get user's messages (inbox) with real-time subscription
-  static subscribeToUserMessages(userId: string, preschoolId: string, callback: (message: any) => void) {
-    return supabase
-      .from(`message_recipients:recipient_id=eq.${userId}`)
-      .on('INSERT', payload => {
+  // Subscribe to new messages for a user via Realtime channel
+  static subscribeToUserMessages(userId: string, preschoolId: string, callback: (payload: any) => void) {
+    const channel = supabase.channel(`messages_user_${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_recipients', filter: `recipient_id=eq.${userId}` }, (payload) => {
         callback(payload.new);
       })
       .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 
   static async getUserMessages(userId: string, preschoolId: string, limit = 50, offset = 0) {
@@ -44,14 +49,17 @@ export class MessageService {
     }
   }
 
-// Get user's sent messages with real-time subscription
+  // Subscribe to sent messages by a user via Realtime channel
   static subscribeToSentMessages(userId: string, preschoolId: string, callback: (message: any) => void) {
-    return supabase
-      .from(`messages:sender_id=eq.${userId}`)
-      .on('INSERT', payload => {
+    const channel = supabase.channel(`messages_sent_${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${userId}` }, (payload) => {
         callback(payload.new);
       })
       .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 
   static async getSentMessages(userId: string, preschoolId: string, limit = 50, offset = 0) {
@@ -241,7 +249,7 @@ export class MessageService {
         .from('message_recipients')
         .select('*', { count: 'exact', head: true })
         .eq('recipient_id', userId)
-        .eq('is_read', false)
+        .is('read_at', null)
         .eq('is_archived', false);
 
       if (error) throw error;
@@ -260,17 +268,18 @@ export class MessageService {
     limit = 20
   ) {
     try {
+      const term = `%${query}%`;
       const { data, error } = await supabase
-        .from('message_recipients')
+        .from('messages')
         .select(`
           *,
-          message:messages(
-            *,
-            sender:users!messages_sender_id_fkey(id, name, avatar_url, role)
-          )
+          sender:users!messages_sender_id_fkey(id, name, avatar_url, role),
+          message_recipients!inner(recipient_id)
         `)
-        .eq('recipient_id', userId)
-        .textSearch('message.subject', query)
+        .eq('preschool_id', preschoolId)
+        .eq('message_recipients.recipient_id', userId)
+        .or(`subject.ilike.${term},content.ilike.${term}`)
+        .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
