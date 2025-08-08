@@ -16,7 +16,7 @@ export class MessageService {
       .subscribe();
 
     return () => {
-      try { (supabase as any).removeChannel(channel); } catch {}
+      try { (supabase as any).removeChannel(channel); } catch { }
     };
   }
 
@@ -54,7 +54,7 @@ export class MessageService {
       .subscribe();
 
     return () => {
-      try { (supabase as any).removeChannel(channel); } catch {}
+      try { (supabase as any).removeChannel(channel); } catch { }
     };
   }
 
@@ -165,7 +165,7 @@ export class MessageService {
       if (fetchError) throw fetchError;
 
       // Create reply subject
-      const replySubject = originalMessage.subject.startsWith('Re: ')
+      const replySubject = (originalMessage.subject || '').startsWith('Re: ')
         ? originalMessage.subject
         : `Re: ${originalMessage.subject}`;
 

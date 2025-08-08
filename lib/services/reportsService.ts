@@ -1,4 +1,4 @@
-import { claudeAI } from '@/lib/ai/claudeService';
+import { claudeService } from '@/lib/ai/claudeService';
 import { createLogger } from '@/lib/utils/logger';
 import { supabase } from '../supabase';
 const log = createLogger('reports');
@@ -8,7 +8,7 @@ export interface ClassroomReport {
   preschool_id: string;
   teacher_id: string;
   student_id: string;
-  class_id?: string;
+  class_id?: string | null;
   report_type: 'daily' | 'weekly' | 'monthly';
   report_date: string;
 
@@ -414,9 +414,9 @@ export class ReportsService {
         .eq('id', studentId)
         .single();
 
-      const studentName = studentInfo?.full_name || 'Student';
-      const studentAge = studentInfo?.age || 4;
-      const gradeLevel = studentInfo?.grade_level || 'Pre-K';
+      const studentName = (studentInfo as any)?.full_name || 'Student';
+      const studentAge = (studentInfo as any)?.age || 4;
+      const gradeLevel = (studentInfo as any)?.grade_level || 'Pre-K';
 
       const prompt = `
         As an experienced early childhood educator, create a ${reportType} report for ${studentName} (age ${studentAge}, ${gradeLevel}):
@@ -448,17 +448,11 @@ export class ReportsService {
         }
       `;
 
-      const response = await claudeAI.generateLessonContent ? await claudeAI.generateLessonContent({} as any) : await claudeAI.generateLessonContent({} as any);
-      // The above placeholder ensures import ref is correct; real code path below uses messages API
-      const response = await claudeAI['messages']?.create ? { success: false } as any : await (async () => {
-        return await ({} as any);
-      })();
-      // Replace legacy helper call
-      // const response = await claudeService.generateContent({
+      const response = await claudeService.generateContent({
         prompt,
         type: 'report_generation',
         context: { studentId, reportType, studentAge, gradeLevel },
-      // });
+      });
 
       if (response.success && response.content) {
         try {
@@ -566,11 +560,11 @@ export class ReportsService {
         }
       `;
 
-      // const response = await claudeService.generateContent({
+      const response = await claudeService.generateContent({
         prompt,
         type: 'progress_summary',
         context: { studentId, periodDays },
-      // });
+      });
 
       if (response.success && response.content) {
         try {
