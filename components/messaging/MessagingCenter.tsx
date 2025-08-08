@@ -1,41 +1,32 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  RefreshControl,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import ComposeMessageModal from './ComposeMessageModal';
 
 interface Message {
   id: string;
   content: string;
   sender_id: string;
-  receiver_id: string;
-  sender_type: 'parent' | 'teacher' | 'admin';
-  receiver_type: 'parent' | 'teacher' | 'admin';
-  message_type: 'text' | 'image' | 'file' | 'announcement';
-  child_id?: string;
-  thread_id?: string;
-  is_read: boolean;
+  message_type: 'text' | 'image' | 'file' | 'announcement' | 'system' | 'general';
   created_at: string;
-  updated_at: string;
+  updated_at?: string | null;
   sender_name?: string;
-  sender_avatar?: string;
-  attachments?: MessageAttachment[];
+  sender_avatar?: string | null;
 }
 
 interface MessageAttachment {
@@ -79,7 +70,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   const [activeTab, setActiveTab] = useState<'conversations' | 'announcements'>('conversations');
   const [announcements, setAnnouncements] = useState<Message[]>([]);
   const [showComposeModal, setShowComposeModal] = useState(false);
-  
+  const [parentUserId, setParentUserId] = useState<string | null>(null);
+
   const scrollViewRef = useRef<ScrollView>(null);
   const messageSubscription = useRef<any>(null);
 
@@ -97,28 +89,38 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     };
   }, [profile]);
 
-  const setupRealtimeSubscription = () => {
-    if (!profile?.auth_user_id) return;
+  const setupRealtimeSubscription = async () => {
+    // Subscribe to new message deliveries for this user
+    try {
+      const { data: parentProfile } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', profile?.auth_user_id || '')
+        .single();
+      if (!parentProfile) return;
+      setParentUserId(parentProfile.id);
 
-    // Subscribe to new messages
-    messageSubscription.current = supabase
-      .channel('messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${profile.auth_user_id}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
-          loadConversations(); // Refresh conversations to update last message
-          scrollToBottom();
-        }
-      )
-      .subscribe();
+      messageSubscription.current = (supabase as any)
+        .channel(`message_recipients_user_${parentProfile.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'message_recipients', filter: `recipient_id=eq.${parentProfile.id}` },
+          async (payload: any) => {
+            const recipientRow = payload.new as { message_id: string };
+            const { data: msg } = await supabase
+              .from('messages')
+              .select('id, content, created_at, sender_id')
+              .eq('id', recipientRow.message_id)
+              .single();
+            if (msg) {
+              setMessages(prev => [...prev, { id: msg.id, content: msg.content, created_at: msg.created_at || new Date().toISOString(), sender_id: msg.sender_id, message_type: 'general' }]);
+              loadConversations();
+              scrollToBottom();
+            }
+          }
+        )
+        .subscribe();
+    } catch {}
   };
 
   const loadConversations = async () => {
@@ -137,53 +139,93 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       if (parentError || !parentProfile) {
         throw new Error('Parent profile not found');
       }
+      setParentUserId(parentProfile.id);
 
-      // Fetch conversations with teachers and staff
-      const { data: conversationsData, error: conversationsError } = await supabase
+      // 1) Incoming messages to parent
+      const { data: incoming, error: incomingError } = await supabase
+        .from('message_recipients')
+        .select(`
+          read_at,
+          created_at,
+          message:messages(
+            id,
+            content,
+            created_at,
+            sender_id,
+            sender:users!messages_sender_id_fkey(name, avatar_url, role)
+          )
+        `)
+        .eq('recipient_id', parentProfile.id)
+        .order('created_at', { ascending: false });
+      if (incomingError) throw incomingError;
+
+      // 2) Outgoing messages from parent (to build conversations)
+      const { data: outgoing, error: outgoingError } = await supabase
         .from('messages')
         .select(`
           id,
-          sender_id,
-          receiver_id,
-          sender_type,
-          receiver_type,
           content,
           created_at,
-          is_read,
-          child_id,
-          sender:users!messages_sender_id_fkey(name, avatar_url, role),
-          receiver:users!messages_receiver_id_fkey(name, avatar_url, role),
-          child:students(first_name, last_name)
+          sender_id,
+          message_recipients(recipient_id)
         `)
-        .or(`sender_id.eq.${parentProfile.id},receiver_id.eq.${parentProfile.id}`)
+        .eq('sender_id', parentProfile.id)
         .order('created_at', { ascending: false });
+      if (outgoingError) throw outgoingError;
 
-      if (conversationsError) {
-        throw conversationsError;
+      // Collect recipient user ids from outgoing to backfill names
+      const recipientIds = new Set<string>();
+      outgoing?.forEach((m: any) => m.message_recipients?.forEach((r: any) => recipientIds.add(r.recipient_id)));
+      const missingIds = Array.from(recipientIds);
+      let recipientsById: Record<string, { name: string; avatar_url: string | null; role: string | null }> = {};
+      if (missingIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, name, avatar_url, role')
+          .in('id', missingIds);
+        (usersData || []).forEach((u: any) => { recipientsById[u.id] = { name: u.name, avatar_url: u.avatar_url, role: u.role }; });
       }
 
-      // Group messages by conversation participants
       const conversationMap = new Map<string, Conversation>();
-      
-      conversationsData?.forEach((msg: any) => {
-        const isFromParent = msg.sender_id === parentProfile.id;
-        const otherParticipant = isFromParent ? msg.receiver : msg.sender;
-        const conversationKey = isFromParent ? msg.receiver_id : msg.sender_id;
-        
-        if (!conversationMap.has(conversationKey)) {
-          conversationMap.set(conversationKey, {
-            id: conversationKey,
-            participant_name: otherParticipant?.name || 'Unknown',
-            participant_avatar: otherParticipant?.avatar_url,
-            participant_role: otherParticipant?.role || 'teacher',
-            child_name: msg.child ? `${msg.child.first_name} ${msg.child.last_name}` : undefined,
+
+      // Build from incoming
+      incoming?.forEach((row: any) => {
+        const msg = row.message;
+        if (!msg) return;
+        const otherId = msg.sender_id;
+        if (!conversationMap.has(otherId)) {
+          conversationMap.set(otherId, {
+            id: otherId,
+            participant_name: msg.sender?.name || 'Unknown',
+            participant_avatar: msg.sender?.avatar_url || null,
+            participant_role: msg.sender?.role || 'teacher',
             last_message: msg.content,
             last_message_time: formatMessageTime(msg.created_at),
-            unread_count: isFromParent ? 0 : (msg.is_read ? 0 : 1),
-  // TODO: Replace with real presence status
-  is_online: false,
+            unread_count: row.read_at ? 0 : 1,
+            is_online: false,
           });
         }
+      });
+
+      // Build from outgoing
+      outgoing?.forEach((msg: any) => {
+        const recipients = msg.message_recipients || [];
+        recipients.forEach((r: any) => {
+          const otherId = r.recipient_id;
+          if (!conversationMap.has(otherId)) {
+            const recipient = recipientsById[otherId];
+            conversationMap.set(otherId, {
+              id: otherId,
+              participant_name: recipient?.name || 'Unknown',
+              participant_avatar: recipient?.avatar_url || null,
+              participant_role: recipient?.role || 'teacher',
+              last_message: msg.content,
+              last_message_time: formatMessageTime(msg.created_at),
+              unread_count: 0,
+              is_online: false,
+            });
+          }
+        });
       });
 
       setConversations(Array.from(conversationMap.values()));
@@ -196,28 +238,52 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   };
 
   const loadAnnouncements = async () => {
-    if (!profile?.preschool_id) return;
+    if (!profile?.auth_user_id) return;
 
     try {
-      // Fetch school announcements
-      const { data: announcementsData, error } = await supabase
-        .from('messages')
+      // Resolve current user id
+      const { data: parentProfile } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', profile.auth_user_id)
+        .single();
+      if (!parentProfile) return;
+
+      // Fetch announcement messages delivered to this user
+      const { data, error } = await supabase
+        .from('message_recipients')
         .select(`
-          id,
-          content,
-          created_at,
-          sender:users!messages_sender_id_fkey(name, avatar_url, role)
+          read_at,
+          message:messages(
+            id,
+            content,
+            created_at,
+            sender_id,
+            message_type,
+            sender:users!messages_sender_id_fkey(name, avatar_url)
+          )
         `)
-        .eq('message_type', 'announcement')
-        .eq('receiver_type', 'parent')
+        .eq('recipient_id', parentProfile.id)
+        .eq('message.message_type', 'announcement')
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      setAnnouncements(announcementsData || []);
+      const mapped: Message[] = (data || [])
+        .map((row: any) => row.message)
+        .filter((m: any) => !!m)
+        .map((m: any) => ({
+          id: m.id,
+          content: m.content,
+          created_at: m.created_at,
+          sender_id: m.sender_id,
+          message_type: (m.message_type as any) || 'announcement',
+          sender_name: m.sender?.name,
+          sender_avatar: m.sender?.avatar_url,
+        }));
+
+      setAnnouncements(mapped);
     } catch (error) {
       console.error('Error loading announcements:', error);
     }
@@ -235,35 +301,43 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
       if (parentError || !parentProfile) return;
 
-      const { data: messagesData, error } = await supabase
-        .from('messages')
+      // Incoming messages from conversation user -> parent
+      const { data: incoming, error: incomingError } = await supabase
+        .from('message_recipients')
         .select(`
-          id,
-          content,
-          sender_id,
-          receiver_id,
-          sender_type,
-          message_type,
-          created_at,
-          is_read,
-          sender:users!messages_sender_id_fkey(name, avatar_url)
+          read_at,
+          message:messages(id, content, created_at, sender_id)
         `)
-        .or(`and(sender_id.eq.${parentProfile.id},receiver_id.eq.${conversationId}),and(sender_id.eq.${conversationId},receiver_id.eq.${parentProfile.id})`)
-        .order('created_at', { ascending: true });
+        .eq('recipient_id', parentProfile.id)
+        .eq('message.sender_id', conversationId);
+      if (incomingError) throw incomingError;
 
-      if (error) {
-        throw error;
-      }
+      // Outgoing messages from parent -> conversation user
+      const { data: outgoing, error: outgoingError } = await supabase
+        .from('message_recipients')
+        .select(`
+          read_at,
+          message:messages(id, content, created_at, sender_id)
+        `)
+        .eq('recipient_id', conversationId)
+        .eq('message.sender_id', parentProfile.id);
+      if (outgoingError) throw outgoingError;
 
-      setMessages(messagesData || []);
-      
-      // Mark messages as read
-      // Mark as read in message_recipients
+      const unified: Message[] = ([] as any[])
+        .concat((incoming || []).map((r: any) => r.message))
+        .concat((outgoing || []).map((r: any) => r.message))
+        .filter(Boolean)
+        .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        .map((m: any) => ({ id: m.id, content: m.content, created_at: m.created_at, sender_id: m.sender_id, message_type: 'general' }));
+
+      setMessages(unified);
+
+      // Mark as read for any incoming unread
       await supabase
         .from('message_recipients')
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq('user_id', parentProfile.id)
-        .eq('is_read', false);
+        .update({ read_at: new Date().toISOString() })
+        .eq('recipient_id', parentProfile.id)
+        .is('read_at', null);
 
       scrollToBottom();
     } catch (error) {
@@ -305,7 +379,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           .from('message_recipients')
           .insert({
             message_id: newMsg.id,
-            user_id: selectedConversation,
+            recipient_id: selectedConversation,
             recipient_type: 'user'
           });
       }
@@ -394,7 +468,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
               <Text style={styles.participantName}>{conversation.participant_name}</Text>
               <Text style={styles.messageTime}>{conversation.last_message_time}</Text>
             </View>
-            
+
             <View style={styles.conversationDetails}>
               <Text style={styles.participantRole}>
                 {conversation.participant_role === 'teacher' ? '👩‍🏫 Teacher' : '👨‍💼 Admin'}
@@ -431,7 +505,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             Connect with your child&apos;s teachers, school staff, and other parents.
             Tap the + button above to send your first message!
           </Text>
-          
+
           <TouchableOpacity
             style={styles.emptyStateButton}
             onPress={() => setShowComposeModal(true)}
@@ -439,7 +513,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
             <Text style={styles.emptyStateButtonText}>Start a Conversation</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.emptyStateFeatures}>
             <View style={styles.featureItem}>
               <IconSymbol name="person.2.fill" size={16} color="#10B981" />
@@ -491,7 +565,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             Important school updates, events, and news will appear here.
             Stay tuned for the latest from your preschool!
           </Text>
-          
+
           <View style={styles.emptyStateFeatures}>
             <View style={styles.featureItem}>
               <IconSymbol name="calendar" size={16} color="#3B82F6" />
@@ -525,7 +599,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           >
             <IconSymbol name="chevron.left" size={20} color="#3B82F6" />
           </TouchableOpacity>
-          
+
           <View style={styles.chatHeaderInfo}>
             <Text style={styles.chatParticipantName}>{conversation.participant_name}</Text>
             <Text style={styles.chatParticipantRole}>
@@ -552,7 +626,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           onContentSizeChange={scrollToBottom}
         >
           {messages.map((message) => {
-            const isFromParent = message.sender_type === 'parent';
+            const isFromParent = parentUserId ? message.sender_id === parentUserId : false;
             return (
               <View
                 key={message.id}
@@ -640,9 +714,9 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
           <IconSymbol name="xmark" size={20} color="#6B7280" />
         </TouchableOpacity>
-        
+
         <Text style={styles.headerTitle}>Messages</Text>
-        
+
         <TouchableOpacity
           style={styles.composeButton}
           onPress={() => setShowComposeModal(true)}
@@ -703,7 +777,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           {activeTab === 'conversations' ? renderConversationsList() : renderAnnouncementsList()}
         </>
       )}
-      
+
       {/* Compose Message Modal */}
       <ComposeMessageModal
         visible={showComposeModal}
