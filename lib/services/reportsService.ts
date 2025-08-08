@@ -87,7 +87,7 @@ export class ReportsService {
           preschool_id: preschoolId,
           teacher_id: teacherId,
           student_id: studentId,
-          report_type: reportType,
+        report_type: reportType as 'daily' | 'weekly' | 'monthly',
           report_date: reportDate,
           ...reportData,
         })

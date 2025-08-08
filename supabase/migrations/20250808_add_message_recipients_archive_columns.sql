@@ -7,3 +7,4 @@ alter table if exists public.message_recipients
 
 commit;
 
+

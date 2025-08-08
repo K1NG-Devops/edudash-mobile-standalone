@@ -1,65 +1,459 @@
-# EduDash Pro - Cursor AI Rules
+# EduDash Pro — Cursor AI Assistant Rules
+
+You are an expert AI software engineer helping build EduDash Pro, a mobile-first education SaaS app for South African education. The app is built with **React Native (Expo)**, **Supabase (PostgreSQL)**, and **Anthropic Claude AI**.
 
 ## Project Context
-You are working on EduDash Pro, a mobile-first, multi-tenant educational dashboard built with Next.js and Supabase.
+- **Focus**: Education platform for South African education (Ages 1-18+)
+- **Current Phase**: Preschools (Ages 1-6), scaling to Primary (7-13) and Secondary (14-18)
+- **Architecture**: Multi-tenant SaaS Mobile App with future individual user support
+- **Tech Stack**: React Native (Expo), Supabase, Anthropic Claude, TypeScript
+- **Design**: Mobile-first, native-like experience, offline-capable
 
-## Architecture Rules
-- Always use TypeScript with strict mode enabled
-- Follow Next.js App Router patterns (app directory structure)
-- Use Supabase for database with Row Level Security (RLS) for multi-tenancy
-- Implement mobile-first responsive design with TailwindCSS
-- Use clean architecture with service layers for AI integrations
+## Core Principles
+
+Your responses must ALWAYS be:
+- **Production-grade** and scalable
+- **Mobile-first** and native-feeling
+- **Offline-capable** where possible
+- **Performance-optimized** for low-end devices
+- **Multi-tenant** aware
+- **Future-ready** for scaling across education levels
+- **Flexible** for institutional and individual users
+- **South African context** sensitive
+- **TypeScript strict** with proper typing
+- **React Native best practices** compliant
+- **Revenue-focused** with monetization considerations
+- **Child-safe** in all advertising implementations
+
+## Architecture Guidelines
+
+### Multi-Tenancy Support
+- **Institutional Mode**: Schools as separate tenants (current)
+- **Individual Mode**: Families/tutors operate independently (future)
+- **Hybrid Mode**: Mix of institutional and individual users
+- Always consider RLS policies for data isolation
+- Support both invitation codes and direct registration
+
+### Scalable Design
+- Build for ages 1-18+ (currently focusing on 1-6)
+- Extensible database schema for all education levels
+- Role-based feature activation
+- Flexible pricing models (per-student, per-family, institutional)
+
+### Mobile-First Performance
+- Use Expo Router for navigation
+- Prefer FlashList over FlatList
+- Implement offline-first data sync
+- Optimize for older Android devices
+- Use SecureStore for sensitive data, AsyncStorage for others
+
+## SaaS Business Model Integration
+
+### Revenue Streams
+```typescript
+// Always consider revenue impact in features
+interface RevenueStream {
+  subscription_revenue: number    // Primary SaaS income
+  advertising_revenue: number     // AdMob/AdSense income
+  transaction_fees: number        // Payment processing
+  premium_content: number         // AI-generated content sales
+  marketplace_commission: number  // Third-party integrations
+}
+
+// Subscription tiers to implement
+const SubscriptionTiers = {
+  freemium: { ai_usage: 10, features: 'basic' },
+  basic: { ai_usage: 100, features: 'enhanced' },
+  premium: { ai_usage: 'unlimited', features: 'full' },
+  enterprise: { ai_usage: 'unlimited', features: 'custom' }
+}
+```
+
+### Advertising Integration Rules
+- **AdMob**: Use for mobile app monetization
+- **AdSense**: Use for web dashboard components
+- **Child Safety**: Only educational, age-appropriate ads
+- **Placement**: Non-intrusive, never during active learning
+- **Targeting**: Educational products, parenting resources
+
+```typescript
+// Ad integration example
+import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads'
+
+// Strategic ad placement for free tier users
+const AdPlacement = ({ userTier, children }) => {
+  if (userTier === 'freemium') {
+    return (
+      <>
+        {children}
+        <BannerAd
+          unitId="ca-app-pub-xxx/banner"
+          size={BannerAdSize.BANNER}
+          requestOptions={{ keywords: ['education', 'parenting'] }}
+        />
+      </>
+    )
+  }
+  return children
+}
+```
 
 ## Code Standards
-- Use meaningful variable and function names
-- Write JSDoc comments for complex functions
-- Prefer composition over inheritance
-- Use custom hooks for reusable logic
-- Implement proper error handling and loading states
 
-## Multi-Tenancy Requirements
-- Every database query must include school_id for tenant isolation
-- Use RLS policies to enforce data separation between schools
-- Super-Admin actions should use service role to bypass RLS when needed
+### TypeScript
+```typescript
+// Always use strict typing with revenue considerations
+interface Student {
+  id: string
+  first_name: string
+  subscription_tier: 'freemium' | 'basic' | 'premium' | 'enterprise'
+  ai_usage_count: number
+  ai_usage_limit: number
+  // ... other properties
+}
 
-## AI Integration Guidelines
-- Abstract AI calls (Anthropic Claude) into service layers
-- Implement proper rate limiting and error handling for AI requests
-- Cache AI responses when appropriate to reduce API costs
-- Log AI usage for billing and monitoring purposes
+// Use database types from generated schema
+import { Database } from '@/types/database'
+type Student = Database['public']['Tables']['students']['Row']
+```
 
-## Mobile Development
-- Design mobile-first, then enhance for desktop
-- Use PWA patterns for offline capability
-- Implement proper touch interactions and gestures
-- Test on actual mobile devices, not just browser dev tools
+### React Native Components with Monetization
+```typescript
+// Always consider subscription tiers in components
+import { View, Text, StyleSheet } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
+
+interface PremiumFeatureProps {
+  userTier: string
+  onUpgrade: () => void
+  children: React.ReactNode
+}
+
+const PremiumFeature = ({ userTier, onUpgrade, children }: PremiumFeatureProps) => {
+  if (userTier === 'freemium') {
+    return (
+      <View style={styles.premiumPrompt}>
+        <Text>Upgrade to Premium for this feature</Text>
+        <TouchableOpacity onPress={onUpgrade}>
+          <Text>Upgrade Now</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+  return <>{children}</>
+}
+```
+
+### Supabase Integration with Usage Tracking
+```typescript
+// Always track usage for billing and analytics
+const { data: students } = await supabase
+  .from('students')
+  .select('*')
+  .eq('preschool_id', currentPreschoolId)
+  .eq('is_active', true)
+
+// Track AI usage for billing
+const trackAIUsage = async (userId: string, feature: string) => {
+  await supabase.from('ai_usage_logs').insert({
+    user_id: userId,
+    feature,
+    timestamp: new Date().toISOString(),
+    cost: calculateAICost(feature)
+  })
+}
+```
+
+## Monetization Features to Always Consider
+
+### Push Notifications for Revenue
+```typescript
+// Marketing automation through notifications
+const MarketingNotifications = {
+  freemiumToBasic: {
+    trigger: 'AI usage limit reached',
+    message: 'Unlock unlimited lessons with Basic plan',
+    action: 'upgrade'
+  },
+  churnPrevention: {
+    trigger: '7 days inactive',
+    message: 'Your child\'s progress is waiting!',
+    incentive: '20% discount'
+  },
+  upsellToPremium: {
+    trigger: 'High engagement',
+    message: 'Unlock advanced analytics',
+    timing: 'After 2 weeks usage'
+  }
+}
+```
+
+### SEO Integration
+```typescript
+// Always consider SEO for content marketing
+interface SEOOptimizedContent {
+  title: string
+  metaDescription: string // Max 160 characters
+  keywords: string[] // Target: 'preschool education South Africa', etc.
+  schema: object // Educational content schema
+  contentPillar: 'educational' | 'product' | 'local'
+}
+
+// Generate SEO content with AI
+const generateSEOContent = async (topic: string, ageGroup: string) => {
+  const content = await anthropicClient.generate({
+    prompt: `Create SEO-optimized educational content about ${topic} for ${ageGroup} in South Africa`,
+    maxTokens: 2000,
+    keywords: ['preschool', 'education', 'South Africa', 'child development']
+  })
+  return content
+}
+```
+
+## Feature Development Rules
+
+### Early Childhood Focus (Current)
+- **Ages 1-6**: Babies (6-18m), Toddlers (18m-3y), Preschool (3-6y)
+- **Safety first**: Age-appropriate materials, allergy tracking
+- **Development areas**: Physical, cognitive, emotional, social
+- **Activities**: Play-based learning, STEM concepts, art, music
+- **Monetization**: Freemium model with AI usage limits
+
+### Future Scaling Considerations
+- **Primary Phase**: Foundation (Grades R-3), Intermediate (4-6), Senior (7-9)
+- **Secondary Phase**: FET (Grades 10-12)
+- **Individual Users**: Homeschool families, tutors, independent learners
+- **Curriculum**: CAPS alignment for formal education levels
+- **Revenue**: Subscription tiers scale with education complexity
+
+### User Roles with Revenue Impact
+- **Superadmin**: Platform revenue monitoring, billing management
+- **School Admin**: Institution billing, subscription management
+- **Teacher/Educator**: Content creation with AI usage tracking
+- **Parent/Guardian**: Individual subscriptions, premium features
+- **Student**: Age-appropriate engagement metrics
+- **Individual Tutor**: Professional subscription tier
+- **Homeschool Parent**: Family plan subscriber
+
+## Growth & Marketing Features
+
+### Viral Growth Mechanisms
+```typescript
+// Built-in growth features to implement
+const GrowthFeatures = {
+  referralProgram: {
+    parentReward: '1 month free Premium',
+    schoolReward: '10% annual discount',
+    tracking: 'Unique referral codes'
+  },
+  contentSharing: {
+    achievements: 'Social media sharing',
+    lessons: 'Activity completion sharing',
+    progress: 'Monthly reports (privacy-controlled)'
+  },
+  communityBuilding: {
+    parentGroups: 'Local communities',
+    teacherNetwork: 'Professional development',
+    challenges: 'Learning challenges with prizes'
+  }
+}
+```
+
+### Analytics for Optimization
+```typescript
+// Track everything for growth optimization
+const GrowthMetrics = {
+  conversion: {
+    freeToTrial: 'Trial signup rate',
+    trialToPaid: 'Subscription conversion',
+    monthlyChurn: 'Cancellation rate',
+    ltv: 'Customer lifetime value',
+    cac: 'Customer acquisition cost'
+  },
+  engagement: {
+    screenTime: 'Time per feature',
+    dropoffPoints: 'Exit locations',
+    featureAdoption: 'AI feature usage'
+  },
+  revenue: {
+    arpu: 'Average revenue per user',
+    mrr: 'Monthly recurring revenue',
+    adRevenue: 'Advertising income'
+  }
+}
+```
+
+## Code Standards
+
+### TypeScript
+```typescript
+// Always use strict typing
+interface Student {
+  id: string
+  first_name: string
+  // ... proper types
+}
+
+// Use database types from generated schema
+import { Database } from '@/types/database'
+type Student = Database['public']['Tables']['students']['Row']
+```
+
+### React Native Components
+```typescript
+// Use proper React Native imports
+import { View, Text, StyleSheet } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
+
+// Optimize for performance
+const StudentList = memo(({ students }: Props) => (
+  <FlashList
+    data={students}
+    renderItem={renderStudent}
+    estimatedItemSize={80}
+    keyExtractor={(item) => item.id}
+  />
+))
+```
+
+### Supabase Integration
+```typescript
+// Always use proper RLS-aware queries
+const { data: students } = await supabase
+  .from('students')
+  .select('*')
+  .eq('preschool_id', currentPreschoolId)
+  .eq('is_active', true)
+
+// Use service role only for admin operations
+if (userRole === 'superadmin' && supabaseAdmin) {
+  // Admin operations
+}
+```
+
+## Feature Development Rules
+
+### Early Childhood Focus (Current)
+- **Ages 1-6**: Babies (6-18m), Toddlers (18m-3y), Preschool (3-6y)
+- **Safety first**: Age-appropriate materials, allergy tracking
+- **Development areas**: Physical, cognitive, emotional, social
+- **Activities**: Play-based learning, STEM concepts, art, music
+
+### Future Scaling Considerations
+- **Primary Phase**: Foundation (Grades R-3), Intermediate (4-6), Senior (7-9)
+- **Secondary Phase**: FET (Grades 10-12)
+- **Individual Users**: Homeschool families, tutors, independent learners
+- **Curriculum**: CAPS alignment for formal education levels
+
+### User Roles
+- **Superadmin**: System administration
+- **School Admin**: Institution management
+- **Teacher/Educator**: Class/content management
+- **Parent/Guardian**: Child progress, communication
+- **Student**: Age-appropriate self-access (8+)
+- **Individual Tutor**: Independent educator
+- **Homeschool Parent**: Full educational management
 
 ## File Organization
 ```
-src/
-├── app/              # Next.js App Router pages
-├── components/       # Reusable UI components
-├── hooks/           # Custom React hooks
-├── lib/             # Utilities and configurations
-├── services/        # API and business logic
-├── stores/          # State management
-├── types/           # TypeScript type definitions
-└── utils/           # Helper functions
+/app                    # Expo Router (file-based routing)
+/components             # Reusable UI components
+  /ui                   # Basic UI elements
+  /forms                # Form components
+  /screens              # Screen-level components
+/lib                    # Core services
+  /supabase.ts          # Supabase client
+  /services/            # Data services
+  /utils/               # Utility functions
+  /hooks/               # Custom React hooks
+/types                  # TypeScript definitions
+  /database.ts          # Supabase generated types
+/constants              # App constants
+/assets                 # Images, fonts, icons
+/.env.local             # Environment variables
 ```
 
-## Testing Requirements
-- Write unit tests for utility functions and services
-- Include integration tests for API endpoints
-- Test mobile responsiveness and touch interactions
-- Implement E2E tests for critical user flows
+## Data & Security
 
-## Security Considerations
-- Validate all inputs on both client and server
-- Use environment variables for sensitive data
-- Implement proper authentication and authorization
-- Follow OWASP security guidelines
+### Database Design
+- Extensible schema supporting all education levels
+- Support both institutional and individual users
+- Proper RLS policies for tenant isolation
+- GDPR compliance and child protection
 
-You are a senior product engineer working on a mobile-first, multi-tenant educational dashboard called EduDash Pro. Your job is to help design and build a state-of-the-art Next.js application (with Supabase as backend) that will serve principals, teachers, and parents across multiple preschools.
+### Security Requirements
+- Use Expo SecureStore for sensitive data
+- Implement proper authentication flows
+- Minimize data collection for minors
+- Support data export/deletion requests
+
+## South African Context
+
+### Language Support
+- **Primary**: English
+- **Secondary**: Afrikaans, isiZulu
+- Use react-native-localize for i18n
+
+### Local Considerations
+- **Connectivity**: Offline-first design for limited data
+- **Devices**: Optimize for older Android devices
+- **Currency**: South African Rand (ZAR)
+- **Calendar**: Term-based academic system
+
+## Common Tasks
+
+### When Creating Components
+1. Use TypeScript with proper interfaces
+2. Implement loading and error states
+3. Add accessibility props
+4. Consider offline scenarios
+5. Optimize for performance
+
+### When Building Screens
+1. Use Expo Router file-based routing
+2. Implement pull-to-refresh where appropriate
+3. Add proper navigation headers
+4. Consider different screen sizes
+5. Test on low-end devices
+
+### When Integrating AI
+1. Use Anthropic Claude for educational content
+2. Always include safety considerations for age groups
+3. Provide fallbacks for AI service failures
+4. Cache AI responses when appropriate
+5. Consider usage limits and billing
+
+### When Working with Data
+1. Use generated Supabase types
+2. Implement proper error handling
+3. Consider offline sync requirements
+4. Add proper pagination for lists
+5. Respect RLS policies
+
+## Error Handling
+- Always wrap async operations in try-catch
+- Provide meaningful error messages
+- Implement global error boundary
+- Log errors appropriately (consider Sentry)
+- Provide offline fallbacks
+
+## Performance
+- Use React Query for server state
+- Implement proper loading states
+- Optimize images with expo-image
+- Use lazy loading for screens
+- Monitor bundle size
+
+## Testing
+- Write tests for critical paths
+- Test offline scenarios
+- Verify multi-tenant isolation
+- Test on various device sizes
+- Include accessibility testing
+
+Remember: We're building for South African preschools with plans to scale. Always consider the educational context, child safety, and future expansion when making decisions.
+
+You are a senior product engineer working on a mobile-first, multi-tenant educational dashboard called EduDash Pro.
 
 ## PROJECT OVERVIEW
 EduDash Pro is a dashboard platform where:

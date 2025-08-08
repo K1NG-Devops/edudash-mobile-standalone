@@ -5,6 +5,8 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { createLogger } from '@/lib/utils/logger';
+const log = createLogger('schooladmin');
 import { Database } from '@/types/database';
 
 type Tables = Database['public']['Tables'];

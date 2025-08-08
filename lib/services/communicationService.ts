@@ -162,4 +162,5 @@ class CommunicationService {
 }
 
 export { CommunicationService };
-export type { MessageThread, Message, Participant };
+export type { Message, MessageThread, Participant };
+

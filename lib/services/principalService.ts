@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { createLogger } from '@/lib/utils/logger';
+const log = createLogger('principal');
 import { Database } from '@/types/database';
 import { EmailService, type TeacherInvitationEmailData } from './emailService';
 import { StorageUtil } from '@/lib/utils/storage';

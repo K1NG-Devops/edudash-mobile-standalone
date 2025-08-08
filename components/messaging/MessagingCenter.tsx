@@ -180,7 +180,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             last_message: msg.content,
             last_message_time: formatMessageTime(msg.created_at),
             unread_count: isFromParent ? 0 : (msg.is_read ? 0 : 1),
-            is_online: Math.random() > 0.5, // Mock online status
+  // TODO: Replace with real presence status
+  is_online: false,
           });
         }
       });

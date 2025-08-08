@@ -11,6 +11,8 @@ import {
     View
 } from 'react-native';
 import { MobileSidebar } from './MobileSidebar';
+import { createLogger } from '@/lib/utils/logger';
+const log = createLogger('ui');
 
 interface MobileHeaderProps {
   user: {
@@ -37,12 +39,8 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
   };
 
   private getRoleTitle = (role: string) => {
-    console.log('🏫 [DEBUG] getRoleTitle called with role:', role);
-    console.log('🏫 [DEBUG] schoolName prop:', this.props.schoolName);
-    
     // If we have a school name, prioritize showing it for school roles
     if (this.props.schoolName && (role === 'preschool_admin' || role === 'principal' || role === 'teacher')) {
-      console.log('🏫 [DEBUG] Returning school name:', this.props.schoolName);
       return this.props.schoolName;
     }
     

@@ -1,9 +1,9 @@
-import { HomeworkAssignment, StudentHomeworkSubmission, HomeworkSubmissionData, HomeworkNotification, HomeworkFilter, HomeworkSummary } from '@/types/homework-types';
-import { supabase } from '../supabase';
 import { claudeService } from '@/lib/ai/claudeService';
+import { HomeworkAssignment, HomeworkFilter, HomeworkNotification, HomeworkSubmissionData, HomeworkSummary, StudentHomeworkSubmission } from '@/types/homework-types';
+import { supabase } from '../supabase';
 
 export class HomeworkService {
-// Subscriptions for real-time updates
+  // Subscriptions for real-time updates
   static subscribeToAssignments(userId: string, callback: (assignment: any) => void) {
     const channel = (supabase as any)
       .channel(`homework_assignments_user_${userId}`)
@@ -12,7 +12,7 @@ export class HomeworkService {
       })
       .subscribe();
     return () => {
-      try { (supabase as any).removeChannel(channel); } catch {}
+      try { (supabase as any).removeChannel(channel); } catch { }
     };
   }
 
@@ -68,7 +68,7 @@ export class HomeworkService {
       if (response.success && response.content) {
         try {
           const gradingResult = JSON.parse(response.content);
-          
+
           // Update the submission with AI grading
           await supabase
             .from('homework_submissions')
@@ -80,7 +80,7 @@ export class HomeworkService {
               status: 'graded'
             })
             .eq('id', submissionId);
-          
+
           return gradingResult;
         } catch (parseError) {
           console.warn('Failed to parse AI grading response:', parseError);
@@ -94,7 +94,7 @@ export class HomeworkService {
           };
         }
       }
-      
+
       throw new Error('AI grading service unavailable');
     } catch (error) {
       console.error('Error in AI homework grading:', error);
@@ -154,7 +154,7 @@ export class HomeworkService {
       if (response.error) {
         throw new Error(`Failed to fetch homework assignments: ${response.error.message}`);
       }
-      
+
       return response.data as HomeworkAssignment[];
     } catch (error) {
       console.error('Error fetching homework assignments:', error);
@@ -230,14 +230,14 @@ export class HomeworkService {
         .single();
 
       if (response.error) throw new Error(response.error.message);
-      
+
       const submissionId = response.data.id;
       const uploadedFiles: string[] = [];
 
       // If there are media files, upload them and update the submission
       if (mediaFiles && mediaFiles.length > 0) {
         const { MediaService } = await import('./mediaService');
-        
+
         // Get student and preschool info for upload
         const { data: studentData } = await supabase
           .from('students')
@@ -256,7 +256,7 @@ export class HomeworkService {
             file.mimeType,
             (studentData.parent_id ?? data.student_id) as string,
             studentData.preschool_id,
-            { 
+            {
               studentId: data.student_id,
               homeworkSubmissionId: submissionId
             }
@@ -264,7 +264,7 @@ export class HomeworkService {
         });
 
         const uploadResults = await Promise.all(uploadPromises);
-        
+
         // Check for upload failures
         const failedUploads = uploadResults.filter(result => result.error);
         if (failedUploads.length > 0) {
@@ -276,14 +276,14 @@ export class HomeworkService {
         const successfulUploads = uploadResults
           .filter(result => result.data)
           .map(result => result.data!.file_url);
-        
+
         uploadedFiles.push(...successfulUploads);
 
         // Update submission with uploaded file URLs
         if (successfulUploads.length > 0) {
           const { error: updateError } = await supabase
             .from('homework_submissions')
-            .update({ 
+            .update({
               attachment_urls: [...(data.attachment_urls || []), ...successfulUploads]
             })
             .eq('id', submissionId);
@@ -309,9 +309,9 @@ export class HomeworkService {
   static async getSummary(studentId: string): Promise<HomeworkSummary> {
     try {
       // Calculate summary locally
-      
+
       const submissions = await this.getSubmissions(studentId);
-      
+
       const summary: HomeworkSummary = {
         total_assignments: submissions.length,
         completed_assignments: submissions.filter(s => s.status === 'submitted' || s.status === 'completed' || s.status === 'reviewed').length,
@@ -326,7 +326,7 @@ export class HomeworkService {
         upcoming_deadlines: [],
         recent_feedback: [],
       };
-      
+
       return summary;
     } catch (error) {
       console.error('Error generating homework summary:', error);
@@ -388,7 +388,7 @@ export class HomeworkService {
           };
         }
       }
-      
+
       throw new Error('AI homework help service unavailable');
     } catch (error) {
       console.error('Error getting homework help:', error);
@@ -469,7 +469,7 @@ export class HomeworkService {
           };
         }
       }
-      
+
       throw new Error('AI assignment creation service unavailable');
     } catch (error) {
       console.error('Error creating assignment with AI:', error);

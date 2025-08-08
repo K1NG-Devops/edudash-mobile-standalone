@@ -185,7 +185,7 @@ export class MessageService {
         preschoolId,
         replySubject,
         content,
-        originalMessage.message_type,
+        (originalMessage.message_type as any) ?? 'general',
         recipients,
         {
           attachmentUrls,

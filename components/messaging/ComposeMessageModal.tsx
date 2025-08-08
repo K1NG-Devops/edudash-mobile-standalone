@@ -116,7 +116,8 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
             avatar_url: teacher.avatar_url,
             email: teacher.email,
             class_name: teacher.classes?.name,
-            is_online: Math.random() > 0.5, // Mock online status
+  // TODO: Replace with real presence status
+  is_online: false,
           });
         });
       }
@@ -156,7 +157,8 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
                   avatar_url: student.users.avatar_url,
                   email: student.users.email,
                   class_name: student.classes?.name,
-                  is_online: Math.random() > 0.5, // Mock online status
+  // TODO: Replace with real presence status
+  is_online: false,
                 });
               }
             });

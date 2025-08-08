@@ -60,7 +60,7 @@ export class ClaudeAIService {
     };
 
     this.usageTracker.push(usage);
-    
+
     // Guard for SSR / Node during web static rendering
     if (typeof window === 'undefined') {
       return;
@@ -162,7 +162,7 @@ Make it educational, fun, and age-appropriate with hands-on learning experiences
       const content = response.content[0];
       if (content.type === 'text') {
         const lessonData = JSON.parse(content.text);
-        
+
         // Track AI usage
         await this.trackUsage(params.userId, params.preschoolId, 'lesson_generation', response.usage?.input_tokens || 0);
 
@@ -175,9 +175,9 @@ Make it educational, fun, and age-appropriate with hands-on learning experiences
       return { success: false, error: 'Invalid response format' };
     } catch (error) {
       console.error('AI Lesson Generation Error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -253,7 +253,7 @@ Format as JSON:
       const content = response.content[0];
       if (content.type === 'text') {
         const gradingData = JSON.parse(content.text);
-        
+
         // Track AI usage
         await this.trackUsage(params.userId, params.preschoolId, 'homework_grading', response.usage?.input_tokens || 0);
 
@@ -266,9 +266,9 @@ Format as JSON:
       return { success: false, error: 'Invalid response format' };
     } catch (error) {
       console.error('AI Homework Grading Error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -337,7 +337,7 @@ Format as JSON:
       const content = response.content[0];
       if (content.type === 'text') {
         const activityData = JSON.parse(content.text);
-        
+
         // Track AI usage
         await this.trackUsage(params.userId, params.preschoolId, 'stem_activity', response.usage?.input_tokens || 0);
 
@@ -350,9 +350,9 @@ Format as JSON:
       return { success: false, error: 'Invalid response format' };
     } catch (error) {
       console.error('AI STEM Activity Generation Error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -390,7 +390,7 @@ Format as JSON:
       const activitiesText = params.recentActivities
         .map(a => `${a.activity}: ${a.performance} (${a.date})`)
         .join('\n');
-      
+
       const notesText = params.teacherNotes.join('\n');
 
       const prompt = `Analyze the learning progress for ${params.studentName}, a ${params.age}-year-old preschooler.
@@ -434,7 +434,7 @@ Format as JSON:
       const content = response.content[0];
       if (content.type === 'text') {
         const analysisData = JSON.parse(content.text);
-        
+
         // Track AI usage
         await this.trackUsage(params.userId, params.preschoolId, 'progress_analysis', response.usage?.input_tokens || 0);
 
@@ -447,9 +447,9 @@ Format as JSON:
       return { success: false, error: 'Invalid response format' };
     } catch (error) {
       console.error('AI Progress Analysis Error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -465,12 +465,12 @@ Format as JSON:
   }> {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    const preschoolUsage = this.usageTracker.filter(u => 
+
+    const preschoolUsage = this.usageTracker.filter(u =>
       u.preschoolId === preschoolId
     );
-    
-    const monthlyUsage = preschoolUsage.filter(u => 
+
+    const monthlyUsage = preschoolUsage.filter(u =>
       new Date(u.timestamp) >= monthStart
     );
 

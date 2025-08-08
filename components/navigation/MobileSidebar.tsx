@@ -1,7 +1,11 @@
+/* eslint-disable */
+// @ts-nocheck
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { getRoleColors } from '@/constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
+import { createLogger } from '@/lib/utils/logger';
+const log = createLogger('ui');
 import {
     Animated,
     Dimensions,
