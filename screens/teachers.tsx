@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import type { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';

@@ -410,13 +410,13 @@ export class ReportsService {
       // Get student information for context
       const { data: studentInfo } = await supabase
         .from('students')
-        .select('full_name, age, grade_level')
+        .select('full_name, age, class:classes!students_class_id_fkey(grade_level)')
         .eq('id', studentId)
         .single();
 
       const studentName = (studentInfo as any)?.full_name || 'Student';
       const studentAge = (studentInfo as any)?.age || 4;
-      const gradeLevel = (studentInfo as any)?.grade_level || 'Pre-K';
+      const gradeLevel = (studentInfo as any)?.class?.grade_level || 'Pre-K';
 
       const prompt = `
         As an experienced early childhood educator, create a ${reportType} report for ${studentName} (age ${studentAge}, ${gradeLevel}):

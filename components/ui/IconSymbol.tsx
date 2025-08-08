@@ -25,7 +25,7 @@ const MAPPING: IconMapping = {
   'magnifyingglass': 'search',
   'xmark': 'close',
   'xmark.circle': 'cancel',
-  'arrow.clockwise': 'refresh',
+  // 'arrow.clockwise' already defined above; avoid duplicate key
 
   // User & Authentication
   'person.circle.fill': 'account-circle',
