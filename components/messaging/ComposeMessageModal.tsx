@@ -220,15 +220,29 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       const { data: messageData, error: messageError } = await supabase
         .from('messages')
         .insert({
+          preschool_id: profile.preschool_id!,
+          subject: '',
           content: messageContent.trim() || (attachedMedia.length > 0 ? '📷 Photo message' : ''),
           sender_id: parentProfile.id,
           message_type: attachedMedia.length > 0 ? 'image' : 'text',
+          is_draft: false,
         })
         .select()
         .single();
 
       if (messageError) {
         throw messageError;
+      }
+
+      // Insert recipients row for selected contact
+      if (selectedContact?.id) {
+        await supabase
+          .from('message_recipients')
+          .insert({
+            message_id: messageData.id,
+            recipient_id: selectedContact.id,
+            recipient_type: 'user',
+          });
       }
 
       // Upload attached media if any
