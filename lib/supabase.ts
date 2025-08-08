@@ -6,11 +6,14 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { Database } from '@/types/database';
 
-// Debug environment variables
-console.log('🔧 Supabase Config Debug:');
-console.log('- EXPO_PUBLIC_SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Found' : '❌ Missing');
-console.log('- EXPO_PUBLIC_SUPABASE_ANON_KEY:', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? '✅ Found' : '❌ Missing');
-console.log('- EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY:', process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ? '✅ Found' : '❌ Missing');
+// Debug environment variables (gated behind debug flag)
+const DEBUG_SUPABASE = process.env.EXPO_PUBLIC_DEBUG_SUPABASE === 'true';
+if (DEBUG_SUPABASE) {
+  console.log('🔧 Supabase Config Debug:');
+  console.log('- EXPO_PUBLIC_SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Found' : '❌ Missing');
+  console.log('- EXPO_PUBLIC_SUPABASE_ANON_KEY:', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? '✅ Found' : '❌ Missing');
+  console.log('- EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY:', process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ? '✅ Found' : '❌ Missing');
+}
 
 // Set to true for local development testing
 const USE_LOCAL_DB = false;
@@ -25,9 +28,11 @@ const supabaseAnonKey = USE_LOCAL_DB
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Supabase configuration missing!');
-  console.error('URL:', supabaseUrl);
-  console.error('Key available:', !!supabaseAnonKey);
-} else {
+  if (DEBUG_SUPABASE) {
+    console.error('URL:', supabaseUrl);
+    console.error('Key available:', !!supabaseAnonKey);
+  }
+} else if (DEBUG_SUPABASE) {
   console.log('✅ Supabase configuration loaded');
   console.log('URL:', supabaseUrl);
 }
@@ -106,12 +111,14 @@ export const supabaseAdmin = supabaseServiceRoleKey
     })
   : null;
 
-if (supabaseServiceRoleKey) {
-  console.log('✅ Supabase Admin client configured with service role');
-  console.log('🔑 Service role key (first 20 chars):', supabaseServiceRoleKey.substring(0, 20) + '...');
-} else {
-  console.warn('⚠️ Service role key not found - admin operations will not work');
-  console.log('🔍 Available env vars:', Object.keys(process.env).filter(key => key.includes('SUPABASE')));
+if (DEBUG_SUPABASE) {
+  if (supabaseServiceRoleKey) {
+    console.log('✅ Supabase Admin client configured with service role');
+    console.log('🔑 Service role key (first 20 chars):', supabaseServiceRoleKey.substring(0, 20) + '...');
+  } else {
+    console.warn('⚠️ Service role key not found - admin operations will not work');
+    console.log('🔍 Available env vars:', Object.keys(process.env).filter(key => key.includes('SUPABASE')));
+  }
 }
 
 // Helper function to get current user with role
