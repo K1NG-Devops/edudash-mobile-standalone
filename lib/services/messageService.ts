@@ -189,7 +189,7 @@ export class MessageService {
         recipients,
         {
           attachmentUrls,
-          priority: originalMessage.priority,
+          priority: (originalMessage.priority ?? undefined) as 'low' | 'normal' | 'high' | 'urgent' | undefined,
         }
       );
     } catch (error) {
