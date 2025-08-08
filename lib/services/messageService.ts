@@ -1,26 +1,22 @@
 import { supabase } from '@/lib/supabase';
 import { createLogger } from '@/lib/utils/logger';
-const log = createLogger('message');
-import { 
-  Message, 
-  MessageRecipient, 
-  MessageDraft, 
-  MessageNotification,
-  MessageType,
-  MessageRecipientType 
+import {
+  MessageRecipientType,
+  MessageType
 } from '@/types/types';
+const log = createLogger('message');
 
 export class MessageService {
   // Subscribe to new messages for a user via Realtime channel
   static subscribeToUserMessages(userId: string, preschoolId: string, callback: (payload: any) => void) {
-    const channel = supabase.channel(`messages_user_${userId}`)
+    const channel = (supabase as any).channel(`messages_user_${userId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_recipients', filter: `recipient_id=eq.${userId}` }, (payload) => {
         callback(payload.new);
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      try { (supabase as any).removeChannel(channel); } catch {}
     };
   }
 
@@ -51,14 +47,14 @@ export class MessageService {
 
   // Subscribe to sent messages by a user via Realtime channel
   static subscribeToSentMessages(userId: string, preschoolId: string, callback: (message: any) => void) {
-    const channel = supabase.channel(`messages_sent_${userId}`)
+    const channel = (supabase as any).channel(`messages_sent_${userId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${userId}` }, (payload) => {
         callback(payload.new);
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      try { (supabase as any).removeChannel(channel); } catch {}
     };
   }
 
@@ -169,8 +165,8 @@ export class MessageService {
       if (fetchError) throw fetchError;
 
       // Create reply subject
-      const replySubject = originalMessage.subject.startsWith('Re: ') 
-        ? originalMessage.subject 
+      const replySubject = originalMessage.subject.startsWith('Re: ')
+        ? originalMessage.subject
         : `Re: ${originalMessage.subject}`;
 
       // Get original recipients (excluding the current sender)
@@ -207,9 +203,9 @@ export class MessageService {
     try {
       const { error } = await supabase
         .from('message_recipients')
-        .update({ 
-          is_read: true, 
-          read_at: new Date().toISOString() 
+        .update({
+          is_read: true,
+          read_at: new Date().toISOString()
         })
         .eq('message_id', messageId)
         .eq('recipient_id', userId);
@@ -227,7 +223,7 @@ export class MessageService {
     try {
       const { error } = await supabase
         .from('message_recipients')
-        .update({ 
+        .update({
           is_archived: archived,
           archived_at: archived ? new Date().toISOString() : null
         })
@@ -262,9 +258,9 @@ export class MessageService {
 
   // Search messages
   static async searchMessages(
-    userId: string, 
-    preschoolId: string, 
-    query: string, 
+    userId: string,
+    preschoolId: string,
+    query: string,
     limit = 20
   ) {
     try {
@@ -368,10 +364,10 @@ export class MessageService {
   ) {
     try {
       const notificationType = this.getNotificationType(messageType);
-      
+
       // Only create notifications for user recipients
       const userRecipients = recipients.filter(r => r.type === 'user');
-      
+
       if (userRecipients.length === 0) return;
 
       const notifications = userRecipients.map(recipient => ({
