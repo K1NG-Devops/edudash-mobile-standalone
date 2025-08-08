@@ -258,11 +258,11 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       setMessages(messagesData || []);
       
       // Mark messages as read
+      // Mark as read in message_recipients
       await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('sender_id', conversationId)
-        .eq('receiver_id', parentProfile.id)
+        .from('message_recipients')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('user_id', parentProfile.id)
         .eq('is_read', false);
 
       scrollToBottom();
@@ -287,17 +287,28 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         throw new Error('Parent profile not found');
       }
 
-      const { error } = await supabase
+      const { data: newMsg, error } = await supabase
         .from('messages')
         .insert({
+          preschool_id: profile.preschool_id!,
+          subject: '',
           content: newMessage.trim(),
           sender_id: parentProfile.id,
-          receiver_id: selectedConversation,
-          sender_type: 'parent',
-          receiver_type: 'teacher',
           message_type: 'text',
-          is_read: false,
-        });
+          is_draft: false,
+        })
+        .select()
+        .single();
+
+      if (!error) {
+        await supabase
+          .from('message_recipients')
+          .insert({
+            message_id: newMsg.id,
+            user_id: selectedConversation,
+            recipient_type: 'user'
+          });
+      }
 
       if (error) {
         throw error;
