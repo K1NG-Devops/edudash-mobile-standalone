@@ -10,7 +10,7 @@ export class MessageService {
   // Subscribe to new messages for a user via Realtime channel
   static subscribeToUserMessages(userId: string, preschoolId: string, callback: (payload: any) => void) {
     const channel = (supabase as any).channel(`messages_user_${userId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_recipients', filter: `recipient_id=eq.${userId}` }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_recipients', filter: `recipient_id=eq.${userId}` }, (payload: any) => {
         callback(payload.new);
       })
       .subscribe();
@@ -48,7 +48,7 @@ export class MessageService {
   // Subscribe to sent messages by a user via Realtime channel
   static subscribeToSentMessages(userId: string, preschoolId: string, callback: (message: any) => void) {
     const channel = (supabase as any).channel(`messages_sent_${userId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${userId}` }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${userId}` }, (payload: any) => {
         callback(payload.new);
       })
       .subscribe();

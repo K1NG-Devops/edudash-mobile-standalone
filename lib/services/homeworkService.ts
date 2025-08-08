@@ -322,13 +322,9 @@ export class HomeworkService {
           dueDate.setDate(dueDate.getDate() + s.homework_assignment.due_date_offset_days);
           return new Date() > dueDate && (s.status === 'assigned' || s.status === 'in_progress');
         }).length,
-        average_score: 0,
-        total_time_spent: submissions
-          .reduce((acc, s) => acc + (s.homework_assignment?.estimated_time_minutes || 0), 0),
-        completion_rate: submissions.length > 0 
-          ? (submissions.filter(s => s.status === 'submitted' || s.status === 'completed' || s.status === 'reviewed').length / submissions.length) * 100
-          : 0,
-        last_updated: new Date().toISOString()
+        in_progress_assignments: submissions.filter(s => s.status === 'in_progress').length,
+        upcoming_deadlines: [],
+        recent_feedback: [],
       };
       
       return summary;
