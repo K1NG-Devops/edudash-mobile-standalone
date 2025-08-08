@@ -5,6 +5,7 @@
 DROP POLICY IF EXISTS "parents_read_own_payments" ON public.payments;
 DROP POLICY IF EXISTS "parents_create_own_payments" ON public.payments;
 DROP POLICY IF EXISTS "school_staff_manage_preschool_payments" ON public.payments;
+DROP POLICY IF EXISTS "superadmins_manage_all_payments" ON public.payments;
 
 -- Now create the correct policies using payer_id instead of parent_id
 DO $$

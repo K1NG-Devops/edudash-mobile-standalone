@@ -114,7 +114,8 @@ export class StorageUtil {
       if (this.isWeb() && typeof localStorage !== 'undefined') {
         return Object.keys(localStorage);
       } else {
-        return await AsyncStorage.getAllKeys();
+        const keys = await AsyncStorage.getAllKeys();
+        return Array.isArray(keys) ? [...keys] : [];
       }
     } catch (error) {
       console.error('Error getting all keys:', error);

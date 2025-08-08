@@ -504,3 +504,30 @@ export type LessonContent = Awaited<ReturnType<typeof claudeAI.generateLessonCon
 export type HomeworkGrading = Awaited<ReturnType<typeof claudeAI.gradeHomework>>['grading'];
 export type STEMActivity = Awaited<ReturnType<typeof claudeAI.generateSTEMActivity>>['activity'];
 export type ProgressAnalysis = Awaited<ReturnType<typeof claudeAI.analyzeStudentProgress>>['analysis'];
+
+// Backward-compatible simple content generator used by legacy services
+export const claudeService = {
+  async generateContent(args: { prompt: string; type?: string; context?: any }) {
+    const { prompt } = args;
+    if (!anthropic || !CLAUDE_API_KEY) {
+      return { success: false, content: '' } as { success: boolean; content: string };
+    }
+    try {
+      const response = await anthropic.messages.create({
+        model: DEFAULT_MODEL,
+        max_tokens: 2000,
+        temperature: 0.7,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const first = response.content?.[0];
+      if (first && first.type === 'text') {
+        return { success: true, content: first.text } as { success: boolean; content: string };
+      }
+      return { success: false, content: '' } as { success: boolean; content: string };
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Claude simple generateContent error:', error);
+      return { success: false, content: '' } as { success: boolean; content: string };
+    }
+  },
+};

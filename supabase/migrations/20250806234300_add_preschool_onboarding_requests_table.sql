@@ -19,10 +19,12 @@ CREATE TABLE IF NOT EXISTS preschool_onboarding_requests (
 ALTER TABLE preschool_onboarding_requests ENABLE ROW LEVEL SECURITY;
 
 -- Allow anyone to submit preschool onboarding requests (anonymous users)
+DROP POLICY IF EXISTS "Anyone can submit onboarding requests" ON preschool_onboarding_requests;
 CREATE POLICY "Anyone can submit onboarding requests" ON preschool_onboarding_requests
     FOR INSERT WITH CHECK (true);
 
 -- Allow superadmins to view all onboarding requests
+DROP POLICY IF EXISTS "Superadmins can view all onboarding requests" ON preschool_onboarding_requests;
 CREATE POLICY "Superadmins can view all onboarding requests" ON preschool_onboarding_requests
     FOR SELECT USING (
         EXISTS (
@@ -33,6 +35,7 @@ CREATE POLICY "Superadmins can view all onboarding requests" ON preschool_onboar
     );
 
 -- Allow superadmins to update onboarding requests
+DROP POLICY IF EXISTS "Superadmins can update onboarding requests" ON preschool_onboarding_requests;
 CREATE POLICY "Superadmins can update onboarding requests" ON preschool_onboarding_requests
     FOR UPDATE USING (
         EXISTS (
