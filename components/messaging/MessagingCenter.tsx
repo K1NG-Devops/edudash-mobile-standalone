@@ -40,7 +40,7 @@ interface MessageAttachment {
 interface Conversation {
   id: string;
   participant_name: string;
-  participant_avatar?: string;
+  participant_avatar?: string | null;
   participant_role: string;
   child_name?: string;
   last_message: string;

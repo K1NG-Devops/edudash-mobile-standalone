@@ -402,7 +402,7 @@ export class MessageService {
   // Get possible recipients for a user (based on their role and preschool)
   static async getPossibleRecipients(userId: string, preschoolId: string, userRole: string) {
     try {
-      let query = supabase
+      let query: any = supabase
         .from('users')
         .select('id, name, email, role, avatar_url')
         .eq('preschool_id', preschoolId)
