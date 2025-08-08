@@ -222,11 +222,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         .insert({
           content: messageContent.trim() || (attachedMedia.length > 0 ? '📷 Photo message' : ''),
           sender_id: parentProfile.id,
-          receiver_id: selectedContact.id,
-          sender_type: 'parent',
-          receiver_type: selectedContact.role,
           message_type: attachedMedia.length > 0 ? 'image' : 'text',
-          is_read: false,
         })
         .select()
         .single();

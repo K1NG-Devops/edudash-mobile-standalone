@@ -92,7 +92,7 @@ const MAPPING: IconMapping = {
   'hand.raised': 'pan-tool',
   'calendar': 'event',
   'gearshape.fill': 'settings',
-  'gearshape': 'settings-outlined',
+  'gearshape': 'settings',
   'creditcard.fill': 'payment',
   'creditcard': 'payment',
   'location.fill': 'place',
