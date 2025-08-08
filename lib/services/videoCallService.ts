@@ -118,14 +118,14 @@ export class VideoCallService {
         throw new Error('Cannot join a call that is not scheduled or in progress');
       }
 
-      if (call.joined_participants.includes(userId)) {
+      if (Array.isArray(call.joined_participants) && call.joined_participants.includes(userId)) {
         return { error: new Error('You have already joined this call') };
       }
 
       const { error } = await supabase
         .from('video_call_sessions')
         .update({
-          joined_participants: [...call.joined_participants, userId],
+          joined_participants: [...(Array.isArray(call.joined_participants) ? call.joined_participants : []), userId],
         })
         .eq('id', callId);
 

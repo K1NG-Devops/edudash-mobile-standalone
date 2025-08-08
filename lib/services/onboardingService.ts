@@ -40,7 +40,7 @@ export const createOnboardingRequest = async (requestData: OnboardingRequestInpu
 };
 
 // Fetch all onboarding requests (for super admins)
-export const getAllOnboardingRequests = async (): Promise<PreschoolOnboardingRequest[]> => {
+export const getAllOnboardingRequests = async (): Promise<Partial<PreschoolOnboardingRequest>[]> => {
   const { data, error } = await supabase
     .from('preschool_onboarding_requests')
     .select('*')
@@ -50,7 +50,7 @@ export const getAllOnboardingRequests = async (): Promise<PreschoolOnboardingReq
     throw error;
   }
 
-  return data;
+  return (data as any) as Partial<PreschoolOnboardingRequest>[];
 };
 
 // Approve an onboarding request (for super admins)

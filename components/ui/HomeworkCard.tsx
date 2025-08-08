@@ -18,7 +18,7 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({ assignment, onPress }) => {
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {hasImage ? (
         <View style={styles.imageContainer}>
-          <Image source={{ uri: assignment.lesson.thumbnail_url }} style={styles.thumbnail} />
+          <Image source={{ uri: assignment.lesson?.thumbnail_url || '' }} style={styles.thumbnail} />
         </View>
       ) : (
         <View style={styles.iconContainer}>
@@ -33,7 +33,7 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({ assignment, onPress }) => {
         <Text style={styles.title}>{assignment.title}</Text>
         <View style={styles.lessonRow}>
           <IconSymbol name="book.fill" size={14} color="#6B7280" />
-          <Text style={styles.lessonTitle}>{assignment.lesson?.title}</Text>
+          <Text style={styles.lessonTitle}>{assignment.lesson?.title || 'Lesson'}</Text>
         </View>
         <View style={styles.detailsRow}>
           <IconSymbol name="clock" size={14} color="#6B7280" />

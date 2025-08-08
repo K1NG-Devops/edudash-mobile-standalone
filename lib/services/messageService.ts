@@ -108,7 +108,7 @@ export class MessageService {
           subject,
           content,
           message_type: messageType,
-          priority: (options?.priority as any) || 'normal',
+          priority: (options?.priority as 'low' | 'normal' | 'high' | 'urgent' | undefined) ?? 'normal',
           attachment_urls: options?.attachmentUrls || null,
           scheduled_send_at: options?.scheduledSendAt || null,
           expires_at: options?.expiresAt || null,

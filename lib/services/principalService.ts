@@ -180,7 +180,7 @@ export class PrincipalService {
 
       // For now, store in a custom table structure or use localStorage
       // TODO: Create proper school_invitation_codes table
-      const invitationData = {
+      const invitationData: SchoolInvitationCode = {
         id: crypto.randomUUID(),
         code,
         preschool_id: preschoolId,
@@ -189,7 +189,7 @@ export class PrincipalService {
         expires_at: expiryDate.toISOString(),
         is_active: true,
         usage_count: 0,
-        max_usage: options.maxUsage || null,
+        max_usage: options.maxUsage ?? undefined,
         description: options.description || 'School-wide parent invitation code',
       };
 
@@ -331,14 +331,7 @@ export class PrincipalService {
         console.log(`✅ Teacher invitation email sent successfully to ${teacherData.email}`);
       }
 
-      return { 
-        data: {
-          ...invitation,
-          emailSent: emailResult.success,
-          emailError: emailResult.error
-        }, 
-        error: null 
-      };
+      return { data: invitation, error: null };
     } catch (error) {
       console.error('Error creating teacher invitation:', error);
       return { data: null, error };
