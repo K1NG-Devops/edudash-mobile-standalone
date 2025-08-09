@@ -299,7 +299,7 @@ export class TeacherDataService {
   static async createHomeworkAssignment(
     teacherUserId: string, 
     assignmentData: {
-      title: string;
+      title?: string;
       description: string;
       instructions: string;
       class_id?: string;
@@ -325,7 +325,8 @@ export class TeacherDataService {
       const { data, error } = await supabase
         .from('homework_assignments')
         .insert({
-          title: assignmentData.title,
+          // Some schemas may not require title; include only if provided
+          ...(assignmentData.title ? { title: assignmentData.title } : {}),
           description: assignmentData.description,
           instructions: assignmentData.instructions,
           teacher_id: teacherProfile.id,

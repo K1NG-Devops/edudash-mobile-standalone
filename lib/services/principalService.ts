@@ -1,9 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { createLogger } from '@/lib/utils/logger';
-const log = createLogger('principal');
-import { Database } from '@/types/database';
-import { EmailService, type TeacherInvitationEmailData } from './emailService';
 import { StorageUtil } from '@/lib/utils/storage';
+import { EmailService, type TeacherInvitationEmailData } from './emailService';
+const log = createLogger('principal');
 
 // Type definitions for principal dashboard
 export interface PrincipalStats {
@@ -173,7 +172,7 @@ export class PrincipalService {
     try {
       // Generate a unique 8-character code
       const code = this.generateRandomCode();
-      
+
       // Calculate expiry date (default: 30 days)
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + (options.expiryDays || 30));
@@ -195,12 +194,12 @@ export class PrincipalService {
 
       // Store temporarily in AsyncStorage until proper table is created
       const existingCodes = await StorageUtil.getJSON<SchoolInvitationCode[]>('schoolInvitationCodes', []);
-      
+
       // Remove any existing active codes for this school (only one active at a time)
-      const filteredCodes = existingCodes.filter((c: SchoolInvitationCode) => 
+      const filteredCodes = existingCodes.filter((c: SchoolInvitationCode) =>
         c.preschool_id !== preschoolId || !c.is_active
       );
-      
+
       filteredCodes.push(invitationData);
       await StorageUtil.setJSON('schoolInvitationCodes', filteredCodes);
 
@@ -217,9 +216,9 @@ export class PrincipalService {
   static async getActiveSchoolInvitationCode(preschoolId: string): Promise<{ data: SchoolInvitationCode | null; error: any }> {
     try {
       const existingCodes = await StorageUtil.getJSON<SchoolInvitationCode[]>('schoolInvitationCodes', []);
-      const activeCode = existingCodes.find((code: SchoolInvitationCode) => 
-        code.preschool_id === preschoolId && 
-        code.is_active && 
+      const activeCode = existingCodes.find((code: SchoolInvitationCode) =>
+        code.preschool_id === preschoolId &&
+        code.is_active &&
         new Date(code.expires_at) > new Date()
       );
 
@@ -306,7 +305,7 @@ export class PrincipalService {
       const schoolInfo = await this.getSchoolInfo(preschoolId);
       const { data: principalUser, error: principalError } = await supabase
         .from('users')
-        .select('first_name, last_name, name')
+        .select('name')
         .eq('id', invitedBy)
         .single();
 
@@ -315,14 +314,12 @@ export class PrincipalService {
         teacherName: teacherData.name,
         schoolName: schoolInfo.data?.name || 'EduDash Pro School',
         invitationCode,
-        principalName: principalUser
-          ? `${principalUser.first_name || ''} ${principalUser.last_name || ''}`.trim() || principalUser.name || 'School Principal'
-          : 'School Principal',
+        principalName: principalUser?.name || 'School Principal',
         expiryDate: expiryDate.toISOString(),
       };
 
       const emailResult = await EmailService.sendTeacherInvitation(teacherData.email, emailData);
-      
+
       if (!emailResult.success) {
         console.warn(`⚠️ Failed to send email invitation to ${teacherData.email}:`, emailResult.error);
         // Still return success since the invitation was created in database
@@ -344,7 +341,7 @@ export class PrincipalService {
   static async getTeacherInvitations(preschoolId: string): Promise<{ data: TeacherInvitation[]; error: any }> {
     try {
       const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
-      const schoolInvitations = existingInvitations.filter((inv: TeacherInvitation) => 
+      const schoolInvitations = existingInvitations.filter((inv: TeacherInvitation) =>
         inv.preschool_id === preschoolId
       );
 
@@ -490,21 +487,21 @@ export class PrincipalService {
   static async getRecentActivity(preschoolId: string) {
     try {
       const activities: string[] = [];
-      
+
       // Get recent student enrollments (last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       const { count: recentEnrollments, error: enrollmentError } = await supabase
         .from('students')
         .select('*', { count: 'exact', head: true })
         .eq('preschool_id', preschoolId)
         .gte('created_at', thirtyDaysAgo.toISOString());
-        
+
       if (!enrollmentError && recentEnrollments) {
         activities.push(`${recentEnrollments} new student enrollments this month`);
       }
-      
+
       // Get active teachers count
       const { count: activeTeachers, error: teacherError } = await supabase
         .from('users')
@@ -512,36 +509,36 @@ export class PrincipalService {
         .eq('role', 'teacher')
         .eq('preschool_id', preschoolId)
         .eq('is_active', true);
-        
+
       if (!teacherError && activeTeachers) {
         activities.push(`${activeTeachers} active teachers managing classes`);
       }
-      
+
       // Get recent homework assignments (last 7 days)
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
+
       const { count: recentHomework, error: homeworkError } = await supabase
         .from('homework_assignments')
         .select('*', { count: 'exact', head: true })
         .eq('preschool_id', preschoolId)
         .gte('created_at', sevenDaysAgo.toISOString());
-        
+
       if (!homeworkError && recentHomework) {
         activities.push(`${recentHomework} new homework assignments created this week`);
       }
-      
+
       // Get total classes
       const { count: totalClasses, error: classError } = await supabase
         .from('classes')
         .select('*', { count: 'exact', head: true })
         .eq('preschool_id', preschoolId)
         .eq('is_active', true);
-        
+
       if (!classError && totalClasses) {
         activities.push(`${totalClasses} active classes running`);
       }
-      
+
       // Get parent count
       const { count: parentCount, error: parentError } = await supabase
         .from('users')
@@ -549,11 +546,11 @@ export class PrincipalService {
         .eq('role', 'parent')
         .eq('preschool_id', preschoolId)
         .eq('is_active', true);
-        
+
       if (!parentError && parentCount) {
         activities.push(`${parentCount} engaged parents in the community`);
       }
-      
+
       // If no real data, show meaningful defaults
       if (activities.length === 0) {
         activities.push(
@@ -576,8 +573,8 @@ export class PrincipalService {
    */
   static async getPendingTasks(preschoolId: string) {
     try {
-      const tasks: Array<{priority: string, text: string, color: string}> = [];
-      
+      const tasks: Array<{ priority: string, text: string, color: string }> = [];
+
       // Check for pending teacher invitations
       const teacherInvitations = await this.getTeacherInvitations(preschoolId);
       const pendingInvitations = teacherInvitations.data.filter(inv => inv.status === 'pending');
@@ -588,7 +585,7 @@ export class PrincipalService {
           color: '#F59E0B'
         });
       }
-      
+
       // Check for teachers without classes
       const teachersResult = await this.getSchoolTeachers(preschoolId);
       if (teachersResult.data) {
@@ -603,7 +600,7 @@ export class PrincipalService {
           });
         }
       }
-      
+
       // Check if school has no active invitation code
       const activeCode = await this.getActiveSchoolInvitationCode(preschoolId);
       if (!activeCode.data) {
@@ -613,7 +610,7 @@ export class PrincipalService {
           color: '#EF4444'
         });
       }
-      
+
       // Check for classes without teachers
       const { count: classesWithoutTeachers, error: classError } = await supabase
         .from('classes')
@@ -621,7 +618,7 @@ export class PrincipalService {
         .eq('preschool_id', preschoolId)
         .eq('is_active', true)
         .is('teacher_id', null);
-        
+
       if (!classError && classesWithoutTeachers && classesWithoutTeachers > 0) {
         tasks.push({
           priority: 'medium',
@@ -629,7 +626,7 @@ export class PrincipalService {
           color: '#F59E0B'
         });
       }
-      
+
       // Check for students without classes
       const { count: studentsWithoutClasses, error: studentError } = await supabase
         .from('students')
@@ -637,7 +634,7 @@ export class PrincipalService {
         .eq('preschool_id', preschoolId)
         .eq('is_active', true)
         .is('class_id', null);
-        
+
       if (!studentError && studentsWithoutClasses && studentsWithoutClasses > 0) {
         tasks.push({
           priority: 'high',
@@ -645,7 +642,7 @@ export class PrincipalService {
           color: '#EF4444'
         });
       }
-      
+
       // Check school profile completion
       const schoolInfo = await this.getSchoolInfo(preschoolId);
       if (schoolInfo.data) {
@@ -653,7 +650,7 @@ export class PrincipalService {
         if (!schoolInfo.data.address) missingFields.push('address');
         if (!schoolInfo.data.phone) missingFields.push('phone');
         if (!schoolInfo.data.logo_url) missingFields.push('logo');
-        
+
         if (missingFields.length > 0) {
           tasks.push({
             priority: 'low',
@@ -662,7 +659,7 @@ export class PrincipalService {
           });
         }
       }
-      
+
       // If no urgent tasks, suggest growth activities
       if (tasks.length === 0) {
         tasks.push(
@@ -672,7 +669,7 @@ export class PrincipalService {
             color: '#10B981'
           },
           {
-            priority: 'low', 
+            priority: 'low',
             text: 'Review school performance metrics and analytics',
             color: '#8B5CF6'
           },
@@ -687,11 +684,13 @@ export class PrincipalService {
       return { data: tasks, error: null };
     } catch (error) {
       console.error('Error fetching pending tasks:', error);
-      return { data: [{
-        priority: 'low',
-        text: 'Task monitoring system is being set up',
-        color: '#6B7280'
-      }], error };
+      return {
+        data: [{
+          priority: 'low',
+          text: 'Task monitoring system is being set up',
+          color: '#6B7280'
+        }], error
+      };
     }
   }
 
@@ -703,22 +702,20 @@ export class PrincipalService {
     try {
       // First, try to get revenue from subscription/billing tables
       const { data: subscriptions, error: subError } = await supabase
-        .from('school_subscriptions')
-        .select('monthly_fee, student_count')
-        .eq('school_id', preschoolId)
-        .eq('status', 'active')
+        .from('preschools')
+        .select('subscription_plan, subscription_status')
+        .eq('id', preschoolId)
         .maybeSingle();
 
-      if (!subError && subscriptions) {
-        // Use actual subscription data
-        return subscriptions.monthly_fee || (subscriptions.student_count * this.getMonthlyFeePerStudent());
+      if (!subError && subscriptions && subscriptions.subscription_status === 'active') {
+        return totalStudents * this.getMonthlyFeePerStudent();
       }
 
       // Second, try to get revenue from payment records for current month
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
-      
+
       const endOfMonth = new Date(startOfMonth);
       endOfMonth.setMonth(endOfMonth.getMonth() + 1);
       endOfMonth.setDate(0);
@@ -727,17 +724,14 @@ export class PrincipalService {
       const { data: payments, error: paymentError } = await supabase
         .from('payments')
         .select('amount')
-        .eq('school_id', preschoolId)
+        .eq('preschool_id', preschoolId)
         .gte('created_at', startOfMonth.toISOString())
         .lte('created_at', endOfMonth.toISOString())
-        .eq('status', 'completed')
-        .maybeSingle();
+        .eq('payment_status', 'completed');
 
-      if (!paymentError && payments && payments.length > 0) {
+      if (!paymentError && payments && Array.isArray(payments) && payments.length > 0) {
         // Sum up payments for current month
-        const totalPayments = Array.isArray(payments) 
-          ? payments.reduce((total, payment) => total + (payment.amount || 0), 0)
-          : payments.amount || 0;
+        const totalPayments = payments.reduce((total, payment: any) => total + (payment.amount || 0), 0);
         return totalPayments;
       }
 
@@ -764,7 +758,7 @@ export class PrincipalService {
         return parsed;
       }
     }
-    
+
     // Default fee: R800 per student per month (South African Rand)
     // This is a reasonable fee for quality preschool education in South Africa
     return 800;
@@ -780,7 +774,7 @@ export class PrincipalService {
     try {
       // Get the invitation from AsyncStorage
       const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
-      const invitation = existingInvitations.find((inv: TeacherInvitation) => 
+      const invitation = existingInvitations.find((inv: TeacherInvitation) =>
         inv.id === invitationId && inv.preschool_id === preschoolId
       );
 
@@ -802,7 +796,7 @@ export class PrincipalService {
       const schoolInfo = await this.getSchoolInfo(preschoolId);
       const { data: principalUser, error: principalError } = await supabase
         .from('users')
-        .select('first_name, last_name, name')
+        .select('name')
         .eq('id', invitation.invited_by)
         .single();
 
@@ -811,14 +805,12 @@ export class PrincipalService {
         teacherName: invitation.name,
         schoolName: schoolInfo.data?.name || 'EduDash Pro School',
         invitationCode: invitation.invitation_code,
-        principalName: principalUser
-          ? `${principalUser.first_name || ''} ${principalUser.last_name || ''}`.trim() || principalUser.name || 'School Principal'
-          : 'School Principal',
+        principalName: principalUser?.name || 'School Principal',
         expiryDate: invitation.expires_at,
       };
 
       const emailResult = await EmailService.sendTeacherInvitation(invitation.email, emailData);
-      
+
       if (!emailResult.success) {
         console.warn(`⚠️ Failed to resend email invitation to ${invitation.email}:`, emailResult.error);
         return { success: false, error: emailResult.error || 'Failed to send email' };
@@ -841,7 +833,7 @@ export class PrincipalService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
-      const invitationIndex = existingInvitations.findIndex((inv: TeacherInvitation) => 
+      const invitationIndex = existingInvitations.findIndex((inv: TeacherInvitation) =>
         inv.id === invitationId && inv.preschool_id === preschoolId
       );
 
@@ -864,7 +856,7 @@ export class PrincipalService {
       };
 
       await StorageUtil.setJSON('teacherInvitations', existingInvitations);
-      
+
       console.log(`🚫 Teacher invitation revoked for ${invitation.email}`);
       return { success: true };
     } catch (error) {
@@ -882,7 +874,7 @@ export class PrincipalService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
-      const invitationIndex = existingInvitations.findIndex((inv: TeacherInvitation) => 
+      const invitationIndex = existingInvitations.findIndex((inv: TeacherInvitation) =>
         inv.id === invitationId && inv.preschool_id === preschoolId
       );
 
@@ -891,11 +883,11 @@ export class PrincipalService {
       }
 
       const invitation = existingInvitations[invitationIndex];
-      
+
       // Remove invitation from array
       existingInvitations.splice(invitationIndex, 1);
       await StorageUtil.setJSON('teacherInvitations', existingInvitations);
-      
+
       console.log(`🗑️ Teacher invitation deleted for ${invitation.email}`);
       return { success: true };
     } catch (error) {
@@ -912,12 +904,12 @@ export class PrincipalService {
   ): Promise<{ success: boolean; deletedCount: number; error?: string }> {
     try {
       const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
-      const schoolInvitations = existingInvitations.filter((inv: TeacherInvitation) => 
+      const schoolInvitations = existingInvitations.filter((inv: TeacherInvitation) =>
         inv.preschool_id === preschoolId
       );
 
       const now = new Date();
-      const expiredInvitations = schoolInvitations.filter((inv: TeacherInvitation) => 
+      const expiredInvitations = schoolInvitations.filter((inv: TeacherInvitation) =>
         inv.status === 'pending' && new Date(inv.expires_at) < now
       );
 
@@ -926,13 +918,13 @@ export class PrincipalService {
       }
 
       // Remove expired invitations
-      const remainingInvitations = existingInvitations.filter((inv: TeacherInvitation) => 
-        inv.preschool_id !== preschoolId || 
+      const remainingInvitations = existingInvitations.filter((inv: TeacherInvitation) =>
+        inv.preschool_id !== preschoolId ||
         (inv.status !== 'pending' || new Date(inv.expires_at) >= now)
       );
 
       await StorageUtil.setJSON('teacherInvitations', remainingInvitations);
-      
+
       console.log(`🧹 Cleaned up ${expiredInvitations.length} expired invitations`);
       return { success: true, deletedCount: expiredInvitations.length };
     } catch (error) {

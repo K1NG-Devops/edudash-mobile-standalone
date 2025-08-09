@@ -111,7 +111,7 @@ export class StudentsService {
     try {
       const { data, error } = await supabase
         .from('students')
-        .insert(studentData)
+        .insert(studentData as any)
         .select()
         .single();
 
