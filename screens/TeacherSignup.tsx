@@ -53,7 +53,7 @@ export default function TeacherSignup({ invitationCode }: TeacherSignupProps) {
       }
 
       setInvitation(invitationData);
-      setFormData(prev => ({ ...prev, name: (invitationData.name as string) || '' }));
+      setFormData(prev => ({ ...prev, name: ((invitationData as any).name as string) || '' }));
       setStep('details');
     } catch (error) {
       console.error('Error verifying code:', error);

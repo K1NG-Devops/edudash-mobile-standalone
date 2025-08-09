@@ -687,11 +687,13 @@ export class SchoolAdminDataService {
     try {
       const { data, error } = await supabase
         .from('students')
-        .insert([{
-          ...studentData,
-          is_active: true,
-          created_at: new Date().toISOString()
-        }])
+        .insert([
+          {
+            ...studentData,
+            is_active: true,
+            created_at: new Date().toISOString()
+          } as any
+        ])
         .select()
         .single();
 
@@ -701,7 +703,8 @@ export class SchoolAdminDataService {
       return { success: true, student: data };
     } catch (error) {
       console.error('❌ [SchoolAdmin] Error enrolling student:', error);
-      return { success: false, error: error.message };
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
     }
   }
 
@@ -729,7 +732,8 @@ export class SchoolAdminDataService {
       return { success: true, teacher: data };
     } catch (error) {
       console.error('❌ [SchoolAdmin] Error adding teacher:', error);
-      return { success: false, error: error.message };
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
     }
   }
 
@@ -757,7 +761,8 @@ export class SchoolAdminDataService {
       return { success: true, class: data };
     } catch (error) {
       console.error('❌ [SchoolAdmin] Error creating class:', error);
-      return { success: false, error: error.message };
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
     }
   }
 }
