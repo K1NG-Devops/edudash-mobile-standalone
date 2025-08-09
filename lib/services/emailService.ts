@@ -23,6 +23,8 @@ export interface TeacherInvitationEmailData {
   expiryDate: string;
 }
 
+import { supabase } from '@/lib/supabase';
+
 export class EmailService {
   /**
    * Send teacher invitation email
@@ -57,7 +59,7 @@ export class EmailService {
     // Check available email services - use EXPO_PUBLIC_ for React Native compatibility
     const hasResendKey = process.env.EXPO_PUBLIC_RESEND_API_KEY || process.env.RESEND_API_KEY;
     const hasSendGridKey = process.env.EXPO_PUBLIC_SENDGRID_API_KEY || process.env.SENDGRID_API_KEY;
-    
+
     console.log('🔧 Email Service Debug:');
     console.log('- NODE_ENV:', process.env.NODE_ENV);
     console.log('- Has Resend API Key:', hasResendKey ? 'Yes' : 'No');
@@ -74,19 +76,14 @@ export class EmailService {
         const useProxy = typeof window !== 'undefined';
         if (useProxy) {
           try {
-            const edgeBase = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace(/\/$/, '') || '';
-            const fnUrl = `${edgeBase}/functions/v1/send-email`;
-            const resp = await fetch(fnUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ provider: 'resend', options }),
+            const { data, error } = await supabase.functions.invoke('send-email', {
+              body: { provider: 'resend', options },
             });
-            if (resp.ok) {
+            if (!error) {
               console.log('✅ Email sent via Edge Function proxy');
               return { success: true };
             }
-            const txt = await resp.text();
-            console.warn('⚠️ Edge Function email proxy failed, falling back direct:', txt);
+            console.warn('⚠️ Edge Function email proxy failed, falling back direct:', error?.message);
           } catch (e) {
             console.warn('⚠️ Edge Function proxy unavailable, falling back direct');
           }
@@ -118,11 +115,11 @@ export class EmailService {
     try {
       const apiKey = process.env.EXPO_PUBLIC_RESEND_API_KEY || process.env.RESEND_API_KEY;
       const fromEmail = process.env.EXPO_PUBLIC_FROM_EMAIL || process.env.FROM_EMAIL || 'noreply@edudashpro.org.za';
-      
+
       console.log('📧 Sending via Resend with:');
       console.log('- API Key (first 10):', apiKey ? apiKey.substring(0, 10) + '...' : 'None');
       console.log('- From Email:', fromEmail);
-      
+
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -169,7 +166,7 @@ export class EmailService {
             to: [{ email: options.to }],
             subject: options.subject,
           }],
-          from: { 
+          from: {
             email: process.env.FROM_EMAIL || 'noreply@edudashpro.com',
             name: 'EduDash Pro'
           },
@@ -254,12 +251,12 @@ export class EmailService {
         <code style="font-size: 24px; font-weight: bold; color: #3B82F6; letter-spacing: 3px;">${data.invitationCode}</code>
       </div>
       <p style="margin: 10px 0 0 0; font-size: 14px; color: #6b7280;">
-        ⏰ This code expires on ${new Date(data.expiryDate).toLocaleDateString('en-US', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        })}
+        ⏰ This code expires on ${new Date(data.expiryDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })}
       </p>
     </div>
     
@@ -314,12 +311,12 @@ Hello ${data.teacherName}!
 ${data.principalName} has invited you to join ${data.schoolName} as a teacher on our EduDash Pro platform!
 
 Your Invitation Code: ${data.invitationCode}
-⏰ This code expires on ${new Date(data.expiryDate).toLocaleDateString('en-US', { 
-  weekday: 'long', 
-  year: 'numeric', 
-  month: 'long', 
-  day: 'numeric' 
-})}
+⏰ This code expires on ${new Date(data.expiryDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })}
 
 How to Get Started:
 1. Download the EduDash Pro app from your app store
