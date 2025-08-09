@@ -207,7 +207,7 @@ export class TeacherDataService {
           }
 
           // Get homework statistics
-          const homeworkStats = await this.getStudentHomeworkStats(student.id);
+      const homeworkStats = await this.getStudentHomeworkStats(student.id);
           
           // Get achievements
           const achievements = await this.getStudentAchievements(student.id);
@@ -331,7 +331,7 @@ export class TeacherDataService {
           instructions: assignmentData.instructions,
           teacher_id: teacherProfile.id,
           preschool_id: teacherProfile.preschool_id,
-          class_id: assignmentData.class_id,
+          class_id: assignmentData.class_id ?? undefined as unknown as string,
           due_date_offset_days: assignmentData.due_date_offset_days,
           estimated_time_minutes: assignmentData.estimated_time_minutes,
           materials_needed: assignmentData.materials_needed,

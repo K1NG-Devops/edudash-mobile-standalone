@@ -157,7 +157,7 @@ export class SuperAdminDataService {
         return false;
       }
 
-      return user.role === 'superadmin' && user.is_active;
+      return user.role === 'superadmin' && !!user.is_active;
     } catch (error) {
       console.error('❌ [SuperAdmin] Permission verification failed:', error);
       return false;
@@ -475,7 +475,8 @@ export class SuperAdminDataService {
       return { success: true };
     } catch (error) {
       console.error('❌ [SuperAdmin] Error suspending school:', error);
-      return { success: false, error: error.message };
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
     }
   }
 
@@ -495,7 +496,8 @@ export class SuperAdminDataService {
       return { success: true };
     } catch (error) {
       console.error('❌ [SuperAdmin] Error suspending user:', error);
-      return { success: false, error: error.message };
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
     }
   }
 
@@ -522,7 +524,8 @@ export class SuperAdminDataService {
       return { success: true, school_id: data };
     } catch (error) {
       console.error('❌ [SuperAdmin] Error creating school:', error);
-      return { success: false, error: error.message };
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
     }
   }
 }
