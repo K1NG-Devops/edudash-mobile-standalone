@@ -6,8 +6,8 @@
 
 import { supabase } from '@/lib/supabase';
 import { createLogger } from '@/lib/utils/logger';
-const log = createLogger('teacher');
 import { Database } from '@/types/database';
+const log = createLogger('teacher');
 
 type Tables = Database['public']['Tables'];
 type Student = Tables['students']['Row'];
@@ -135,7 +135,7 @@ export class TeacherDataService {
       const teacherClasses: TeacherClass[] = await Promise.all(
         classesData.map(async (classData: any) => {
           const activeStudents = classData.students.filter((s: any) => s.is_active);
-          
+
           // Get enhanced student data with metrics
           const studentsWithMetrics = await Promise.all(
             activeStudents.map(async (student: any) => {
@@ -207,10 +207,13 @@ export class TeacherDataService {
           }
 
           // Get homework statistics
-      const homeworkStats = await this.getStudentHomeworkStats(student.id);
-          
+          const homeworkStats = await this.getStudentHomeworkStats(student.id);
+
           // Get achievements
           const achievements = await this.getStudentAchievements(student.id);
+
+          const parentJoin: any = (studentDetails as any).users;
+          const parentRecord: any = Array.isArray(parentJoin) ? parentJoin[0] : parentJoin;
 
           const enhancedStudent: TeacherStudent = {
             id: student.id,
@@ -220,9 +223,9 @@ export class TeacherDataService {
             age: student.age,
             date_of_birth: studentDetails.date_of_birth,
             class_name: classData.name,
-            parent_name: studentDetails.users?.name || 'Unknown Parent',
-            parent_email: studentDetails.users?.email || '',
-            parent_phone: studentDetails.users?.phone || '',
+            parent_name: parentRecord?.name || 'Unknown Parent',
+            parent_email: parentRecord?.email || '',
+            parent_phone: parentRecord?.phone || '',
             attendance_rate: student.attendance_rate,
             recent_homework_submissions: homeworkStats.recent_submissions,
             recent_activities_completed: student.recent_activities,
@@ -256,16 +259,16 @@ export class TeacherDataService {
 
       // Get classes
       const classes = await this.getTeacherClasses(teacherUserId);
-      
+
       // Calculate total students
       const totalStudents = classes.reduce((sum, cls) => sum + cls.student_count, 0);
 
       // Get recent activities
       const recentActivities = await this.getTeacherRecentActivities(teacherUserId);
-      
+
       // Get pending tasks
       const pendingTasks = await this.getTeacherPendingTasks(teacherUserId);
-      
+
       // Get daily summary
       const dailySummary = await this.getTeacherDailySummary(teacherUserId);
 
@@ -297,7 +300,7 @@ export class TeacherDataService {
    * Create a new homework assignment
    */
   static async createHomeworkAssignment(
-    teacherUserId: string, 
+    teacherUserId: string,
     assignmentData: {
       title?: string;
       description: string;
@@ -331,13 +334,13 @@ export class TeacherDataService {
           instructions: assignmentData.instructions,
           teacher_id: teacherProfile.id,
           preschool_id: teacherProfile.preschool_id,
-          class_id: assignmentData.class_id ?? undefined as unknown as string,
+          class_id: assignmentData.class_id ?? undefined,
           due_date_offset_days: assignmentData.due_date_offset_days,
           estimated_time_minutes: assignmentData.estimated_time_minutes,
           materials_needed: assignmentData.materials_needed,
           difficulty_level: assignmentData.difficulty_level,
           is_active: true
-        })
+        } as any)
         .select('id')
         .single();
 
@@ -362,11 +365,11 @@ export class TeacherDataService {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    
+
     return age;
   }
 
@@ -394,14 +397,14 @@ export class TeacherDataService {
       // Count recent submissions (last 7 days)
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      
-      const recentSubmissions = data.filter(sub => 
+
+      const recentSubmissions = data.filter(sub =>
         sub.submitted_at && new Date(sub.submitted_at) > weekAgo
       ).length;
 
       return {
         recent_submissions: recentSubmissions,
-        completion_rate: data.length > 0 ? 
+        completion_rate: data.length > 0 ?
           Math.round((data.filter(s => s.status === 'completed').length / data.length) * 100) : 0
       };
     } catch (error) {
@@ -417,22 +420,22 @@ export class TeacherDataService {
       'Perfect attendance this week',
       'Great participation in story time'
     ];
-    
+
     const count = Math.floor(Math.random() * 3);
     return achievements.slice(0, count);
   }
 
   static getSpecialNotes(studentDetails: any): string[] {
     const notes: string[] = [];
-    
+
     if (studentDetails.allergies) {
       notes.push(`Allergies: ${studentDetails.allergies}`);
     }
-    
+
     if (studentDetails.medical_conditions) {
       notes.push(`Medical: ${studentDetails.medical_conditions}`);
     }
-    
+
     if (studentDetails.special_needs) {
       notes.push(`Special needs: ${studentDetails.special_needs}`);
     }

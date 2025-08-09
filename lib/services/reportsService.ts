@@ -1,4 +1,4 @@
-import { claudeService } from '@/lib/ai/claudeService';
+import { claudeAI, claudeService } from '@/lib/ai/claudeService';
 import { createLogger } from '@/lib/utils/logger';
 import { supabase } from '../supabase';
 const log = createLogger('reports');
