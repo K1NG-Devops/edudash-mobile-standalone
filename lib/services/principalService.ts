@@ -837,7 +837,7 @@ export class PrincipalService {
     try {
       // First, try Supabase table if available
       try {
-        const { data: updated, error: dbErr } = await supabase
+        const { data: updated, error: dbErr } = await (supabase as any)
           .from('teacher_invitations')
           .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
           .eq('id', invitationId)
@@ -896,7 +896,7 @@ export class PrincipalService {
     try {
       // First, try Supabase table if available
       try {
-        const { data: deleted, error: dbErr } = await supabase
+        const { data: deleted, error: dbErr } = await (supabase as any)
           .from('teacher_invitations')
           .delete()
           .eq('id', invitationId)
