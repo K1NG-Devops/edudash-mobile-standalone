@@ -67,9 +67,31 @@ export class EmailService {
     console.log('- Subject:', options.subject);
 
     try {
-      // Priority 1: Use Resend if API key is available
+      // Priority 1: Use Resend via proxy (to avoid CORS in RN/Web dev)
       if (hasResendKey) {
         console.log('📧 Attempting to send email via Resend...');
+        // If running in browser or RN dev, route via Supabase Edge Function proxy
+        const useProxy = typeof window !== 'undefined';
+        if (useProxy) {
+          try {
+            const edgeBase = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace(/\/$/, '') || '';
+            const fnUrl = `${edgeBase}/functions/v1/send-email`;
+            const resp = await fetch(fnUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ provider: 'resend', options }),
+            });
+            if (resp.ok) {
+              console.log('✅ Email sent via Edge Function proxy');
+              return { success: true };
+            }
+            const txt = await resp.text();
+            console.warn('⚠️ Edge Function email proxy failed, falling back direct:', txt);
+          } catch (e) {
+            console.warn('⚠️ Edge Function proxy unavailable, falling back direct');
+          }
+        }
+        // Fallback to direct if proxy not available
         return await this.sendWithResend(options);
       }
 

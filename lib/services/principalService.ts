@@ -143,6 +143,9 @@ export class PrincipalService {
    */
   static async getSchoolInfo(preschoolId: string) {
     try {
+      if (!preschoolId) {
+        return { data: null, error: 'No preschool selected' };
+      }
       const { data, error } = await supabase
         .from('preschools')
         .select('*')
@@ -832,6 +835,24 @@ export class PrincipalService {
     preschoolId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // First, try Supabase table if available
+      try {
+        const { data: updated, error: dbErr } = await supabase
+          .from('teacher_invitations')
+          .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+          .eq('id', invitationId)
+          .eq('preschool_id', preschoolId)
+          .eq('status', 'pending')
+          .select('id')
+          .single();
+        if (!dbErr && updated) {
+          console.log(`🚫 Teacher invitation revoked (DB) id=${invitationId}`);
+          return { success: true };
+        }
+      } catch (_) {
+        // fallthrough to local storage
+      }
+
       const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
       const invitationIndex = existingInvitations.findIndex((inv: TeacherInvitation) =>
         inv.id === invitationId && inv.preschool_id === preschoolId
@@ -873,6 +894,23 @@ export class PrincipalService {
     preschoolId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // First, try Supabase table if available
+      try {
+        const { data: deleted, error: dbErr } = await supabase
+          .from('teacher_invitations')
+          .delete()
+          .eq('id', invitationId)
+          .eq('preschool_id', preschoolId)
+          .select('id')
+          .single();
+        if (!dbErr && deleted) {
+          console.log(`🗑️ Teacher invitation deleted (DB) id=${invitationId}`);
+          return { success: true };
+        }
+      } catch (_) {
+        // fallthrough to local storage
+      }
+
       const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
       const invitationIndex = existingInvitations.findIndex((inv: TeacherInvitation) =>
         inv.id === invitationId && inv.preschool_id === preschoolId

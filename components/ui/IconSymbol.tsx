@@ -88,6 +88,7 @@ const MAPPING: IconMapping = {
   // Settings & Info
   'questionmark.circle': 'help',
   'info.circle': 'info',
+  'info.circle.fill': 'info',
   'lock.shield': 'security',
   'hand.raised': 'pan-tool',
   'calendar': 'event',
