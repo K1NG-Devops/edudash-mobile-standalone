@@ -1,26 +1,27 @@
-import React, { useState } from 'react';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { useAuth } from '@/contexts/SimpleWorkingAuth';
-import { LinearGradient } from 'expo-linear-gradient';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
 
   const handleSignIn = async () => {
@@ -64,10 +65,10 @@ export default function SignIn() {
               </TouchableOpacity>
               <Text style={styles.title}>Welcome Back</Text>
             </View>
-            
+
             <View style={styles.content}>
               <Text style={styles.subtitle}>Sign in to your EduDash Pro account</Text>
-              
+
               <View style={styles.inputContainer}>
                 <IconSymbol name="envelope.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
                 <TextInput
@@ -80,7 +81,7 @@ export default function SignIn() {
                   autoCapitalize="none"
                 />
               </View>
-              
+
               <View style={styles.inputContainer}>
                 <IconSymbol name="lock.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
                 <TextInput
@@ -89,10 +90,13 @@ export default function SignIn() {
                   placeholderTextColor="#FFFFFF80"
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                 />
+                <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
+                  <Text style={styles.toggleText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                </TouchableOpacity>
               </View>
-              
+
               <TouchableOpacity style={styles.forgotPasswordButton} onPress={() => router.push('/(auth)/forgot-password')}>
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
@@ -110,11 +114,9 @@ export default function SignIn() {
                 )}
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.footer}>
-              <TouchableOpacity onPress={() => router.push('/(auth)/sign-up')}>
-                <Text style={styles.linkText}>Don't have an account? <Text style={styles.boldLink}>Sign Up</Text></Text>
-              </TouchableOpacity>
+              <Text style={styles.linkText}>Contact your administrator for account setup</Text>
             </View>
           </SafeAreaView>
         </KeyboardAvoidingView>
@@ -178,6 +180,11 @@ const styles = StyleSheet.create({
     height: 50,
     color: '#FFFFFF',
     fontSize: 16,
+  },
+  toggleText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',

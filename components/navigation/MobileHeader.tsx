@@ -1,7 +1,7 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { getRoleColors } from '@/constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     SafeAreaView,
     StatusBar,
@@ -11,8 +11,7 @@ import {
     View
 } from 'react-native';
 import { MobileSidebar } from './MobileSidebar';
-import { createLogger } from '@/lib/utils/logger';
-const log = createLogger('ui');
+import { NotificationService } from '@/lib/services/notificationService';
 
 interface MobileHeaderProps {
   user: {
@@ -138,8 +137,10 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                   {/* Show EduDash Pro for superadmin, otherwise school name */}
                   {user?.role === 'superadmin' ? (
                     <Text style={styles.brandName}>EduDash Pro</Text>
-                  ) : this.props.schoolName && (
-                    <Text style={styles.schoolName}>{this.props.schoolName}</Text>
+                  ) : (
+                    this.props.schoolName && (
+                      <Text style={styles.schoolName}>{this.props.schoolName}</Text>
+                    )
                   )}
                   
                   {/* User info below */}

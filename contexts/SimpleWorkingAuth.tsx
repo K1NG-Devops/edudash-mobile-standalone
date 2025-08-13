@@ -15,18 +15,18 @@ export interface UserProfile {
   phone: string | null;
   is_active: boolean;
   auth_user_id: string;
-  
+
   // Address information
   home_address: string | null;
   home_city: string | null;
   home_postal_code: string | null;
-  
+
   // Work information
   work_company: string | null;
   work_position: string | null;
   work_address: string | null;
   work_phone: string | null;
-  
+
   // Emergency contacts
   emergency_contact_1_name: string | null;
   emergency_contact_1_phone: string | null;
@@ -34,15 +34,15 @@ export interface UserProfile {
   emergency_contact_2_name: string | null;
   emergency_contact_2_phone: string | null;
   emergency_contact_2_relationship: string | null;
-  
+
   // Additional parent information
   relationship_to_child: string | null;
   pickup_authorized: string | null;
-  
+
   // Profile completion tracking
   profile_completed_at: string | null;
   profile_completion_status: 'incomplete' | 'in_progress' | 'complete';
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -92,14 +92,14 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     try {
       // Get initial session
       const { data } = await supabase.auth.getSession();
-      
+
       console.log('🔍 [AUTH-DEBUG] Session data:', {
         hasSession: !!data.session,
         hasUser: !!data.session?.user,
         userId: data.session?.user?.id || 'none',
         userEmail: data.session?.user?.email || 'none'
       });
-      
+
       this.setState({
         session: data.session,
         user: data.session?.user || null,
@@ -118,7 +118,7 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
       const { data: listener } = supabase.auth.onAuthStateChange(
         async (event, session) => {
           console.log('🔄 Auth state changed:', event);
-          
+
           // Prevent duplicate profile loading
           if (event === 'SIGNED_IN' && session?.user) {
             // Only load profile if the user changed
@@ -138,13 +138,13 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
             }
           } else if (event === 'SIGNED_OUT') {
             console.log('👋 User signed out');
-            this.setState({ 
+            this.setState({
               session: null,
               user: null,
               profile: null,
               loading: false
             });
-            
+
             // Disable automatic redirect on sign out to prevent interference
             // with password reset and other flows. The welcome screen (index.tsx)
             // will handle showing appropriate auth screens when needed.
@@ -175,28 +175,28 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     try {
       console.log('🔍 [DEBUG] Loading profile for userId:', userId);
       console.log('🔍 [DEBUG] Current profile state before load:', this.state.profile?.role || 'none');
-      
+
       // Set loading state immediately
       this.setState({ loading: true });
-      
+
       // Use direct query with auth.uid() check
       console.log('📡 [DEBUG] Executing query: SELECT * FROM users WHERE auth_user_id =', userId);
-      
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', userId)
         .single();
-      
-      console.log('🔍 [DEBUG] Profile query result:', { 
-        hasData: !!data, 
+
+      console.log('🔍 [DEBUG] Profile query result:', {
+        hasData: !!data,
         dataKeys: data ? Object.keys(data) : 'none',
         error: error?.message || 'none',
         errorCode: error?.code || 'none',
         errorDetails: error?.details || 'none',
         errorHint: error?.hint || 'none'
       });
-      
+
       if (error) {
         console.error('❌ [DEBUG] Supabase error details:', {
           message: error.message,
@@ -204,19 +204,19 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
           details: error.details,
           hint: error.hint
         });
-        
+
         // If we get a policy error, let's try a different approach
         if (error.message?.includes('policy') || error.message?.includes('recursion')) {
           console.log('🔄 [DEBUG] Policy/recursion error detected, trying alternative approach');
           // For now, set a basic profile to prevent blocking
-          this.setState({ 
+          this.setState({
             profile: null,
-            loading: false 
+            loading: false
           });
           return;
         }
       }
-      
+
       if (!error && data) {
         console.log('✅ [DEBUG] Profile loaded successfully:');
         console.log('  - ID:', data.id || 'Unknown');
@@ -226,7 +226,7 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
         console.log('  - Email:', data.email || 'Unknown');
         console.log('  - Is Active:', data.is_active);
         console.log('  - Auth User ID:', data.auth_user_id);
-        
+
         // Create a complete profile with all fields from database
         const profileData: UserProfile = {
           id: data.id,
@@ -258,11 +258,11 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
           created_at: data.created_at,
           updated_at: data.updated_at
         };
-        
+
         // Update profile state
-        this.setState({ 
+        this.setState({
           profile: profileData,
-          loading: false 
+          loading: false
         }, () => {
           console.log('✅ [DEBUG] Profile state updated. New role:', this.state.profile?.role);
           console.log('✅ [DEBUG] Profile state updated. New preschool_id:', this.state.profile?.preschool_id);
@@ -270,16 +270,16 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
       } else {
         console.error('❌ [DEBUG] Failed to load profile - no data returned');
         console.log('❌ [DEBUG] User ID we searched for:', userId);
-        this.setState({ 
+        this.setState({
           profile: null,
-          loading: false 
+          loading: false
         });
       }
     } catch (error) {
       console.error('❌ [DEBUG] Exception in loadProfile:', error);
-      this.setState({ 
+      this.setState({
         profile: null,
-        loading: false 
+        loading: false
       });
     }
   };
@@ -291,7 +291,7 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
         email: email.toLowerCase().trim(),
         password,
       });
-      
+
       if (error) {
         return { error: error.message };
       }
@@ -312,7 +312,7 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
         password,
         options: { data: userData },
       });
-      
+
       if (error) {
         return { error: error.message };
       }
@@ -329,34 +329,34 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     try {
       console.log('🚪 Starting sign out process...');
       this.setState({ loading: true });
-      
+
       // Clear local state immediately to ensure UI updates
-      this.setState({ 
+      this.setState({
         session: null,
         user: null,
         profile: null,
       });
-      
+
       // Call Supabase sign out
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) {
         console.error('❌ Supabase sign out error:', error);
         // Even if Supabase sign out fails, we've already cleared local state
       } else {
         console.log('✅ Supabase sign out successful');
       }
-      
-      // Force navigation to sign-in screen
+
+      // Go back to welcome screen after sign out
       setTimeout(() => {
         try {
-          console.log('🧭 Navigating to sign-in screen...');
-          router.replace('/(auth)/sign-in');
+          console.log('🧭 Navigating to welcome screen...');
+          router.replace('/');
         } catch (navError) {
           console.warn('Navigation error:', navError);
           // Try alternative navigation methods
           try {
-            router.push('/(auth)/sign-in');
+            router.push('/');
           } catch (pushError) {
             console.warn('Push navigation failed:', pushError);
             // As a last resort, try to go to the root
@@ -368,11 +368,11 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
           }
         }
       }, 50);
-      
+
     } catch (error) {
       console.error('❌ Sign out process error:', error);
       // Even on error, clear the local state
-      this.setState({ 
+      this.setState({
         session: null,
         user: null,
         profile: null,
@@ -385,26 +385,26 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
   resetPassword = async (email: string): Promise<{ error?: string }> => {
     try {
       this.setState({ loading: true });
-      
+
       // For development, use a web URL that will redirect back to the app
       // In production, use the native deep link
       const isDevelopment = __DEV__;
-      
-      const redirectTo = isDevelopment 
+
+      const redirectTo = isDevelopment
         ? 'http://localhost:8081/reset-password'  // Web version for development
         : 'edudashpro://auth/reset-password';     // Deep link for production
-      
+
       console.log('🔧 Reset password redirect URL:', redirectTo);
       console.log('🔧 Development mode:', isDevelopment);
-      
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
       });
-      
+
       if (error) {
         return { error: error.message };
       }
-      
+
       return {};
     } catch (error) {
       console.error('Reset password error:', error);
@@ -417,15 +417,15 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
   updatePassword = async (password: string): Promise<{ error?: string }> => {
     try {
       this.setState({ loading: true });
-      
+
       const { error } = await supabase.auth.updateUser({
         password,
       });
-      
+
       if (error) {
         return { error: error.message };
       }
-      
+
       return {};
     } catch (error) {
       console.error('Update password error:', error);

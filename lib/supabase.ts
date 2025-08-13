@@ -1,11 +1,10 @@
-import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
-import { createClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
-import { Database } from '@/types/database';
 import { createLogger } from '@/lib/utils/logger';
+import { Database } from '@/types/database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import 'react-native-url-polyfill/auto';
 
 // Debug environment variables (gated behind debug flag)
 const DEBUG_SUPABASE = process.env.EXPO_PUBLIC_DEBUG_SUPABASE === 'true';
@@ -17,16 +16,22 @@ if (DEBUG_SUPABASE) {
   log.debug('- EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY:', process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ? '✅ Found' : '❌ Missing');
 }
 
-// Set to true for local development testing
+// Prefer environment variables so Expo Go devices can connect over LAN
 const USE_LOCAL_DB = false;
 
-const supabaseUrl = USE_LOCAL_DB 
-  ? 'http://127.0.0.1:54321'  // Local Supabase
-  : (process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://lvvvjywrmpcqrpvuptdi.supabase.co');
+// Log current configuration for debugging
+console.log('🔧 Supabase Configuration:', {
+  USE_LOCAL_DB,
+  url: USE_LOCAL_DB ? 'LOCAL' : 'PRODUCTION',
+  hasEnvUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
+  hasEnvKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+});
 
-const supabaseAnonKey = USE_LOCAL_DB
-  ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'  // Local anon key
-  : (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2dnZqeXdybXBjcXJwdnVwdGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwMzc4MzgsImV4cCI6MjA2ODYxMzgzOH0.mjXejyRHPzEJfMlhW46TlYI0qw9mtoSRJZhGsCkuvd8');
+const supabaseUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL || (USE_LOCAL_DB ? 'http://127.0.0.1:54321' : 'https://lvvvjywrmpcqrpvuptdi.supabase.co'));
+
+const supabaseAnonKey = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || (USE_LOCAL_DB
+  ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+  : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2dnZqeXdybXBjcXJwdnVwdGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwMzc4MzgsImV4cCI6MjA2ODYxMzgzOH0.mjXejyRHPzEJfMlhW46TlYI0qw9mtoSRJZhGsCkuvd8'));
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Supabase configuration missing!');
@@ -50,7 +55,7 @@ const ExpoSecureStoreAdapter = {
       }
       return Promise.resolve(null);
     }
-    
+
     // On mobile, use SecureStore for sensitive data, AsyncStorage for others
     if (key.includes('supabase.auth.token')) {
       return SecureStore.getItemAsync(key);
@@ -66,7 +71,7 @@ const ExpoSecureStoreAdapter = {
       }
       return Promise.resolve();
     }
-    
+
     // On mobile, use SecureStore for sensitive data, AsyncStorage for others
     if (key.includes('supabase.auth.token')) {
       return SecureStore.setItemAsync(key, value);
@@ -82,7 +87,7 @@ const ExpoSecureStoreAdapter = {
       }
       return Promise.resolve();
     }
-    
+
     // On mobile, use SecureStore for sensitive data, AsyncStorage for others
     if (key.includes('supabase.auth.token')) {
       return SecureStore.deleteItemAsync(key);
@@ -104,13 +109,13 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 // WARNING: This exposes the service role key to the client - only for development!
 const supabaseServiceRoleKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
 
-export const supabaseAdmin = supabaseServiceRoleKey 
+export const supabaseAdmin = supabaseServiceRoleKey
   ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
   : null;
 
 if (DEBUG_SUPABASE) {
@@ -126,7 +131,7 @@ if (DEBUG_SUPABASE) {
 // Helper function to get current user with role
 export const getCurrentUserWithRole = async () => {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
+
   if (authError || !user) {
     return { user: null, profile: null, error: authError };
   }
@@ -137,10 +142,10 @@ export const getCurrentUserWithRole = async () => {
     .eq('auth_user_id', user.id)
     .single();
 
-  return { 
-    user, 
-    profile, 
-    error: profileError 
+  return {
+    user,
+    profile,
+    error: profileError
   };
 };
 

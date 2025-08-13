@@ -1,31 +1,29 @@
 /* eslint-disable */
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  RefreshControl,
-  ActivityIndicator,
-  Dimensions,
-  Alert,
-  Modal
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
-import { 
-  SuperAdminDataService, 
-  SuperAdminDashboardData,
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import {
+  PlatformActivity,
   PlatformStats,
   SchoolOverview,
-  UserOverview,
-  PlatformActivity,
-  SystemHealth
+  SuperAdminDashboardData,
+  SuperAdminDataService,
+  SystemHealth,
+  UserOverview
 } from '@/lib/services/superAdminDataService';
 
 interface SuperAdminDashboardProps {
@@ -36,6 +34,7 @@ interface SuperAdminDashboardProps {
     avatar?: string | null;
   };
   onSignOut: () => Promise<void>;
+  onNavigate?: (route: string) => void;
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -43,7 +42,8 @@ const { width: screenWidth } = Dimensions.get('window');
 const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   userId,
   userProfile,
-  onSignOut
+  onSignOut,
+  onNavigate
 }) => {
   const [dashboardData, setDashboardData] = useState<SuperAdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,11 +83,24 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   // Handle navigation
   const handleNavigate = (route: string) => {
     console.log('Navigating to:', route);
-    if (route.startsWith('/(tabs)')) {
-      router.push(route as any);
-    } else if (route.startsWith('/')) {
-      const screenName = route.substring(1);
-      router.push(`/screens/${screenName}` as any);
+    
+    // Use parent onNavigate if provided, otherwise use local routing
+    if (onNavigate) {
+      onNavigate(route);
+    } else {
+      // Fallback local routing logic
+      if (route.startsWith('/(tabs)')) {
+        router.push(route as any);
+      } else if (route.includes('?tab=')) {
+        router.push(route as any);
+      } else if (route.startsWith('/screens/') || route.startsWith('screens/')) {
+        const cleanRoute = route.startsWith('/') ? route : `/${route}`;
+        router.push(cleanRoute as any);
+      } else if (route.startsWith('/')) {
+        router.push(route as any);
+      } else {
+        router.push(`/${route}` as any);
+      }
     }
   };
 
@@ -179,7 +192,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       </View>
       <View style={styles.statCard}>
         <IconSymbol name="dollarsign" size={24} color="#F59E0B" />
-        <Text style={styles.statValue}>${stats.monthly_revenue.toLocaleString()}</Text>
+        <Text style={styles.statValue}>R {stats.monthly_revenue.toLocaleString('en-ZA')}</Text>
         <Text style={styles.statLabel}>Monthly Revenue</Text>
       </View>
       <View style={styles.statCard}>
@@ -206,7 +219,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           </Text>
         </View>
       </View>
-      
+
       <View style={styles.healthMetrics}>
         <View style={styles.healthMetric}>
           <Text style={styles.healthMetricLabel}>API Response</Text>
@@ -233,7 +246,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     <View style={styles.schoolsList}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>🏫 Recent Schools</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.addButton}
           onPress={() => setShowCreateSchoolModal(true)}
         >
@@ -241,7 +254,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           <Text style={styles.addButtonText}>Add School</Text>
         </TouchableOpacity>
       </View>
-      
+
       {schools.map((school) => (
         <View key={school.id} style={styles.schoolCard}>
           <View style={styles.schoolInfo}>
@@ -253,12 +266,12 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               Last active: {new Date(school.last_activity).toLocaleDateString()}
             </Text>
           </View>
-          
+
           <View style={styles.schoolActions}>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(school.subscription_status) }]}>
               <Text style={styles.statusText}>{school.subscription_status}</Text>
             </View>
-            
+
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleSuspendSchool(school)}
@@ -275,7 +288,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const renderUsersList = (users: UserOverview[]) => (
     <View style={styles.usersList}>
       <Text style={styles.sectionTitle}>👥 Recent Users</Text>
-      
+
       {users.slice(0, 10).map((user) => (
         <View key={user.id} style={styles.userCard}>
           <View style={styles.userInfo}>
@@ -287,12 +300,12 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               Last login: {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
             </Text>
           </View>
-          
+
           <View style={styles.userActions}>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(user.account_status) }]}>
               <Text style={styles.statusText}>{user.account_status}</Text>
             </View>
-            
+
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleSuspendUser(user)}
@@ -309,11 +322,11 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const renderActivityFeed = (activities: PlatformActivity[]) => (
     <View style={styles.activityFeed}>
       <Text style={styles.sectionTitle}>📊 Platform Activity</Text>
-      
+
       {activities.map((activity) => (
         <View key={activity.id} style={styles.activityCard}>
           <View style={[styles.activitySeverity, { backgroundColor: getSeverityColor(activity.severity) }]} />
-          
+
           <View style={styles.activityContent}>
             <Text style={styles.activityTitle}>{activity.title}</Text>
             <Text style={styles.activityDescription}>{activity.description}</Text>
@@ -321,20 +334,20 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               {new Date(activity.timestamp).toLocaleString()}
             </Text>
           </View>
-          
-          <IconSymbol 
-            name={activity.type === 'security_alert' ? 'exclamationmark.shield' : 'info.circle'} 
-            size={20} 
-            color={getSeverityColor(activity.severity)} 
+
+          <IconSymbol
+            name={activity.type === 'security_alert' ? 'exclamationmark.shield' : 'info.circle'}
+            size={20}
+            color={getSeverityColor(activity.severity)}
           />
         </View>
       ))}
     </View>
   );
 
-  // Tab navigation
+  // Tab navigation (bottom bar)
   const renderTabNavigation = () => (
-    <View style={styles.tabNavigation}>
+    <View style={styles.tabNavigationBottom}>
       {[
         { key: 'overview', label: 'Overview', icon: 'chart.bar' },
         { key: 'schools', label: 'Schools', icon: 'building.2' },
@@ -347,10 +360,10 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           style={[styles.tabButton, selectedTab === tab.key && styles.tabButtonActive]}
           onPress={() => setSelectedTab(tab.key as any)}
         >
-          <IconSymbol 
-            name={tab.icon as any} 
-            size={16} 
-            color={selectedTab === tab.key ? '#8B5CF6' : '#6B7280'} 
+          <IconSymbol
+            name={tab.icon as any}
+            size={16}
+            color={selectedTab === tab.key ? '#8B5CF6' : '#6B7280'}
           />
           <Text style={[styles.tabLabel, selectedTab === tab.key && styles.tabLabelActive]}>
             {tab.label}
@@ -418,8 +431,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         notificationCount={dashboardData.alerts.length}
       />
 
-      {/* Tab Navigation */}
-      {renderTabNavigation()}
+      {/* Content */}
 
       <ScrollView
         style={styles.scrollView}
@@ -455,7 +467,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           <>
             {renderStatsCards(dashboardData.platform_stats)}
             {renderSystemHealth(dashboardData.system_health)}
-            
+
             {/* Pending Approvals */}
             <View style={styles.approvalsSection}>
               <Text style={styles.sectionTitle}>📋 Pending Approvals</Text>
@@ -480,11 +492,11 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         {selectedTab === 'schools' && renderSchoolsList(dashboardData.recent_schools)}
         {selectedTab === 'users' && renderUsersList(dashboardData.recent_users)}
         {selectedTab === 'activity' && renderActivityFeed(dashboardData.platform_activity)}
-        
+
         {selectedTab === 'system' && (
           <View style={styles.systemSection}>
             {renderSystemHealth(dashboardData.system_health)}
-            
+
             {/* Quick Actions */}
             <View style={styles.quickActionsSection}>
               <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
@@ -512,6 +524,9 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Bottom Tab Navigation */}
+      {renderTabNavigation()}
     </View>
   );
 };
@@ -543,15 +558,19 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 22,
   },
-  
-  // Tab Navigation
-  tabNavigation: {
+
+  // Bottom Tab Navigation
+  tabNavigationBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 10,
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
   },
   tabButton: {
     flex: 1,

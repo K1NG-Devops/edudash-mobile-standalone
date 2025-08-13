@@ -1,18 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
   Animated,
   Dimensions,
   ScrollView,
-  ImageBackground,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -47,6 +47,8 @@ export default function WelcomeScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const [currentFeature, setCurrentFeature] = useState(0);
+  const rotationRef = useRef<NodeJS.Timeout | null>(null);
+  const sliderRef = useRef<ScrollView | null>(null);
 
   useEffect(() => {
     // Initial animation
@@ -62,13 +64,21 @@ export default function WelcomeScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+    // Auto-rotate features and scroll slides
+    rotationRef.current && clearInterval(rotationRef.current as any);
+    rotationRef.current = setInterval(() => {
+      setCurrentFeature((prev) => {
+        const next = (prev + 1) % features.length;
+        try {
+          sliderRef.current?.scrollTo({ x: next * screenWidth, y: 0, animated: true });
+        } catch { }
+        return next;
+      });
+    }, 3500);
 
-    // Feature rotation
-    const interval = setInterval(() => {
-      setCurrentFeature((prev) => (prev + 1) % features.length);
-    }, 3000);
-
-    return () => clearInterval(interval);
+    return () => {
+      rotationRef.current && clearInterval(rotationRef.current as any);
+    };
   }, [fadeAnim, slideAnim]);
 
   const FeatureCard = ({ feature, index, isActive }: any) => (
@@ -100,122 +110,150 @@ export default function WelcomeScreen() {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="light-content" />
       <LinearGradient
         colors={['#667eea', '#764ba2', '#f093fb']}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Hero Section */}
-          <Animated.View
-            style={[
-              styles.heroSection,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
+        <SafeAreaView style={styles.safeArea}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
           >
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={['#FFFFFF30', '#FFFFFF10']}
-                style={styles.logoBackground}
-              >
-                <IconSymbol name="graduationcap.fill" size={60} color="#FFFFFF" />
-              </LinearGradient>
-            </View>
-            
-            <Text style={styles.appName}>EduDash Pro</Text>
-            <Text style={styles.tagline}>Next-Generation Educational Platform</Text>
-            <Text style={styles.subtitle}>
-              Empowering education through AI, connecting teachers, parents, and students
-            </Text>
-          </Animated.View>
+            {/* Hero Section */}
+            <Animated.View
+              style={[
+                styles.heroSection,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={['#FFFFFF30', '#FFFFFF10']}
+                  style={styles.logoBackground}
+                >
+                  <IconSymbol name="graduationcap.fill" size={60} color="#FFFFFF" />
+                </LinearGradient>
+              </View>
 
-          {/* Features Section */}
-          <View style={styles.featuresSection}>
-            <Text style={styles.featuresTitle}>Powerful Features</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              pagingEnabled
-              style={styles.featuresScroll}
-            >
-              {features.map((feature, index) => (
-                <FeatureCard
-                  key={index}
-                  feature={feature}
-                  index={index}
-                  isActive={index === currentFeature}
-                />
-              ))}
-            </ScrollView>
-            
-            {/* Feature Indicators */}
-            <View style={styles.indicators}>
-              {features.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicator,
-                    {
-                      backgroundColor: index === currentFeature ? '#FFFFFF' : '#FFFFFF50',
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-          </View>
+              <Text style={styles.appName}>EduDash Pro</Text>
+              <Text style={styles.tagline}>Next-Generation Educational Platform</Text>
+              <Text style={styles.subtitle}>
+                Empowering education through AI, connecting teachers, parents, and students
+              </Text>
+            </Animated.View>
 
-          {/* CTA Section */}
-          <Animated.View
-            style={[
-              styles.ctaSection,
-              {
-                opacity: fadeAnim,
-              },
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => {
-                console.log('Navigate to sign-in');
-                router.push('/(auth)/sign-in');
-              }}
-              activeOpacity={0.9}
-            >
-              <LinearGradient
-                colors={['#FFFFFF', '#F8F9FA']}
-                style={styles.buttonGradient}
+            {/* Features Section */}
+            <View style={styles.featuresSection}>
+              <Text style={styles.featuresTitle}>Powerful Features</Text>
+              <ScrollView
+                ref={sliderRef as any}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                pagingEnabled
+                style={styles.featuresScroll}
+                contentContainerStyle={styles.featuresScrollContent}
+                onScroll={(e) => {
+                  const x = e.nativeEvent.contentOffset.x;
+                  const index = Math.round(x / screenWidth);
+                  if (index !== currentFeature) setCurrentFeature(Math.max(0, Math.min(features.length - 1, index)));
+                }}
+                decelerationRate="fast"
+                snapToInterval={screenWidth}
+                snapToAlignment="center"
+                scrollEventThrottle={16}
               >
-                <IconSymbol name="arrow.right.circle.fill" size={24} color="#667eea" />
-                <Text style={styles.primaryButtonText}>Get Started</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={() => {
-                console.log('Navigate to demo dashboard');
-                router.push('/(tabs)/dashboard');
-              }}
-              activeOpacity={0.8}
-            >
-              <IconSymbol name="eye.fill" size={20} color="#FFFFFF" />
-              <Text style={styles.secondaryButtonText}>View Demo</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.credentialsHint}>
-              <IconSymbol name="info.circle.fill" size={16} color="#FFFFFF80" />
-              <Text style={styles.hintText}>Demo: admin@demo.com / password123</Text>
+                {features.map((feature, index) => (
+                  <View key={index} style={styles.featurePage}>
+                    <FeatureCard
+                      feature={feature}
+                      index={index}
+                      isActive={index === currentFeature}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+
+              {/* Feature Indicators */}
+              <View style={styles.indicators}>
+                {features.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.indicator,
+                      {
+                        backgroundColor: index === currentFeature ? '#FFFFFF' : '#FFFFFF50',
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
             </View>
-          </Animated.View>
-        </ScrollView>
+
+            {/* CTA Section */}
+            <Animated.View
+              style={[
+                styles.ctaSection,
+                {
+                  opacity: fadeAnim,
+                },
+              ]}
+            >
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => {
+                  // Get started → sign in
+                  router.push('/(auth)/sign-in');
+                }}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8F9FA']}
+                  style={styles.buttonGradient}
+                >
+                  <IconSymbol name="arrow.right.circle.fill" size={24} color="#667eea" />
+                  <Text style={styles.primaryButtonText}>Get Started</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => {
+                  // Generic create account
+                  router.push('/(auth)/sign-up');
+                }}
+                activeOpacity={0.8}
+              >
+                <IconSymbol name="person.fill" size={20} color="#FFFFFF" />
+                <Text style={styles.secondaryButtonText}>Create Account</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => {
+                  // Register your school flow (3-step wizard)
+                  router.push('/(auth)/school-onboarding');
+                }}
+                activeOpacity={0.8}
+              >
+                <IconSymbol name="graduationcap.fill" size={20} color="#FFFFFF" />
+                <Text style={styles.secondaryButtonText}>Register Your School</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push('/(auth)/sign-up?role=parent')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.parentLink}>Join as a parent</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </ScrollView>
+        </SafeAreaView>
       </LinearGradient>
     </>
   );
@@ -227,7 +265,9 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingTop: StatusBar.currentHeight || 44,
+  },
+  safeArea: {
+    flex: 1,
   },
   heroSection: {
     flex: 1,
@@ -292,9 +332,17 @@ const styles = StyleSheet.create({
   featuresScroll: {
     marginBottom: 24,
   },
+  featuresScrollContent: {
+    alignItems: 'center',
+  },
+  featurePage: {
+    width: screenWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+  },
   featureCard: {
-    width: screenWidth - 80,
-    marginHorizontal: 16,
+    width: '100%',
     borderRadius: 24,
     overflow: 'hidden',
   },
@@ -392,6 +440,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  parentLink: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    textDecorationLine: 'underline',
+    opacity: 0.9,
   },
   credentialsHint: {
     flexDirection: 'row',

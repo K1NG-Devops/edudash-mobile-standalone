@@ -272,13 +272,23 @@ componentDidMount() {
 
   private handleNavigate = (route: string) => {
     console.log('Navigating to:', route);
-    // Handle navigation based on route
+    
     if (route.startsWith('/(tabs)')) {
+      // Handle tab routes directly
       router.push(route as any);
+    } else if (route.includes('?tab=')) {
+      // Handle routes with tab query parameters
+      router.push(route as any);
+    } else if (route.startsWith('/screens/') || route.startsWith('screens/')) {
+      // Handle screen routes - normalize to ensure proper format
+      const cleanRoute = route.startsWith('/') ? route : `/${route}`;
+      router.push(cleanRoute as any);
     } else if (route.startsWith('/')) {
-      // Handle screen routes
-      const screenName = route.substring(1);
-      router.push(`/screens/${screenName}` as any);
+      // Handle other absolute routes
+      router.push(route as any);
+    } else {
+      // Handle relative routes by making them absolute
+      router.push(`/${route}` as any);
     }
   };
 
@@ -514,6 +524,7 @@ componentDidMount() {
                     avatar: profile?.avatar_url,
                   }}
                   onSignOut={signOut}
+                  onNavigate={this.handleNavigate}
                 />
               );
             case 'preschool_admin':

@@ -92,9 +92,9 @@ begin
   if not exists (
     select 1 from pg_views where schemaname = 'public' and viewname = 'assignments'
   ) then
-    execute $$create view public.assignments as
+    execute 'create view public.assignments as
       select id, class_id, title, description, due_date_offset_days as due_date, created_at
-      from public.homework_assignments$$;
+      from public.homework_assignments';
   end if;
 end$$;
 

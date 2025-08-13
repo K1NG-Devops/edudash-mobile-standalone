@@ -30,6 +30,8 @@ const MAPPING: IconMapping = {
   // User & Authentication
   'person.circle.fill': 'account-circle',
   'person.circle': 'account-circle',
+  'person.fill': 'person',
+  'person': 'person',
   'person.3.fill': 'group',
   'person.2.fill': 'people',
   'person.2.badge.plus': 'person-add',
@@ -40,20 +42,26 @@ const MAPPING: IconMapping = {
   'book.fill': 'book',
   'book': 'menu-book',
   'graduationcap.fill': 'school',
+  'graduationcap': 'school',
   'doc.text.fill': 'description',
+  'doc.text': 'description',
   'building.2.fill': 'business',
   'building.2': 'business',
 
   // Analytics & Charts
   'chart.bar.fill': 'bar-chart',
+  'chart.bar': 'bar-chart',
+  'chart.bar.doc.horizontal': 'bar-chart',
   'chart.pie': 'pie-chart',
   'chart.line.uptrend.xyaxis': 'trending-up',
   'dollarsign.circle.fill': 'attach-money',
+  'dollarsign': 'attach-money',
 
   // Communication
   'message.fill': 'message',
   'bell': 'notifications',
   'bell.fill': 'notifications',
+  'clock': 'schedule',
 
   // Media & Devices
   'video.fill': 'videocam',
@@ -61,7 +69,10 @@ const MAPPING: IconMapping = {
 
   // Actions
   'plus.circle.fill': 'add-circle',
+  'plus.app': 'add',
+  'plus': 'add',
   'checkmark.circle.fill': 'check-circle',
+  'checkmark.circle': 'check-circle',
   'exclamationmark.triangle.fill': 'warning',
   'clock.fill': 'schedule',
   'qrcode.viewfinder': 'qr-code-scanner',
@@ -69,14 +80,22 @@ const MAPPING: IconMapping = {
   'trash': 'delete',
   'envelope': 'email',
   'envelope.fill': 'email',
+  'phone.fill': 'phone',
+  'lock.fill': 'lock',
+  'lock': 'lock',
   'person.2': 'people',
   'person.badge.plus': 'person-add',
   'person.3.sequence.fill': 'groups',
+  'person.3': 'groups',
+  'gear.badge': 'settings',
+  'chart.bar.doc.horizontal': 'bar-chart',
   'video.bubble.left.fill': 'video-call',
   'arrow.right.circle.fill': 'arrow-forward',
   'eye.fill': 'visibility',
   'person.fill.checkmark': 'verified-user',
+  'person.badge.shield.checkmark': 'verified-user',
   'person.fill.xmark': 'person-remove',
+  'person.badge.minus': 'person-remove',
   'line.3.horizontal.decrease': 'filter-list',
   'arrow.clockwise': 'refresh',
   'snack.circle': 'local-dining',
@@ -90,10 +109,12 @@ const MAPPING: IconMapping = {
   'info.circle': 'info',
   'info.circle.fill': 'info',
   'lock.shield': 'security',
+  'exclamationmark.shield': 'security',
   'hand.raised': 'pan-tool',
   'calendar': 'event',
   'gearshape.fill': 'settings',
   'gearshape': 'settings',
+  'gear': 'settings',
   'creditcard.fill': 'payment',
   'creditcard': 'payment',
   'location.fill': 'place',
@@ -108,6 +129,7 @@ const MAPPING: IconMapping = {
 
   // AI & Brain
   'brain.head.profile': 'psychology',
+  'cpu': 'memory',
 
   // Parent Dashboard Specific Icons
   'heart.fill': 'favorite',

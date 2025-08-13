@@ -4,8 +4,6 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { getRoleColors } from '@/constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { createLogger } from '@/lib/utils/logger';
-const log = createLogger('ui');
 import {
     Animated,
     Dimensions,
@@ -79,26 +77,34 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
         route: '/profile',
         color: '#6366F1',
       },
-      {
-        id: 'notifications',
-        title: 'Notifications',
-        subtitle: 'Manage alerts & updates',
-        icon: 'bell.fill',
-        route: '/notifications',
-        badge: 5,
-        color: '#8B5CF6',
-      },
+        {
+          id: 'notifications',
+          title: 'Notifications',
+          subtitle: 'Manage alerts & updates',
+          icon: 'bell.fill',
+          route: '/screens/notifications',
+          badge: 5,
+          color: '#8B5CF6',
+        },
     ];
 
     switch (role) {
       case 'superadmin':
         return [
           {
-            id: 'analytics',
-            title: 'Platform Analytics',
-            subtitle: 'Usage & revenue insights',
-            icon: 'chart.line.uptrend.xyaxis',
-            route: '/(tabs)/activities',
+            id: 'dashboard',
+            title: 'Super Admin Dashboard',
+            subtitle: 'Platform overview & management',
+            icon: 'rectangle.3.group.fill',
+            route: 'screens/super-admin-dashboard',
+            color: '#DC2626',
+          },
+          {
+            id: 'onboarding',
+            title: 'School Onboarding',
+            subtitle: 'Approve pending schools',
+            icon: 'plus.app',
+            route: 'screens/super-admin-dashboard?tab=onboarding',
             color: '#DC2626',
           },
           {
@@ -106,23 +112,23 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'User Management',
             subtitle: 'Manage all platform users',
             icon: 'person.3.fill',
-            route: '/users',
+            route: 'screens/super-admin-dashboard?tab=users',
             color: '#DC2626',
           },
           {
-            id: 'billing',
-            title: 'Billing & Revenue',
-            subtitle: 'Financial dashboard',
-            icon: 'creditcard.fill',
-            route: '/billing',
+            id: 'schools',
+            title: 'School Management',
+            subtitle: 'Monitor all schools',
+            icon: 'building.2.fill',
+            route: 'screens/super-admin-dashboard?tab=schools',
             color: '#DC2626',
           },
           {
             id: 'system',
-            title: 'System Settings',
-            subtitle: 'Platform configuration',
+            title: 'System Health',
+            subtitle: 'Platform monitoring',
             icon: 'gear',
-            route: '/(tabs)/activities',
+            route: 'screens/super-admin-dashboard?tab=system',
             color: '#DC2626',
           },
           {
@@ -585,14 +591,14 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   sidebarHeader: {
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 30,
     paddingHorizontal: 24,
     position: 'relative',
   },
   closeButton: {
     position: 'absolute',
-    top: 50,
+    top: 10,
     right: 20,
     width: 36,
     height: 36,
@@ -636,7 +642,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 80, // Extra padding to ensure space above sign out button
+    paddingBottom: 90, // Extra padding to ensure space above sign out button
   },
   menuItem: {
     flexDirection: 'row',
@@ -707,6 +713,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,
+    paddingBottom: 24, // Extra padding for devices with home indicators
     borderTopWidth: 2,
     borderTopColor: '#FCA5A5',
   },
