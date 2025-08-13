@@ -1,5 +1,26 @@
 # EduDash Pro — Cursor AI Assistant Rules
 
+## 🚨 CRITICAL: PRODUCTION DATABASE STATUS
+**DATABASE STATE: PRODUCTION READY ✅**  
+**LAST VERIFIED:** 2025-08-13 23:22:52 UTC  
+**⚠️ NO DATABASE RESETS ALLOWED - SUPERADMIN ACCOUNTS ARE PRODUCTION**
+
+### SuperAdmin Accounts (LIVE PRODUCTION DATA)
+- **Primary:** superadmin@edudashpro.org.za / #Olivia@17
+- **Secondary:** admin@edudashpro.com / Secure123!
+- **Status:** Both active, authenticated, and working ✅
+- **Database:** Clean, secure, no mock data ✅
+- **Tables:** All essential tables present with proper RLS ✅
+
+### CRITICAL RULES - READ FIRST
+1. **NO DATABASE RESETS** - Will destroy production superadmin accounts
+2. **MIGRATIONS ONLY** - All schema changes must use Supabase migrations
+3. **NO MOCK DATA** - Database is clean and production-ready, do not add test/demo data
+4. **NO MOCK DATA IN CODE** - Do not use mock data arrays or hardcoded test data in components
+5. **HANDLE EMPTY STATES** - Always handle loading, error, and empty data states gracefully
+6. **AUTH IS WORKING** - Do not modify authentication configuration
+7. **RLS IS SECURE** - All policies tested and working
+
 You are an expert AI software engineer helping build EduDash Pro, a mobile-first education SaaS app for South African education. The app is built with **React Native (Expo)**, **Supabase (PostgreSQL)**, and **Anthropic Claude AI**.
 
 ## Project Context
@@ -354,24 +375,51 @@ if (userRole === 'superadmin' && supabaseAdmin) {
 - **Individual Tutor**: Independent educator
 - **Homeschool Parent**: Full educational management
 
-## File Organization
+## File Organization (Current Structure)
 ```
 /app                    # Expo Router (file-based routing)
+  /(auth)               # Authentication screens (sign-in, sign-up, onboarding)
+  /(tabs)               # Tab-based navigation screens
+  /screens              # Additional screens (profile, settings, super-admin)
+  /_layout.tsx          # Root layout with auth context
+  /index.tsx            # Entry point with auth checks
 /components             # Reusable UI components
-  /ui                   # Basic UI elements
-  /forms                # Form components
-  /screens              # Screen-level components
+  /ui                   # Basic UI elements (IconSymbol, etc.)
+  /navigation           # Navigation components (MobileHeader, MobileSidebar)
+  /dashboard            # Dashboard-specific components (SuperAdminDashboard)
+  /admin                # Admin management components
 /lib                    # Core services
-  /supabase.ts          # Supabase client
-  /services/            # Data services
+  /supabase.ts          # Supabase client configuration
+  /services/            # Data services (superAdminDataService, notificationService)
+  /auth/                # Authentication modules (ProductionAuth)
   /utils/               # Utility functions
-  /hooks/               # Custom React hooks
+/contexts               # React contexts
+  /SimpleWorkingAuth.tsx # Main auth context (WORKING - DO NOT MODIFY)
 /types                  # TypeScript definitions
   /database.ts          # Supabase generated types
 /constants              # App constants
 /assets                 # Images, fonts, icons
-/.env.local             # Environment variables
+/supabase               # Database configuration
+  /migrations/          # Database migration files (PRODUCTION READY)
+  /seed.sql             # Database seed file
+/scripts                # Database utility scripts
+/archive                # Historical code and documentation
+/.env.local             # Local environment variables (CONFIGURED)
+/.env                   # Production environment template
+/PROJECT_RULES.md       # Comprehensive project rules and state
+/PRODUCTION-SETUP.md    # Production setup documentation
 ```
+
+### Current Implementation Status
+- ✅ **Authentication System**: Complete and working
+- ✅ **SuperAdmin Dashboard**: Functional with working navigation
+- ✅ **Profile/Settings Screens**: Implemented with proper data loading
+- ✅ **Database Schema**: Production-ready with all essential tables
+- ✅ **RLS Security**: Active and tested
+- ✅ **Mobile Navigation**: Fixed and responsive
+- ✅ **Icon System**: Resolved with proper mappings
+- 🔄 **Platform Admin Creation**: Next phase (through dashboard)
+- 📅 **School Onboarding**: Planned for future development
 
 ## Data & Security
 
@@ -429,6 +477,54 @@ if (userRole === 'superadmin' && supabaseAdmin) {
 3. Consider offline sync requirements
 4. Add proper pagination for lists
 5. Respect RLS policies
+6. **NO MOCK DATA** - Always handle empty states properly
+
+### Empty State Handling (CRITICAL)
+```typescript
+// CORRECT: Handle empty states gracefully
+const StudentList = ({ preschoolId }: Props) => {
+  const [students, setStudents] = useState<Student[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('students')
+          .select('*')
+          .eq('preschool_id', preschoolId)
+        
+        if (error) throw error
+        setStudents(data || [])
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchStudents()
+  }, [preschoolId])
+
+  if (loading) return <LoadingSpinner />
+  if (error) return <ErrorMessage message={error} />
+  if (students.length === 0) {
+    return (
+      <EmptyState
+        title="No students yet"
+        description="Students will appear here once they're enrolled"
+        action={{ text: "Enroll Student", onPress: handleEnrollStudent }}
+      />
+    )
+  }
+
+  return <FlashList data={students} ... />
+}
+
+// WRONG: Never use mock data
+// const mockStudents = [{ id: '1', name: 'Test Student' }] // DON'T DO THIS
+```
 
 ## Error Handling
 - Always wrap async operations in try-catch
