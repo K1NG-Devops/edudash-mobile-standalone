@@ -15,6 +15,7 @@ import {
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { supabase } from '@/lib/supabase';
 import {
   approveOnboardingRequest,
   getAllOnboardingRequests,
@@ -75,6 +76,10 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   };
 
   const handleApprove = async (request: OnboardingRequest) => {
+    console.log('🔥 [OnboardingManager] handleApprove called with request:', request);
+    
+    // TODO: Test Alert on mobile device - currently commented out for web testing
+    /*
     Alert.alert(
       'Approve School',
       `Approve "${request.preschool_name}" and create school account?`,
@@ -84,35 +89,81 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
           text: 'Approve & Create School',
           style: 'default',
           onPress: async () => {
-            try {
-              setProcessing(request.id);
-              
-              // First approve the request
-              await approveOnboardingRequest(request.id, superAdminUserId);
-              
-              // Then create the actual school
-              const result = await SuperAdminDataService.createSchool({
-                name: request.preschool_name,
-                email: request.admin_email,
-                admin_name: request.admin_name,
-                subscription_plan: 'trial'
-              });
-
-              if (result.success) {
-                Alert.alert('Success', `School "${request.preschool_name}" has been created successfully!`);
-                fetchRequests(); // Refresh list
-              } else {
-                Alert.alert('Error', result.error || 'Failed to create school');
-              }
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to approve request');
-            } finally {
-              setProcessing(null);
-            }
+            await performApproval(request);
           }
         }
       ]
     );
+    */
+    
+    // Temporary web fallback - use window.confirm or proceed directly
+    const confirmed = typeof window !== 'undefined' 
+      ? window.confirm(`Approve "${request.preschool_name}" and create school account?`)
+      : true;
+    
+    if (!confirmed) {
+      console.log('❌ [OnboardingManager] User cancelled approval');
+      return;
+    }
+
+    await performApproval(request);
+  };
+
+  const performApproval = async (request: OnboardingRequest) => {
+    try {
+      console.log('🚀 [OnboardingManager] Starting approval process...');
+      setProcessing(request.id);
+      
+      console.log('📝 [OnboardingManager] Approving request in database...');
+      // First approve the request
+      await approveOnboardingRequest(request.id, superAdminUserId);
+      console.log('✅ [OnboardingManager] Request approved in database');
+      
+      console.log('🏫 [OnboardingManager] Creating school with data:', {
+        name: request.preschool_name,
+        email: request.admin_email,
+        admin_name: request.admin_name,
+        subscription_plan: 'trial'
+      });
+      
+      // Then create the actual school
+      const result = await SuperAdminDataService.createSchool({
+        name: request.preschool_name,
+        email: request.admin_email,
+        admin_name: request.admin_name,
+        subscription_plan: 'trial'
+      });
+
+      console.log('🏫 [OnboardingManager] School creation result:', result);
+
+      if (result.success) {
+        // TODO: Test Alert on mobile - using fallback for web
+        if (typeof window !== 'undefined') {
+          window.alert(`School "${request.preschool_name}" has been created successfully!\n\nAdmin Email: ${result.admin_email}\nTemporary Password: ${result.temp_password}`);
+        } else {
+          // Alert.alert('Success', `School "${request.preschool_name}" has been created successfully!\n\nAdmin Email: ${result.admin_email}\nTemporary Password: ${result.temp_password}`);
+        }
+        console.log('🎉 [OnboardingManager] Success! Refreshing requests...');
+        fetchRequests(); // Refresh list
+      } else {
+        console.error('❌ [OnboardingManager] School creation failed:', result.error);
+        if (typeof window !== 'undefined') {
+          window.alert(result.error || 'Failed to create school');
+        } else {
+          // Alert.alert('Error', result.error || 'Failed to create school');
+        }
+      }
+    } catch (error: any) {
+      console.error('💥 [OnboardingManager] Exception during approval:', error);
+      if (typeof window !== 'undefined') {
+        window.alert(error.message || 'Failed to approve request');
+      } else {
+        // Alert.alert('Error', error.message || 'Failed to approve request');
+      }
+    } finally {
+      console.log('🏁 [OnboardingManager] Approval process finished');
+      setProcessing(null);
+    }
   };
 
   const handleReject = async (request: OnboardingRequest) => {
@@ -139,6 +190,134 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         }
       ]
     );
+  };
+
+  const handleResendInstructions = async (request: OnboardingRequest) => {
+    console.log('📧 [OnboardingManager] Resending instructions for:', request.preschool_name);
+    
+    // Use window.confirm for web compatibility
+    const confirmed = typeof window !== 'undefined' 
+      ? window.confirm(`Resend welcome instructions to "${request.preschool_name}" admin?\n\nThis will generate a new password and send the setup email again.`)
+      : true;
+    
+    if (!confirmed) {
+      console.log('❌ [OnboardingManager] User cancelled resend');
+      return;
+    }
+
+    try {
+      console.log('📧 [OnboardingManager] Starting resend process...');
+      setProcessing(request.id);
+      
+      // First, find the actual school that was created from this onboarding request
+      console.log('🔍 [OnboardingManager] Looking for school with admin email:', request.admin_email);
+      
+      const { data: schoolData, error: schoolError } = await supabase
+        .from('preschools')
+        .select('id')
+        .eq('email', request.admin_email)
+        .single();
+      
+      if (schoolError || !schoolData) {
+        console.error('❌ [OnboardingManager] School not found for admin:', request.admin_email, schoolError);
+        if (typeof window !== 'undefined') {
+          window.alert(`School not found for admin email: ${request.admin_email}\n\nThe school may not have been created yet. Please approve the request first.`);
+        }
+        return;
+      }
+      
+      console.log('✅ [OnboardingManager] Found school ID:', schoolData.id);
+      
+      // Now resend instructions using the actual school ID
+      const resendResult = await SuperAdminDataService.resendWelcomeInstructions(
+        schoolData.id, // Using actual school ID
+        'Admin requested resend via dashboard'
+      );
+
+      console.log('📧 [OnboardingManager] Resend result:', resendResult);
+
+      if (resendResult?.success) {
+        if (typeof window !== 'undefined') {
+          window.alert(`Instructions resent successfully!\n\nEmail sent to: ${resendResult.admin_email}\n${resendResult.password_updated ? 'New password generated.' : 'Please contact support if issues persist.'}`);
+        }
+        console.log('🎉 [OnboardingManager] Instructions resent successfully!');
+      } else {
+        console.error('❌ [OnboardingManager] Resend failed:', resendResult?.error);
+        if (typeof window !== 'undefined') {
+          window.alert(resendResult?.error || 'Failed to resend instructions');
+        }
+      }
+    } catch (error: any) {
+      console.error('💥 [OnboardingManager] Exception during resend:', error);
+      if (typeof window !== 'undefined') {
+        window.alert(error.message || 'Failed to resend instructions');
+      }
+    } finally {
+      console.log('🏁 [OnboardingManager] Resend process finished');
+      setProcessing(null);
+    }
+  };
+
+  const handleCompleteSetup = async (request: OnboardingRequest) => {
+    console.log('🔧 [OnboardingManager] Completing setup for approved request:', request.preschool_name);
+    
+    const confirmed = typeof window !== 'undefined' 
+      ? window.confirm(`Complete the setup for "${request.preschool_name}"?\n\nThis will create the missing school and admin account.`)
+      : true;
+    
+    if (!confirmed) {
+      console.log('❌ [OnboardingManager] User cancelled setup completion');
+      return;
+    }
+
+    // Reuse the performApproval function since it does exactly what we need
+    await performApproval(request);
+  };
+
+  const handleDeleteRequest = async (request: OnboardingRequest) => {
+    console.log('🗑️ [OnboardingManager] Deleting request for:', request.preschool_name);
+    
+    const confirmed = typeof window !== 'undefined' 
+      ? window.confirm(`Permanently delete the request for "${request.preschool_name}"?\n\nThis action cannot be undone.`)
+      : false;
+    
+    if (!confirmed) {
+      console.log('❌ [OnboardingManager] User cancelled deletion');
+      return;
+    }
+
+    try {
+      console.log('🗑️ [OnboardingManager] Starting deletion process...');
+      setProcessing(request.id);
+      
+      const { error } = await supabase
+        .from('onboarding_requests')
+        .delete()
+        .eq('id', request.id);
+      
+      if (error) {
+        console.error('❌ [OnboardingManager] Delete failed:', error);
+        if (typeof window !== 'undefined') {
+          window.alert(`Failed to delete request: ${error.message}`);
+        }
+        return;
+      }
+      
+      console.log('✅ [OnboardingManager] Request deleted successfully');
+      if (typeof window !== 'undefined') {
+        window.alert(`Request for "${request.preschool_name}" has been permanently deleted.`);
+      }
+      
+      fetchRequests(); // Refresh list
+    } catch (error: any) {
+      console.error('💥 [OnboardingManager] Exception during deletion:', error);
+      if (typeof window !== 'undefined') {
+        window.alert(error.message || 'Failed to delete request');
+      }
+    } finally {
+      console.log('🏁 [OnboardingManager] Deletion process finished');
+      setProcessing(null);
+    }
   };
 
   const handleCreateSchool = async () => {
@@ -224,7 +403,10 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={[styles.actionButton, styles.approveButton]}
-            onPress={() => handleApprove(item)}
+            onPress={() => {
+              console.log('🔴 [OnboardingManager] Approve button clicked for:', item.preschool_name);
+              handleApprove(item);
+            }}
             disabled={processing === item.id}
           >
             {processing === item.id ? (
@@ -242,6 +424,53 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
           >
             <IconSymbol name="x" size={16} color="#FFFFFF" />
             <Text style={styles.actionButtonText}>Reject</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      {item.status === 'approved' && (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.warningButton]}
+            onPress={() => handleCompleteSetup(item)}
+            disabled={processing === item.id}
+          >
+            {processing === item.id ? (
+              <LoadingSpinner size={16} color="#FFFFFF" />
+            ) : (
+              <IconSymbol name="wrench" size={16} color="#FFFFFF" />
+            )}
+            <Text style={styles.actionButtonText}>Complete Setup</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.actionButton, styles.resendButton]}
+            onPress={() => handleResendInstructions(item)}
+            disabled={processing === item.id}
+          >
+            {processing === item.id ? (
+              <LoadingSpinner size={16} color="#FFFFFF" />
+            ) : (
+              <IconSymbol name="mail" size={16} color="#FFFFFF" />
+            )}
+            <Text style={styles.actionButtonText}>Resend Instructions</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      {item.status === 'rejected' && (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => handleDeleteRequest(item)}
+            disabled={processing === item.id}
+          >
+            {processing === item.id ? (
+              <LoadingSpinner size={16} color="#FFFFFF" />
+            ) : (
+              <IconSymbol name="trash" size={16} color="#FFFFFF" />
+            )}
+            <Text style={styles.actionButtonText}>Delete Request</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -494,6 +723,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 20,
+    paddingBottom: 100, // Extra padding to prevent last element from being hidden behind navbar
   },
   requestCard: {
     backgroundColor: '#FFFFFF',
@@ -566,6 +796,15 @@ const styles = StyleSheet.create({
   },
   rejectButton: {
     backgroundColor: '#EF4444',
+  },
+  resendButton: {
+    backgroundColor: '#3B82F6',
+  },
+  warningButton: {
+    backgroundColor: '#F59E0B',
+  },
+  deleteButton: {
+    backgroundColor: '#DC2626',
   },
   actionButtonText: {
     color: '#FFFFFF',
