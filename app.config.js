@@ -3,7 +3,7 @@ import 'dotenv/config';
 export default {
   expo: {
     name: "EduDash Pro Mobile",
-    slug: "edudash-pro-mobile",
+    slug: "edudashpro-app",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
@@ -11,7 +11,7 @@ export default {
     userInterfaceStyle: "automatic",
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.edudashpro.mobile"
+      bundleIdentifier: "com.edudashpro.app"
     },
     android: {
       adaptiveIcon: {
@@ -19,7 +19,7 @@ export default {
         backgroundColor: "#ffffff"
       },
       edgeToEdgeEnabled: true,
-      package: "com.edudashpro.mobile"
+      package: "com.edudashpro.app"
     },
     web: {
       bundler: "metro",
@@ -44,14 +44,12 @@ export default {
     extra: {
       router: {},
       eas: {
-        projectId: "09b1f081-3817-49b2-882f-ca873dc2e9ec"
+        projectId: "b1fd3356-08ed-4331-92b5-52a7be4cd4bc"
       }
     },
-    runtimeVersion: {
-      policy: "appVersion"
-    },
+    runtimeVersion: "1.0.0",
     updates: {
-      url: "https://u.expo.dev/33a263ac-0d01-480c-bc1b-384873cd2b47"
+      url: "https://u.expo.dev/b1fd3356-08ed-4331-92b5-52a7be4cd4bc"
     }
   }
 };
