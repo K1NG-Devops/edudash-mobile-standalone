@@ -96,6 +96,7 @@ const MAPPING: IconMapping = {
   'person.badge.shield.checkmark': 'verified-user',
   'person.fill.xmark': 'person-remove',
   'person.badge.minus': 'person-remove',
+  'person.slash': 'block',
   'line.3.horizontal.decrease': 'filter-list',
   'arrow.clockwise': 'refresh',
   'snack.circle': 'local-dining',
@@ -135,6 +136,12 @@ const MAPPING: IconMapping = {
   'heart.fill': 'favorite',
   'trophy.fill': 'emoji-events',
   'person.2.square.stack.fill': 'people',
+
+  // Additional missing icons
+  'wrench': 'build',
+  'mail': 'mail',
+  'checkmark': 'check',
+  'x': 'close',
 };
 
 /**

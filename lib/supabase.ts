@@ -16,7 +16,7 @@ if (DEBUG_SUPABASE) {
   log.debug('- EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY:', process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ? '✅ Found' : '❌ Missing');
 }
 
-// Prefer environment variables so Expo Go devices can connect over LAN
+// Use production database for authentication
 const USE_LOCAL_DB = false;
 
 // Log current configuration for debugging
@@ -102,18 +102,22 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    storageKey: 'supabase_auth_client',
   },
 });
 
 // Admin client for service role operations (development only)
 // WARNING: This exposes the service role key to the client - only for development!
-const supabaseServiceRoleKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceRoleKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || (USE_LOCAL_DB 
+  ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+  : undefined);
 
 export const supabaseAdmin = supabaseServiceRoleKey
   ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+      storageKey: 'supabase_auth_admin',
     },
   })
   : null;
