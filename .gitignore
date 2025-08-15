@@ -25,7 +25,9 @@ expo-env.d.ts
 *.keystore
 !debug.keystore
 ios/
-android/
+# Track Android native code so EAS uses our manifest/Gradle config
+# (remove this ignore)
+# android/
 .kotlin/
 
 # Metro
