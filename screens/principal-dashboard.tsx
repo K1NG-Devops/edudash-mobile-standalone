@@ -178,7 +178,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
       <MobileHeader
         user={{
           name: profile?.name || 'Principal',
-          role: 'School Principal',
+          role: profile?.role || 'preschool_admin',
           avatar: profile?.avatar_url,
         }}
         schoolName={schoolName || undefined}

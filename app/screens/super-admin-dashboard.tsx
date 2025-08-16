@@ -364,7 +364,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
       <MobileHeader
         user={{
           name: user.name || 'Super Admin',
-          role: 'superadmin',
+          role: user.role || 'superadmin',
           avatar: user.avatar_url
         }}
         schoolName="EduDash Pro Platform"

@@ -150,6 +150,8 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                       <View style={styles.roleBadge}>
                         <Text style={styles.roleTitle}>
                           {user?.role === 'preschool_admin' ? 'Principal' : 
+                           user?.role === 'principal' ? 'Principal' :
+                           user?.role === 'school_admin' ? 'School Admin' :
                            user?.role === 'teacher' ? 'Teacher' :
                            user?.role === 'parent' ? 'Parent' :
                            user?.role === 'superadmin' ? 'Platform Admin' : 'User'}

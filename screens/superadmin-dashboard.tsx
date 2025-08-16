@@ -199,7 +199,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ profile, onSi
       <MobileHeader
         user={{
           name: profile?.name || 'Super Admin',
-          role: 'Platform Administrator',
+          role: profile?.role || 'superadmin',
           avatar: profile?.avatar_url,
         }}
         onNotificationsPress={() => handleNavigate('notifications')}
