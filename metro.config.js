@@ -1,3 +1,27 @@
+// Metro configuration for Expo/React Native
+// Blocks heavy/unnecessary directories from being watched to reduce watcher load
+
+const { getDefaultConfig } = require('expo/metro-config');
+const exclusionList = require('metro-config/src/defaults/exclusionList');
+
+const projectRoot = __dirname;
+const config = getDefaultConfig(projectRoot);
+
+config.resolver.blockList = exclusionList([
+  /(^|\/)\.git\//,
+  /(^|\/)\.expo\//,
+  /(^|\/)\.cache\//,
+  /(^|\/)\.cursor\//,
+  /(^|\/)android\/build\//,
+  /(^|\/)ios\/build\//,
+  /(^|\/)web\/dist\//,
+  /(^|\/)web\/build\//,
+  /(^|\/)archive\//,
+  /(^|\/)docs\//,
+]);
+
+module.exports = config;
+
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
