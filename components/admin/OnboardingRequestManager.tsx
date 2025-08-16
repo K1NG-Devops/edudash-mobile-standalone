@@ -160,38 +160,20 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       console.log('🚀 [OnboardingManager] Starting approval process...');
       setProcessing(request.id);
 
-      console.log('📝 [OnboardingManager] Approving request in database...');
-      // First approve the request
-      await approveOnboardingRequest(request.id, superAdminUserId);
-      console.log('✅ [OnboardingManager] Request approved in database');
+      console.log('📝 [OnboardingManager] Approving & provisioning via Edge Function...');
+      const result = await approveOnboardingRequest(request.id) as any;
 
-      // Immediately update the request status in UI
-      setRequests(prevRequests =>
-        prevRequests.map(r =>
-          r.id === request.id
-            ? { ...r, status: 'approved' as const, reviewed_by: superAdminUserId, reviewed_at: new Date().toISOString() }
-            : r
-        )
-      );
+      console.log('🏫 [OnboardingManager] Provisioning result:', result);
 
-      console.log('🏫 [OnboardingManager] Creating school with data:', {
-        name: request.preschool_name,
-        email: request.admin_email,
-        admin_name: request.admin_name,
-        subscription_plan: 'trial'
-      });
-
-      // Then create the actual school
-      const result = await SuperAdminDataService.createSchool({
-        name: request.preschool_name,
-        email: request.admin_email,
-        admin_name: request.admin_name,
-        subscription_plan: 'trial'
-      });
-
-      console.log('🏫 [OnboardingManager] School creation result:', result);
-
-      if (result.success) {
+      if (result?.success) {
+        // Update UI to approved
+        setRequests(prevRequests =>
+          prevRequests.map(r =>
+            r.id === request.id
+              ? { ...r, status: 'approved' as const, reviewed_by: superAdminUserId, reviewed_at: new Date().toISOString() }
+              : r
+          )
+        );
         // TODO: Test Alert on mobile - using fallback for web
         if (typeof window !== 'undefined') {
           window.alert(`School "${request.preschool_name}" has been created successfully!\n\nAdmin Email: ${result.admin_email}\nTemporary Password: ${result.temp_password}`);
@@ -201,14 +183,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         console.log('🎉 [OnboardingManager] Success!');
       } else {
         console.error('❌ [OnboardingManager] School creation failed:', result.error);
-        // Revert the status change if school creation failed
-        setRequests(prevRequests =>
-          prevRequests.map(r =>
-            r.id === request.id
-              ? { ...r, status: 'pending' as const, reviewed_by: undefined, reviewed_at: undefined }
-              : r
-          )
-        );
         if (typeof window !== 'undefined') {
           window.alert(result.error || 'Failed to create school');
         } else {
@@ -217,14 +191,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       }
     } catch (error: any) {
       console.error('💥 [OnboardingManager] Exception during approval:', error);
-      // Revert the status change if any error occurred
-      setRequests(prevRequests =>
-        prevRequests.map(r =>
-          r.id === request.id
-            ? { ...r, status: 'pending' as const, reviewed_by: undefined, reviewed_at: undefined }
-            : r
-        )
-      );
       if (typeof window !== 'undefined') {
         window.alert(error.message || 'Failed to approve request');
       } else {
@@ -405,69 +371,27 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       console.log('🗑️ [OnboardingManager] Starting school deletion process...');
       setProcessing(request.id);
 
-      // First, find the school that was created from this onboarding request
-      console.log('🔍 [OnboardingManager] Looking for school with admin email:', request.admin_email);
-
+      // Prefer server-side deletion to ensure Auth users and tenant data are removed
+      console.log('🗑️ [OnboardingManager] Deleting school via Edge Function...');
+      // Find school by admin email (server will delete by ID once sent)
       const { data: schoolData, error: schoolError } = await supabase
         .from('preschools')
-        .select('id, name')
+        .select('id')
         .eq('email', request.admin_email)
         .single();
-
       if (schoolError || !schoolData) {
         console.error('❌ [OnboardingManager] School not found for admin:', request.admin_email, schoolError);
-        Alert.alert(
-          'School Not Found', 
-          `School not found for admin email: ${request.admin_email}\n\nThe school may have already been deleted or not created yet.`
-        );
+        Alert.alert('School Not Found', `School not found for admin email: ${request.admin_email}`);
         return;
       }
 
-      console.log('✅ [OnboardingManager] Found school to delete:', schoolData);
-
-      // Delete users associated with this school first (due to foreign key constraints)
-      console.log('🗑️ [OnboardingManager] Deleting users associated with school...');
-      const { error: usersError } = await supabase
-        .from('users')
-        .delete()
-        .eq('preschool_id', schoolData.id);
-
-      if (usersError) {
-        console.error('❌ [OnboardingManager] Failed to delete users:', usersError);
-        Alert.alert('Error', `Failed to delete school users: ${usersError.message}`);
+      const { data: delRes, error: delErr } = await supabase.functions.invoke('superadmin_delete_school', {
+        body: { schoolId: schoolData.id, requestId: request.id },
+      });
+      if (delErr || !delRes?.success) {
+        console.error('❌ [OnboardingManager] Server-side delete failed:', delErr || delRes);
+        Alert.alert('Error', delErr?.message || delRes?.error || 'Failed to delete school');
         return;
-      }
-
-      console.log('✅ [OnboardingManager] School users deleted successfully');
-
-      // Delete the school record
-      console.log('🗑️ [OnboardingManager] Deleting school record...');
-      const { error: schoolDeleteError } = await supabase
-        .from('preschools')
-        .delete()
-        .eq('id', schoolData.id);
-
-      if (schoolDeleteError) {
-        console.error('❌ [OnboardingManager] Failed to delete school:', schoolDeleteError);
-        Alert.alert('Error', `Failed to delete school: ${schoolDeleteError.message}`);
-        return;
-      }
-
-      console.log('✅ [OnboardingManager] School record deleted successfully');
-
-      // Finally, delete the onboarding request
-      console.log('🗑️ [OnboardingManager] Deleting onboarding request...');
-      const { error: requestError } = await supabase
-        .from('preschool_onboarding_requests')
-        .delete()
-        .eq('id', request.id);
-
-      if (requestError) {
-        console.error('❌ [OnboardingManager] Failed to delete onboarding request:', requestError);
-        // Don't fail the whole operation if this fails
-        console.log('⚠️ [OnboardingManager] School deleted but onboarding request may still exist');
-      } else {
-        console.log('✅ [OnboardingManager] Onboarding request deleted successfully');
       }
 
       console.log('✅ [OnboardingManager] Complete school deletion successful');
@@ -515,29 +439,13 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       console.log('🗑️ [OnboardingManager] Starting deletion process...');
       setProcessing(request.id);
 
-      console.log('🗑️ [OnboardingManager] Attempting to delete request with ID:', request.id);
-      
-      // Use admin client if available for delete operations
-      const client = supabaseAdmin || supabase;
-      console.log('🗑️ [OnboardingManager] Using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
-      
-      const { error, data } = await client
-        .from('preschool_onboarding_requests')
-        .delete()
-        .eq('id', request.id)
-        .select(); // Add select to see what was deleted
-
-      console.log('🗑️ [OnboardingManager] Delete operation result:', { error, data });
-
-      if (error) {
-        console.error('❌ [OnboardingManager] Delete failed:', error);
-        Alert.alert('Delete failed', `Failed to delete request: ${error.message}\n\nError code: ${error.code}`);
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        console.warn('⚠️ [OnboardingManager] No rows were deleted - record may not exist or RLS blocking');
-        Alert.alert('Warning', 'No records were deleted. This might be due to permissions or the record may not exist.');
+      // Prefer server-side deletion to bypass RLS safely
+      const { data: delRes, error: delErr } = await supabase.functions.invoke('superadmin_delete_onboarding_request', {
+        body: { requestId: request.id },
+      });
+      if (delErr || !delRes?.success) {
+        console.error('❌ [OnboardingManager] Delete failed:', delErr || delRes);
+        Alert.alert('Delete failed', delErr?.message || delRes?.error || 'Failed to delete request');
         return;
       }
 

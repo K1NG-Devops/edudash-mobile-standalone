@@ -411,72 +411,27 @@ export const getAllOnboardingRequests = async (): Promise<Partial<PreschoolOnboa
 };
 
 // Approve an onboarding request (for super admins)
-export const approveOnboardingRequest = async (requestId: string, reviewerId: string) => {
-  // Use admin client for approval operations
-  const client = supabaseAdmin || supabase;
-  console.log('✅ [OnboardingService] Approving request using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
-  
-  // Check if the reviewer exists in the database using admin client
-  const { data: reviewer } = await client
-    .from('users')
-    .select('id')
-    .eq('id', reviewerId)
-    .single();
-
-  const updateData: any = {
-    status: 'approved',
-    reviewed_at: new Date().toISOString(),
-  };
-
-  // Only set reviewed_by if the reviewer exists
-  if (reviewer) {
-    updateData.reviewed_by = reviewerId;
-  }
-
-  const { data, error } = await client
-    .from('preschool_onboarding_requests')
-    .update(updateData)
-    .eq('id', requestId);
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
+export const approveOnboardingRequest = async (requestId: string) => {
+  // Route approval + provisioning through Edge Function to use service role safely
+  const { data, error } = await supabase.functions.invoke('superadmin_approve_onboarding', {
+    body: { requestId },
+  });
+  if (error) throw error;
+  return data as any;
 };
 
 // Reject an onboarding request (for super admins)
 export const rejectOnboardingRequest = async (requestId: string, reviewerId: string) => {
-  // Use admin client for rejection operations
+  // Keep rejection simple via RLS (superadmin) or use service role when available
   const client = supabaseAdmin || supabase;
-  console.log('❌ [OnboardingService] Rejecting request using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
-  
-  // Check if the reviewer exists in the database using admin client
-  const { data: reviewer } = await client
-    .from('users')
-    .select('id')
-    .eq('id', reviewerId)
-    .single();
-
-  const updateData: any = {
-    status: 'rejected',
-    reviewed_at: new Date().toISOString(),
-  };
-
-  // Only set reviewed_by if the reviewer exists
-  if (reviewer) {
-    updateData.reviewed_by = reviewerId;
-  }
-
+  const updateData: any = { status: 'rejected', reviewed_at: new Date().toISOString() };
+  const { data: reviewer } = await client.from('users').select('id').eq('id', reviewerId).single();
+  if (reviewer) updateData.reviewed_by = reviewerId;
   const { data, error } = await client
     .from('preschool_onboarding_requests')
     .update(updateData)
     .eq('id', requestId);
-
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return data;
 };
 
