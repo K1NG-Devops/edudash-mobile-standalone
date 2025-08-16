@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-  Alert,
-  ActivityIndicator
-} from 'react-native';
-import { router } from 'expo-router';
-import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 interface UserSettings {
   notifications_enabled: boolean;
@@ -78,11 +78,10 @@ export default function SettingsScreen() {
     try {
       setSaving(true);
       setSettings(prev => ({ ...prev, [key]: value }));
-      
+
       // In a real app, you'd save these to your database
       // For now, we'll just update the local state
-      console.log(`Setting ${key} updated to:`, value);
-      
+
     } catch (error) {
       console.error('Error updating setting:', error);
       Alert.alert('Error', 'Failed to update setting');
@@ -92,7 +91,7 @@ export default function SettingsScreen() {
   };
 
   const handleNavigate = (route: string) => {
-    console.log('Navigating to:', route);
+
     if (route.startsWith('/')) {
       router.push(route as any);
     } else {
@@ -137,9 +136,9 @@ export default function SettingsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <MobileHeader
-          user={user ? { name: user.email || 'User', role: 'user' } : null}
+          user={{ name: user?.email || 'User', role: 'user' }}
           schoolName="Settings"
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement action */ }}
           onSignOut={handleSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -155,14 +154,14 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <MobileHeader
-        user={user ? { name: user.email || 'User', role: 'user' } : null}
+        user={{ name: user?.email || 'User', role: 'user' }}
         schoolName="Settings"
         onNotificationsPress={() => handleNavigate('/screens/notifications')}
         onSignOut={handleSignOut}
         onNavigate={handleNavigate}
         notificationCount={0}
       />
-      
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -173,7 +172,7 @@ export default function SettingsScreen() {
         {/* Notifications Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notifications</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <IconSymbol name="bell" size={20} color="#6B7280" />
@@ -216,7 +215,7 @@ export default function SettingsScreen() {
         {/* Appearance Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <IconSymbol name="moon.fill" size={20} color="#6B7280" />
@@ -240,7 +239,7 @@ export default function SettingsScreen() {
         {/* Account Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          
+
           <TouchableOpacity style={styles.actionButton} onPress={() => handleNavigate('/screens/profile')}>
             <IconSymbol name="person.circle" size={20} color="#8B5CF6" />
             <Text style={styles.actionButtonText}>View Profile</Text>
@@ -257,7 +256,7 @@ export default function SettingsScreen() {
         {/* Privacy & Security Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Privacy & Security</Text>
-          
+
           <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Privacy Policy', 'Privacy policy would be shown here')}>
             <IconSymbol name="lock.shield" size={20} color="#8B5CF6" />
             <Text style={styles.actionButtonText}>Privacy Policy</Text>
@@ -274,7 +273,7 @@ export default function SettingsScreen() {
         {/* Support Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
-          
+
           <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Help', 'Help documentation would be shown here')}>
             <IconSymbol name="questionmark.circle" size={20} color="#8B5CF6" />
             <Text style={styles.actionButtonText}>Help & FAQ</Text>
@@ -291,7 +290,7 @@ export default function SettingsScreen() {
         {/* Danger Zone */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: '#EF4444' }]}>Danger Zone</Text>
-          
+
           <TouchableOpacity style={[styles.actionButton, styles.dangerButton]} onPress={handleSignOut}>
             <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color="#EF4444" />
             <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Sign Out</Text>

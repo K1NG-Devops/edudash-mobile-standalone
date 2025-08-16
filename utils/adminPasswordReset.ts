@@ -9,8 +9,7 @@ export const sendPasswordResetAsAdmin = async (
   adminUserId?: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log('📧 Admin sending password reset email to:', email);
-    
+
     // Optional: Verify the requesting user is an admin
     if (adminUserId) {
       const { data: adminProfile } = await supabase
@@ -33,8 +32,7 @@ export const sendPasswordResetAsAdmin = async (
       console.error('❌ Failed to send password reset email:', error);
       return { success: false, error: error.message };
     }
-    
-    console.log('✅ Password reset email sent successfully to:', email);
+
     return { success: true };
     
   } catch (error: any) {

@@ -142,22 +142,17 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
   };
 
   const approveRequest = async (requestId: string) => {
-    console.log('=== APPROVE REQUEST FUNCTION CALLED ===');
-    console.log('Request ID:', requestId);
-    console.log('Current onboarding requests:', state.onboardingRequests);
-    
+
     // Ask for confirmation first
     const userConfirmed = window.confirm(
       'This will create a new school on the platform and send login credentials to the admin. Continue?'
     );
     
     if (!userConfirmed) {
-      console.log('User cancelled approval');
+
       return;
     }
-    
-    console.log('User confirmed, starting approval process...');
-    
+
     // Check if admin client is available
     if (!supabaseAdmin) {
       alert('Error: Admin operations not available - service role key missing');
@@ -175,16 +170,12 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
         return;
       }
 
-      console.log('Approving request:', request);
-
       // Step 1: Create the preschool
       const tenantSlug = request.preschool_name
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
         .substring(0, 50);
-
-      console.log('Creating preschool with slug:', tenantSlug);
 
       const { data: preschoolData, error: preschoolError } = await supabase
         .from('preschools')
@@ -212,13 +203,9 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
         return;
       }
 
-      console.log('Created preschool:', preschoolData);
-
       // Step 2: Create admin user in Supabase Auth using admin client
       const tempPassword = Math.random().toString(36).slice(-8) + 'A1!'; // Temporary password
-      console.log('Creating auth user for email:', request.admin_email);
-      console.log('Using admin client for user creation...');
-      
+
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: request.admin_email,
         password: tempPassword,
@@ -238,10 +225,8 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
         return;
       }
 
-      console.log('Created auth user:', authData);
-
       // Step 3: Create user profile in users table
-      console.log('Creating user profile...');
+
       const { error: userError } = await supabase
         .from('users')
         .insert({
@@ -266,7 +251,7 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
       }
 
       // Step 4: Update the onboarding request status
-      console.log('Updating onboarding request status...');
+
       const { error: updateError } = await supabase
         .from('preschool_onboarding_requests')
         .update({ 
@@ -282,10 +267,9 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
       }
 
       // Step 5: Show success message with credentials
-      console.log('SUCCESS: School creation completed!');
+
       const successMessage = `SUCCESS! School "${request.preschool_name}" has been created.\n\nAdmin Login Details:\nEmail: ${request.admin_email}\nTemporary Password: ${tempPassword}\n\nThe admin will need to change this password on first login.`;
-      
-      console.log(successMessage);
+
       alert(successMessage);
       
       // Refresh data and close modal
@@ -516,8 +500,7 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
                 <TouchableOpacity
                   style={styles.approveButton}
                   onPress={() => {
-                    console.log('Approve button pressed! Request ID:', state.selectedRequest!.id);
-                    console.log('Calling approveRequest function...');
+
                     approveRequest(state.selectedRequest!.id);
                   }}
                 >
@@ -527,8 +510,7 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
                 <TouchableOpacity
                   style={styles.rejectButton}
                   onPress={() => {
-                    console.log('Reject button pressed! Request ID:', state.selectedRequest!.id);
-                    console.log('Calling rejectRequest function...');
+
                     rejectRequest(state.selectedRequest!.id);
                   }}
                 >

@@ -36,6 +36,7 @@ import {
 } from '@/lib/services/schoolAdminDataService';
 
 const { width: screenWidth } = Dimensions.get('window');
+const isSmallScreen = screenWidth <= 350;
 
 interface UserProfile {
   name: string;
@@ -105,7 +106,7 @@ export default function SchoolAdminDashboard({
   };
 
   const handleNavigate = (route: string) => {
-    console.log('Navigate to:', route);
+
     // Handle navigation
   };
 
@@ -169,8 +170,8 @@ export default function SchoolAdminDashboard({
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Text style={styles.overviewTitle}>School Overview</Text>
-          <Text style={styles.overviewSubtitle}>Real-time insights at your fingertips</Text>
+          <Text style={styles.overviewTitle}>School Overview 📱</Text>
+          <Text style={styles.overviewSubtitle}>Real-time insights • Screen: {screenWidth}px {isSmallScreen ? '(Small)' : '(Large)'}</Text>
           
           {/* Quick Actions */}
           <View style={styles.quickActionsRow}>
@@ -186,10 +187,10 @@ export default function SchoolAdminDashboard({
           </View>
         </LinearGradient>
 
-        {/* Stats Grid - 2 Column Layout */}
+        {/* Stats Grid - Responsive Layout */}
         <View style={styles.statsGridContainer}>
-          <View style={styles.statsGrid}>
-            <View style={styles.statTile}>
+          <View style={[styles.statsGrid, isSmallScreen && styles.statsGridSmall]}>
+            <View style={[styles.statTile, isSmallScreen && styles.statTileSmall]}>
               <LinearGradient
                 colors={['#3B82F6', '#1D4ED8']}
                 style={styles.statTileGradient}
@@ -202,7 +203,7 @@ export default function SchoolAdminDashboard({
               </LinearGradient>
             </View>
             
-            <View style={styles.statTile}>
+            <View style={[styles.statTile, isSmallScreen && styles.statTileSmall]}>
               <LinearGradient
                 colors={['#10B981', '#059669']}
                 style={styles.statTileGradient}
@@ -216,8 +217,8 @@ export default function SchoolAdminDashboard({
             </View>
           </View>
           
-          <View style={styles.statsGrid}>
-            <View style={styles.statTile}>
+          <View style={[styles.statsGrid, isSmallScreen && styles.statsGridSmall]}>
+            <View style={[styles.statTile, isSmallScreen && styles.statTileSmall]}>
               <LinearGradient
                 colors={['#8B5CF6', '#7C3AED']}
                 style={styles.statTileGradient}
@@ -230,7 +231,7 @@ export default function SchoolAdminDashboard({
               </LinearGradient>
             </View>
             
-            <View style={styles.statTile}>
+            <View style={[styles.statTile, isSmallScreen && styles.statTileSmall]}>
               <LinearGradient
                 colors={['#F59E0B', '#D97706']}
                 style={styles.statTileGradient}
@@ -828,7 +829,7 @@ export default function SchoolAdminDashboard({
       <MobileHeader
         user={userProfile}
         schoolName={schoolName}
-        onNotificationsPress={() => console.log('Notifications')}
+        onNotificationsPress={() => {/* TODO: Implement action */}}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
         notificationCount={dashboardData?.alerts.length || 0}
@@ -968,6 +969,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 20,
+  },
+  // Small screen: stack vertically
+  statsGridSmall: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 12,
   },
   statsCard: {
     backgroundColor: '#FFFFFF',
@@ -2050,6 +2057,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 6,
+  },
+  // Small screen: full width tiles
+  statTileSmall: {
+    width: '100%',
+    marginBottom: 8,
   },
   statTileGradient: {
     paddingVertical: 24,

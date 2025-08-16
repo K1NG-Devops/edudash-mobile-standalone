@@ -107,6 +107,22 @@ __tests__/
 README.md
 FIXES_APPLIED.md
 docs/
+BUILD-AND-RELEASE-GUIDE.md
+PLAY_STORE_DEPLOYMENT_TODO.md
+
+# Local backups or archives (keep out of build uploads)
+archive/
+backups/
+design/
+screenshots/
+*.psd
+*.sketch
+*.fig
+*.ai
+*.xd
+*.zip
+*.tar
+*.tar.gz
 
 # Git
 .git/

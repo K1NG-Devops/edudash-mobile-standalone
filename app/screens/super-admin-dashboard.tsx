@@ -101,8 +101,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
 
   // Handle navigation
   const handleNavigate = (route: string) => {
-    console.log('Navigating to:', route);
-    
+
     if (route.startsWith('/(tabs)')) {
       // Handle tab routes directly
       router.push(route as any);
@@ -273,7 +272,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
       {[
         { key: 'overview', label: 'Overview', icon: 'chart.bar' },
         { key: 'schools', label: 'Schools', icon: 'building.2' },
-        { key: 'onboarding', label: 'Onboarding', icon: 'person.badge.plus' },
+        { key: 'onboarding', label: 'Onboard', icon: 'person.badge.plus' },
         { key: 'users', label: 'Users', icon: 'person.3' },
         { key: 'system', label: 'System', icon: 'gear' }
       ].map((tab) => (
@@ -318,7 +317,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
             avatar: user.avatar_url
           }}
           schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement action */}}
           onSignOut={signOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -342,7 +341,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
             avatar: user.avatar_url
           }}
           schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement action */}}
           onSignOut={signOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -558,10 +557,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#6B7280',
     marginTop: 4,
     textAlign: 'center',
+    fontWeight: '500',
   },
   tabLabelActive: {
     color: '#8B5CF6',

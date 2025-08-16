@@ -60,18 +60,10 @@ export class EmailService {
     const hasResendKey = process.env.EXPO_PUBLIC_RESEND_API_KEY || process.env.RESEND_API_KEY;
     const hasSendGridKey = process.env.EXPO_PUBLIC_SENDGRID_API_KEY || process.env.SENDGRID_API_KEY;
 
-    console.log('🔧 Email Service Debug:');
-    console.log('- NODE_ENV:', process.env.NODE_ENV);
-    console.log('- Has Resend API Key:', hasResendKey ? 'Yes' : 'No');
-    console.log('- Resend Key (first 10):', hasResendKey ? hasResendKey.substring(0, 10) + '...' : 'None');
-    console.log('- Has SendGrid API Key:', hasSendGridKey ? 'Yes' : 'No');
-    console.log('- Recipient:', options.to);
-    console.log('- Subject:', options.subject);
-
     try {
       // Priority 1: Use Resend via proxy (to avoid CORS in RN/Web dev)
       if (hasResendKey) {
-        console.log('📧 Attempting to send email via Resend...');
+
         // If running in browser or RN dev, route via Supabase Edge Function proxy
         const useProxy = typeof window !== 'undefined';
         if (useProxy) {
@@ -80,7 +72,7 @@ export class EmailService {
               body: { provider: 'resend', options },
             });
             if (!error) {
-              console.log('✅ Email sent via Edge Function proxy');
+
               return { success: true };
             }
             console.warn('⚠️ Edge Function email proxy failed, falling back direct:', error?.message);
@@ -94,12 +86,12 @@ export class EmailService {
 
       // Priority 2: Use SendGrid as fallback if API key is available  
       if (hasSendGridKey) {
-        console.log('📧 Attempting to send email via SendGrid...');
+
         return await this.sendWithSendGrid(options);
       }
 
       // Priority 3: Development/Console mode (when no API keys available)
-      console.log('📧 No email API keys found, using console mode...');
+
       return await this.sendWithConsole(options);
 
     } catch (error) {
@@ -115,10 +107,6 @@ export class EmailService {
     try {
       const apiKey = process.env.EXPO_PUBLIC_RESEND_API_KEY || process.env.RESEND_API_KEY;
       const fromEmail = process.env.EXPO_PUBLIC_FROM_EMAIL || process.env.FROM_EMAIL || 'noreply@edudashpro.org.za';
-
-      console.log('📧 Sending via Resend with:');
-      console.log('- API Key (first 10):', apiKey ? apiKey.substring(0, 10) + '...' : 'None');
-      console.log('- From Email:', fromEmail);
 
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -137,7 +125,7 @@ export class EmailService {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Email sent successfully via Resend:', result.id);
+
         return { success: true };
       } else {
         const error = await response.text();
@@ -184,7 +172,7 @@ export class EmailService {
       });
 
       if (response.ok) {
-        console.log('✅ Email sent successfully via SendGrid');
+
         return { success: true };
       } else {
         const error = await response.text();
@@ -201,14 +189,6 @@ export class EmailService {
    * Development mode: Log email to console and show user notification
    */
   private static async sendWithConsole(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
-    console.log('\n📧 ===== EMAIL SENT (DEVELOPMENT MODE) =====');
-    console.log('To:', options.to);
-    console.log('Subject:', options.subject);
-    console.log('\n--- TEXT CONTENT ---');
-    console.log(options.textBody || 'No text version');
-    console.log('\n--- HTML CONTENT ---');
-    console.log(options.htmlBody);
-    console.log('=====================================\n');
 
     // For development, also show a user-friendly message
     if (typeof window !== 'undefined' && window.alert) {

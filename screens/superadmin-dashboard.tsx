@@ -186,7 +186,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ profile, onSi
   );
 
   const handleNavigate = (route: string) => {
-    console.log('SuperAdmin navigating to:', route);
+
     if (route.startsWith('/')) {
       router.push(route as any);
     } else {

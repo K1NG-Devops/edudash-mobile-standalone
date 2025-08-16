@@ -94,17 +94,6 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
-        // Provide AdMob app id via manifest placeholders
-        // If ads are disabled or APP_ID is missing/blank, use Google's test App ID to avoid startup crashes
-        def enableAdsEnv = System.getenv("EXPO_PUBLIC_ENABLE_ADS")
-        def enableAds = enableAdsEnv != null && enableAdsEnv.toLowerCase() == "true"
-        def admobAppIdEnv = System.getenv("EXPO_PUBLIC_ADMOB_ANDROID_APP_ID")
-        def admobAppId = (enableAds && admobAppIdEnv != null && !admobAppIdEnv.trim().isEmpty())
-                ? admobAppIdEnv.trim()
-                : "ca-app-pub-3940256099942544~3347511713"
-        manifestPlaceholders = [
-            googleMobileAdsAppId: admobAppId
-        ]
     }
     signingConfigs {
         debug {
@@ -119,20 +108,13 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // EAS will inject release signing; do not use debug signing for release builds
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
-        }
-    }
-    // Reduce APK size for local/preview APKs by splitting per ABI (AABs are already optimized by Google Play)
-    splits {
-        abi {
-            enable true
-            reset()
-            include 'armeabi-v7a', 'arm64-v8a'
-            universalApk false
         }
     }
     packagingOptions {
@@ -193,6 +175,3 @@ dependencies {
         implementation jscFlavor
     }
 }
-
-// Apply Google Services plugin for Firebase
-apply plugin: 'com.google.gms.google-services'

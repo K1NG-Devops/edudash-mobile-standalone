@@ -188,7 +188,7 @@ const CompleteProfileScreen: React.FC = () => {
                 role: 'parent',
                 avatar: profile?.avatar_url,
               }}
-              onNotificationsPress={() => console.log('Notifications')}
+              onNotificationsPress={() => { /* TODO: Implement notifications */ }}
               onSignOut={signOut}
               onNavigate={(route) => router.push(route as any)}
               notificationCount={0}

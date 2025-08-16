@@ -127,8 +127,7 @@ export class SchoolAdminDataService {
    */
   static async getSchoolAdminDashboardData(adminUserId: string): Promise<SchoolAdminDashboardData> {
     try {
-      console.log('🏫 [SchoolAdmin] Fetching school dashboard data');
-      
+
       // Get admin profile and verify permissions
       const adminProfile = await this.getAdminProfile(adminUserId);
       if (!adminProfile || !adminProfile.preschool_id) {
@@ -699,7 +698,6 @@ export class SchoolAdminDataService {
 
       if (error) throw error;
 
-      console.log(`🏫 [SchoolAdmin] Student enrolled: ${studentData.first_name} ${studentData.last_name}`);
       return { success: true, student: data };
     } catch (error) {
       console.error('❌ [SchoolAdmin] Error enrolling student:', error);
@@ -728,7 +726,6 @@ export class SchoolAdminDataService {
 
       if (error) throw error;
 
-      console.log(`🏫 [SchoolAdmin] Teacher added: ${teacherData.name}`);
       return { success: true, teacher: data };
     } catch (error) {
       console.error('❌ [SchoolAdmin] Error adding teacher:', error);
@@ -757,7 +754,6 @@ export class SchoolAdminDataService {
 
       if (error) throw error;
 
-      console.log(`🏫 [SchoolAdmin] Class created: ${classData.name}`);
       return { success: true, class: data };
     } catch (error) {
       console.error('❌ [SchoolAdmin] Error creating class:', error);

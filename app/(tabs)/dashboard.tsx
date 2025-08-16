@@ -1,17 +1,14 @@
+import ParentDashboard from '@/components/dashboard/ParentDashboard';
+import SchoolAdminDashboard from '@/components/dashboard/SchoolAdminDashboard';
+import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import ParentDashboard from '@/components/dashboard/ParentDashboard';
-import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
-import SchoolAdminDashboard from '@/components/dashboard/SchoolAdminDashboard';
-import { TeacherDataService } from '@/lib/services/teacherDataService';
 import React from 'react';
 import {
   Dimensions,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -96,13 +93,13 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
     this.setState({ refreshing: false });
   };
 
-componentDidMount() {
+  componentDidMount() {
     // Initial load will be handled by the render method when profile is available
   }
 
   fetchTenantInfo = async (userProfile: UserProfile) => {
     try {
-      console.log('🏫 [DEBUG] Fetching tenant info for preschool_id:', userProfile.preschool_id);
+
       if (userProfile.preschool_id) {
         const { data: tenant, error: tenantError } = await supabase
           .from('preschools')
@@ -110,18 +107,16 @@ componentDidMount() {
           .eq('id', userProfile.preschool_id)
           .single();
 
-        console.log('🏫 [DEBUG] Tenant query result:', { tenant, tenantError });
-
         if (!tenantError && tenant) {
-          console.log('🏫 [DEBUG] Setting tenant name:', tenant.name);
-          this.setState({ 
+
+          this.setState({
             tenantName: tenant.name,
             tenantSlug: tenant.id || tenant.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown'
           });
         }
       }
     } catch (error) {
-      console.log('❌ Failed to fetch tenant info:', error);
+
     }
   };
 
@@ -138,10 +133,10 @@ componentDidMount() {
 
       if (parentError || !parentProfile) {
         console.error('Error fetching parent profile:', parentError);
-        this.setState({ 
-          loading: false, 
+        this.setState({
+          loading: false,
           error: 'Unable to fetch parent profile',
-          tenantSlug: null 
+          tenantSlug: null
         });
         return;
       }
@@ -159,7 +154,7 @@ componentDidMount() {
           .single();
 
         if (!tenantError && tenant) {
-          this.setState({ 
+          this.setState({
             tenantName: tenant.name,
             tenantSlug: tenant.id || tenant.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown'
           });
@@ -188,9 +183,9 @@ componentDidMount() {
 
       if (error) {
         console.error('Error fetching children:', error);
-        this.setState({ 
-          loading: false, 
-          error: 'Unable to fetch children data' 
+        this.setState({
+          loading: false,
+          error: 'Unable to fetch children data'
         });
         return;
       }
@@ -205,28 +200,28 @@ componentDidMount() {
           emoji: '👤', // Default emoji for students
           attendance: 0, // Will be calculated from actual attendance data
         }));
-        
+
         // Set the first child as selected if no selection exists
         if (!this.state.selectedChildId || !this.children.find(c => c.id === this.state.selectedChildId)) {
           this.setState({ selectedChildId: this.children[0].id });
         }
-        
+
         this.setState({ loading: false });
         this.forceUpdate();
       } else {
         // No children found
         this.children = [];
-        this.setState({ 
-          loading: false, 
+        this.setState({
+          loading: false,
           selectedChildId: null,
-          error: 'No children found for this parent' 
+          error: 'No children found for this parent'
         });
       }
     } catch (error) {
       console.error('Unexpected error:', error);
-      this.setState({ 
-        loading: false, 
-        error: 'An unexpected error occurred' 
+      this.setState({
+        loading: false,
+        error: 'An unexpected error occurred'
       });
     }
   };
@@ -271,8 +266,7 @@ componentDidMount() {
   };
 
   private handleNavigate = (route: string) => {
-    console.log('Navigating to:', route);
-    
+
     if (route.startsWith('/(tabs)')) {
       // Handle tab routes directly
       router.push(route as any);
@@ -310,7 +304,7 @@ componentDidMount() {
         router.push('/(tabs)/messages');
         break;
       default:
-        console.log(`Quick action: ${action}`);
+
     }
   };
 
@@ -319,16 +313,16 @@ componentDidMount() {
   };
 
   private selectChild = (childId: string) => {
-    this.setState({ 
+    this.setState({
       selectedChildId: childId,
-      showChildSelector: false 
+      showChildSelector: false
     });
   };
 
   private renderParentDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
     // Always fetch tenant info for parent users if we have a profile and preschool_id
     if (profile && profile.preschool_id && !this.state.tenantName) {
-      console.log('🏫 [DEBUG] Triggering tenant fetch for parent dashboard');
+
       this.fetchTenantInfo(profile);
     }
 
@@ -339,7 +333,7 @@ componentDidMount() {
         userProfile={{
           name: profile?.name || 'Parent',
           role: 'parent',
-          avatar: profile?.avatar_url,
+          avatar: profile?.avatar_url || undefined,
         }}
         tenantName={this.state.tenantName || undefined}
         onSignOut={signOut}
@@ -351,7 +345,7 @@ componentDidMount() {
   private renderAdminDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
     // Always fetch tenant info for admin/teacher users if we have a profile and preschool_id
     if (profile && profile.preschool_id && !this.state.tenantName) {
-      console.log('🏫 [DEBUG] Triggering tenant fetch for admin dashboard');
+
       this.fetchTenantInfo(profile);
     }
 
@@ -362,10 +356,10 @@ componentDidMount() {
           user={{
             name: profile?.name || 'Admin',
             role: profile?.role || 'admin',
-            avatar: profile?.avatar_url,
+            avatar: profile?.avatar_url || undefined,
           }}
           schoolName={this.state.tenantName || undefined}
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement notifications */ }}
           onSignOut={signOut}
           onNavigate={this.handleNavigate}
           notificationCount={3}
@@ -394,12 +388,12 @@ componentDidMount() {
             <Text style={styles.adminTitle}>
               {profile?.role === 'teacher' ? '👩‍🏫 Teacher Dashboard' : '👨‍💼 Admin Dashboard'}
             </Text>
-            
+
             {/* Quick Actions Grid */}
             <View style={styles.teacherQuickActions}>
               {profile?.role === 'teacher' && (
                 <>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.teacherActionCard}
                     onPress={() => router.push('/(teacher)/reports')}
                   >
@@ -409,8 +403,8 @@ componentDidMount() {
                     <Text style={styles.teacherActionTitle}>Child Evaluations</Text>
                     <Text style={styles.teacherActionSubtitle}>Reports & assessments for students</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                     style={styles.teacherActionCard}
                     onPress={() => router.push('/(tabs)/videocalls')}
                   >
@@ -420,8 +414,8 @@ componentDidMount() {
                     <Text style={styles.teacherActionTitle}>Video Calls</Text>
                     <Text style={styles.teacherActionSubtitle}>Schedule parent meetings</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                     style={styles.teacherActionCard}
                     onPress={() => router.push('/(tabs)/messages')}
                   >
@@ -431,10 +425,10 @@ componentDidMount() {
                     <Text style={styles.teacherActionTitle}>Messages</Text>
                     <Text style={styles.teacherActionSubtitle}>Communicate with parents</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                     style={styles.teacherActionCard}
-                    onPress={() => console.log('Class Management')}
+                    onPress={() => {/* TODO: Navigate to classes */ }}
                   >
                     <View style={styles.teacherActionIcon}>
                       <IconSymbol name="person.3.fill" size={24} color="#8B5CF6" />
@@ -444,7 +438,7 @@ componentDidMount() {
                   </TouchableOpacity>
                 </>
               )}
-              
+
               {profile?.role !== 'teacher' && (
                 <>
                   <TouchableOpacity style={styles.teacherActionCard}>
@@ -454,7 +448,7 @@ componentDidMount() {
                     <Text style={styles.teacherActionTitle}>Settings</Text>
                     <Text style={styles.teacherActionSubtitle}>System configuration</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity style={styles.teacherActionCard}>
                     <View style={styles.teacherActionIcon}>
                       <IconSymbol name="person.2.fill" size={24} color="#6B7280" />
@@ -465,7 +459,7 @@ componentDidMount() {
                 </>
               )}
             </View>
-            
+
             {/* Today's Summary for Teachers */}
             {profile?.role === 'teacher' && (
               <View style={styles.teacherSummaryCard}>
@@ -486,12 +480,12 @@ componentDidMount() {
                 </View>
               </View>
             )}
-            
+
             {/* Recent Activity */}
             <View style={styles.adminCard}>
               <Text style={styles.adminCardTitle}>Recent Activity</Text>
               <Text style={styles.adminCardText}>
-                {profile?.role === 'teacher' 
+                {profile?.role === 'teacher'
                   ? 'Your recent reports, messages, and student interactions will appear here.'
                   : 'System activity and user management updates will be shown here.'
                 }
@@ -508,8 +502,7 @@ componentDidMount() {
       <AuthConsumer>
         {({ profile, signOut }) => {
           // Add debugging
-          console.log('🎭 Dashboard Role Check:', profile?.role);
-          
+
           // Route based on user role
           switch (profile?.role) {
             case 'parent':
@@ -521,7 +514,7 @@ componentDidMount() {
                   userProfile={{
                     name: profile?.name || 'Super Admin',
                     role: 'superadmin',
-                    avatar: profile?.avatar_url,
+                    avatar: profile?.avatar_url || undefined,
                   }}
                   onSignOut={signOut}
                   onNavigate={this.handleNavigate}
@@ -534,7 +527,7 @@ componentDidMount() {
                   userProfile={{
                     name: profile?.name || 'School Admin',
                     role: 'preschool_admin',
-                    avatar: profile?.avatar_url,
+                    avatar: profile?.avatar_url || undefined,
                   }}
                   schoolName={this.state.tenantName || undefined}
                   onSignOut={signOut}
@@ -544,7 +537,7 @@ componentDidMount() {
               return this.renderAdminDashboard(profile, signOut);
             default:
               // If no role or unknown role, show parent dashboard as fallback
-              console.log('⚠️ Unknown role, showing parent dashboard as fallback');
+
               return this.renderParentDashboard(profile, signOut);
           }
         }}

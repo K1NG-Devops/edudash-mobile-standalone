@@ -4,18 +4,18 @@ import { createOnboardingRequest } from '@/lib/services/onboardingService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { 
-  Alert, 
-  Dimensions, 
-  KeyboardAvoidingView, 
-  Platform, 
-  ScrollView, 
-  StatusBar, 
-  StyleSheet, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  View 
+import {
+  Alert,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -29,12 +29,13 @@ interface FormData {
   schoolType: string;
   expectedStudents: string;
   expectedTeachers: string;
-  
+
   // Step 2 - Administrator Details
   adminName: string;
   adminEmail: string;
   adminPhone: string;
-  
+  adminRole: 'principal' | 'school_admin'; // New field for role selection
+
   // Step 3 - Location & Additional Info
   schoolAddress: string;
   schoolWebsite: string;
@@ -55,12 +56,13 @@ export default function SchoolOnboarding() {
     schoolType: 'Preschool',
     expectedStudents: '',
     expectedTeachers: '',
-    
+
     // Step 2 - Administrator Details
     adminName: '',
     adminEmail: '',
     adminPhone: '',
-    
+    adminRole: 'principal', // Default to principal
+
     // Step 3 - Location & Additional Info
     schoolAddress: '',
     schoolWebsite: '',
@@ -78,7 +80,7 @@ export default function SchoolOnboarding() {
 
   const validateStep = (currentStep: Step): boolean => {
     const stepErrors: { [key: string]: string } = {};
-    
+
     if (currentStep === 1) {
       // Step 1 - School Information
       if (!formData.schoolName.trim()) {
@@ -86,22 +88,22 @@ export default function SchoolOnboarding() {
       } else if (formData.schoolName.trim().length < 3) {
         stepErrors.schoolName = 'School name must be at least 3 characters';
       }
-      
+
       if (!formData.schoolType.trim()) {
         stepErrors.schoolType = 'School type is required';
       }
-      
+
       if (!formData.expectedStudents.trim()) {
         stepErrors.expectedStudents = 'Expected number of students is required';
       } else if (isNaN(Number(formData.expectedStudents)) || Number(formData.expectedStudents) < 1) {
         stepErrors.expectedStudents = 'Please enter a valid number greater than 0';
       }
-      
+
       if (formData.expectedTeachers.trim() && (isNaN(Number(formData.expectedTeachers)) || Number(formData.expectedTeachers) < 1)) {
         stepErrors.expectedTeachers = 'Please enter a valid number greater than 0';
       }
     }
-    
+
     if (currentStep === 2) {
       // Step 2 - Administrator Details
       if (!formData.adminName.trim()) {
@@ -109,7 +111,7 @@ export default function SchoolOnboarding() {
       } else if (formData.adminName.trim().length < 2) {
         stepErrors.adminName = 'Administrator name must be at least 2 characters';
       }
-      
+
       if (!formData.adminEmail.trim()) {
         stepErrors.adminEmail = 'Administrator email is required';
       } else {
@@ -118,7 +120,7 @@ export default function SchoolOnboarding() {
           stepErrors.adminEmail = 'Please enter a valid email address';
         }
       }
-      
+
       if (formData.adminPhone.trim()) {
         const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
         if (!phoneRegex.test(formData.adminPhone.trim().replace(/\s/g, ''))) {
@@ -126,7 +128,7 @@ export default function SchoolOnboarding() {
         }
       }
     }
-    
+
     if (currentStep === 3) {
       // Step 3 - Optional validations
       if (formData.schoolWebsite.trim()) {
@@ -136,7 +138,7 @@ export default function SchoolOnboarding() {
         }
       }
     }
-    
+
     setErrors(stepErrors);
     return Object.keys(stepErrors).length === 0;
   };
@@ -156,10 +158,10 @@ export default function SchoolOnboarding() {
     const step1Valid = validateStep(1);
     const step2Valid = validateStep(2);
     const step3Valid = validateStep(3);
-    
+
     if (!step1Valid || !step2Valid || !step3Valid) {
       Alert.alert(
-        'Incomplete Information', 
+        'Incomplete Information',
         'Please review and complete all required fields.',
         [{ text: 'OK', onPress: () => setStep(1) }]
       );
@@ -168,7 +170,7 @@ export default function SchoolOnboarding() {
 
     try {
       setSubmitting(true);
-      
+
       const response = await createOnboardingRequest({
         preschoolName: formData.schoolName.trim(),
         adminName: formData.adminName.trim(),
@@ -183,27 +185,43 @@ export default function SchoolOnboarding() {
           formData.additionalNotes.trim() && `Additional Notes: ${formData.additionalNotes.trim()}`
         ].filter(Boolean).join('\n\n') || undefined,
       });
+
+      // Show success state immediately
+      setSubmitted(true);
+      setStep(4);
       
-      // Show success alert immediately
+      // Show comprehensive success alert with next steps
       Alert.alert(
-        '🎉 Request Submitted Successfully!',
-        `Thank you for registering ${formData.schoolName.trim()} with EduDash Pro!\n\nYour school registration request has been submitted and is now under review.\n\nYou'll receive an email confirmation at ${formData.adminEmail.trim()} shortly.`,
+        '🎉 Registration Submitted Successfully!',
+        `Congratulations! ${formData.schoolName.trim()} has been successfully submitted to EduDash Pro.\n\n📧 CONFIRMATION EMAIL\nYou'll receive a confirmation email at ${formData.adminEmail.trim()} within 5 minutes.\n\n⏰ WHAT HAPPENS NEXT?\n• Our team will review your request within 24 hours\n• You'll receive approval notification via email\n• Login credentials will be provided upon approval\n• Full onboarding support will be available\n\n🚀 Ready to transform your preschool education experience!\n\n⏰ Redirecting to sign-in page in 5 seconds...`,
         [
           {
-            text: 'Continue to Sign In',
+            text: 'Continue to Sign In →',
+            style: 'default',
             onPress: () => {
-              setSubmitted(true);
-              setStep(4);
+              router.replace('/(auth)/sign-in');
+            }
+          },
+          {
+            text: 'Go to Home',
+            style: 'cancel',
+            onPress: () => {
+              router.replace('/');
             }
           }
         ],
         { cancelable: false }
       );
       
+      // Auto-redirect after 5 seconds regardless of user interaction
+      setTimeout(() => {
+        router.replace('/(auth)/sign-in');
+      }, 5000);
+
     } catch (error: any) {
       console.error('Onboarding submission error:', error);
       Alert.alert(
-        'Submission Failed', 
+        'Submission Failed',
         error.message || 'Unable to submit your school registration. Please check your connection and try again.',
         [{ text: 'OK' }]
       );
@@ -356,19 +374,19 @@ export default function SchoolOnboarding() {
         {errors.adminEmail && <Text style={styles.errorText}>{errors.adminEmail}</Text>}
       </View>
 
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Phone Number</Text>
-        <View style={[styles.inputContainer, errors.adminPhone && styles.inputError]}>
-          <IconSymbol name="phone.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Contact phone number (optional)"
-            placeholderTextColor="#FFFFFF80"
-            value={formData.adminPhone}
-            onChangeText={(text) => updateFormData('adminPhone', text)}
-            keyboardType="phone-pad"
-            returnKeyType="done"
-          />
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Phone Number</Text>
+          <View style={[styles.inputContainer, errors.adminPhone && styles.inputError]}>
+            <IconSymbol name="phone.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="+27 71 234 5678 (optional)"
+              placeholderTextColor="#FFFFFF80"
+              value={formData.adminPhone}
+              onChangeText={(text) => updateFormData('adminPhone', text)}
+              keyboardType="phone-pad"
+              returnKeyType="done"
+            />
         </View>
         {errors.adminPhone && <Text style={styles.errorText}>{errors.adminPhone}</Text>}
       </View>
@@ -401,10 +419,10 @@ export default function SchoolOnboarding() {
         {errors.schoolAddress && <Text style={styles.errorText}>{errors.schoolAddress}</Text>}
       </View>
 
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>School Website</Text>
-        <View style={[styles.inputContainer, errors.schoolWebsite && styles.inputError]}>
-          <IconSymbol name="globe" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>School Website</Text>
+          <View style={[styles.inputContainer, errors.schoolWebsite && styles.inputError]}>
+            <IconSymbol name="globe" size={20} color="#FFFFFF80" style={styles.inputIcon} />
           <TextInput
             style={styles.input}
             placeholder="https://www.yourschool.com (optional)"
@@ -462,14 +480,14 @@ export default function SchoolOnboarding() {
       <Text style={styles.successMessage}>
         Thank you for registering {formData.schoolName} with EduDash Pro.{'\n\n'}
         Your school registration request has been submitted and is now under review by our team.{'\n\n'}
-        You will receive an email confirmation at {formData.adminEmail} shortly, and we'll notify you once your school has been approved.
+        You will receive an email confirmation at {formData.adminEmail} shortly, and we will notify you once your school has been approved.
       </Text>
-      
+
       <TouchableOpacity style={styles.successButton} onPress={() => router.replace('/(auth)/sign-in')}>
         <IconSymbol name="arrow.right" size={20} color="#FFFFFF" />
         <Text style={styles.successButtonText}>Go to Sign In</Text>
       </TouchableOpacity>
-      
+
       <TouchableOpacity style={styles.secondarySuccessButton} onPress={() => router.replace('/')}>
         <Text style={styles.secondarySuccessButtonText}>Back to Home</Text>
       </TouchableOpacity>
@@ -480,14 +498,14 @@ export default function SchoolOnboarding() {
     <>
       <StatusBar barStyle="light-content" />
       <LinearGradient colors={['#1e3c72', '#2a5298']} style={styles.container}>
-        <KeyboardAvoidingView 
-          style={styles.flex} 
+        <KeyboardAvoidingView
+          style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <SafeAreaView style={styles.flex}>
             <View style={styles.header}>
-              <TouchableOpacity 
-                style={styles.backButton} 
+              <TouchableOpacity
+                style={styles.backButton}
                 onPress={() => step === 1 ? router.back() : handleBack()}
               >
                 <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
@@ -500,13 +518,13 @@ export default function SchoolOnboarding() {
               )}
             </View>
 
-            <ScrollView 
-              contentContainerStyle={styles.scrollContent} 
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
               {step < 4 && renderStepIndicator()}
-              
+
               {step === 1 && renderStep1()}
               {step === 2 && renderStep2()}
               {step === 3 && renderStep3()}
@@ -520,13 +538,13 @@ export default function SchoolOnboarding() {
                       <IconSymbol name="chevron.right" size={20} color="#1e3c72" />
                     </TouchableOpacity>
                   ) : (
-                    <TouchableOpacity 
-                      style={[styles.primaryButton, submitting && styles.buttonDisabled]} 
+                    <TouchableOpacity
+                      style={[styles.primaryButton, submitting && styles.buttonDisabled]}
                       onPress={handleSubmit}
                       disabled={submitting}
                     >
                       {submitting ? (
-                        <LoadingSpinner size={20} color="#1e3c72" />
+                        <LoadingSpinner size="small" color="#1e3c72" />
                       ) : (
                         <>
                           <IconSymbol name="paperplane.fill" size={20} color="#1e3c72" />

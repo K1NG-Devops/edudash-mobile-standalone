@@ -5,16 +5,16 @@ import { getRoleColors } from '@/constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
-    Animated,
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -77,15 +77,15 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
         route: '/profile',
         color: '#6366F1',
       },
-        {
-          id: 'notifications',
-          title: 'Notifications',
-          subtitle: 'Manage alerts & updates',
-          icon: 'bell.fill',
-          route: '/screens/notifications',
-          badge: 5,
-          color: '#8B5CF6',
-        },
+      {
+        id: 'notifications',
+        title: 'Notifications',
+        subtitle: 'Manage alerts & updates',
+        icon: 'bell.fill',
+        route: '/screens/notifications',
+        badge: 5,
+        color: '#8B5CF6',
+      },
     ];
 
     switch (role) {
@@ -464,7 +464,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
   private renderHeader = () => {
     const { userProfile } = this.props;
     const roleColors = getRoleColors(userProfile?.role || 'default', this.state.colorScheme);
-    
+
     return (
       <LinearGradient
         colors={roleColors.gradient}
@@ -475,7 +475,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
         <TouchableOpacity style={styles.closeButton} onPress={this.props.onClose}>
           <IconSymbol name="xmark" size={22} color="#FFFFFF" />
         </TouchableOpacity>
-        
+
         <View style={styles.userInfo}>
           <View style={styles.userAvatar}>
             <Image
@@ -506,14 +506,14 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
       >
         <View style={styles.overlay}>
           <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.5)" />
-          
+
           {/* Backdrop */}
           <TouchableOpacity
             style={styles.backdrop}
             activeOpacity={1}
             onPress={this.props.onClose}
           />
-          
+
           {/* Sidebar */}
           <Animated.View
             style={[
@@ -524,9 +524,9 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             ]}
           >
             {this.renderHeader()}
-            
-            <ScrollView 
-              style={styles.menuScrollView} 
+
+            <ScrollView
+              style={styles.menuScrollView}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.menuContainer}
             >
@@ -703,9 +703,9 @@ const styles = StyleSheet.create({
   },
   signOutButton: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     overflow: 'hidden',
   },
   signOutGradient: {
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,
-    paddingBottom: 24, // Extra padding for devices with home indicators
+    paddingBottom: 28,
     borderTopWidth: 2,
     borderTopColor: '#FCA5A5',
   },

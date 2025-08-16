@@ -2,13 +2,15 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "EduDash Pro Mobile",
+    name: "EduDash Pro",
     slug: "edudashpro-app",
     version: "1.0.0",
+    runtimeVersion: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "edudashpro",
     userInterfaceStyle: "automatic",
+    newArchEnabled: true,
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.edudashpro.app"
@@ -18,8 +20,11 @@ export default {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      edgeToEdgeEnabled: true,
-      package: "com.edudashpro.app"
+      package: "com.edudashpro.app",
+      versionCode: 1,
+      permissions: [
+        "INTERNET"
+      ]
     },
     web: {
       bundler: "metro",
@@ -28,6 +33,7 @@ export default {
     },
     plugins: [
       "expo-router",
+      "expo-dev-client",
       [
         "expo-splash-screen",
         {
@@ -39,7 +45,7 @@ export default {
       ]
     ],
     experiments: {
-      typedRoutes: false
+      typedRoutes: true
     },
     extra: {
       router: {},
@@ -47,7 +53,6 @@ export default {
         projectId: "b1fd3356-08ed-4331-92b5-52a7be4cd4bc"
       }
     },
-    runtimeVersion: "1.0.0",
     updates: {
       url: "https://u.expo.dev/b1fd3356-08ed-4331-92b5-52a7be4cd4bc"
     }

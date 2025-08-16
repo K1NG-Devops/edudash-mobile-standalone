@@ -2,8 +2,7 @@
 // @ts-nocheck
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
+  Alert, FlatList,
   Modal,
   ScrollView,
   StyleSheet,
@@ -15,13 +14,13 @@ import {
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { supabase } from '@/lib/supabase';
 import {
   approveOnboardingRequest,
   getAllOnboardingRequests,
   rejectOnboardingRequest
 } from '@/lib/services/onboardingService';
 import { SuperAdminDataService } from '@/lib/services/superAdminDataService';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 interface OnboardingRequest {
   id: string;
@@ -52,6 +51,9 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   const [selectedRequest, setSelectedRequest] = useState<OnboardingRequest | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   
+  // Track which approved requests have successfully created schools
+  const [schoolCreationStatus, setSchoolCreationStatus] = useState<Record<string, boolean>>({});
+
   // Create School Form State
   const [schoolName, setSchoolName] = useState('');
   const [adminName, setAdminName] = useState('');
@@ -64,20 +66,64 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
   const fetchRequests = async () => {
     try {
+      console.log('🔄 [OnboardingManager] fetchRequests: Starting to fetch requests...');
       setLoading(true);
       const data = await getAllOnboardingRequests();
+      console.log('📊 [OnboardingManager] fetchRequests: Received data:', data);
+      console.log('📊 [OnboardingManager] fetchRequests: Data length:', data?.length || 0);
       setRequests(data as OnboardingRequest[]);
+      console.log('✅ [OnboardingManager] fetchRequests: State updated with', data?.length || 0, 'requests');
+      
+      // Check school creation status for approved requests
+      await checkSchoolCreationStatus(data as OnboardingRequest[]);
     } catch (error) {
-      console.error('Error fetching onboarding requests:', error);
+      console.error('❌ [OnboardingManager] fetchRequests: Error fetching onboarding requests:', error);
       Alert.alert('Error', 'Failed to load onboarding requests');
     } finally {
       setLoading(false);
+      console.log('🏁 [OnboardingManager] fetchRequests: Finished (loading=false)');
+    }
+  };
+
+  const checkSchoolCreationStatus = async (requests: OnboardingRequest[]) => {
+    try {
+      console.log('🔍 [OnboardingManager] Checking school creation status for approved requests...');
+      const approvedRequests = requests.filter(r => r.status === 'approved');
+      const statusMap: Record<string, boolean> = {};
+
+      for (const request of approvedRequests) {
+        try {
+          const { data: school, error } = await supabase
+            .from('preschools')
+            .select('id, name, setup_completed, onboarding_status')
+            .eq('email', request.admin_email)
+            .single();
+
+          if (!error && school) {
+            // School exists and is properly set up
+            statusMap[request.id] = school.setup_completed && school.onboarding_status === 'completed';
+            console.log(`✅ [OnboardingManager] School found for ${request.admin_email}: ${school.name} (Setup: ${school.setup_completed})`);
+          } else {
+            // School not found or error
+            statusMap[request.id] = false;
+            console.log(`❌ [OnboardingManager] No school found for ${request.admin_email}`);
+          }
+        } catch (schoolError) {
+          console.error(`❌ [OnboardingManager] Error checking school for ${request.admin_email}:`, schoolError);
+          statusMap[request.id] = false;
+        }
+      }
+
+      setSchoolCreationStatus(statusMap);
+      console.log('📊 [OnboardingManager] School creation status updated:', statusMap);
+    } catch (error) {
+      console.error('❌ [OnboardingManager] Error checking school creation status:', error);
     }
   };
 
   const handleApprove = async (request: OnboardingRequest) => {
     console.log('🔥 [OnboardingManager] handleApprove called with request:', request);
-    
+
     // TODO: Test Alert on mobile device - currently commented out for web testing
     /*
     Alert.alert(
@@ -95,12 +141,12 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       ]
     );
     */
-    
+
     // Temporary web fallback - use window.confirm or proceed directly
-    const confirmed = typeof window !== 'undefined' 
+    const confirmed = typeof window !== 'undefined'
       ? window.confirm(`Approve "${request.preschool_name}" and create school account?`)
       : true;
-    
+
     if (!confirmed) {
       console.log('❌ [OnboardingManager] User cancelled approval');
       return;
@@ -113,19 +159,28 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
     try {
       console.log('🚀 [OnboardingManager] Starting approval process...');
       setProcessing(request.id);
-      
+
       console.log('📝 [OnboardingManager] Approving request in database...');
       // First approve the request
       await approveOnboardingRequest(request.id, superAdminUserId);
       console.log('✅ [OnboardingManager] Request approved in database');
-      
+
+      // Immediately update the request status in UI
+      setRequests(prevRequests =>
+        prevRequests.map(r =>
+          r.id === request.id
+            ? { ...r, status: 'approved' as const, reviewed_by: superAdminUserId, reviewed_at: new Date().toISOString() }
+            : r
+        )
+      );
+
       console.log('🏫 [OnboardingManager] Creating school with data:', {
         name: request.preschool_name,
         email: request.admin_email,
         admin_name: request.admin_name,
         subscription_plan: 'trial'
       });
-      
+
       // Then create the actual school
       const result = await SuperAdminDataService.createSchool({
         name: request.preschool_name,
@@ -143,10 +198,17 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         } else {
           // Alert.alert('Success', `School "${request.preschool_name}" has been created successfully!\n\nAdmin Email: ${result.admin_email}\nTemporary Password: ${result.temp_password}`);
         }
-        console.log('🎉 [OnboardingManager] Success! Refreshing requests...');
-        fetchRequests(); // Refresh list
+        console.log('🎉 [OnboardingManager] Success!');
       } else {
         console.error('❌ [OnboardingManager] School creation failed:', result.error);
+        // Revert the status change if school creation failed
+        setRequests(prevRequests =>
+          prevRequests.map(r =>
+            r.id === request.id
+              ? { ...r, status: 'pending' as const, reviewed_by: undefined, reviewed_at: undefined }
+              : r
+          )
+        );
         if (typeof window !== 'undefined') {
           window.alert(result.error || 'Failed to create school');
         } else {
@@ -155,6 +217,14 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       }
     } catch (error: any) {
       console.error('💥 [OnboardingManager] Exception during approval:', error);
+      // Revert the status change if any error occurred
+      setRequests(prevRequests =>
+        prevRequests.map(r =>
+          r.id === request.id
+            ? { ...r, status: 'pending' as const, reviewed_by: undefined, reviewed_at: undefined }
+            : r
+        )
+      );
       if (typeof window !== 'undefined') {
         window.alert(error.message || 'Failed to approve request');
       } else {
@@ -167,39 +237,60 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   };
 
   const handleReject = async (request: OnboardingRequest) => {
-    Alert.alert(
-      'Reject School Request',
-      `Are you sure you want to reject "${request.preschool_name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setProcessing(request.id);
-              await rejectOnboardingRequest(request.id, superAdminUserId);
-              Alert.alert('Success', 'Request has been rejected');
-              fetchRequests(); // Refresh list
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to reject request');
-            } finally {
-              setProcessing(null);
-            }
-          }
-        }
-      ]
-    );
+    console.log('❌ [OnboardingManager] Rejecting request for:', request.preschool_name);
+
+    const confirmed = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'Reject Request',
+        `Are you sure you want to reject "${request.preschool_name}"?\n\nThis action will mark the request as rejected.`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Reject', style: 'destructive', onPress: () => resolve(true) },
+        ],
+      );
+    });
+
+    if (!confirmed) {
+      console.log('❌ [OnboardingManager] User cancelled rejection');
+      return;
+    }
+
+    try {
+      console.log('❌ [OnboardingManager] Starting rejection process...');
+      setProcessing(request.id);
+
+      await rejectOnboardingRequest(request.id, superAdminUserId);
+
+      console.log('✅ [OnboardingManager] Request rejected successfully');
+
+      // Immediately update the request status in UI
+      setRequests(prevRequests =>
+        prevRequests.map(r =>
+          r.id === request.id
+            ? { ...r, status: 'rejected' as const, reviewed_by: superAdminUserId, reviewed_at: new Date().toISOString() }
+            : r
+        )
+      );
+
+      Alert.alert('Success', `Request for "${request.preschool_name}" has been rejected.`);
+
+    } catch (error: any) {
+      console.error('💥 [OnboardingManager] Exception during rejection:', error);
+      Alert.alert('Error', error.message || 'Failed to reject request');
+    } finally {
+      console.log('🏁 [OnboardingManager] Rejection process finished');
+      setProcessing(null);
+    }
   };
 
   const handleResendInstructions = async (request: OnboardingRequest) => {
     console.log('📧 [OnboardingManager] Resending instructions for:', request.preschool_name);
-    
+
     // Use window.confirm for web compatibility
-    const confirmed = typeof window !== 'undefined' 
+    const confirmed = typeof window !== 'undefined'
       ? window.confirm(`Resend welcome instructions to "${request.preschool_name}" admin?\n\nThis will generate a new password and send the setup email again.`)
       : true;
-    
+
     if (!confirmed) {
       console.log('❌ [OnboardingManager] User cancelled resend');
       return;
@@ -208,16 +299,16 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
     try {
       console.log('📧 [OnboardingManager] Starting resend process...');
       setProcessing(request.id);
-      
+
       // First, find the actual school that was created from this onboarding request
       console.log('🔍 [OnboardingManager] Looking for school with admin email:', request.admin_email);
-      
+
       const { data: schoolData, error: schoolError } = await supabase
         .from('preschools')
         .select('id')
         .eq('email', request.admin_email)
         .single();
-      
+
       if (schoolError || !schoolData) {
         console.error('❌ [OnboardingManager] School not found for admin:', request.admin_email, schoolError);
         if (typeof window !== 'undefined') {
@@ -225,9 +316,9 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         }
         return;
       }
-      
+
       console.log('✅ [OnboardingManager] Found school ID:', schoolData.id);
-      
+
       // Now resend instructions using the actual school ID
       const resendResult = await SuperAdminDataService.resendWelcomeInstructions(
         schoolData.id, // Using actual school ID
@@ -260,11 +351,11 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
   const handleCompleteSetup = async (request: OnboardingRequest) => {
     console.log('🔧 [OnboardingManager] Completing setup for approved request:', request.preschool_name);
-    
-    const confirmed = typeof window !== 'undefined' 
+
+    const confirmed = typeof window !== 'undefined'
       ? window.confirm(`Complete the setup for "${request.preschool_name}"?\n\nThis will create the missing school and admin account.`)
       : true;
-    
+
     if (!confirmed) {
       console.log('❌ [OnboardingManager] User cancelled setup completion');
       return;
@@ -274,13 +365,147 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
     await performApproval(request);
   };
 
+  const handleUpdateProfile = async (request: OnboardingRequest) => {
+    console.log('👤 [OnboardingManager] Opening profile update for completed school:', request.preschool_name);
+
+    if (typeof window !== 'undefined') {
+      window.alert(`Profile update functionality will redirect to the school admin's profile management page.\n\nSchool: ${request.preschool_name}\nAdmin: ${request.admin_name}\n\nThis feature will be implemented to allow updating school information, admin details, and other profile settings.`);
+    } else {
+      Alert.alert(
+        'Update Profile',
+        `Profile update functionality for ${request.preschool_name} will be implemented to allow updating school information and admin details.`
+      );
+    }
+
+    // TODO: Implement profile update modal or navigation to profile management
+    // This could open a modal with editable school information, admin details, etc.
+    // or navigate to a dedicated profile management screen for this school
+  };
+
+  const handleDeleteSchool = async (request: OnboardingRequest) => {
+    console.log('🗑️ [OnboardingManager] Deleting approved school for:', request.preschool_name);
+
+    const confirmed = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        '⚠️ DANGEROUS OPERATION ⚠️',
+        `Permanently delete the ENTIRE SCHOOL "${request.preschool_name}"?\n\n🚨 This will delete:\n- The school record\n- All admin users\n- All associated data\n\nThis action CANNOT be undone!`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'DELETE SCHOOL', style: 'destructive', onPress: () => resolve(true) },
+        ],
+      );
+    });
+
+    if (!confirmed) {
+      console.log('❌ [OnboardingManager] User cancelled school deletion');
+      return;
+    }
+
+    try {
+      console.log('🗑️ [OnboardingManager] Starting school deletion process...');
+      setProcessing(request.id);
+
+      // First, find the school that was created from this onboarding request
+      console.log('🔍 [OnboardingManager] Looking for school with admin email:', request.admin_email);
+
+      const { data: schoolData, error: schoolError } = await supabase
+        .from('preschools')
+        .select('id, name')
+        .eq('email', request.admin_email)
+        .single();
+
+      if (schoolError || !schoolData) {
+        console.error('❌ [OnboardingManager] School not found for admin:', request.admin_email, schoolError);
+        Alert.alert(
+          'School Not Found', 
+          `School not found for admin email: ${request.admin_email}\n\nThe school may have already been deleted or not created yet.`
+        );
+        return;
+      }
+
+      console.log('✅ [OnboardingManager] Found school to delete:', schoolData);
+
+      // Delete users associated with this school first (due to foreign key constraints)
+      console.log('🗑️ [OnboardingManager] Deleting users associated with school...');
+      const { error: usersError } = await supabase
+        .from('users')
+        .delete()
+        .eq('preschool_id', schoolData.id);
+
+      if (usersError) {
+        console.error('❌ [OnboardingManager] Failed to delete users:', usersError);
+        Alert.alert('Error', `Failed to delete school users: ${usersError.message}`);
+        return;
+      }
+
+      console.log('✅ [OnboardingManager] School users deleted successfully');
+
+      // Delete the school record
+      console.log('🗑️ [OnboardingManager] Deleting school record...');
+      const { error: schoolDeleteError } = await supabase
+        .from('preschools')
+        .delete()
+        .eq('id', schoolData.id);
+
+      if (schoolDeleteError) {
+        console.error('❌ [OnboardingManager] Failed to delete school:', schoolDeleteError);
+        Alert.alert('Error', `Failed to delete school: ${schoolDeleteError.message}`);
+        return;
+      }
+
+      console.log('✅ [OnboardingManager] School record deleted successfully');
+
+      // Finally, delete the onboarding request
+      console.log('🗑️ [OnboardingManager] Deleting onboarding request...');
+      const { error: requestError } = await supabase
+        .from('preschool_onboarding_requests')
+        .delete()
+        .eq('id', request.id);
+
+      if (requestError) {
+        console.error('❌ [OnboardingManager] Failed to delete onboarding request:', requestError);
+        // Don't fail the whole operation if this fails
+        console.log('⚠️ [OnboardingManager] School deleted but onboarding request may still exist');
+      } else {
+        console.log('✅ [OnboardingManager] Onboarding request deleted successfully');
+      }
+
+      console.log('✅ [OnboardingManager] Complete school deletion successful');
+      Alert.alert(
+        '✅ School Deleted',
+        `School "${request.preschool_name}" and all associated data has been permanently deleted.\n\nThis included:\n- School record\n- Admin users\n- Onboarding request`
+      );
+
+      console.log('🔄 [OnboardingManager] Refreshing requests list...');
+      await fetchRequests(); // Refresh list
+      console.log('✅ [OnboardingManager] Requests list refreshed');
+
+    } catch (error: any) {
+      console.error('💥 [OnboardingManager] Exception during school deletion:', error);
+      Alert.alert(
+        'Critical Error',
+        `Critical error during school deletion: ${error.message}\n\nPlease check the database manually and contact support if needed.`
+      );
+    } finally {
+      console.log('🏁 [OnboardingManager] School deletion process finished');
+      setProcessing(null);
+    }
+  };
+
   const handleDeleteRequest = async (request: OnboardingRequest) => {
     console.log('🗑️ [OnboardingManager] Deleting request for:', request.preschool_name);
-    
-    const confirmed = typeof window !== 'undefined' 
-      ? window.confirm(`Permanently delete the request for "${request.preschool_name}"?\n\nThis action cannot be undone.`)
-      : false;
-    
+
+    const confirmed = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'Delete request',
+        `Permanently delete the request for "${request.preschool_name}"? This cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+        ],
+      );
+    });
+
     if (!confirmed) {
       console.log('❌ [OnboardingManager] User cancelled deletion');
       return;
@@ -289,31 +514,47 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
     try {
       console.log('🗑️ [OnboardingManager] Starting deletion process...');
       setProcessing(request.id);
+
+      console.log('🗑️ [OnboardingManager] Attempting to delete request with ID:', request.id);
       
-      const { error } = await supabase
-        .from('onboarding_requests')
+      // Use admin client if available for delete operations
+      const client = supabaseAdmin || supabase;
+      console.log('🗑️ [OnboardingManager] Using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
+      
+      const { error, data } = await client
+        .from('preschool_onboarding_requests')
         .delete()
-        .eq('id', request.id);
-      
+        .eq('id', request.id)
+        .select(); // Add select to see what was deleted
+
+      console.log('🗑️ [OnboardingManager] Delete operation result:', { error, data });
+
       if (error) {
         console.error('❌ [OnboardingManager] Delete failed:', error);
-        if (typeof window !== 'undefined') {
-          window.alert(`Failed to delete request: ${error.message}`);
-        }
+        Alert.alert('Delete failed', `Failed to delete request: ${error.message}\n\nError code: ${error.code}`);
         return;
       }
-      
-      console.log('✅ [OnboardingManager] Request deleted successfully');
-      if (typeof window !== 'undefined') {
-        window.alert(`Request for "${request.preschool_name}" has been permanently deleted.`);
+
+      if (!data || data.length === 0) {
+        console.warn('⚠️ [OnboardingManager] No rows were deleted - record may not exist or RLS blocking');
+        Alert.alert('Warning', 'No records were deleted. This might be due to permissions or the record may not exist.');
+        return;
       }
-      
-      fetchRequests(); // Refresh list
+
+      console.log('✅ [OnboardingManager] Request deleted successfully');
+
+      // Immediately update UI by filtering out the deleted item
+      setRequests(prevRequests => {
+        const filtered = prevRequests.filter(r => r.id !== request.id);
+        console.log(`🔄 [OnboardingManager] UI updated immediately: ${prevRequests.length} -> ${filtered.length} requests`);
+        return filtered;
+      });
+
+      Alert.alert('Deleted', `Request for "${request.preschool_name}" has been permanently deleted.`);
+
     } catch (error: any) {
       console.error('💥 [OnboardingManager] Exception during deletion:', error);
-      if (typeof window !== 'undefined') {
-        window.alert(error.message || 'Failed to delete request');
-      }
+      Alert.alert('Error', error.message || 'Failed to delete request');
     } finally {
       console.log('🏁 [OnboardingManager] Deletion process finished');
       setProcessing(null);
@@ -328,7 +569,7 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
     try {
       setProcessing('create');
-      
+
       const result = await SuperAdminDataService.createSchool({
         name: schoolName.trim(),
         email: adminEmail.trim(),
@@ -383,13 +624,13 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
           <Text style={styles.adminName}>Admin: {item.admin_name}</Text>
           <Text style={styles.requestEmail}>{item.admin_email}</Text>
         </View>
-        
+
         <View style={styles.statusContainer}>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <IconSymbol 
-              name={getStatusIcon(item.status) as any} 
-              size={12} 
-              color="#FFFFFF" 
+            <IconSymbol
+              name={getStatusIcon(item.status) as any}
+              size={12}
+              color="#FFFFFF"
             />
             <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
           </View>
@@ -400,64 +641,120 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       </View>
 
       {item.status === 'pending' && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.approveButton]}
-            onPress={() => {
-              console.log('🔴 [OnboardingManager] Approve button clicked for:', item.preschool_name);
-              handleApprove(item);
-            }}
-            disabled={processing === item.id}
-          >
-            {processing === item.id ? (
-              <LoadingSpinner size={16} color="#FFFFFF" />
-            ) : (
-              <IconSymbol name="checkmark" size={16} color="#FFFFFF" />
-            )}
-            <Text style={styles.actionButtonText}>Approve & Create</Text>
-          </TouchableOpacity>
+        <View>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.approveButton]}
+              onPress={() => {
+                console.log('🔴 [OnboardingManager] Approve button clicked for:', item.preschool_name);
+                handleApprove(item);
+              }}
+              disabled={processing === item.id}
+            >
+              {processing === item.id ? (
+                <LoadingSpinner size={16} color="#FFFFFF" />
+              ) : (
+                <IconSymbol name="checkmark" size={16} color="#FFFFFF" />
+              )}
+              <Text style={styles.actionButtonText}>Approve & Create</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.rejectButton]}
-            onPress={() => handleReject(item)}
-            disabled={processing === item.id}
-          >
-            <IconSymbol name="x" size={16} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Reject</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      
-      {item.status === 'approved' && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.warningButton]}
-            onPress={() => handleCompleteSetup(item)}
-            disabled={processing === item.id}
-          >
-            {processing === item.id ? (
-              <LoadingSpinner size={16} color="#FFFFFF" />
-            ) : (
-              <IconSymbol name="wrench" size={16} color="#FFFFFF" />
-            )}
-            <Text style={styles.actionButtonText}>Complete Setup</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.rejectButton]}
+              onPress={() => handleReject(item)}
+              disabled={processing === item.id}
+            >
+              <IconSymbol name="x" size={16} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>Reject</Text>
+            </TouchableOpacity>
+          </View>
           
-          <TouchableOpacity
-            style={[styles.actionButton, styles.resendButton]}
-            onPress={() => handleResendInstructions(item)}
-            disabled={processing === item.id}
-          >
-            {processing === item.id ? (
-              <LoadingSpinner size={16} color="#FFFFFF" />
-            ) : (
-              <IconSymbol name="mail" size={16} color="#FFFFFF" />
-            )}
-            <Text style={styles.actionButtonText}>Resend Instructions</Text>
-          </TouchableOpacity>
+          {/* Delete button for pending requests */}
+          <View style={[styles.actionButtons, { marginTop: 8 }]}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={() => handleDeleteRequest(item)}
+              disabled={processing === item.id}
+            >
+              {processing === item.id ? (
+                <LoadingSpinner size={16} color="#FFFFFF" />
+              ) : (
+                <IconSymbol name="trash" size={16} color="#FFFFFF" />
+              )}
+              <Text style={styles.actionButtonText}>Delete Request</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
-      
+
+      {item.status === 'approved' && (() => {
+        const isSchoolCompleted = schoolCreationStatus[item.id] === true;
+        
+        return (
+          <View>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={[styles.actionButton, isSchoolCompleted ? styles.successButton : styles.warningButton]}
+                onPress={() => isSchoolCompleted ? handleUpdateProfile(item) : handleCompleteSetup(item)}
+                disabled={processing === item.id}
+              >
+                {processing === item.id ? (
+                  <LoadingSpinner size={16} color="#FFFFFF" />
+                ) : (
+                  <IconSymbol name={isSchoolCompleted ? "person.crop.circle" : "wrench"} size={16} color="#FFFFFF" />
+                )}
+                <Text style={styles.actionButtonText}>{isSchoolCompleted ? 'Update Profile' : 'Complete Setup'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, styles.resendButton]}
+                onPress={() => handleResendInstructions(item)}
+                disabled={processing === item.id}
+              >
+                {processing === item.id ? (
+                  <LoadingSpinner size={16} color="#FFFFFF" />
+                ) : (
+                  <IconSymbol name="mail" size={16} color="#FFFFFF" />
+                )}
+                <Text style={styles.actionButtonText}>Resend Instructions</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Dangerous Operations - Second Row */}
+            <View style={[styles.actionButtons, { marginTop: 8 }]}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.dangerButton]}
+                onPress={() => handleDeleteSchool(item)}
+                disabled={processing === item.id}
+              >
+                {processing === item.id ? (
+                  <LoadingSpinner size={16} color="#FFFFFF" />
+                ) : (
+                  <IconSymbol name="trash.fill" size={16} color="#FFFFFF" />
+                )}
+                <Text style={styles.actionButtonText}>🚨 Delete School</Text>
+              </TouchableOpacity>
+              
+              {/* Only show Delete Request button if school setup is NOT completed */}
+              {!isSchoolCompleted && (
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.deleteButton]}
+                  onPress={() => handleDeleteRequest(item)}
+                  disabled={processing === item.id}
+                >
+                  {processing === item.id ? (
+                    <LoadingSpinner size={16} color="#FFFFFF" />
+                  ) : (
+                    <IconSymbol name="trash" size={16} color="#FFFFFF" />
+                  )}
+                  <Text style={styles.actionButtonText}>Delete Request</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        );
+      })()}
+
       {item.status === 'rejected' && (
         <View style={styles.actionButtons}>
           <TouchableOpacity
@@ -489,17 +786,20 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>🏫 School Onboarding Requests</Text>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => setShowCreateModal(true)}
-        >
-          <IconSymbol name="plus" size={16} color="#FFFFFF" />
-          <Text style={styles.createButtonText}>Create School</Text>
-        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>🏫 School Onboarding Requests</Text>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => setShowCreateModal(true)}
+          >
+            <IconSymbol name="plus" size={16} color="#FFFFFF" />
+            <Text style={styles.createButtonText}>Create School</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
+        key={`requests-${requests.length}`}
         data={requests}
         renderItem={renderRequest}
         keyExtractor={(item) => item.id}
@@ -507,9 +807,11 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         contentContainerStyle={styles.listContainer}
         refreshing={loading}
         onRefresh={fetchRequests}
+        extraData={requests}
+        removeClippedSubviews={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <IconSymbol name="doc.text" size={48} color="#9CA3AF" />
+            <IconSymbol name="document" size={48} color="#9CA3AF" />
             <Text style={styles.emptyText}>No onboarding requests found</Text>
             <Text style={styles.emptySubtext}>New school requests will appear here</Text>
           </View>
@@ -668,10 +970,10 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
               <View style={styles.detailSection}>
                 <Text style={styles.detailLabel}>Request Status</Text>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedRequest.status) }]}>
-                  <IconSymbol 
-                    name={getStatusIcon(selectedRequest.status) as any} 
-                    size={16} 
-                    color="#FFFFFF" 
+                  <IconSymbol
+                    name={getStatusIcon(selectedRequest.status) as any}
+                    size={16}
+                    color="#FFFFFF"
                   />
                   <Text style={styles.statusText}>{selectedRequest.status.toUpperCase()}</Text>
                 </View>
@@ -693,14 +995,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  headerContent: {
+    flexDirection: 'column',
+    gap: 12,
   },
   title: {
     fontSize: 20,
@@ -803,8 +1106,16 @@ const styles = StyleSheet.create({
   warningButton: {
     backgroundColor: '#F59E0B',
   },
+  successButton: {
+    backgroundColor: '#10B981',
+  },
   deleteButton: {
     backgroundColor: '#DC2626',
+  },
+  dangerButton: {
+    backgroundColor: '#7F1D1D',
+    borderWidth: 2,
+    borderColor: '#DC2626',
   },
   actionButtonText: {
     color: '#FFFFFF',

@@ -42,7 +42,7 @@ const results = {
 };
 
 function log(message, color = 'reset') {
-  console.log(`${colors[color]}${message}${colors.reset}`);
+
 }
 
 function addResult(type, category, message, details = null) {

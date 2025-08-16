@@ -1,13 +1,13 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { PaymentMethod } from '@/types/payment-types';
+import React from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface PaymentMethodOption {
   method: PaymentMethod;
@@ -74,9 +74,9 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Select Payment Method</Text>
-      <Text style={styles.subtitle}>Choose how you'd like to pay</Text>
+      <Text style={styles.subtitle}>Choose how you would like to pay</Text>
 
-      <ScrollView 
+      <ScrollView
         style={styles.methodsList}
         showsVerticalScrollIndicator={false}
       >
@@ -97,10 +97,10 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 styles.methodIcon,
                 { backgroundColor: `${getMethodColor(method.method)}20` }
               ]}>
-                <IconSymbol 
-                  name={method.icon} 
-                  size={24} 
-                  color={getMethodColor(method.method)} 
+                <IconSymbol
+                  name={method.icon}
+                  size={24}
+                  color={getMethodColor(method.method)}
                 />
               </View>
 

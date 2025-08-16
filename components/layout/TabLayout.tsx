@@ -1,7 +1,9 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
+import AdPlacement from '@/components/ui/AdPlacement';
 import { router } from 'expo-router';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TabLayoutProps {
   children: React.ReactNode;
@@ -15,6 +17,7 @@ interface TabLayoutProps {
 }
 
 export function TabLayout({ children, user, onSignOut, notificationCount }: TabLayoutProps) {
+  const insets = useSafeAreaInsets();
   const handleNavigate = (route: string) => {
     router.push(route);
   };
@@ -38,9 +41,11 @@ export function TabLayout({ children, user, onSignOut, notificationCount }: TabL
           notificationCount={notificationCount}
         />
       )}
-      <View style={styles.content}>
-        {children}
-      </View>
+      <AdPlacement>
+        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+          {children}
+        </View>
+      </AdPlacement>
     </View>
   );
 }

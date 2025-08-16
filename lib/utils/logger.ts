@@ -19,13 +19,13 @@ export const createLogger = (namespace?: string) => ({
   debug: (message?: unknown, ...args: unknown[]) => {
     if (isDebugEnabled(namespace)) {
       // eslint-disable-next-line no-console
-      console.debug(...format('debug', namespace, message, ...args));
+
     }
   },
   info: (message?: unknown, ...args: unknown[]) => {
     if (isDebugEnabled(namespace)) {
       // eslint-disable-next-line no-console
-      console.info(...format('info', namespace, message, ...args));
+
     }
   },
   warn: (message?: unknown, ...args: unknown[]) => {
@@ -42,7 +42,4 @@ export const createLogger = (namespace?: string) => ({
 });
 
 export const logger = createLogger();
-
-
-
 

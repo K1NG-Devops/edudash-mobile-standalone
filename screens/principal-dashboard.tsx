@@ -72,22 +72,20 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         return;
       }
 
-      console.log('🏫 [DEBUG] Loading principal data for preschool_id:', profile.preschool_id);
-      
       // Fetch school information
       const schoolResult = await PrincipalService.getSchoolInfo(profile.preschool_id);
       if (schoolResult.data) {
-        console.log('🏫 [DEBUG] School info fetched:', schoolResult.data.name);
+
         setSchoolName(schoolResult.data.name);
       } else {
-        console.log('❌ [DEBUG] Failed to fetch school info:', schoolResult.error);
+
         setSchoolName('Your Preschool');
       }
       
       // Fetch real stats from database
       const statsResult = await PrincipalService.getPrincipalStats(profile.preschool_id);
       if (statsResult.data) {
-        console.log('📊 [DEBUG] Stats loaded:', statsResult.data);
+
         setStats(statsResult.data);
       } else {
         console.error('❌ [DEBUG] Failed to load stats:', statsResult.error);
@@ -167,7 +165,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   );
 
   const handleNavigate = (route: string) => {
-    console.log('Principal navigating to:', route);
+
     if (route.startsWith('/')) {
       router.push(route as any);
     } else {

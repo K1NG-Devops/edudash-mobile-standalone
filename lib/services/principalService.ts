@@ -328,7 +328,7 @@ export class PrincipalService {
         // Still return success since the invitation was created in database
         // The principal can resend the email manually or share the code directly
       } else {
-        console.log(`✅ Teacher invitation email sent successfully to ${teacherData.email}`);
+
       }
 
       return { data: invitation, error: null };
@@ -819,7 +819,6 @@ export class PrincipalService {
         return { success: false, error: emailResult.error || 'Failed to send email' };
       }
 
-      console.log(`✅ Teacher invitation email resent successfully to ${invitation.email}`);
       return { success: true };
     } catch (error) {
       console.error('Error resending teacher invitation:', error);
@@ -846,7 +845,7 @@ export class PrincipalService {
           .select('id')
           .single();
         if (!dbErr && updated) {
-          console.log(`🚫 Teacher invitation revoked (DB) id=${invitationId}`);
+
           return { success: true };
         }
       } catch (_) {
@@ -878,7 +877,6 @@ export class PrincipalService {
 
       await StorageUtil.setJSON('teacherInvitations', existingInvitations);
 
-      console.log(`🚫 Teacher invitation revoked for ${invitation.email}`);
       return { success: true };
     } catch (error) {
       console.error('Error revoking teacher invitation:', error);
@@ -904,7 +902,7 @@ export class PrincipalService {
           .select('id')
           .single();
         if (!dbErr && deleted) {
-          console.log(`🗑️ Teacher invitation deleted (DB) id=${invitationId}`);
+
           return { success: true };
         }
       } catch (_) {
@@ -926,7 +924,6 @@ export class PrincipalService {
       existingInvitations.splice(invitationIndex, 1);
       await StorageUtil.setJSON('teacherInvitations', existingInvitations);
 
-      console.log(`🗑️ Teacher invitation deleted for ${invitation.email}`);
       return { success: true };
     } catch (error) {
       console.error('Error deleting teacher invitation:', error);
@@ -963,7 +960,6 @@ export class PrincipalService {
 
       await StorageUtil.setJSON('teacherInvitations', remainingInvitations);
 
-      console.log(`🧹 Cleaned up ${expiredInvitations.length} expired invitations`);
       return { success: true, deletedCount: expiredInvitations.length };
     } catch (error) {
       console.error('Error cleaning up expired invitations:', error);

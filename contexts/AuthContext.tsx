@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -103,49 +103,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       setLoading(true);
       
-      // Try to get cached profile first
-      try {
-        let cachedProfile = null;
-        if (Platform.OS === 'web') {
-          if (typeof window !== 'undefined') {
-            cachedProfile = window.localStorage.getItem('userProfile');
-          }
-        } else {
-          cachedProfile = await AsyncStorage.getItem('userProfile');
-        }
-        
-        if (cachedProfile) {
-          setProfile(JSON.parse(cachedProfile));
-        }
-      } catch (error) {
-        console.warn('Error getting cached profile:', error);
-      }
+      // Clear any existing profile to force fresh load
+      setProfile(null);
 
-      // Fetch fresh profile from database
+      // Fetch fresh profile from database (no caching)
+      console.log('🔄 [AuthContext] Loading fresh profile for user:', userId);
       const { user, profile, error } = await getCurrentUserWithRole();
       
       if (error) {
-        console.error('Error loading profile:', error);
+        console.error('❌ [AuthContext] Error loading profile:', error);
         return;
       }
 
       if (profile) {
+        console.log('✅ [AuthContext] Profile loaded:', profile.role);
         setProfile(profile as UserProfile);
-        // Cache the profile
-        try {
-          if (Platform.OS === 'web') {
-            if (typeof window !== 'undefined') {
-              window.localStorage.setItem('userProfile', JSON.stringify(profile));
-            }
-          } else {
-            await AsyncStorage.setItem('userProfile', JSON.stringify(profile));
-          }
-        } catch (error) {
-          console.warn('Error caching profile:', error);
-        }
+      } else {
+        console.log('⚠️ [AuthContext] No profile found for user');
       }
     } catch (error) {
-      console.error('Error in loadUserProfile:', error);
+      console.error('❌ [AuthContext] Error in loadUserProfile:', error);
     } finally {
       setLoading(false);
     }

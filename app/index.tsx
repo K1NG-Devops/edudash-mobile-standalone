@@ -47,7 +47,7 @@ export default function WelcomeScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const [currentFeature, setCurrentFeature] = useState(0);
-  const rotationRef = useRef<NodeJS.Timeout | null>(null);
+  const rotationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sliderRef = useRef<ScrollView | null>(null);
 
   useEffect(() => {

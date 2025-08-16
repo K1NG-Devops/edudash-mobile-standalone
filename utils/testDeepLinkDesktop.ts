@@ -8,8 +8,7 @@ export const simulatePasswordResetDeepLink = (
   accessToken?: string, 
   refreshToken?: string
 ) => {
-  console.log('🖥️ Simulating password reset deep link for desktop testing...');
-  
+
   // Create mock parameters similar to what would come from a deep link
   const mockParams = {
     access_token: accessToken || 'mock_access_token_for_testing',
@@ -19,13 +18,10 @@ export const simulatePasswordResetDeepLink = (
   // Navigate to reset password screen with mock parameters
   const queryString = new URLSearchParams(mockParams).toString();
   const resetUrl = `/(auth)/reset-password?${queryString}`;
-  
-  console.log('🔗 Simulated deep link URL:', resetUrl);
-  console.log('📱 On mobile, this would be: edudashpro://auth/reset-password?' + queryString);
-  
+
   try {
     router.push(resetUrl as any);
-    console.log('✅ Navigation successful');
+
   } catch (error) {
     console.error('❌ Navigation failed:', error);
   }
@@ -40,15 +36,14 @@ export const extractTokensFromEmail = (emailResetLink: string): {
   error?: string; 
 } => {
   try {
-    console.log('🔍 Extracting tokens from email link...');
-    
+
     // Parse the URL to extract tokens
     const url = new URL(emailResetLink);
     const accessToken = url.searchParams.get('access_token');
     const refreshToken = url.searchParams.get('refresh_token');
     
     if (accessToken && refreshToken) {
-      console.log('✅ Tokens extracted successfully');
+
       return { accessToken, refreshToken };
     } else {
       const error = 'No valid tokens found in the link';
@@ -66,8 +61,7 @@ export const extractTokensFromEmail = (emailResetLink: string): {
  * Complete desktop testing workflow
  */
 export const testPasswordResetFlowDesktop = (emailResetLink: string) => {
-  console.log('🧪 Starting desktop password reset flow test...');
-  
+
   // Extract tokens from the email link
   const { accessToken, refreshToken, error } = extractTokensFromEmail(emailResetLink);
   

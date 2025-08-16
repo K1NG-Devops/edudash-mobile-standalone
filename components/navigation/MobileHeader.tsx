@@ -138,9 +138,9 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                   {user?.role === 'superadmin' ? (
                     <Text style={styles.brandName}>EduDash Pro</Text>
                   ) : (
-                    this.props.schoolName && (
-                      <Text style={styles.schoolName}>{this.props.schoolName}</Text>
-                    )
+                    <Text style={styles.schoolName}>
+                      {this.props.schoolName || 'EduDash Pro'}
+                    </Text>
                   )}
                   
                   {/* User info below */}
@@ -183,7 +183,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                     activeOpacity={0.7}
                   >
                     <IconSymbol name="bell" size={18} color="#FFFFFF" />
-                    {notificationCount && notificationCount > 0 && (
+                    {(notificationCount && notificationCount > 0) && (
                       <View style={styles.modernNotificationBadge}>
                         <Text style={styles.notificationBadgeText}>
                           {notificationCount > 99 ? '99+' : notificationCount.toString()}

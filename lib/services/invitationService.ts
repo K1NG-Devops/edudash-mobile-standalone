@@ -176,10 +176,6 @@ export class InvitationService {
   ): Promise<void> {
     try {
       // TODO: Integrate with your email service (SendGrid, AWS SES, etc.)
-      console.log(`📧 Sending invitation email to ${email}`);
-      console.log(`Role: ${role}`);
-      console.log(`Invitation Code: ${invitationCode}`);
-      console.log(`Signup URL: ${process.env.EXPO_PUBLIC_WEB_URL}/signup?code=${invitationCode}`);
 
       // For now, we'll use a simple notification
       // Replace this with actual email sending logic

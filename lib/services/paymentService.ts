@@ -179,7 +179,6 @@ export class PaymentService {
       if (error) {
         console.error('Error persisting fees:', error);
       } else {
-        console.log(`✅ Persisted ${persistedFees?.length || 0} new fees to database`);
 
         // Update the fees array with actual IDs from database
         if (persistedFees) {
@@ -243,11 +242,9 @@ export class PaymentService {
       // Generate age-based fees for all children
       const fees = await this.generateAgeBasedFees(children, parentProfile.preschool_id, parentProfile.id);
 
-      console.log(`Generated ${fees.length} age-based fees for ${children.length} children`);
-
       // If no fees generated (all payments up to date), return empty state
       if (fees.length === 0) {
-        console.log('All payments are up to date - no outstanding fees');
+
       }
 
       // Calculate summary data
@@ -657,7 +654,6 @@ export class PaymentService {
         }
       );
 
-      console.log('✅ Proof of payment submitted successfully:', payment.id);
       return { success: true, paymentId: payment.id };
 
     } catch (error) {
@@ -713,7 +709,6 @@ export class PaymentService {
         return { success: false, error: 'Failed to update payment window settings' };
       }
 
-      console.log(`✅ Updated payment window for parent ${parentProfile.id}: ${startDay}-${endDay}`);
       return { success: true };
 
     } catch (error) {
@@ -773,7 +768,7 @@ export class PaymentService {
         .eq('is_active', true);
 
       if (error || !adminUsers || adminUsers.length === 0) {
-        console.log('No admin users found for preschool:', preschoolId);
+
         return;
       }
 
@@ -791,8 +786,6 @@ export class PaymentService {
       await supabase
         .from('notifications')
         .insert(notifications);
-
-      console.log(`✅ Created ${notifications.length} admin notifications`);
 
     } catch (error) {
       console.error('Error creating admin notifications:', error);

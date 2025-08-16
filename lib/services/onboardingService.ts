@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { PreschoolOnboardingRequest } from '@/types/types';
 
 interface OnboardingRequestInput {
@@ -156,10 +156,13 @@ const sendOnboardingEmail = async (emailData: OnboardingEmailData) => {
 const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
   const { schoolName, adminName, adminEmail, numberOfStudents, numberOfTeachers, address, message } = emailData;
 
-  // Find all super admin users
-  const { data: superAdmins, error: superAdminError } = await supabase
+  // Use admin client to find all super admin users (bypass RLS)
+  const client = supabaseAdmin || supabase;
+  console.log('🔍 [OnboardingService] Looking for superadmins using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
+  
+  const { data: superAdmins, error: superAdminError } = await client
     .from('users')
-    .select('id, full_name, email')
+    .select('id, name, email')
     .eq('role', 'superadmin')
     .eq('is_active', true);
 
@@ -284,7 +287,7 @@ const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
   `;
 
   // Send notification emails to all super admins
-  const emailPromises = superAdmins.map(async (admin) => {
+  const emailPromises = superAdmins.map(async (admin: any) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
@@ -293,7 +296,7 @@ const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
           html: notificationHTML,
           templateType: 'admin_notification',
           schoolName: schoolName,
-          adminName: admin.full_name || 'Super Admin'
+          adminName: admin.name || 'Super Admin'
         }
       });
 
@@ -302,7 +305,7 @@ const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
       } else {
         console.log(`Notification sent successfully to ${admin.email}`);
       }
-      
+
       return { admin: admin.email, success: !error, error };
     } catch (err) {
       console.error(`Exception sending notification to ${admin.email}:`, err);
@@ -312,21 +315,25 @@ const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
 
   // Wait for all email notifications to complete
   const results = await Promise.allSettled(emailPromises);
-  
+
   // Log summary
   const successful = results.filter(r => r.status === 'fulfilled').length;
   const failed = results.length - successful;
-  
+
   console.log(`Super admin notifications: ${successful} sent, ${failed} failed`);
-  
+
   return results;
 };
 
 export const createOnboardingRequest = async (requestData: OnboardingRequestInput) => {
   const { preschoolName, adminName, adminEmail, phone, address, numberOfStudents, numberOfTeachers, message } = requestData;
 
+  // Use admin client for inserting onboarding requests to bypass RLS
+  const client = supabaseAdmin || supabase;
+  console.log('🔥 [OnboardingService] Using client for insert:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
+
   // Insert the onboarding request into the database
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('preschool_onboarding_requests')
     .insert([
       {
@@ -344,8 +351,11 @@ export const createOnboardingRequest = async (requestData: OnboardingRequestInpu
     ]);
 
   if (error) {
+    console.error('🔥 [OnboardingService] Database insert error:', error);
     throw error;
   }
+
+  console.log('✅ [OnboardingService] Successfully inserted onboarding request:', data);
 
   // Send confirmation email to the school admin
   try {
@@ -384,7 +394,11 @@ export const createOnboardingRequest = async (requestData: OnboardingRequestInpu
 
 // Fetch all onboarding requests (for super admins)
 export const getAllOnboardingRequests = async (): Promise<Partial<PreschoolOnboardingRequest>[]> => {
-  const { data, error } = await supabase
+  // Use admin client for fetching requests to bypass RLS
+  const client = supabaseAdmin || supabase;
+  console.log('📋 [OnboardingService] Fetching requests using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
+  
+  const { data, error } = await client
     .from('preschool_onboarding_requests')
     .select('*')
     .order('created_at', { ascending: false });
@@ -398,8 +412,12 @@ export const getAllOnboardingRequests = async (): Promise<Partial<PreschoolOnboa
 
 // Approve an onboarding request (for super admins)
 export const approveOnboardingRequest = async (requestId: string, reviewerId: string) => {
-  // Check if the reviewer exists in the database
-  const { data: reviewer } = await supabase
+  // Use admin client for approval operations
+  const client = supabaseAdmin || supabase;
+  console.log('✅ [OnboardingService] Approving request using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
+  
+  // Check if the reviewer exists in the database using admin client
+  const { data: reviewer } = await client
     .from('users')
     .select('id')
     .eq('id', reviewerId)
@@ -415,7 +433,7 @@ export const approveOnboardingRequest = async (requestId: string, reviewerId: st
     updateData.reviewed_by = reviewerId;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('preschool_onboarding_requests')
     .update(updateData)
     .eq('id', requestId);
@@ -429,8 +447,12 @@ export const approveOnboardingRequest = async (requestId: string, reviewerId: st
 
 // Reject an onboarding request (for super admins)
 export const rejectOnboardingRequest = async (requestId: string, reviewerId: string) => {
-  // Check if the reviewer exists in the database
-  const { data: reviewer } = await supabase
+  // Use admin client for rejection operations
+  const client = supabaseAdmin || supabase;
+  console.log('❌ [OnboardingService] Rejecting request using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
+  
+  // Check if the reviewer exists in the database using admin client
+  const { data: reviewer } = await client
     .from('users')
     .select('id')
     .eq('id', reviewerId)
@@ -446,7 +468,7 @@ export const rejectOnboardingRequest = async (requestId: string, reviewerId: str
     updateData.reviewed_by = reviewerId;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('preschool_onboarding_requests')
     .update(updateData)
     .eq('id', requestId);

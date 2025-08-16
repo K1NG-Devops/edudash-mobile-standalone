@@ -78,9 +78,7 @@ export const HomeworkSubmission: React.FC<HomeworkSubmissionProps> = ({
         },
         mediaFiles
       );
-      
-      console.log('✅ Homework submitted successfully:', result);
-      
+
       // Enhanced success message
       const successMessage = `🎉 Homework submitted successfully!
 
@@ -131,7 +129,7 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
 
   const pickImage = async () => {
     try {
-      console.log('📸 Starting image picker...');
+
       setUploading(true);
       
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -147,8 +145,6 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
         quality: 0.8,
       });
 
-      console.log('📸 Image picker result:', result);
-
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         const newAttachment = {
@@ -157,8 +153,7 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
           mimeType: asset.mimeType || 'image/jpeg',
           fileSize: asset.fileSize,
         };
-        
-        console.log('📸 Adding attachment:', newAttachment);
+
         setAttachments(prev => [...prev, newAttachment]);
         Alert.alert('Success', 'Image added successfully!');
       }
@@ -172,7 +167,7 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
 
   const takePhoto = async () => {
     try {
-      console.log('📷 Starting camera...');
+
       setUploading(true);
       
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -187,8 +182,6 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
         quality: 0.8,
       });
 
-      console.log('📷 Camera result:', result);
-
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         const newAttachment = {
@@ -197,8 +190,7 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
           mimeType: asset.mimeType || 'image/jpeg',
           fileSize: asset.fileSize,
         };
-        
-        console.log('📷 Adding photo:', newAttachment);
+
         setAttachments(prev => [...prev, newAttachment]);
         Alert.alert('Success', 'Photo taken successfully!');
       }
@@ -212,15 +204,13 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
 
   const pickDocument = async () => {
     try {
-      console.log('📄 Starting document picker...');
+
       setUploading(true);
       
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
         copyToCacheDirectory: true,
       });
-
-      console.log('📄 Document picker result:', result);
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
@@ -230,8 +220,7 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
           mimeType: asset.mimeType || 'application/octet-stream',
           fileSize: asset.size,
         };
-        
-        console.log('📄 Adding document:', newAttachment);
+
         setAttachments(prev => [...prev, newAttachment]);
         Alert.alert('Success', 'Document added successfully!');
       }
@@ -248,12 +237,12 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
   };
 
   const showAttachmentOptions = () => {
-    console.log('🎯 showAttachmentOptions function called!');
-    console.log('🔍 Platform check:', { platform: 'web' }); // Will be web in this case
+
+    ; // Will be web in this case
     
     // For web environments, Alert might not work properly, let's try a direct call first
     if (typeof window !== 'undefined') {
-      console.log('🌐 Running on web, trying confirm dialog...');
+
       const choice = window.confirm('Choose attachment type:\n\n1. Take Photo\n2. Choose from Library\n3. Choose Document\n\nClick OK to choose from library, Cancel to see more options');
       if (choice) {
         pickImage();

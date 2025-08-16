@@ -311,7 +311,7 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
       item.action();
     } else if (item.route) {
       // Navigate to route
-      console.log('Navigate to:', item.route);
+
     }
     this.props.onClose();
   };

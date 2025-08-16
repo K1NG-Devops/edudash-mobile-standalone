@@ -11,11 +11,6 @@ const path = require('path');
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env.local') });
 
-console.log('🔧 Environment Variables Debug:');
-console.log('- NODE_ENV:', process.env.NODE_ENV);
-console.log('- RESEND_API_KEY:', process.env.RESEND_API_KEY ? `${process.env.RESEND_API_KEY.substring(0, 10)}...` : 'Not found');
-console.log('- FROM_EMAIL:', process.env.FROM_EMAIL || 'Not set');
-
 async function testResendAPI() {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@edudashpro.com';
@@ -25,8 +20,6 @@ async function testResendAPI() {
     return;
   }
 
-  console.log('\n📧 Testing Resend API...');
-  
   const testEmail = {
     from: FROM_EMAIL,
     to: ['your-email@gmail.com'], // Replace with your actual email for testing
@@ -50,16 +43,11 @@ async function testResendAPI() {
       body: JSON.stringify(testEmail),
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers));
-    
     const responseText = await response.text();
-    console.log('Response body:', responseText);
 
     if (response.ok) {
       const result = JSON.parse(responseText);
-      console.log('✅ Email sent successfully!');
-      console.log('Email ID:', result.id);
+
     } else {
       console.error('❌ Email failed to send');
       console.error('Error:', responseText);

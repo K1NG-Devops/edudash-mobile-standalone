@@ -27,11 +27,9 @@ console.log('🔧 Supabase Configuration:', {
   hasEnvKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
 });
 
-const supabaseUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL || (USE_LOCAL_DB ? 'http://127.0.0.1:54321' : 'https://lvvvjywrmpcqrpvuptdi.supabase.co'));
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || (USE_LOCAL_DB ? 'http://127.0.0.1:54321' : '');
 
-const supabaseAnonKey = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || (USE_LOCAL_DB
-  ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
-  : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2dnZqeXdybXBjcXJwdnVwdGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwMzc4MzgsImV4cCI6MjA2ODYxMzgzOH0.mjXejyRHPzEJfMlhW46TlYI0qw9mtoSRJZhGsCkuvd8'));
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || (USE_LOCAL_DB ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' : '');
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Supabase configuration missing!');
@@ -108,7 +106,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 
 // Admin client for service role operations (development only)
 // WARNING: This exposes the service role key to the client - only for development!
-const supabaseServiceRoleKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || (USE_LOCAL_DB 
+const supabaseServiceRoleKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || (USE_LOCAL_DB
   ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
   : undefined);
 
@@ -162,3 +160,12 @@ export const hasRole = (profile: any, role: string): boolean => {
 export const getUserSchool = (profile: any) => {
   return profile?.schools;
 };
+
+// Expose clients globally for debugging (development only)
+if (typeof window !== 'undefined' && DEBUG_SUPABASE) {
+  (window as any).supabaseClients = {
+    supabase,
+    supabaseAdmin
+  };
+  console.log('🔧 [Debug] Supabase clients exposed globally for debugging');
+}

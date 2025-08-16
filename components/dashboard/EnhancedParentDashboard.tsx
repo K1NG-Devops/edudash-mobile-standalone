@@ -445,7 +445,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         router.push('/screens/register-child');
         break;
       default:
-        console.log(`Quick action: ${action}`);
+
     }
   };
 
@@ -780,7 +780,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
           role: 'parent',
           avatar: profile?.avatar_url,
         }}
-        onNotificationsPress={() => console.log('Notifications')}
+        onNotificationsPress={() => {/* TODO: Implement action */}}
         onSignOut={onSignOut}
         onNavigate={(route) => router.push(route as any)}
         notificationCount={recentUpdates.length}

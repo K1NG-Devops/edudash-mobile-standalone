@@ -160,7 +160,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
   // Navigation handlers
   const handleNavigate = (route: string) => {
-    console.log('Navigating to:', route);
+
     if (route.startsWith('/(tabs)')) {
       router.push(route as any);
     } else if (route.startsWith('/')) {
@@ -187,7 +187,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         router.push('/(tabs)/messages');
         break;
       default:
-        console.log(`Quick action: ${action}`);
+
     }
   };
 
@@ -198,7 +198,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         <MobileHeader
           user={userProfile}
           schoolName={tenantName}
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement notifications */}}
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -218,7 +218,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         <MobileHeader
           user={userProfile}
           schoolName={tenantName}
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement notifications */}}
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -241,7 +241,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
       <MobileHeader
         user={userProfile}
         schoolName={tenantName}
-        onNotificationsPress={() => console.log('Notifications')}
+        onNotificationsPress={() => {/* TODO: Implement notifications */}}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
         notificationCount={dashboardData?.recent_updates.length || 0}

@@ -1,19 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { InvitationService } from '@/lib/services/invitationService';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { PrincipalService } from '@/lib/services/principalService';
-import { InvitationService } from '@/lib/services/invitationService';
 
 interface TeacherSignupProps {
   invitationCode?: string;
@@ -46,7 +45,7 @@ export default function TeacherSignup({ invitationCode }: TeacherSignupProps) {
     setLoading(true);
     try {
       const invitationData = await InvitationService.getInvitationByCode(inviteCode);
-      
+
       if (!invitationData) {
         Alert.alert('Error', 'Invalid or expired invitation code');
         return;
@@ -83,7 +82,7 @@ export default function TeacherSignup({ invitationCode }: TeacherSignupProps) {
     try {
       // In a real app, you would create an auth account first
       const authUserId = 'temp-auth-id-' + Date.now();
-      
+
       // Use the invitation code to create the teacher account
       await InvitationService.useInvitationCode(
         invitation.code,
@@ -100,7 +99,7 @@ export default function TeacherSignup({ invitationCode }: TeacherSignupProps) {
             text: 'Continue',
             onPress: () => {
               // Navigate to teacher dashboard
-              console.log('Navigate to teacher dashboard');
+
             },
           },
         ]
@@ -154,7 +153,7 @@ export default function TeacherSignup({ invitationCode }: TeacherSignupProps) {
 
       <View style={styles.helpSection}>
         <Text style={styles.helpText}>
-          Don't have a code? Contact your school administrator.
+          Do not have a code? Contact your school administrator.
         </Text>
       </View>
     </View>

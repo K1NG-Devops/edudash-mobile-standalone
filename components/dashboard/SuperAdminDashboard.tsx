@@ -82,8 +82,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
   // Handle navigation
   const handleNavigate = (route: string) => {
-    console.log('Navigating to:', route);
-    
+
     // Use parent onNavigate if provided, otherwise use local routing
     if (onNavigate) {
       onNavigate(route);
@@ -380,7 +379,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         <MobileHeader
           user={userProfile}
           schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement notifications */}}
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -400,7 +399,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         <MobileHeader
           user={userProfile}
           schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement notifications */}}
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -425,7 +424,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       <MobileHeader
         user={userProfile}
         schoolName="EduDash Pro Platform"
-        onNotificationsPress={() => console.log('Notifications')}
+        onNotificationsPress={() => {/* TODO: Implement notifications */}}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
         notificationCount={dashboardData.alerts.length}

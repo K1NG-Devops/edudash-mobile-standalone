@@ -92,8 +92,7 @@ export class StudentDataService {
    */
   static async getStudentsForParent(parentUserId: string): Promise<EnhancedStudent[]> {
     try {
-      console.log('📚 [StudentService] Fetching students for parent:', parentUserId);
-      
+
       // First get the parent's profile
       const { data: parentProfile, error: parentError } = await supabase
         .from('users')
@@ -137,7 +136,7 @@ export class StudentDataService {
       }
 
       if (!studentsData || studentsData.length === 0) {
-        console.log('ℹ️ [StudentService] No active students found for parent');
+
         return [];
       }
 
@@ -182,7 +181,6 @@ export class StudentDataService {
         })
       );
 
-      console.log(`✅ [StudentService] Successfully fetched ${enhancedStudents.length} students`);
       return enhancedStudents;
 
     } catch (error) {
@@ -196,7 +194,6 @@ export class StudentDataService {
    */
   static async getStudentProgress(studentId: string): Promise<StudentProgressData | null> {
     try {
-      console.log('📊 [StudentService] Fetching progress for student:', studentId);
 
       // Get basic progress metrics
       const [
@@ -241,8 +238,7 @@ export class StudentDataService {
    */
   static async getParentDashboardData(parentUserId: string): Promise<ParentDashboardData> {
     try {
-      console.log('🏠 [StudentService] Fetching parent dashboard data');
-      
+
       // Get children
       const children = await this.getStudentsForParent(parentUserId);
       

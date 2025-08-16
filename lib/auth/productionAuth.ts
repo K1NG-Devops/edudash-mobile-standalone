@@ -11,7 +11,7 @@ export interface AuthResult {
 }
 
 export class ProductionAuth {
-  
+
   /**
    * Register the first superadmin user (PRODUCTION SECURED)
    */
@@ -188,9 +188,9 @@ export class ProductionAuth {
 
       return { success: true, profile: data };
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to load profile' 
+      return {
+        success: false,
+        error: error.message || 'Failed to load profile'
       };
     }
   }
@@ -226,7 +226,7 @@ export class ProductionAuth {
         .single();
 
       if (error || !data) return false;
-      return data.role === 'superadmin' && data.is_active;
+      return data.role === 'superadmin' && !!data.is_active;
     } catch {
       return false;
     }

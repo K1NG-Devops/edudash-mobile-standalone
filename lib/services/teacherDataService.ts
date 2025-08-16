@@ -86,7 +86,6 @@ export class TeacherDataService {
    */
   static async getTeacherClasses(teacherUserId: string): Promise<TeacherClass[]> {
     try {
-      console.log('👩‍🏫 [TeacherService] Fetching classes for teacher:', teacherUserId);
 
       // First get the teacher's profile
       const { data: teacherProfile, error: teacherError } = await supabase
@@ -127,7 +126,7 @@ export class TeacherDataService {
       }
 
       if (!classesData || classesData.length === 0) {
-        console.log('ℹ️ [TeacherService] No active classes found for teacher');
+
         return [];
       }
 
@@ -166,7 +165,6 @@ export class TeacherDataService {
         })
       );
 
-      console.log(`✅ [TeacherService] Successfully fetched ${teacherClasses.length} classes`);
       return teacherClasses;
 
     } catch (error) {
@@ -180,7 +178,6 @@ export class TeacherDataService {
    */
   static async getTeacherStudents(teacherUserId: string): Promise<TeacherStudent[]> {
     try {
-      console.log('📚 [TeacherService] Fetching students for teacher:', teacherUserId);
 
       const classes = await this.getTeacherClasses(teacherUserId);
       const allStudents: TeacherStudent[] = [];
@@ -241,7 +238,6 @@ export class TeacherDataService {
         }
       }
 
-      console.log(`✅ [TeacherService] Successfully fetched ${allStudents.length} students`);
       return allStudents;
 
     } catch (error) {
@@ -255,7 +251,6 @@ export class TeacherDataService {
    */
   static async getTeacherDashboardData(teacherUserId: string): Promise<TeacherDashboardData> {
     try {
-      console.log('🏠 [TeacherService] Fetching teacher dashboard data');
 
       // Get classes
       const classes = await this.getTeacherClasses(teacherUserId);

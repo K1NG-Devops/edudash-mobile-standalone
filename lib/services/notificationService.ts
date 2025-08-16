@@ -30,7 +30,6 @@ export class NotificationService {
    * Get all notifications for a specific user
    */
   static async getUserNotifications(userId: string): Promise<Notification[]> {
-    console.log('🔔 [NotificationService] Fetching notifications for user:', userId);
 
     try {
       const { data, error } = await supabase
@@ -45,7 +44,6 @@ export class NotificationService {
         throw new Error(error.message);
       }
 
-      console.log('✅ [NotificationService] Found notifications:', data?.length || 0);
       return data || [];
     } catch (error) {
       console.error('❌ [NotificationService] Error fetching notifications:', error);
@@ -94,7 +92,6 @@ export class NotificationService {
         throw new Error(error.message);
       }
 
-      console.log('✅ [NotificationService] Marked notification as read:', notificationId);
     } catch (error) {
       console.error('❌ [NotificationService] Error marking as read:', error);
       throw error;
@@ -120,7 +117,6 @@ export class NotificationService {
         throw new Error(error.message);
       }
 
-      console.log('✅ [NotificationService] Marked all notifications as read for user:', userId);
     } catch (error) {
       console.error('❌ [NotificationService] Error marking all as read:', error);
       throw error;
@@ -161,7 +157,6 @@ export class NotificationService {
         throw new Error(error.message);
       }
 
-      console.log('✅ [NotificationService] Created notification:', title);
     } catch (error) {
       console.error('❌ [NotificationService] Error creating notification:', error);
       throw error;
@@ -202,7 +197,6 @@ export class NotificationService {
         throw new Error(error.message);
       }
 
-      console.log('✅ [NotificationService] Created bulk notifications for', userIds.length, 'users');
     } catch (error) {
       console.error('❌ [NotificationService] Error creating bulk notifications:', error);
       throw error;
@@ -238,7 +232,7 @@ export class NotificationService {
         console.error('❌ [NotificationService] Error logging activity:', activityError);
         // Don't throw here, as notifications shouldn't fail because of activity logging
       } else {
-        console.log('✅ [NotificationService] Logged activity:', action);
+
       }
 
       // Create notifications based on activity type
@@ -339,7 +333,7 @@ export class NotificationService {
 
         default:
           // General activity notification
-          console.log('ℹ️ [NotificationService] No specific notification rule for action:', action);
+
           break;
       }
     } catch (error) {
@@ -367,7 +361,7 @@ export class NotificationService {
         .eq('is_active', true);
 
       if (error || !superAdmins || superAdmins.length === 0) {
-        console.log('⚠️ [NotificationService] No super admins found to notify');
+
         return;
       }
 
@@ -382,7 +376,6 @@ export class NotificationService {
         relatedEntityId
       );
 
-      console.log('✅ [NotificationService] Notified', userIds.length, 'super admins');
     } catch (error) {
       console.error('❌ [NotificationService] Error notifying super admins:', error);
     }
@@ -406,7 +399,6 @@ export class NotificationService {
         throw new Error(error.message);
       }
 
-      console.log('✅ [NotificationService] Cleaned up old notifications');
     } catch (error) {
       console.error('❌ [NotificationService] Error cleaning up old notifications:', error);
       throw error;

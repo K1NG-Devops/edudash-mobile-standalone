@@ -155,7 +155,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardProps> = ({ profile, onSignOu
           role: profile?.role || 'preschool_admin',
           avatar: profile?.avatar_url,
         }}
-        onNotificationsPress={() => console.log('Notifications')}
+        onNotificationsPress={() => { /* TODO: Implement notifications */ }}
         onSignOut={onSignOut}
         onNavigate={(screen) => router.push(screen as any)}
         notificationCount={5}

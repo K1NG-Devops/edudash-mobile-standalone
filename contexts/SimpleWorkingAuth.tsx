@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
@@ -145,10 +143,19 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
               loading: false
             });
 
-            // Disable automatic redirect on sign out to prevent interference
-            // with password reset and other flows. The welcome screen (index.tsx)
-            // will handle showing appropriate auth screens when needed.
-            console.log('🚫 Skipping automatic redirect on SIGNED_OUT - letting app handle navigation');
+            // Navigate to welcome screen after sign out
+            setTimeout(() => {
+              try {
+                router.replace('/');
+              } catch (error) {
+                console.warn('Navigation failed:', error);
+                try {
+                  router.push('/');
+                } catch (pushError) {
+                  console.warn('Fallback navigation failed:', pushError);
+                }
+              }
+            }, 100);
           } else {
             // For other events, just update session/user
             this.setState({
@@ -179,8 +186,11 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
       // Set loading state immediately
       this.setState({ loading: true });
 
-      // Use direct query with auth.uid() check
-      console.log('📡 [DEBUG] Executing query: SELECT * FROM users WHERE auth_user_id =', userId);
+      // Clear any existing profile state to force fresh load
+      this.setState({ profile: null });
+
+      // Use direct query with auth.uid() check and force fresh data
+      console.log('📡 [DEBUG] Executing fresh query: SELECT * FROM users WHERE auth_user_id =', userId);
 
       const { data, error } = await supabase
         .from('users')
@@ -234,8 +244,8 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
           name: data.name,
           role: data.role as 'superadmin' | 'preschool_admin' | 'teacher' | 'parent',
           preschool_id: data.preschool_id,
-          auth_user_id: data.auth_user_id,
-          is_active: data.is_active,
+          auth_user_id: data.auth_user_id || '',
+          is_active: !!data.is_active,
           avatar_url: data.avatar_url,
           phone: data.phone,
           home_address: data.home_address,
@@ -255,8 +265,8 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
           pickup_authorized: data.pickup_authorized,
           profile_completed_at: data.profile_completed_at,
           profile_completion_status: (data.profile_completion_status as 'incomplete' | 'in_progress' | 'complete') || 'incomplete',
-          created_at: data.created_at,
-          updated_at: data.updated_at
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString()
         };
 
         // Update profile state
@@ -327,56 +337,10 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
   signOut = async () => {
     try {
-      console.log('🚪 Starting sign out process...');
       this.setState({ loading: true });
-
-      // Clear local state immediately to ensure UI updates
-      this.setState({
-        session: null,
-        user: null,
-        profile: null,
-      });
-
-      // Call Supabase sign out
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        console.error('❌ Supabase sign out error:', error);
-        // Even if Supabase sign out fails, we've already cleared local state
-      } else {
-        console.log('✅ Supabase sign out successful');
-      }
-
-      // Go back to welcome screen after sign out
-      setTimeout(() => {
-        try {
-          console.log('🧭 Navigating to welcome screen...');
-          router.replace('/');
-        } catch (navError) {
-          console.warn('Navigation error:', navError);
-          // Try alternative navigation methods
-          try {
-            router.push('/');
-          } catch (pushError) {
-            console.warn('Push navigation failed:', pushError);
-            // As a last resort, try to go to the root
-            try {
-              router.replace('/');
-            } catch (rootError) {
-              console.error('All navigation attempts failed:', rootError);
-            }
-          }
-        }
-      }, 50);
-
+      await supabase.auth.signOut();
     } catch (error) {
-      console.error('❌ Sign out process error:', error);
-      // Even on error, clear the local state
-      this.setState({
-        session: null,
-        user: null,
-        profile: null,
-      });
+      console.error('Sign out error:', error);
     } finally {
       this.setState({ loading: false });
     }
@@ -386,16 +350,8 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     try {
       this.setState({ loading: true });
 
-      // For development, use a web URL that will redirect back to the app
-      // In production, use the native deep link
-      const isDevelopment = __DEV__;
-
-      const redirectTo = isDevelopment
-        ? 'http://localhost:8081/reset-password'  // Web version for development
-        : 'edudashpro://auth/reset-password';     // Deep link for production
-
-      console.log('🔧 Reset password redirect URL:', redirectTo);
-      console.log('🔧 Development mode:', isDevelopment);
+      // Use localhost for development (mobile app)
+      const redirectTo = 'http://localhost:3000/auth/reset-password';
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,

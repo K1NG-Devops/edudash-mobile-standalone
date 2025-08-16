@@ -51,7 +51,7 @@ const MAPPING: IconMapping = {
   // Analytics & Charts
   'chart.bar.fill': 'bar-chart',
   'chart.bar': 'bar-chart',
-  'chart.bar.doc.horizontal': 'bar-chart',
+  // removed duplicate mapping; keep single entry below
   'chart.pie': 'pie-chart',
   'chart.line.uptrend.xyaxis': 'trending-up',
   'dollarsign.circle.fill': 'attach-money',
@@ -127,6 +127,8 @@ const MAPPING: IconMapping = {
   'star.fill': 'star',
   'star': 'star-border',
   'line.3.horizontal': 'menu',
+  'globe': 'public',
+  'globe.americas': 'public',
 
   // AI & Brain
   'brain.head.profile': 'psychology',
@@ -142,6 +144,10 @@ const MAPPING: IconMapping = {
   'mail': 'mail',
   'checkmark': 'check',
   'x': 'close',
+  'arrow.right': 'arrow-forward',
+  'trash.fill': 'delete-forever',
+  'document': 'description',
+  'rectangle.3.group.fill': 'dashboard',
 };
 
 /**

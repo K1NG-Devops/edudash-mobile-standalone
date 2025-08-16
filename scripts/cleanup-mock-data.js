@@ -83,7 +83,7 @@ function analyzeMockDataInFile(filePath) {
   const fullPath = path.join(__dirname, '..', filePath);
   
   if (!fs.existsSync(fullPath)) {
-    console.log(`⚠️ File not found: ${filePath}`);
+
     return null;
   }
 
@@ -101,9 +101,7 @@ function analyzeMockDataInFile(filePath) {
 }
 
 function generateCleanupReport() {
-  console.log('🧹 EduDash Pro Mock Data Cleanup Analysis\n');
-  console.log('=' .repeat(60));
-  
+
   const results = [];
   let totalMockDataFiles = 0;
   let totalMockDataInstances = 0;
@@ -120,59 +118,42 @@ function generateCleanupReport() {
   });
 
   // Summary
-  console.log('📊 SUMMARY:');
-  console.log(`📁 Total files analyzed: ${results.length}`);
-  console.log(`🔍 Files with mock data: ${totalMockDataFiles}`);
-  console.log(`🗑️ Total mock data instances: ${totalMockDataInstances}\n`);
 
   // Detailed results
-  console.log('📋 DETAILED ANALYSIS:\n');
-  
+
   results.forEach(result => {
     if (result.hasMockData) {
-      console.log(`❌ ${result.filePath}`);
-      console.log(`   📏 Size: ${result.fileSize} chars, ${result.linesOfCode} lines`);
-      console.log(`   🚨 Mock data instances: ${result.mockDataFound.length}`);
-      
+
       result.mockDataFound.forEach(mock => {
-        console.log(`      • Pattern ${mock.pattern}: ${mock.matches} matches`);
-        console.log(`        Sample: ${mock.sample}`);
+
       });
-      console.log('');
+
     } else {
-      console.log(`✅ ${result.filePath} - Clean`);
+
     }
   });
 
   // Recommendations
-  console.log('💡 CLEANUP RECOMMENDATIONS:\n');
-  
+
   const highPriorityFiles = results.filter(r => r.hasMockData && r.mockDataFound.length > 2);
   if (highPriorityFiles.length > 0) {
-    console.log('🔥 HIGH PRIORITY (Multiple mock data instances):');
+
     highPriorityFiles.forEach(file => {
-      console.log(`   • ${file.filePath}`);
+
     });
-    console.log('');
+
   }
 
   const mediumPriorityFiles = results.filter(r => r.hasMockData && r.mockDataFound.length <= 2);
   if (mediumPriorityFiles.length > 0) {
-    console.log('⚠️ MEDIUM PRIORITY (Few mock data instances):');
+
     mediumPriorityFiles.forEach(file => {
-      console.log(`   • ${file.filePath}`);
+
     });
-    console.log('');
+
   }
 
   // Suggested replacements
-  console.log('🔄 SUGGESTED REPLACEMENTS:');
-  console.log('   • Replace mockStats with actual database queries');
-  console.log('   • Use AI services for generating dynamic content');
-  console.log('   • Implement proper loading states');
-  console.log('   • Add error handling for real API calls');
-  console.log('   • Use Supabase real-time subscriptions for live data');
-  console.log('   • Implement proper data fetching hooks\n');
 
   return {
     totalFiles: results.length,
@@ -185,14 +166,7 @@ function generateCleanupReport() {
 // Run the analysis
 if (require.main === module) {
   const report = generateCleanupReport();
-  
-  console.log('🎯 NEXT STEPS:');
-  console.log('1. Start with high-priority files');
-  console.log('2. Replace mock data with Supabase queries');
-  console.log('3. Integrate AI services where appropriate');
-  console.log('4. Add proper error handling');
-  console.log('5. Test with real data');
-  console.log('\n🚀 Ready to clean up mock data and implement real AI features!');
+
 }
 
 module.exports = {

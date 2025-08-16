@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator
-} from 'react-native';
-import { router } from 'expo-router';
-import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 interface UserProfile {
   id: string;
@@ -68,7 +68,19 @@ export default function ProfileScreen() {
         return;
       }
 
-      setProfile(data);
+      // Normalize nullable fields to match component interface
+      setProfile({
+        id: data.id,
+        name: data.name || 'User',
+        email: data.email,
+        role: data.role,
+        phone: data.phone || undefined,
+        avatar_url: data.avatar_url || undefined,
+        preschool_id: data.preschool_id || undefined,
+        is_active: !!data.is_active,
+        created_at: data.created_at || new Date().toISOString(),
+        preschool: (data as any).preschools ? { name: (data as any).preschools.name, address: (data as any).preschools.address || undefined } : undefined
+      });
     } catch (err: any) {
       console.error('Error fetching profile:', err);
       setError('Failed to load profile data');
@@ -93,7 +105,7 @@ export default function ProfileScreen() {
   };
 
   const handleNavigate = (route: string) => {
-    console.log('Navigating to:', route);
+
     if (route.startsWith('/')) {
       router.push(route as any);
     } else {
@@ -105,9 +117,9 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <MobileHeader
-          user={user ? { name: user.email || 'User', role: 'user' } : null}
+          user={{ name: user?.email || 'User', role: 'user' }}
           schoolName="Profile"
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement notifications */ }}
           onSignOut={handleSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -124,9 +136,9 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <MobileHeader
-          user={user ? { name: user.email || 'User', role: 'user' } : null}
+          user={{ name: user?.email || 'User', role: 'user' }}
           schoolName="Profile"
-          onNotificationsPress={() => console.log('Notifications')}
+          onNotificationsPress={() => {/* TODO: Implement notifications */ }}
           onSignOut={handleSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -153,7 +165,7 @@ export default function ProfileScreen() {
         onNavigate={handleNavigate}
         notificationCount={0}
       />
-      
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
@@ -170,7 +182,7 @@ export default function ProfileScreen() {
         {/* Profile Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Information</Text>
-          
+
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <IconSymbol name="envelope" size={20} color="#6B7280" />
@@ -216,7 +228,7 @@ export default function ProfileScreen() {
         {profile.preschool && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>School Information</Text>
-            
+
             <View style={styles.infoCard}>
               <View style={styles.infoRow}>
                 <IconSymbol name="building.2" size={20} color="#6B7280" />
@@ -242,7 +254,7 @@ export default function ProfileScreen() {
         {/* Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Actions</Text>
-          
+
           <TouchableOpacity style={styles.actionButton} onPress={() => handleNavigate('/screens/settings')}>
             <IconSymbol name="gear" size={20} color="#8B5CF6" />
             <Text style={styles.actionButtonText}>Settings</Text>
