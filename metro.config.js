@@ -1,12 +1,19 @@
 // Metro configuration for Expo/React Native
-// Blocks heavy/unnecessary directories from being watched to reduce watcher load
+// Reduce watcher load and add simple path alias
 
+const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 const exclusionList = require('metro-config/src/defaults/exclusionList');
 
-const projectRoot = __dirname;
-const config = getDefaultConfig(projectRoot);
+/** @type {import('expo/metro-config').MetroConfig} */
+const config = getDefaultConfig(__dirname);
 
+// Path alias
+config.resolver.alias = {
+  '@': path.resolve(__dirname, './'),
+};
+
+// Exclusions (use Metro's exclusionList to create a single RegExp)
 config.resolver.blockList = exclusionList([
   /(^|\/)\.git\//,
   /(^|\/)\.expo\//,
@@ -18,23 +25,6 @@ config.resolver.blockList = exclusionList([
   /(^|\/)web\/build\//,
   /(^|\/)archive\//,
   /(^|\/)docs\//,
-]);
-
-module.exports = config;
-
-const { getDefaultConfig } = require('expo/metro-config');
-const path = require('path');
-
-/** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
-
-// Configure resolver
-config.resolver.alias = {
-  '@': path.resolve(__dirname, './'),
-};
-
-// Exclude Node.js scripts and problematic files from bundling
-config.resolver.blockList = [
   /.*\.bak$/,
   /scripts\/.*\.js$/,
   /.*_test\.js$/,
@@ -51,14 +41,14 @@ config.resolver.blockList = [
   /.*\.sql$/,
   /database-migrations\/.*$/,
   /logs\/.*$/,
-];
+]);
 
-// Ensure proper file extensions are handled
-config.resolver.sourceExts = [
+// Ensure extensions include ts/tsx/jsx (dedup)
+config.resolver.sourceExts = Array.from(new Set([
   ...config.resolver.sourceExts,
-  'jsx',
   'ts',
-  'tsx'
-];
+  'tsx',
+  'jsx',
+]));
 
 module.exports = config;
