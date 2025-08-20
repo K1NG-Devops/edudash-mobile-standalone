@@ -63,7 +63,7 @@ export default function ProfileScreen() {
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        // Removed debug statement: console.error('Error fetching profile:', error);
         setError('Failed to load profile data');
         return;
       }
@@ -82,7 +82,7 @@ export default function ProfileScreen() {
         preschool: (data as any).preschools ? { name: (data as any).preschools.name, address: (data as any).preschools.address || undefined } : undefined
       });
     } catch (err: any) {
-      console.error('Error fetching profile:', err);
+      // Removed debug statement: console.error('Error fetching profile:', err);
       setError('Failed to load profile data');
     } finally {
       setLoading(false);

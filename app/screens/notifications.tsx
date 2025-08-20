@@ -46,7 +46,7 @@ export default function NotificationsScreen() {
       const data = await NotificationService.getUserNotifications(user.id);
       setNotifications(data);
     } catch (err: any) {
-      console.error('Error fetching notifications:', err);
+      // Removed debug statement: console.error('Error fetching notifications:', err);
       setError(err.message || 'Failed to load notifications');
     } finally {
       setLoading(false);
@@ -75,7 +75,7 @@ export default function NotificationsScreen() {
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
     } catch (err) {
-      console.error('Error marking notification as read:', err);
+      // Removed debug statement: console.error('Error marking notification as read:', err);
     }
   };
 
@@ -87,7 +87,7 @@ export default function NotificationsScreen() {
       await NotificationService.markAllAsRead(user.id);
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     } catch (err) {
-      console.error('Error marking all notifications as read:', err);
+      // Removed debug statement: console.error('Error marking all notifications as read:', err);
       Alert.alert('Error', 'Failed to mark all notifications as read');
     }
   };

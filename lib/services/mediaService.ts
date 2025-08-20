@@ -33,7 +33,7 @@ export class MediaService {
         mediaLibrary: mediaLibraryPermissions.status === 'granted',
       };
     } catch (error) {
-      console.error('Error requesting permissions:', error);
+      log.error('Error requesting permissions:', error);
       return { camera: false, mediaLibrary: false };
     }
   }
@@ -79,7 +79,7 @@ export class MediaService {
 
       return null;
     } catch (error) {
-      console.error('Error picking image:', error);
+      log.error('Error picking image:', error);
       throw error;
     }
   }
@@ -124,7 +124,7 @@ export class MediaService {
 
       return null;
     } catch (error) {
-      console.error('Error picking video:', error);
+      log.error('Error picking video:', error);
       throw error;
     }
   }
@@ -240,7 +240,7 @@ export class MediaService {
 
       return { data: mediaRecord, error: null };
     } catch (error) {
-      console.error('Error uploading media:', error);
+      log.error('Error uploading media:', error);
       return { data: null, error };
     }
   }
@@ -257,7 +257,7 @@ export class MediaService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching message media:', error);
+      log.error('Error fetching message media:', error);
       return { data: null, error };
     }
   }
@@ -277,7 +277,7 @@ export class MediaService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching classroom activity media:', error);
+      log.error('Error fetching classroom activity media:', error);
       return { data: null, error };
     }
   }
@@ -302,7 +302,7 @@ export class MediaService {
         .remove([filePath]);
 
       if (storageError) {
-        console.warn('Storage deletion failed:', storageError);
+        log.warn('Storage deletion failed:', storageError);
       }
 
       // Delete from database
@@ -315,7 +315,7 @@ export class MediaService {
       if (dbError) throw dbError;
       return { error: null };
     } catch (error) {
-      console.error('Error deleting media:', error);
+      log.error('Error deleting media:', error);
       return { error };
     }
   }
@@ -372,7 +372,7 @@ export class MediaService {
 
       return { data: activity, error: null };
     } catch (error) {
-      console.error('Error creating classroom activity:', error);
+      log.error('Error creating classroom activity:', error);
       return { data: null, error };
     }
   }
@@ -395,7 +395,7 @@ export class MediaService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching student activities:', error);
+      log.error('Error fetching student activities:', error);
       return { data: null, error };
     }
   }
@@ -433,7 +433,7 @@ export class MediaService {
 
       return { data: stats, error: null };
     } catch (error) {
-      console.error('Error fetching media stats:', error);
+      log.error('Error fetching media stats:', error);
       return { data: null, error };
     }
   }

@@ -24,7 +24,7 @@ export class StorageUtil {
         await AsyncStorage.setItem(key, value);
       }
     } catch (error) {
-      console.error(`Error storing item with key ${key}:`, error);
+      log.error(`Error storing item with key ${key}:`, error);
       throw error;
     }
   }
@@ -40,7 +40,7 @@ export class StorageUtil {
         return await AsyncStorage.getItem(key);
       }
     } catch (error) {
-      console.error(`Error getting item with key ${key}:`, error);
+      log.error(`Error getting item with key ${key}:`, error);
       return null;
     }
   }
@@ -56,7 +56,7 @@ export class StorageUtil {
         await AsyncStorage.removeItem(key);
       }
     } catch (error) {
-      console.error(`Error removing item with key ${key}:`, error);
+      log.error(`Error removing item with key ${key}:`, error);
       throw error;
     }
   }
@@ -69,7 +69,7 @@ export class StorageUtil {
       const jsonString = JSON.stringify(value);
       await this.setItem(key, jsonString);
     } catch (error) {
-      console.error(`Error storing JSON with key ${key}:`, error);
+      log.error(`Error storing JSON with key ${key}:`, error);
       throw error;
     }
   }
@@ -85,7 +85,7 @@ export class StorageUtil {
       }
       return JSON.parse(jsonString);
     } catch (error) {
-      console.error(`Error getting JSON with key ${key}:`, error);
+      log.error(`Error getting JSON with key ${key}:`, error);
       return defaultValue;
     }
   }
@@ -101,7 +101,7 @@ export class StorageUtil {
         await AsyncStorage.clear();
       }
     } catch (error) {
-      console.error('Error clearing storage:', error);
+      log.error('Error clearing storage:', error);
       throw error;
     }
   }
@@ -118,7 +118,7 @@ export class StorageUtil {
         return Array.isArray(keys) ? [...keys] : [];
       }
     } catch (error) {
-      console.error('Error getting all keys:', error);
+      log.error('Error getting all keys:', error);
       return [];
     }
   }

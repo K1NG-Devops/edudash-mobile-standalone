@@ -113,7 +113,7 @@ const fetchRecentUpdates = async (parentId: string, children: Child[]): Promise<
     
     return updates.slice(0, 3);
   } catch (error) {
-    console.error('Error fetching recent updates:', error);
+    // Removed debug statement: console.error('Error fetching recent updates:', error);
     return [];
   }
 };
@@ -179,7 +179,7 @@ const fetchUpcomingEvents = async (parentId: string, children: Child[]): Promise
     // Sort by date and return top 3
     return events.slice(0, 3);
   } catch (error) {
-    console.error('Error fetching upcoming events:', error);
+    // Removed debug statement: console.error('Error fetching upcoming events:', error);
     return [];
   }
 };
@@ -288,7 +288,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         setTenantInfo({ name: tenant.name });
       }
     } catch (error) {
-      console.error('Failed to fetch tenant info:', error);
+      // Removed debug statement: console.error('Failed to fetch tenant info:', error);
     }
   }, [profile?.preschool_id]);
 
@@ -394,7 +394,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
       setUpcomingEvents(eventsResult);
 
     } catch (error) {
-      console.error('Error fetching children data:', error);
+      // Removed debug statement: console.error('Error fetching children data:', error);
       Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);

@@ -254,7 +254,7 @@ export class STEMActivityGeneratorService {
     // Check if age group matches concept
     const ageNumber = parseInt(params.ageGroup.split('-')[0]);
     if (ageNumber < concept.ageRange.min || ageNumber > concept.ageRange.max) {
-      console.warn(`Age group ${params.ageGroup} may not be optimal for concept ${concept.name}`);
+      log.warn(`Age group ${params.ageGroup} may not be optimal for concept ${concept.name}`);
     }
 
     const result = await claudeAI.generateSTEMActivity({
@@ -501,7 +501,7 @@ export class STEMActivityGeneratorService {
         activityId: activityData.id
       };
     } catch (error) {
-      console.error('Error saving STEM activity:', error);
+      log.error('Error saving STEM activity:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to save STEM activity'

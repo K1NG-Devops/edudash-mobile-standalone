@@ -44,7 +44,7 @@ export class VideoCallService {
 
       return { data: videoCall, error: null };
     } catch (error) {
-      console.error('Error scheduling video call:', error);
+      log.error('Error scheduling video call:', error);
       return { data: null, error };
     }
   }
@@ -66,7 +66,7 @@ export class VideoCallService {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Error getting upcoming video calls:', error);
+      log.error('Error getting upcoming video calls:', error);
       return { data: null, error };
     }
   }
@@ -98,7 +98,7 @@ export class VideoCallService {
 
       return { error: null };
     } catch (error) {
-      console.error('Error cancelling video call:', error);
+      log.error('Error cancelling video call:', error);
       return { error };
     }
   }
@@ -133,7 +133,7 @@ export class VideoCallService {
 
       return { error: null };
     } catch (error) {
-      console.error('Error joining video call:', error);
+      log.error('Error joining video call:', error);
       return { error };
     }
   }

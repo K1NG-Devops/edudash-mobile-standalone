@@ -51,6 +51,8 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
   const [teachers, setTeachers] = useState<TeacherData[]>([]);
   const [invitations, setInvitations] = useState<TeacherInvitation[]>([]);
   const [loading, setLoading] = useState(false);
+  // Per-invitation processing state to improve responsiveness feedback
+  const [processing, setProcessing] = useState<{ [id: string]: 'resend' | 'revoke' | 'delete' | undefined }>({});
 
   // Form state for inviting new teacher
   const [inviteForm, setInviteForm] = useState({
@@ -73,10 +75,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
       if (result.data) {
         setTeachers(result.data);
       } else if (result.error) {
-        console.error('Error loading teachers:', result.error);
+        // Removed debug statement: console.error('Error loading teachers:', result.error);
       }
     } catch (error) {
-      console.error('Error loading teachers:', error);
+      // Removed debug statement: console.error('Error loading teachers:', error);
     } finally {
       setLoading(false);
     }
@@ -88,10 +90,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
       if (result.data) {
         setInvitations(result.data);
       } else if (result.error) {
-        console.error('Error loading invitations:', result.error);
+        // Removed debug statement: console.error('Error loading invitations:', result.error);
       }
     } catch (error) {
-      console.error('Error loading invitations:', error);
+      // Removed debug statement: console.error('Error loading invitations:', error);
     }
   };
 
@@ -135,7 +137,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
         Alert.alert('Error', result.error || 'Failed to send invitation');
       }
     } catch (error) {
-      console.error('Error inviting teacher:', error);
+      // Removed debug statement: console.error('Error inviting teacher:', error);
       Alert.alert('Error', 'Failed to send invitation. Please try again.');
     } finally {
       setLoading(false);
@@ -161,7 +163,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                 Alert.alert('Error', 'Failed to deactivate teacher');
               }
             } catch (error) {
-              console.error('Error deactivating teacher:', error);
+              // Removed debug statement: console.error('Error deactivating teacher:', error);
               Alert.alert('Error', 'Failed to deactivate teacher');
             }
           },
@@ -172,7 +174,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
 
   const handleResendInvitation = async (invitation: TeacherInvitation) => {
     try {
-      setLoading(true);
+  setProcessing((s) => ({ ...s, [invitation.id]: 'resend' }));
       const result = await PrincipalService.resendTeacherInvitation(
         invitation.id,
         preschoolId
@@ -188,10 +190,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
         Alert.alert('Error', result.error || 'Failed to resend invitation email');
       }
     } catch (error) {
-      console.error('Error resending invitation:', error);
+      // Removed debug statement: console.error('Error resending invitation:', error);
       Alert.alert('Error', 'Failed to resend invitation. Please try again.');
     } finally {
-      setLoading(false);
+  setProcessing((s) => ({ ...s, [invitation.id]: undefined }));
     }
   };
 
@@ -206,7 +208,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              setLoading(true);
+              setProcessing((s) => ({ ...s, [invitation.id]: 'revoke' }));
               const result = await PrincipalService.revokeTeacherInvitation(
                 invitation.id,
                 preschoolId
@@ -223,10 +225,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                 Alert.alert('Error', result.error || 'Failed to revoke invitation');
               }
             } catch (error) {
-              console.error('Error revoking invitation:', error);
+              // Removed debug statement: console.error('Error revoking invitation:', error);
               Alert.alert('Error', 'Failed to revoke invitation. Please try again.');
             } finally {
-              setLoading(false);
+              setProcessing((s) => ({ ...s, [invitation.id]: undefined }));
             }
           },
         },
@@ -245,7 +247,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              setLoading(true);
+              setProcessing((s) => ({ ...s, [invitation.id]: 'delete' }));
               const result = await PrincipalService.deleteTeacherInvitation(
                 invitation.id,
                 preschoolId
@@ -262,10 +264,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                 Alert.alert('Error', result.error || 'Failed to delete invitation');
               }
             } catch (error) {
-              console.error('Error deleting invitation:', error);
+              // Removed debug statement: console.error('Error deleting invitation:', error);
               Alert.alert('Error', 'Failed to delete invitation. Please try again.');
             } finally {
-              setLoading(false);
+              setProcessing((s) => ({ ...s, [invitation.id]: undefined }));
             }
           },
         },
@@ -305,7 +307,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                 Alert.alert('Error', result.error || 'Failed to clean up expired invitations');
               }
             } catch (error) {
-              console.error('Error cleaning up expired invitations:', error);
+              // Removed debug statement: console.error('Error cleaning up expired invitations:', error);
               Alert.alert('Error', 'Failed to clean up expired invitations. Please try again.');
             } finally {
               setLoading(false);
@@ -332,6 +334,8 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
         return '#10B981';
       case 'expired':
         return '#EF4444';
+      case 'cancelled':
+        return '#6B7280';
       default:
         return '#6B7280';
     }
@@ -487,13 +491,17 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                   {/* Resend button for pending invitations */}
                   {invitation.status === 'pending' && new Date(invitation.expires_at) > new Date() && (
                     <TouchableOpacity
-                      style={[styles.actionButton, styles.resendButton, loading && styles.disabledButton]}
+                      style={[
+                        styles.actionButton,
+                        styles.resendButton,
+                        (processing[invitation.id] === 'resend') && styles.disabledButton
+                      ]}
                       onPress={() => handleResendInvitation(invitation)}
-                      disabled={loading}
+                      disabled={processing[invitation.id] === 'resend'}
                     >
                       <IconSymbol name="arrow.clockwise" size={14} color="#3B82F6" />
                       <Text style={styles.resendButtonText}>
-                        {loading ? 'Resending...' : 'Resend'}
+                        {processing[invitation.id] === 'resend' ? 'Resending...' : 'Resend'}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -501,23 +509,35 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                   {/* Revoke button for pending invitations */}
                   {invitation.status === 'pending' && (
                     <TouchableOpacity
-                      style={[styles.actionButton, styles.revokeButton, loading && styles.disabledButton]}
+                      style={[
+                        styles.actionButton,
+                        styles.revokeButton,
+                        (processing[invitation.id] === 'revoke') && styles.disabledButton
+                      ]}
                       onPress={() => handleRevokeInvitation(invitation)}
-                      disabled={loading}
+                      disabled={processing[invitation.id] === 'revoke'}
                     >
                       <IconSymbol name="xmark.circle" size={14} color="#F59E0B" />
-                      <Text style={styles.revokeButtonText}>Revoke</Text>
+                      <Text style={styles.revokeButtonText}>
+                        {processing[invitation.id] === 'revoke' ? 'Revoking...' : 'Revoke'}
+                      </Text>
                     </TouchableOpacity>
                   )}
                   
                   {/* Delete button for all invitations */}
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.deleteButton, loading && styles.disabledButton]}
+                    style={[
+                      styles.actionButton,
+                      styles.deleteButton,
+                      (processing[invitation.id] === 'delete') && styles.disabledButton
+                    ]}
                     onPress={() => handleDeleteInvitation(invitation)}
-                    disabled={loading}
+                    disabled={processing[invitation.id] === 'delete'}
                   >
                     <IconSymbol name="trash" size={14} color="#EF4444" />
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    <Text style={styles.deleteButtonText}>
+                      {processing[invitation.id] === 'delete' ? 'Deleting...' : 'Delete'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>

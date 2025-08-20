@@ -46,7 +46,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
       const count = await NotificationService.getUnreadCount(user.id);
       setNotificationCount(count);
     } catch (err) {
-      console.error('Error fetching notification count:', err);
+      // Removed debug statement: console.error('Error fetching notification count:', err);
       // Don't show error for notification count, just log it
     }
   };
@@ -54,14 +54,14 @@ const SuperAdminDashboardScreen: React.FC = () => {
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     if (!user?.id) {
-      console.log('🔍 [SuperAdmin] No user ID available');
+      // Removed debug statement: console.log('🔍 [SuperAdmin] No user ID available');
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 [SuperAdmin] Fetching dashboard data for user:', user.id);
+      // Removed debug statement: console.log('🔍 [SuperAdmin] Fetching dashboard data for user:', user.id);
 
       // Fetch dashboard data and notification count in parallel
       const [data] = await Promise.all([
@@ -72,7 +72,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
 
       setDashboardData(data);
     } catch (err: any) {
-      console.error('❌ [SuperAdmin] Error fetching dashboard data:', err);
+      // Removed debug statement: console.error('❌ [SuperAdmin] Error fetching dashboard data:', err);
       setError(err.message || 'Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);

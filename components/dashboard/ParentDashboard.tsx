@@ -97,7 +97,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         setSelectedChild(null);
       }
     } catch (err) {
-      console.error('Error fetching parent dashboard data:', err);
+      // Removed debug statement: console.error('Error fetching parent dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);

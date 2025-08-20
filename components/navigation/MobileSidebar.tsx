@@ -68,7 +68,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
   };
 
   private getMenuItems = (role?: string): MenuItem[] => {
-    console.log('🔍 [MobileSidebar] Getting menu items for role:', role);
+    // Removed debug statement: console.log('🔍 [MobileSidebar] Getting menu items for role:', role);
 
     const commonItems: MenuItem[] = [
       {
@@ -547,8 +547,8 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
 
     const menuItems = this.getMenuItems(this.props.userProfile?.role);
 
-    console.log('🔍 [MobileSidebar] Final menu items count:', menuItems.length);
-    console.log('🔍 [MobileSidebar] User profile role:', this.props.userProfile?.role);
+    // Removed debug statement: console.log('🔍 [MobileSidebar] Final menu items count:', menuItems.length);
+    // Removed debug statement: console.log('🔍 [MobileSidebar] User profile role:', this.props.userProfile?.role);
 
     return (
       <Modal

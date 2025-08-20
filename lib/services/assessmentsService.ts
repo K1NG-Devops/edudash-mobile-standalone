@@ -336,7 +336,7 @@ export class AssessmentsService {
 
           return scoringResult;
         } catch (parseError) {
-          console.warn('Failed to parse AI scoring response:', parseError);
+          log.warn('Failed to parse AI scoring response:', parseError);
           return {
             score: 75,
             grade: 'B',
@@ -350,7 +350,7 @@ export class AssessmentsService {
 
       throw new Error('AI assessment scoring service unavailable');
     } catch (error) {
-      console.error('Error in AI assessment scoring:', error);
+      log.error('Error in AI assessment scoring:', error);
       return {
         score: 70,
         grade: 'C',
@@ -460,7 +460,7 @@ export class AssessmentsService {
         try {
           return JSON.parse(response.content);
         } catch (parseError) {
-          console.warn('Failed to parse developmental analysis response:', parseError);
+          log.warn('Failed to parse developmental analysis response:', parseError);
           return {
             overallDevelopment: response.content.slice(0, 200),
             milestoneStatus: {
@@ -478,7 +478,7 @@ export class AssessmentsService {
 
       throw new Error('AI developmental analysis service unavailable');
     } catch (error) {
-      console.error('Error in developmental analysis:', error);
+      log.error('Error in developmental analysis:', error);
       return {
         overallDevelopment: 'Unable to complete developmental analysis at this time.',
         milestoneStatus: {
@@ -562,7 +562,7 @@ export class AssessmentsService {
         try {
           return JSON.parse(response.content);
         } catch (parseError) {
-          console.warn('Failed to parse assessment plan response:', parseError);
+          log.warn('Failed to parse assessment plan response:', parseError);
           return {
             assessmentPlan: focusAreas.map(area => ({
               title: `${area.charAt(0).toUpperCase() + area.slice(1)} Assessment`,
@@ -580,7 +580,7 @@ export class AssessmentsService {
 
       throw new Error('AI assessment planning service unavailable');
     } catch (error) {
-      console.error('Error creating assessment plan:', error);
+      log.error('Error creating assessment plan:', error);
       return {
         assessmentPlan: focusAreas.map(area => ({
           title: `${area.charAt(0).toUpperCase() + area.slice(1)} Assessment`,

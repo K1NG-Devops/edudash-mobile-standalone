@@ -1,8 +1,8 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import {
   Animated,
   Dimensions,
@@ -80,7 +80,7 @@ export default function WelcomeScreen() {
           router.replace('/(tabs)/dashboard');
           return;
         }
-      } catch {}
+      } catch { }
     })();
 
     // Initial animation

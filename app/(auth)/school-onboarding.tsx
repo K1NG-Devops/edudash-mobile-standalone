@@ -219,7 +219,7 @@ export default function SchoolOnboarding() {
       }, 5000);
 
     } catch (error: any) {
-      console.error('Onboarding submission error:', error);
+      // Removed debug statement: console.error('Onboarding submission error:', error);
       Alert.alert(
         'Submission Failed',
         error.message || 'Unable to submit your school registration. Please check your connection and try again.',

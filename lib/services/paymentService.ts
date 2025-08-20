@@ -177,7 +177,7 @@ export class PaymentService {
         .select('*');
 
       if (error) {
-        console.error('Error persisting fees:', error);
+        log.error('Error persisting fees:', error);
       } else {
 
         // Update the fees array with actual IDs from database
@@ -296,7 +296,7 @@ export class PaymentService {
       };
 
     } catch (error) {
-      console.error('PaymentService.getOutstandingFees error:', error);
+      log.error('PaymentService.getOutstandingFees error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   }
@@ -333,7 +333,7 @@ export class PaymentService {
 
       return payments || [];
     } catch (error) {
-      console.error('PaymentService.getPaymentHistory error:', error);
+      log.error('PaymentService.getPaymentHistory error:', error);
       return [];
     }
   }
@@ -356,7 +356,7 @@ export class PaymentService {
 
       return methods || [];
     } catch (error) {
-      console.error('PaymentService.getPaymentMethods error:', error);
+      log.error('PaymentService.getPaymentMethods error:', error);
       return [];
     }
   }
@@ -404,7 +404,7 @@ export class PaymentService {
         .single();
 
       if (error) {
-        console.error('Payment creation error:', error);
+        log.error('Payment creation error:', error);
         return { success: false, error: 'Failed to create payment record' };
       }
 
@@ -434,7 +434,7 @@ export class PaymentService {
         .single();
 
       if (updateError) {
-        console.error('Payment update error:', updateError);
+        log.error('Payment update error:', updateError);
         return { success: false, error: 'Failed to update payment status' };
       }
 
@@ -446,7 +446,7 @@ export class PaymentService {
           .in('id', formData.selectedFees);
 
         if (feesUpdateError) {
-          console.error('Fees update error:', feesUpdateError);
+          log.error('Fees update error:', feesUpdateError);
         }
 
         // Create receipt
@@ -460,7 +460,7 @@ export class PaymentService {
       };
 
     } catch (error) {
-      console.error('PaymentService.processPayment error:', error);
+      log.error('PaymentService.processPayment error:', error);
       return { success: false, error: 'An unexpected error occurred during payment processing' };
     }
   }
@@ -514,7 +514,7 @@ export class PaymentService {
         .insert(receiptData);
 
     } catch (error) {
-      console.error('Receipt creation error:', error);
+      log.error('Receipt creation error:', error);
     }
   }
 
@@ -530,13 +530,13 @@ export class PaymentService {
         .single();
 
       if (error) {
-        console.error('Receipt fetch error:', error);
+        log.error('Receipt fetch error:', error);
         return null;
       }
 
       return receipt;
     } catch (error) {
-      console.error('PaymentService.getReceipt error:', error);
+      log.error('PaymentService.getReceipt error:', error);
       return null;
     }
   }
@@ -600,7 +600,7 @@ export class PaymentService {
           //   .upload(fileName, fileBlob);
 
         } catch (uploadError) {
-          console.error('File upload error:', uploadError);
+          log.error('File upload error:', uploadError);
           // Continue without attachment if upload fails
         }
       }
@@ -637,7 +637,7 @@ export class PaymentService {
         .single();
 
       if (insertError) {
-        console.error('Payment insertion error:', insertError);
+        log.error('Payment insertion error:', insertError);
         return { success: false, error: 'Failed to submit proof of payment' };
       }
 
@@ -657,7 +657,7 @@ export class PaymentService {
       return { success: true, paymentId: payment.id };
 
     } catch (error) {
-      console.error('PaymentService.submitProofOfPayment error:', error);
+      log.error('PaymentService.submitProofOfPayment error:', error);
       return { success: false, error: 'An unexpected error occurred while submitting proof of payment' };
     }
   }
@@ -705,14 +705,14 @@ export class PaymentService {
         .eq('id', parentProfile.id);
 
       if (updateError) {
-        console.error('Payment window update error:', updateError);
+        log.error('Payment window update error:', updateError);
         return { success: false, error: 'Failed to update payment window settings' };
       }
 
       return { success: true };
 
     } catch (error) {
-      console.error('PaymentService.updatePaymentWindow error:', error);
+      log.error('PaymentService.updatePaymentWindow error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   }
@@ -745,7 +745,7 @@ export class PaymentService {
       };
 
     } catch (error) {
-      console.error('PaymentService.getPaymentWindowSettings error:', error);
+      log.error('PaymentService.getPaymentWindowSettings error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   }
@@ -788,7 +788,7 @@ export class PaymentService {
         .insert(notifications);
 
     } catch (error) {
-      console.error('Error creating admin notifications:', error);
+      log.error('Error creating admin notifications:', error);
       // Don't throw error, as notification failure shouldn't stop the payment submission
     }
   }
@@ -913,18 +913,18 @@ export class PaymentService {
             try {
               insights = JSON.parse(response.content);
             } catch (parseError) {
-              console.warn('Failed to parse AI financial insights:', parseError);
+              log.warn('Failed to parse AI financial insights:', parseError);
               insights.paymentTrends = response.content.slice(0, 200);
             }
           }
         } catch (error) {
-          console.warn('AI financial insights unavailable:', error);
+          log.warn('AI financial insights unavailable:', error);
         }
       }
 
       return { summary, insights };
     } catch (error) {
-      console.error('Error generating financial insights:', error);
+      log.error('Error generating financial insights:', error);
       return {
         summary: {
           totalRevenue: 0,

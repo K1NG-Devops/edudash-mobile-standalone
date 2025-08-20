@@ -380,7 +380,7 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
           }
         }
       } catch (aiError) {
-        console.warn('AI insights generation failed:', aiError);
+        // Removed debug statement: console.warn('AI insights generation failed:', aiError);
       }
 
       this.setState({
@@ -393,7 +393,7 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
       });
 
     } catch (error) {
-      console.error('Error loading parent data:', error);
+      // Removed debug statement: console.error('Error loading parent data:', error);
       this.setState({ 
         error: error instanceof Error ? error.message : 'Failed to load dashboard data'
       });

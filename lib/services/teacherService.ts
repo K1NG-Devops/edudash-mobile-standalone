@@ -50,7 +50,7 @@ export class TeacherService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching teachers:', error);
+      log.error('Error fetching teachers:', error);
       return { data: null, error };
     }
   }
@@ -68,7 +68,7 @@ export class TeacherService {
         .maybeSingle();
 
       if (checkError) {
-        console.warn('Error checking for existing user:', checkError);
+        log.warn('Error checking for existing user:', checkError);
         // Continue with creation attempt
       } else if (existingUsers) {
         return { data: null, error: 'A user with this email already exists' };
@@ -90,13 +90,13 @@ export class TeacherService {
         .single();
 
       if (userError) {
-        console.error('Error creating teacher:', userError);
+        log.error('Error creating teacher:', userError);
         return { data: null, error: userError };
       }
 
       return { data: userData, error: null };
     } catch (error) {
-      console.error('Error creating teacher:', error);
+      log.error('Error creating teacher:', error);
       return { data: null, error };
     }
   }
@@ -123,7 +123,7 @@ export class TeacherService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error inviting teacher:', error);
+      log.error('Error inviting teacher:', error);
       return { data: null, error };
     }
   }
@@ -144,7 +144,7 @@ export class TeacherService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error updating teacher:', error);
+      log.error('Error updating teacher:', error);
       return { data: null, error };
     }
   }
@@ -165,7 +165,7 @@ export class TeacherService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error deactivating teacher:', error);
+      log.error('Error deactivating teacher:', error);
       return { data: null, error };
     }
   }
@@ -185,7 +185,7 @@ export class TeacherService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error assigning teacher to class:', error);
+      log.error('Error assigning teacher to class:', error);
       return { data: null, error };
     }
   }
@@ -205,7 +205,7 @@ export class TeacherService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error removing teacher from class:', error);
+      log.error('Error removing teacher from class:', error);
       return { data: null, error };
     }
   }
@@ -253,7 +253,7 @@ export class TeacherService {
         error: null
       };
     } catch (error) {
-      console.error('Error getting teacher stats:', error);
+      log.error('Error getting teacher stats:', error);
       return { data: null, error };
     }
   }

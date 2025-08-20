@@ -132,7 +132,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
         .single();
 
       if (parentError || !parentProfile) {
-        console.error('Error fetching parent profile:', parentError);
+        // Removed debug statement: console.error('Error fetching parent profile:', parentError);
         this.setState({
           loading: false,
           error: 'Unable to fetch parent profile',
@@ -182,7 +182,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
         .eq('is_active', true);
 
       if (error) {
-        console.error('Error fetching children:', error);
+        // Removed debug statement: console.error('Error fetching children:', error);
         this.setState({
           loading: false,
           error: 'Unable to fetch children data'
@@ -218,7 +218,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
         });
       }
     } catch (error) {
-      console.error('Unexpected error:', error);
+      // Removed debug statement: console.error('Unexpected error:', error);
       this.setState({
         loading: false,
         error: 'An unexpected error occurred'
@@ -261,7 +261,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
       // This will be handled by AuthConsumer context
       router.replace('/(auth)/sign-in');
     } catch (error) {
-      console.error('Sign out error:', error);
+      // Removed debug statement: console.error('Sign out error:', error);
     }
   };
 

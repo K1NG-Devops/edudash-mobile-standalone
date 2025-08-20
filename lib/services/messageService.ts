@@ -40,7 +40,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching user messages:', error);
+      log.error('Error fetching user messages:', error);
       return { data: null, error };
     }
   }
@@ -76,7 +76,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching sent messages:', error);
+      log.error('Error fetching sent messages:', error);
       return { data: null, error };
     }
   }
@@ -138,7 +138,7 @@ export class MessageService {
 
       return { data: message, error: null };
     } catch (error) {
-      console.error('Error sending message:', error);
+      log.error('Error sending message:', error);
       return { data: null, error };
     }
   }
@@ -193,7 +193,7 @@ export class MessageService {
         }
       );
     } catch (error) {
-      console.error('Error replying to message:', error);
+      log.error('Error replying to message:', error);
       return { data: null, error };
     }
   }
@@ -213,7 +213,7 @@ export class MessageService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error marking message as read:', error);
+      log.error('Error marking message as read:', error);
       return { error };
     }
   }
@@ -233,7 +233,7 @@ export class MessageService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error toggling message archive:', error);
+      log.error('Error toggling message archive:', error);
       return { error };
     }
   }
@@ -251,7 +251,7 @@ export class MessageService {
       if (error) throw error;
       return { count, error: null };
     } catch (error) {
-      console.error('Error getting unread count:', error);
+      log.error('Error getting unread count:', error);
       return { count: 0, error };
     }
   }
@@ -281,7 +281,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error searching messages:', error);
+      log.error('Error searching messages:', error);
       return { data: null, error };
     }
   }
@@ -316,7 +316,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error saving draft:', error);
+      log.error('Error saving draft:', error);
       return { data: null, error };
     }
   }
@@ -334,7 +334,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching drafts:', error);
+      log.error('Error fetching drafts:', error);
       return { data: null, error };
     }
   }
@@ -351,7 +351,7 @@ export class MessageService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error deleting draft:', error);
+      log.error('Error deleting draft:', error);
       return { error };
     }
   }
@@ -382,7 +382,7 @@ export class MessageService {
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error creating notifications:', error);
+      log.error('Error creating notifications:', error);
     }
   }
 
@@ -436,7 +436,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching possible recipients:', error);
+      log.error('Error fetching possible recipients:', error);
       return { data: null, error };
     }
   }

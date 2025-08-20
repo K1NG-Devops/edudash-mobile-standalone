@@ -56,7 +56,7 @@ export default function SettingsScreen() {
         .single();
 
       if (error) {
-        console.error('Error loading settings:', error);
+        // Removed debug statement: console.error('Error loading settings:', error);
       } else {
         // For now, use defaults since we don't have a settings table yet
         setSettings({
@@ -68,7 +68,7 @@ export default function SettingsScreen() {
         });
       }
     } catch (err: any) {
-      console.error('Error loading settings:', err);
+      // Removed debug statement: console.error('Error loading settings:', err);
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export default function SettingsScreen() {
       // For now, we'll just update the local state
 
     } catch (error) {
-      console.error('Error updating setting:', error);
+      // Removed debug statement: console.error('Error updating setting:', error);
       Alert.alert('Error', 'Failed to update setting');
     } finally {
       setSaving(false);

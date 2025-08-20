@@ -46,7 +46,7 @@ export class EmailService {
 
       return await this.sendEmail(emailOptions);
     } catch (error) {
-      console.error('Error sending teacher invitation:', error);
+      log.error('Error sending teacher invitation:', error);
       return { success: false, error: 'Failed to send teacher invitation email' };
     }
   }
@@ -61,41 +61,41 @@ export class EmailService {
     const hasSendGridKey = process.env.EXPO_PUBLIC_SENDGRID_API_KEY || process.env.SENDGRID_API_KEY;
 
     try {
-      // Priority 1: Use Resend via proxy (to avoid CORS in RN/Web dev)
-      if (hasResendKey) {
-
-        // If running in browser or RN dev, route via Supabase Edge Function proxy
-        const useProxy = typeof window !== 'undefined';
-        if (useProxy) {
-          try {
-            const { data, error } = await supabase.functions.invoke('send-email', {
-              body: { provider: 'resend', options },
-            });
-            if (!error) {
-
-              return { success: true };
-            }
-            console.warn('⚠️ Edge Function email proxy failed, falling back direct:', error?.message);
-          } catch (e) {
-            console.warn('⚠️ Edge Function proxy unavailable, falling back direct');
-          }
+      // Priority 1: Always attempt Supabase Edge Function first (server holds provider keys)
+      try {
+        const { data, error } = await supabase.functions.invoke('send-email', {
+          body: {
+            to: options.to,
+            subject: options.subject,
+            html: options.htmlBody,
+            templateType: 'invitation'
+          },
+        });
+        if (!error) {
+          return { success: true };
         }
-        // Fallback to direct if proxy not available
+        log.warn('⚠️ Edge Function email proxy failed, will try direct providers:', error?.message);
+      } catch (e: any) {
+        log.warn('⚠️ Edge Function unavailable, will try direct providers:', e?.message || e);
+      }
+
+      // Priority 2: Use Resend directly if client key is configured
+      if (hasResendKey) {
         return await this.sendWithResend(options);
       }
 
-      // Priority 2: Use SendGrid as fallback if API key is available  
+      // Priority 3: Use SendGrid as fallback if API key is available  
       if (hasSendGridKey) {
 
         return await this.sendWithSendGrid(options);
       }
 
-      // Priority 3: Development/Console mode (when no API keys available)
-
-      return await this.sendWithConsole(options);
+      // Priority 4: No configured email service
+  // Return failure to avoid false-positive success when nothing is sent
+  return { success: false, error: 'Email service not configured. Set RESEND_API_KEY or SENDGRID_API_KEY.' };
 
     } catch (error) {
-      console.error('Email sending failed:', error);
+      log.error('Email sending failed:', error);
       return { success: false, error: 'Email service unavailable' };
     }
   }
@@ -129,11 +129,11 @@ export class EmailService {
         return { success: true };
       } else {
         const error = await response.text();
-        console.error('❌ Resend API error:', error);
+        log.error('❌ Resend API error:', error);
         return { success: false, error: `Resend error: ${error}` };
       }
     } catch (error) {
-      console.error('❌ Resend service error:', error);
+      log.error('❌ Resend service error:', error);
       return { success: false, error: 'Resend service unavailable' };
     }
   }
@@ -143,10 +143,12 @@ export class EmailService {
    */
   private static async sendWithSendGrid(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
     try {
+      const sgKey = process.env.EXPO_PUBLIC_SENDGRID_API_KEY || process.env.SENDGRID_API_KEY;
+      const fromEmail = process.env.EXPO_PUBLIC_FROM_EMAIL || process.env.FROM_EMAIL || 'noreply@edudashpro.com';
       const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+          'Authorization': `Bearer ${sgKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -155,7 +157,7 @@ export class EmailService {
             subject: options.subject,
           }],
           from: {
-            email: process.env.FROM_EMAIL || 'noreply@edudashpro.com',
+            email: fromEmail,
             name: 'EduDash Pro'
           },
           content: [
@@ -176,11 +178,11 @@ export class EmailService {
         return { success: true };
       } else {
         const error = await response.text();
-        console.error('❌ SendGrid API error:', error);
+        log.error('❌ SendGrid API error:', error);
         return { success: false, error: `SendGrid error: ${error}` };
       }
     } catch (error) {
-      console.error('❌ SendGrid service error:', error);
+      log.error('❌ SendGrid service error:', error);
       return { success: false, error: 'SendGrid service unavailable' };
     }
   }
@@ -197,7 +199,7 @@ export class EmailService {
       }, 100);
     }
 
-    return { success: true };
+  return { success: false, error: 'Console fallback only; no email actually sent.' };
   }
 
   /**

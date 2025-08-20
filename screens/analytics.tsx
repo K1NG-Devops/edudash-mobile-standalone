@@ -79,7 +79,7 @@ export default function AnalyticsScreen() {
 
       setAnalytics(mockData);
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      // Removed debug statement: console.error('Error loading analytics:', error);
       Alert.alert('Error', 'Failed to load analytics data');
     } finally {
       setLoading(false);

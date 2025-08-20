@@ -20,7 +20,7 @@ if (DEBUG_SUPABASE) {
 const USE_LOCAL_DB = false;
 
 // Log current configuration for debugging
-console.log('🔧 Supabase Configuration:', {
+log.log('🔧 Supabase Configuration:', {
   USE_LOCAL_DB,
   url: USE_LOCAL_DB ? 'LOCAL' : 'PRODUCTION',
   hasEnvUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -32,7 +32,7 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || (USE_LOCAL_DB ? 'htt
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || (USE_LOCAL_DB ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' : '');
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Supabase configuration missing!');
+  log.error('❌ Supabase configuration missing!');
   if (DEBUG_SUPABASE) {
     log.error('URL:', supabaseUrl);
     log.error('Key available:', !!supabaseAnonKey);
@@ -167,5 +167,5 @@ if (typeof window !== 'undefined' && DEBUG_SUPABASE) {
     supabase,
     supabaseAdmin
   };
-  console.log('🔧 [Debug] Supabase clients exposed globally for debugging');
+  log.log('🔧 [Debug] Supabase clients exposed globally for debugging');
 }

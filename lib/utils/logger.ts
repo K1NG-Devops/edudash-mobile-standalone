@@ -31,13 +31,13 @@ export const createLogger = (namespace?: string) => ({
   warn: (message?: unknown, ...args: unknown[]) => {
     if (isDebugEnabled(namespace)) {
       // eslint-disable-next-line no-console
-      console.warn(...format('warn', namespace, message, ...args));
+      log.warn(...format('warn', namespace, message, ...args));
     }
   },
   error: (message?: unknown, ...args: unknown[]) => {
     // Errors always log
     // eslint-disable-next-line no-console
-    console.error(...format('error', namespace, message, ...args));
+    log.error(...format('error', namespace, message, ...args));
   },
 });
 

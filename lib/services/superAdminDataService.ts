@@ -7,6 +7,11 @@
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { createLogger } from '@/lib/utils/logger';
 import { Database } from '@/types/database';
+import { 
+  generateSecurePassword, 
+  requestPasswordReset, 
+  resetPasswordWithToken 
+} from '@/lib/utils/authUtils';
 const log = createLogger('superadmin');
 
 type Tables = Database['public']['Tables'];
@@ -135,7 +140,7 @@ export class SuperAdminDataService {
       };
 
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching dashboard data:', error);
+      log.error('Error fetching dashboard data:', error);
       throw error;
     }
   }
@@ -152,13 +157,13 @@ export class SuperAdminDataService {
         .single();
 
       if (error || !user) {
-        console.error('❌ [SuperAdmin] User not found:', error);
+        log.error('User not found:', error);
         return false;
       }
 
       return user.role === 'superadmin' && !!user.is_active;
     } catch (error) {
-      console.error('❌ [SuperAdmin] Permission verification failed:', error);
+      log.error('Permission verification failed:', error);
       return false;
     }
   }
@@ -229,7 +234,7 @@ export class SuperAdminDataService {
         storage_usage_gb: 0
       };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching platform stats:', error);
+      log.error('❌ [SuperAdmin] Error fetching platform stats:', error);
       return {
         total_schools: 0,
         total_users: 0,
@@ -257,7 +262,7 @@ export class SuperAdminDataService {
         .limit(10);
 
       if (error || !schools) {
-        console.error('❌ [SuperAdmin] Error fetching schools:', error);
+        log.error('❌ [SuperAdmin] Error fetching schools:', error);
         return [];
       }
 
@@ -303,7 +308,7 @@ export class SuperAdminDataService {
 
       return enhancedSchools;
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching recent schools:', error);
+      log.error('❌ [SuperAdmin] Error fetching recent schools:', error);
       return [];
     }
   }
@@ -321,7 +326,7 @@ export class SuperAdminDataService {
         .limit(20);
 
       if (error || !users) {
-        console.error('❌ [SuperAdmin] Error fetching users:', error);
+        log.error('❌ [SuperAdmin] Error fetching users:', error);
         return [];
       }
 
@@ -343,7 +348,7 @@ export class SuperAdminDataService {
             }, {} as Record<string, string>);
           }
         } catch (schoolError) {
-          console.warn('⚠️ [SuperAdmin] Could not fetch school names:', schoolError);
+          log.warn('⚠️ [SuperAdmin] Could not fetch school names:', schoolError);
         }
       }
 
@@ -360,7 +365,7 @@ export class SuperAdminDataService {
 
       return enhancedUsers;
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching recent users:', error);
+      log.error('❌ [SuperAdmin] Error fetching recent users:', error);
       return [];
     }
   }
@@ -419,7 +424,7 @@ export class SuperAdminDataService {
               }, {} as Record<string, string>);
             }
           } catch (schoolError) {
-            console.warn('⚠️ [SuperAdmin] Could not fetch school names for activity:', schoolError);
+            log.warn('⚠️ [SuperAdmin] Could not fetch school names for activity:', schoolError);
           }
         }
 
@@ -445,7 +450,7 @@ export class SuperAdminDataService {
         .slice(0, 20);
 
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching platform activity:', error);
+      log.error('❌ [SuperAdmin] Error fetching platform activity:', error);
       return [];
     }
   }
@@ -470,13 +475,13 @@ export class SuperAdminDataService {
         apiResponseTime = Date.now() - startTime;
 
         if (dbError) {
-          console.error('❌ [SuperAdmin] Database health check failed:', dbError);
+          log.error('❌ [SuperAdmin] Database health check failed:', dbError);
           databaseStatus = 'error';
         } else {
           databaseStatus = apiResponseTime > 2000 ? 'warning' : 'healthy';
         }
       } catch (error) {
-        console.error('❌ [SuperAdmin] Database health check failed:', error);
+        log.error('❌ [SuperAdmin] Database health check failed:', error);
         databaseStatus = 'error';
         apiResponseTime = Date.now() - startTime;
       }
@@ -540,7 +545,7 @@ export class SuperAdminDataService {
         // Rough estimate: each record ~1KB, storage limit assumed 10GB
         storageUsagePercentage = Math.min(Math.round((totalRecords * 1024) / (10 * 1024 * 1024 * 1024) * 100), 100);
       } catch (error) {
-        console.warn('⚠️ [SuperAdmin] Storage calculation failed:', error);
+        log.warn('⚠️ [SuperAdmin] Storage calculation failed:', error);
       }
 
       // Skip error rate calculation if system_logs table is not part of generated types
@@ -561,7 +566,7 @@ export class SuperAdminDataService {
         last_backup: new Date().toISOString() // Would come from backup system
       };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error calculating system health:', error);
+      log.error('❌ [SuperAdmin] Error calculating system health:', error);
       return {
         database_status: 'error',
         api_response_time: 0,
@@ -602,7 +607,7 @@ export class SuperAdminDataService {
         content_reports: contentReports
       };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching pending approvals:', error);
+      log.error('❌ [SuperAdmin] Error fetching pending approvals:', error);
       return {
         schools: 0,
         users: 0,
@@ -650,7 +655,7 @@ export class SuperAdminDataService {
         .slice(0, 10);
 
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching system alerts:', error);
+      log.error('❌ [SuperAdmin] Error fetching system alerts:', error);
       return [];
     }
   }
@@ -699,7 +704,7 @@ export class SuperAdminDataService {
 
       return { success: true };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error suspending school:', error);
+      log.error('❌ [SuperAdmin] Error suspending school:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -719,7 +724,7 @@ export class SuperAdminDataService {
 
       return { success: true };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error suspending user:', error);
+      log.error('❌ [SuperAdmin] Error suspending user:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -732,11 +737,11 @@ export class SuperAdminDataService {
     subscription_plan?: string;
   }) {
     try {
-      console.log('🏫 [SuperAdmin] Creating school:', schoolData);
+      log.log('🏫 [SuperAdmin] Creating school:', schoolData);
 
       // Check if admin client is available before proceeding
       if (!supabaseAdmin) {
-        console.error('❌ [SuperAdmin] Service role client (supabaseAdmin) is not available');
+        log.error('❌ [SuperAdmin] Service role client (supabaseAdmin) is not available');
         return {
           success: false,
           error: 'Service role client unavailable. Please ensure EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY is properly configured.'
@@ -744,16 +749,16 @@ export class SuperAdminDataService {
       }
 
       // Debug: Log admin client status
-      console.log('🔧 [SuperAdmin] Admin client available, testing connection...');
+      log.log('🔧 [SuperAdmin] Admin client available, testing connection...');
       try {
         const { data: testData, error: testError } = await supabaseAdmin
           .from('users')
           .select('id')
           .limit(1)
-          .single();
-        console.log('🔧 [SuperAdmin] Admin client test result:', { testData, testError });
+          .maybeSingle();
+        log.log('🔧 [SuperAdmin] Admin client test result:', { testData, testError });
       } catch (testEx) {
-        console.log('🔧 [SuperAdmin] Admin client test exception:', testEx);
+        log.log('🔧 [SuperAdmin] Admin client test exception:', testEx);
       }
 
       // First, create the school record using admin client
@@ -772,26 +777,26 @@ export class SuperAdminDataService {
         .single();
 
       if (schoolError) {
-        console.error('❌ [SuperAdmin] Error creating school record:', schoolError);
-        
+        log.error('❌ [SuperAdmin] Error creating school record:', schoolError);
+
         // Handle duplicate email case
         if (schoolError.code === '23505' && schoolError.message.includes('preschools_email_key')) {
-          console.log('🔍 [SuperAdmin] School with this email already exists, checking if setup is complete...');
-          
+          log.log('🔍 [SuperAdmin] School with this email already exists, checking if setup is complete...');
+
           // Check if existing school is complete
           const { data: existingSchool, error: fetchError } = await supabaseAdmin
             .from('preschools')
             .select('*')
             .eq('email', schoolData.email)
             .single();
-            
+
           if (fetchError) {
             return {
               success: false,
               error: `School email already exists but cannot fetch details: ${fetchError.message}`
             };
           }
-          
+
           if (existingSchool.onboarding_status === 'completed' && existingSchool.setup_completed) {
             return {
               success: false,
@@ -808,11 +813,11 @@ export class SuperAdminDataService {
             };
           }
         }
-        
+
         throw schoolError;
       }
 
-      console.log('✅ [SuperAdmin] School record created:', schoolRecord.id);
+      log.log('✅ [SuperAdmin] School record created:', schoolRecord.id);
 
       // Create a temporary password that meets all Supabase requirements:
       // - lowercase letters, uppercase letters, digits, symbols
@@ -843,11 +848,11 @@ export class SuperAdminDataService {
       const tempPassword = generateSecurePassword();
 
       // Create auth user with minimal metadata to avoid trigger conflicts
-      console.log('🔐 [SuperAdmin] Creating auth user with minimal metadata...');
+      log.log('🔐 [SuperAdmin] Creating auth user with minimal metadata...');
 
       // Prefer service-role client when available (local/dev). In production mobile apps, server functions should be used.
       const adminClient = supabaseAdmin ?? null;
-        const { data: authUser, error: authError } = adminClient
+      const { data: authUser, error: authError } = adminClient
         ? await adminClient.auth.admin.createUser({
           email: schoolData.email,
           password: tempPassword,
@@ -861,8 +866,8 @@ export class SuperAdminDataService {
         : { data: null as any, error: new Error('Service role client unavailable') as any };
 
       if (authError) {
-        console.error('❌ [SuperAdmin] Error creating auth user:', authError);
-        console.error('❌ [SuperAdmin] Auth error details:', authError.message);
+        log.error('❌ [SuperAdmin] Error creating auth user:', authError);
+        log.error('❌ [SuperAdmin] Auth error details:', authError.message);
 
         // Rollback school creation using admin client
         await supabaseAdmin.from('preschools').delete().eq('id', schoolRecord.id);
@@ -875,7 +880,7 @@ export class SuperAdminDataService {
         };
       }
 
-      console.log('✅ [SuperAdmin] Auth user created:', authUser.user?.id);
+      log.log('✅ [SuperAdmin] Auth user created:', authUser.user?.id);
 
       // Wait a moment for trigger to complete, then check if user profile was created
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -888,7 +893,7 @@ export class SuperAdminDataService {
         .single();
 
       if (checkError || !existingProfile) {
-        console.log('🔧 [SuperAdmin] Trigger did not create user profile, creating manually...');
+        log.log('🔧 [SuperAdmin] Trigger did not create user profile, creating manually...');
 
         // Manually create the user profile record since trigger failed using admin client
         const { error: userInsertError } = await supabaseAdmin
@@ -905,14 +910,14 @@ export class SuperAdminDataService {
           });
 
         if (userInsertError) {
-          console.error('❌ [SuperAdmin] Error creating user profile manually:', userInsertError);
-          console.warn('⚠️ [SuperAdmin] User profile creation failed, but auth user exists.');
+          log.error('❌ [SuperAdmin] Error creating user profile manually:', userInsertError);
+          log.warn('⚠️ [SuperAdmin] User profile creation failed, but auth user exists.');
           // Don't fail the entire process - at minimum the auth user exists
         } else {
-          console.log('✅ [SuperAdmin] User profile created manually');
+          log.log('✅ [SuperAdmin] User profile created manually');
         }
       } else {
-        console.log('✅ [SuperAdmin] User profile created by trigger, updating with preschool info...');
+        log.log('✅ [SuperAdmin] User profile created by trigger, updating with preschool info...');
 
         // Update the profile with the preschool information using admin client
         const { error: updateError } = await supabaseAdmin
@@ -926,13 +931,13 @@ export class SuperAdminDataService {
           .eq('auth_user_id', authUser.user!.id);
 
         if (updateError) {
-          console.warn('⚠️ [SuperAdmin] Could not update user profile with preschool info:', updateError);
+          log.warn('⚠️ [SuperAdmin] Could not update user profile with preschool info:', updateError);
         } else {
-          console.log('✅ [SuperAdmin] User profile updated with preschool info');
+          log.log('✅ [SuperAdmin] User profile updated with preschool info');
         }
       }
 
-      console.log('✅ [SuperAdmin] School and admin created successfully');
+      log.log('✅ [SuperAdmin] School and admin created successfully');
 
       // Send welcome email with login credentials and onboarding guide
       try {
@@ -943,14 +948,14 @@ export class SuperAdminDataService {
           tempPassword: tempPassword,
           schoolId: schoolRecord.id
         });
-        console.log('📧 [SuperAdmin] Welcome email sent successfully');
+        log.log('📧 [SuperAdmin] Welcome email sent successfully');
       } catch (emailError) {
-        console.error('❌ [SuperAdmin] Failed to send welcome email:', emailError);
+        log.error('❌ [SuperAdmin] Failed to send welcome email:', emailError);
         // Don't fail the entire process if email fails
       }
 
       // Log the temporary password for admin reference
-      console.log(`🔑 [SuperAdmin] Temporary password for ${schoolData.email}: ${tempPassword}`);
+      log.log(`🔑 [SuperAdmin] Temporary password for ${schoolData.email}: ${tempPassword}`);
 
       return {
         success: true,
@@ -959,7 +964,7 @@ export class SuperAdminDataService {
         temp_password: tempPassword
       };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error creating school:', error);
+      log.error('❌ [SuperAdmin] Error creating school:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -1176,30 +1181,35 @@ export class SuperAdminDataService {
    */
   static async resendWelcomeInstructions(schoolId: string, reason?: string) {
     try {
-      console.log('📧 [SuperAdmin] Resending welcome instructions for school:', schoolId);
+      log.log('📧 [SuperAdmin] Resending welcome instructions for school:', schoolId);
 
       // Get school and admin details from database
       const { data: school, error: schoolError } = await supabase
         .from('preschools')
         .select('*')
         .eq('id', schoolId)
-        .single();
+        .maybeSingle();
 
       if (schoolError || !school) {
         throw new Error(`School not found: ${schoolError?.message || 'Invalid school ID'}`);
       }
 
       // Get the principal/admin user for this school
-      const { data: admin, error: adminError } = await supabase
+      const { data: admins, error: adminError } = await supabase
         .from('users')
         .select('*')
         .eq('preschool_id', schoolId)
         .in('role', ['principal', 'admin', 'preschool_admin'])
         .eq('is_active', true)
-        .single();
+        .limit(10);
 
-      if (adminError || !admin) {
-        throw new Error(`School admin not found: ${adminError?.message || 'No active principal found'}`);
+      if (adminError) {
+        throw new Error(`Failed to query school admins: ${adminError.message}`);
+      }
+
+      const admin = (admins || []).find((u: any) => u.role === 'principal') || (admins || [])[0] || null;
+      if (!admin) {
+        throw new Error('School admin not found: No active principal or admin for this school');
       }
 
       // Check if school has been approved (more flexible status checking)
@@ -1229,11 +1239,11 @@ export class SuperAdminDataService {
         : { error: new Error('Service role client unavailable') as any };
 
       if (passwordError) {
-        console.warn('⚠️ [SuperAdmin] Could not update password in Supabase Auth:', passwordError.message);
+        log.warn('⚠️ [SuperAdmin] Could not update password in Supabase Auth:', passwordError.message);
         // Generate a fallback password for the email when auth update fails
         finalPassword = `Temp${Math.random().toString(36).slice(-6)}${Date.now().toString().slice(-4)}!`;
         passwordUpdated = false;
-        console.log('📧 [SuperAdmin] Using fallback password for email due to auth update failure');
+        log.log('📧 [SuperAdmin] Using fallback password for email due to auth update failure');
       }
 
       // Send the welcome email with credentials
@@ -1262,7 +1272,7 @@ export class SuperAdminDataService {
         severity: 'low'
       });
 
-      console.log('✅ [SuperAdmin] Welcome instructions resent successfully');
+      log.log('✅ [SuperAdmin] Welcome instructions resent successfully');
 
       return {
         success: true,
@@ -1271,7 +1281,7 @@ export class SuperAdminDataService {
         password_updated: !passwordError
       };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error resending welcome instructions:', error);
+      log.error('❌ [SuperAdmin] Error resending welcome instructions:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -1521,7 +1531,7 @@ export class SuperAdminDataService {
         activity_by_role: this.groupByRole(activeUsers || [])
       };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching user analytics:', error);
+      log.error('❌ [SuperAdmin] Error fetching user analytics:', error);
       return null;
     }
   }
@@ -1567,7 +1577,7 @@ export class SuperAdminDataService {
         payment_history: payments || []
       };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching revenue analytics:', error);
+      log.error('❌ [SuperAdmin] Error fetching revenue analytics:', error);
       return null;
     }
   }
@@ -1600,7 +1610,7 @@ export class SuperAdminDataService {
         platform_engagement: this.calculateEngagementScore(enrollments || [])
       };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching platform usage:', error);
+      log.error('❌ [SuperAdmin] Error fetching platform usage:', error);
       return null;
     }
   }
@@ -1631,7 +1641,7 @@ export class SuperAdminDataService {
 
       return { success: true };
     } catch (error) {
-      console.error(`❌ [SuperAdmin] Error toggling user status:`, error);
+      log.error(`❌ [SuperAdmin] Error toggling user status:`, error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -1659,7 +1669,7 @@ export class SuperAdminDataService {
 
       return { success: true };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error updating subscription:', error);
+      log.error('❌ [SuperAdmin] Error updating subscription:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -1669,7 +1679,7 @@ export class SuperAdminDataService {
   static async getSchoolInsights(schoolId: string) {
     try {
       const [school, users, students, messages, lessons] = await Promise.all([
-        supabase.from('preschools').select('*').eq('id', schoolId).single(),
+        supabase.from('preschools').select('*').eq('id', schoolId).maybeSingle(),
         supabase.from('users').select('*').eq('preschool_id', schoolId),
         supabase.from('students').select('*').eq('preschool_id', schoolId),
         supabase.from('messages').select('*').eq('preschool_id', schoolId).limit(100),
@@ -1684,7 +1694,7 @@ export class SuperAdminDataService {
         content_creation: this.analyzeContent(lessons.data || [])
       };
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error fetching school insights:', error);
+      log.error('❌ [SuperAdmin] Error fetching school insights:', error);
       return null;
     }
   }
@@ -1700,9 +1710,9 @@ export class SuperAdminDataService {
   }) {
     try {
       // Optional: log to a generic activity table if available, otherwise no-op
-      console.log('[SuperAdmin] Action:', action.action, action.severity);
+      log.log('[SuperAdmin] Action:', action.action, action.severity);
     } catch (error) {
-      console.error('❌ [SuperAdmin] Error logging system action:', error);
+      log.error('❌ [SuperAdmin] Error logging system action:', error);
     }
   }
 

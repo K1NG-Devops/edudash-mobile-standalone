@@ -90,7 +90,7 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
         setSelectedChild(null);
       }
     } catch (err) {
-      console.error('Error fetching parent dashboard data:', err);
+      // Removed debug statement: console.error('Error fetching parent dashboard data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -108,7 +108,7 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
   };
 
   const handleQuickAction = (action: string) => {
-    console.log('Quick action pressed:', action);
+    // Removed debug statement: console.log('Quick action pressed:', action);
     // Add navigation logic here
   };
 

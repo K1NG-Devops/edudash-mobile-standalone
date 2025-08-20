@@ -83,7 +83,7 @@ export class HomeworkService {
 
           return gradingResult;
         } catch (parseError) {
-          console.warn('Failed to parse AI grading response:', parseError);
+          log.warn('Failed to parse AI grading response:', parseError);
           // Return fallback grading
           return {
             score: 75,
@@ -97,7 +97,7 @@ export class HomeworkService {
 
       throw new Error('AI grading service unavailable');
     } catch (error) {
-      console.error('Error in AI homework grading:', error);
+      log.error('Error in AI homework grading:', error);
       // Return basic fallback grading
       return {
         score: 70,
@@ -157,7 +157,7 @@ export class HomeworkService {
 
       return response.data as HomeworkAssignment[];
     } catch (error) {
-      console.error('Error fetching homework assignments:', error);
+      log.error('Error fetching homework assignments:', error);
       throw error;
     }
   }
@@ -202,7 +202,7 @@ export class HomeworkService {
       }));
       return mapped;
     } catch (error) {
-      console.error('Error fetching homework submissions:', error);
+      log.error('Error fetching homework submissions:', error);
       throw error;
     }
   }
@@ -268,7 +268,7 @@ export class HomeworkService {
         // Check for upload failures
         const failedUploads = uploadResults.filter(result => result.error);
         if (failedUploads.length > 0) {
-          console.warn('Some file uploads failed:', failedUploads);
+          log.warn('Some file uploads failed:', failedUploads);
           // You might want to handle this differently based on your requirements
         }
 
@@ -289,14 +289,14 @@ export class HomeworkService {
             .eq('id', submissionId);
 
           if (updateError) {
-            console.warn('Failed to update submission with uploaded files:', updateError);
+            log.warn('Failed to update submission with uploaded files:', updateError);
           }
         }
       }
 
       return { submissionId, uploadedFiles };
     } catch (error) {
-      console.error('Error submitting homework:', error);
+      log.error('Error submitting homework:', error);
       throw error;
     }
   }
@@ -329,7 +329,7 @@ export class HomeworkService {
 
       return summary;
     } catch (error) {
-      console.error('Error generating homework summary:', error);
+      log.error('Error generating homework summary:', error);
       throw new Error('Failed to generate homework summary');
     }
   }
@@ -380,7 +380,7 @@ export class HomeworkService {
         try {
           return JSON.parse(response.content);
         } catch (parseError) {
-          console.warn('Failed to parse homework help response:', parseError);
+          log.warn('Failed to parse homework help response:', parseError);
           return {
             explanation: response.content.slice(0, 200),
             hints: ['Think step by step', 'Ask for help if you need it'],
@@ -391,7 +391,7 @@ export class HomeworkService {
 
       throw new Error('AI homework help service unavailable');
     } catch (error) {
-      console.error('Error getting homework help:', error);
+      log.error('Error getting homework help:', error);
       return {
         explanation: 'For help with this assignment, please ask your teacher or parent.',
         hints: ['Read the problem carefully', 'Take your time to understand'],
@@ -458,7 +458,7 @@ export class HomeworkService {
         try {
           return JSON.parse(response.content);
         } catch (parseError) {
-          console.warn('Failed to parse assignment creation response:', parseError);
+          log.warn('Failed to parse assignment creation response:', parseError);
           return {
             title: 'Practice Assignment',
             description: response.content.slice(0, 100),
@@ -472,7 +472,7 @@ export class HomeworkService {
 
       throw new Error('AI assignment creation service unavailable');
     } catch (error) {
-      console.error('Error creating assignment with AI:', error);
+      log.error('Error creating assignment with AI:', error);
       return {
         title: 'Practice Assignment',
         description: 'Complete the practice exercises based on today\'s lesson',

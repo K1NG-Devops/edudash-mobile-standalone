@@ -46,7 +46,7 @@ export class ClaudeAIService {
         this.usageTracker = JSON.parse(savedUsage);
       }
     } catch (error) {
-      console.error('Failed to initialize AI usage tracking:', error);
+      log.error('Failed to initialize AI usage tracking:', error);
     }
   }
 
@@ -69,7 +69,7 @@ export class ClaudeAIService {
     try {
       await AsyncStorage.setItem('ai_usage_tracker', JSON.stringify(this.usageTracker));
     } catch (error) {
-      console.error('Failed to save AI usage tracking:', error);
+      log.error('Failed to save AI usage tracking:', error);
     }
   }
 
@@ -174,7 +174,7 @@ Make it educational, fun, and age-appropriate with hands-on learning experiences
 
       return { success: false, error: 'Invalid response format' };
     } catch (error) {
-      console.error('AI Lesson Generation Error:', error);
+      log.error('AI Lesson Generation Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -265,7 +265,7 @@ Format as JSON:
 
       return { success: false, error: 'Invalid response format' };
     } catch (error) {
-      console.error('AI Homework Grading Error:', error);
+      log.error('AI Homework Grading Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -349,7 +349,7 @@ Format as JSON:
 
       return { success: false, error: 'Invalid response format' };
     } catch (error) {
-      console.error('AI STEM Activity Generation Error:', error);
+      log.error('AI STEM Activity Generation Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -446,7 +446,7 @@ Format as JSON:
 
       return { success: false, error: 'Invalid response format' };
     } catch (error) {
-      console.error('AI Progress Analysis Error:', error);
+      log.error('AI Progress Analysis Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -526,7 +526,7 @@ export const claudeService = {
       return { success: false, content: '' } as { success: boolean; content: string };
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Claude simple generateContent error:', error);
+      log.error('Claude simple generateContent error:', error);
       return { success: false, content: '' } as { success: boolean; content: string };
     }
   },

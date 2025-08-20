@@ -94,7 +94,7 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
         .order('created_at', { ascending: false });
 
       if (requestsError) {
-        console.error('Error loading requests:', requestsError);
+        // Removed debug statement: console.error('Error loading requests:', requestsError);
         Alert.alert('Error', 'Failed to load onboarding requests');
         return;
       }
@@ -106,7 +106,7 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
         .order('created_at', { ascending: false });
 
       if (preschoolsError) {
-        console.error('Error loading schools:', preschoolsError);
+        // Removed debug statement: console.error('Error loading schools:', preschoolsError);
         Alert.alert('Error', 'Failed to load schools');
         return;
       }
@@ -129,7 +129,7 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
       }));
 
     } catch (error) {
-      console.error('Error loading data:', error);
+      // Removed debug statement: console.error('Error loading data:', error);
       Alert.alert('Error', 'Failed to load data');
       setState(prev => ({ ...prev, loading: false }));
     }
@@ -142,145 +142,146 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
   };
 
   const approveRequest = async (requestId: string) => {
+    // Use React Native's Alert for confirmation
+    Alert.alert(
+      'Approve Onboarding Request',
+      'This will create a new school on the platform and send login credentials to the admin. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'default',
+          onPress: async () => {
+            // Proceed with approval flow
+            if (!supabaseAdmin) {
+              Alert.alert('Error', 'Admin operations not available - service role key missing');
+              return;
+            }
 
-    // Ask for confirmation first
-    const userConfirmed = window.confirm(
-      'This will create a new school on the platform and send login credentials to the admin. Continue?'
-    );
-    
-    if (!userConfirmed) {
+            try {
+              setState(prev => ({ ...prev, loading: true }));
 
-      return;
-    }
+              // Get the request details first
+              const request = state.onboardingRequests.find(r => r.id === requestId);
+              if (!request) {
+                Alert.alert('Error', 'Request not found');
+                setState(prev => ({ ...prev, loading: false }));
+                return;
+              }
 
-    // Check if admin client is available
-    if (!supabaseAdmin) {
-      alert('Error: Admin operations not available - service role key missing');
-      return;
-    }
-    
-    try {
-      setState(prev => ({ ...prev, loading: true }));
+              // Step 1: Create the preschool
+              const tenantSlug = request.preschool_name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .substring(0, 50);
 
-      // Get the request details first
-      const request = state.onboardingRequests.find(r => r.id === requestId);
-      if (!request) {
-        alert('Error: Request not found');
-        setState(prev => ({ ...prev, loading: false }));
-        return;
-      }
+              const { data: preschoolData, error: preschoolError } = await supabase
+                .from('preschools')
+                .insert({
+                  name: request.preschool_name,
+                  email: request.admin_email,
+                  phone: request.phone,
+                  address: request.address,
+                  tenant_slug: tenantSlug,
+                  subscription_plan: 'basic',
+                  subscription_status: 'active',
+                  max_students: request.number_of_students || 50,
+                  billing_email: request.admin_email,
+                  onboarding_status: 'approved',
+                  setup_completed: false,
+                  created_at: new Date().toISOString()
+                })
+                .select()
+                .single();
 
-      // Step 1: Create the preschool
-      const tenantSlug = request.preschool_name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .substring(0, 50);
+              if (preschoolError) {
+                // Removed debug statement: console.error('Error creating preschool:', preschoolError);
+                Alert.alert('Error', 'Failed to create preschool - ' + preschoolError.message);
+                setState(prev => ({ ...prev, loading: false }));
+                return;
+              }
 
-      const { data: preschoolData, error: preschoolError } = await supabase
-        .from('preschools')
-        .insert({
-          name: request.preschool_name,
-          email: request.admin_email,
-          phone: request.phone,
-          address: request.address,
-          tenant_slug: tenantSlug,
-          subscription_plan: 'basic',
-          subscription_status: 'active',
-          max_students: request.number_of_students || 50,
-          billing_email: request.admin_email,
-          onboarding_status: 'approved',
-          setup_completed: false,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+              // Step 2: Create admin user in Supabase Auth using admin client
+              const tempPassword = Math.random().toString(36).slice(-8) + 'A1!'; // Temporary password
 
-      if (preschoolError) {
-        console.error('Error creating preschool:', preschoolError);
-        alert('Error: Failed to create preschool - ' + preschoolError.message);
-        setState(prev => ({ ...prev, loading: false }));
-        return;
-      }
+              const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+                email: request.admin_email,
+                password: tempPassword,
+                email_confirm: true,
+                user_metadata: {
+                  name: request.admin_name,
+                  role: 'admin'
+                }
+              });
 
-      // Step 2: Create admin user in Supabase Auth using admin client
-      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!'; // Temporary password
+              if (authError) {
+                // Removed debug statement: console.error('Error creating auth user:', authError);
+                // If auth user creation fails, we should delete the preschool
+                await supabase.from('preschools').delete().eq('id', preschoolData.id);
+                Alert.alert('Error', 'Failed to create admin account - ' + authError.message);
+                setState(prev => ({ ...prev, loading: false }));
+                return;
+              }
 
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: request.admin_email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          name: request.admin_name,
-          role: 'admin'
+              // Step 3: Create user profile in users table
+              const { error: userError } = await supabase
+                .from('users')
+                .insert({
+                  auth_user_id: authData.user.id,
+                  preschool_id: preschoolData.id,
+                  name: request.admin_name,
+                  email: request.admin_email,
+                  phone: request.phone,
+                  role: 'admin',
+                  is_active: true,
+                  created_at: new Date().toISOString()
+                });
+
+              if (userError) {
+                // Removed debug statement: console.error('Error creating user profile:', userError);
+                // Cleanup: delete auth user and preschool using admin client
+                await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+                await supabase.from('preschools').delete().eq('id', preschoolData.id);
+                Alert.alert('Error', 'Failed to create user profile - ' + userError.message);
+                setState(prev => ({ ...prev, loading: false }));
+                return;
+              }
+
+              // Step 4: Update the onboarding request status
+              const { error: updateError } = await supabase
+                .from('preschool_onboarding_requests')
+                .update({ 
+                  status: 'approved', 
+                  reviewed_at: new Date().toISOString(),
+                  reviewed_by: profile?.id // Assuming profile has the super admin's ID
+                })
+                .eq('id', requestId);
+
+              if (updateError) {
+                // Removed debug statement: console.error('Error updating request status:', updateError);
+                Alert.alert('Warning', 'School created but failed to update request status');
+              }
+
+              // Step 5: Show success message with credentials
+              const successMessage = `SUCCESS! School "${request.preschool_name}" has been created.\n\nAdmin Login Details:\nEmail: ${request.admin_email}\nTemporary Password: ${tempPassword}\n\nThe admin will need to change this password on first login.`;
+
+              Alert.alert('Success', successMessage);
+
+              // Refresh data and close modal
+              await loadData();
+              setState(prev => ({ ...prev, showRequestModal: false, selectedRequest: null }));
+            } catch (error) {
+              // Removed debug statement: console.error('Error in approve request process:', error);
+              const msg = error instanceof Error ? error.message : String(error);
+              Alert.alert('Error', 'An unexpected error occurred while approving the request - ' + msg);
+            } finally {
+              setState(prev => ({ ...prev, loading: false }));
+            }
+          }
         }
-      });
-
-      if (authError) {
-        console.error('Error creating auth user:', authError);
-        // If auth user creation fails, we should delete the preschool
-        await supabase.from('preschools').delete().eq('id', preschoolData.id);
-        alert('Error: Failed to create admin account - ' + authError.message);
-        setState(prev => ({ ...prev, loading: false }));
-        return;
-      }
-
-      // Step 3: Create user profile in users table
-
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          auth_user_id: authData.user.id,
-          preschool_id: preschoolData.id,
-          name: request.admin_name,
-          email: request.admin_email,
-          phone: request.phone,
-          role: 'admin',
-          is_active: true,
-          created_at: new Date().toISOString()
-        });
-
-      if (userError) {
-        console.error('Error creating user profile:', userError);
-        // Cleanup: delete auth user and preschool using admin client
-        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-        await supabase.from('preschools').delete().eq('id', preschoolData.id);
-        alert('Error: Failed to create user profile - ' + userError.message);
-        setState(prev => ({ ...prev, loading: false }));
-        return;
-      }
-
-      // Step 4: Update the onboarding request status
-
-      const { error: updateError } = await supabase
-        .from('preschool_onboarding_requests')
-        .update({ 
-          status: 'approved', 
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: profile?.id // Assuming profile has the super admin's ID
-        })
-        .eq('id', requestId);
-
-      if (updateError) {
-        console.error('Error updating request status:', updateError);
-        alert('Warning: School created but failed to update request status');
-      }
-
-      // Step 5: Show success message with credentials
-
-      const successMessage = `SUCCESS! School "${request.preschool_name}" has been created.\n\nAdmin Login Details:\nEmail: ${request.admin_email}\nTemporary Password: ${tempPassword}\n\nThe admin will need to change this password on first login.`;
-
-      alert(successMessage);
-      
-      // Refresh data and close modal
-      await loadData();
-      setState(prev => ({ ...prev, showRequestModal: false, selectedRequest: null }));
-    } catch (error) {
-      console.error('Error in approve request process:', error);
-      alert('Error: An unexpected error occurred while approving the request - ' + error.message);
-    } finally {
-      setState(prev => ({ ...prev, loading: false }));
-    }
+      ]
+    );
   };
 
   const rejectRequest = async (requestId: string) => {

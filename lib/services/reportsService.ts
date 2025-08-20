@@ -97,7 +97,7 @@ export class ReportsService {
       if (error) throw error;
       return { data: report, error: null };
     } catch (error) {
-      console.error('Error creating report:', error);
+      log.error('Error creating report:', error);
       return { data: null, error };
     }
   }
@@ -131,7 +131,7 @@ export class ReportsService {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching student reports:', error);
+      log.error('Error fetching student reports:', error);
       return { data: null, error };
     }
   }
@@ -152,7 +152,7 @@ export class ReportsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching report by ID:', error);
+      log.error('Error fetching report by ID:', error);
       return { data: null, error };
     }
   }
@@ -186,7 +186,7 @@ export class ReportsService {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching parent reports:', error);
+      log.error('Error fetching parent reports:', error);
       return { data: null, error };
     }
   }
@@ -204,7 +204,7 @@ export class ReportsService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error marking report as viewed:', error);
+      log.error('Error marking report as viewed:', error);
       return { error };
     }
   }
@@ -222,7 +222,7 @@ export class ReportsService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error adding parent acknowledgment:', error);
+      log.error('Error adding parent acknowledgment:', error);
       return { error };
     }
   }
@@ -241,7 +241,7 @@ export class ReportsService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error sending report to parents:', error);
+      log.error('Error sending report to parents:', error);
       return { error };
     }
   }
@@ -287,7 +287,7 @@ export class ReportsService {
         error: null
       };
     } catch (error) {
-      console.error('Error fetching teacher reports summary:', error);
+      log.error('Error fetching teacher reports summary:', error);
       return { data: null, error };
     }
   }
@@ -321,7 +321,7 @@ export class ReportsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching student activity highlights:', error);
+      log.error('Error fetching student activity highlights:', error);
       return { data: null, error };
     }
   }
@@ -361,7 +361,7 @@ export class ReportsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error creating daily report templates:', error);
+      log.error('Error creating daily report templates:', error);
       return { data: null, error };
     }
   }
@@ -376,7 +376,7 @@ export class ReportsService {
 
       return { error };
     } catch (error) {
-      console.error('Error updating report:', error);
+      log.error('Error updating report:', error);
       return { error };
     }
   }
@@ -458,7 +458,7 @@ export class ReportsService {
         try {
           return JSON.parse(response.content);
         } catch (parseError) {
-          console.warn('Failed to parse AI report response:', parseError);
+          log.warn('Failed to parse AI report response:', parseError);
           return {
             learning_highlights: response.content.slice(0, 150),
             behavior_notes: 'Student showed positive engagement in classroom activities.',
@@ -474,7 +474,7 @@ export class ReportsService {
 
       throw new Error('AI report generation service unavailable');
     } catch (error) {
-      console.error('Error generating AI report:', error);
+      log.error('Error generating AI report:', error);
       return {
         learning_highlights: 'Student engaged in educational activities and showed progress.',
         behavior_notes: 'Student demonstrated positive behavior and social skills.',
@@ -570,7 +570,7 @@ export class ReportsService {
         try {
           return JSON.parse(response.content);
         } catch (parseError) {
-          console.warn('Failed to parse progress summary response:', parseError);
+          log.warn('Failed to parse progress summary response:', parseError);
           return {
             overallProgress: response.content.slice(0, 200),
             strengthAreas: ['Active engagement', 'Positive attitude'],
@@ -584,7 +584,7 @@ export class ReportsService {
 
       throw new Error('AI progress summary service unavailable');
     } catch (error) {
-      console.error('Error generating progress summary:', error);
+      log.error('Error generating progress summary:', error);
       return {
         overallProgress: 'Student continues to grow and learn in our program.',
         strengthAreas: ['Regular participation', 'Positive interactions'],
@@ -635,7 +635,7 @@ export class ReportsService {
       if (error) throw error;
       return { data: (report as unknown as ClassroomReport), error: null };
     } catch (error) {
-      console.error('Error creating AI daily report:', error);
+      log.error('Error creating AI daily report:', error);
       return { data: null, error };
     }
   }

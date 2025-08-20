@@ -67,7 +67,7 @@ export default function SignIn() {
               return;
             }
           }
-        } catch {}
+        } catch { }
         // Fallback route for non-superadmin or if lookup fails
         router.replace('/(tabs)/dashboard');
       }

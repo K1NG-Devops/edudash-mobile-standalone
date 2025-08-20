@@ -103,7 +103,7 @@ const RegisterChildContent: React.FC<RegisterChildContentProps> = ({ profile, on
 
       setAvailableClasses(classes || []);
     } catch (error) {
-      console.error('Error loading classes:', error);
+      // Removed debug statement: console.error('Error loading classes:', error);
     }
   };
 
@@ -211,7 +211,7 @@ const RegisterChildContent: React.FC<RegisterChildContentProps> = ({ profile, on
         ]
       );
     } catch (error) {
-      console.error('Error registering child:', error);
+      // Removed debug statement: console.error('Error registering child:', error);
       Alert.alert(
         'Registration Failed',
         'There was an error registering your child. Please try again or contact support.'

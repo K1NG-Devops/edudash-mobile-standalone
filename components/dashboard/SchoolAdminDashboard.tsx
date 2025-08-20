@@ -67,7 +67,7 @@ export default function SchoolAdminDashboard({
       const data = await SchoolAdminDataService.getSchoolAdminDashboardData(userId);
       setDashboardData(data);
     } catch (err: any) {
-      console.error('❌ [SchoolAdminDashboard] Error loading data:', err);
+      // Removed debug statement: console.error('❌ [SchoolAdminDashboard] Error loading data:', err);
       setError(err.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);

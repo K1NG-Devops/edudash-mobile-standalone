@@ -85,7 +85,7 @@ export class PasswordResetTool extends React.Component<{}, PasswordResetToolStat
         Alert.alert('Error', errorMessage);
       }
     } catch (error: any) {
-      console.error('Error sending password reset:', error);
+      // Removed debug statement: console.error('Error sending password reset:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       this.setState({ loading: false });

@@ -101,7 +101,7 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
         }));
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      // Removed debug statement: console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -125,7 +125,7 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
         }));
       }
     } catch (error) {
-      console.error('Error picking document:', error);
+      // Removed debug statement: console.error('Error picking document:', error);
       Alert.alert('Error', 'Failed to pick document. Please try again.');
     }
   };
@@ -151,7 +151,7 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
       handleClose();
       Alert.alert('Success', 'Proof of payment uploaded successfully. It will be reviewed by the school administration.');
     } catch (error) {
-      console.error('Upload error:', error);
+      // Removed debug statement: console.error('Upload error:', error);
       Alert.alert('Error', 'Failed to upload proof of payment. Please try again.');
     } finally {
       setLoading(false);

@@ -186,7 +186,7 @@ export class HomeworkGraderService {
         grading: gradedSubmission
       };
     } catch (error) {
-      console.error('Error grading submission:', error);
+      log.error('Error grading submission:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to grade submission'
@@ -220,7 +220,7 @@ export class HomeworkGraderService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error saving graded submission:', error);
+      log.error('Error saving graded submission:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to save graded submission'
@@ -274,7 +274,7 @@ export class HomeworkGraderService {
         results
       };
     } catch (error) {
-      console.error('Error batch grading submissions:', error);
+      log.error('Error batch grading submissions:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to batch grade submissions'
@@ -431,7 +431,7 @@ export class HomeworkGraderService {
         }
       };
     } catch (error) {
-      console.error('Error generating progress report:', error);
+      log.error('Error generating progress report:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to generate progress report'
@@ -572,7 +572,7 @@ export class HomeworkGraderService {
         }
       };
     } catch (error) {
-      console.error('Error getting grading statistics:', error);
+      log.error('Error getting grading statistics:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get statistics'

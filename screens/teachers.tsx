@@ -77,7 +77,7 @@ function TeachersScreen({ userProfile }: TeachersScreenProps) {
         setError(result.error ? String(result.error) : 'Failed to load teachers');
       }
     } catch (err) {
-      console.error('Error loading teachers:', err);
+      // Removed debug statement: console.error('Error loading teachers:', err);
       setError('Failed to load teachers');
     } finally {
       setLoading(false);
@@ -115,7 +115,7 @@ function TeachersScreen({ userProfile }: TeachersScreenProps) {
       setShowAddModal(false);
       loadTeachers(); // Refresh the list
     } catch (err) {
-      console.error('Error sending teacher invitation:', err);
+      // Removed debug statement: console.error('Error sending teacher invitation:', err);
       Alert.alert('Error', 'Failed to send teacher invitation');
     } finally {
       setIsSubmitting(false);

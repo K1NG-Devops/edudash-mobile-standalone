@@ -55,7 +55,7 @@ export const HomeworkSubmission: React.FC<HomeworkSubmissionProps> = ({
 
     setSubmitting(true);
     try {
-      console.log('🚀 Submitting homework:', {
+      // Removed debug statement: console.log('🚀 Submitting homework:', {
         assignment: assignment.id,
         student: studentId,
         text: submissionText.trim(),
@@ -101,7 +101,7 @@ ${result.uploadedFiles && result.uploadedFiles.length > 0 ? `🚀 ${result.uploa
       onSubmit();
       onClose();
     } catch (error) {
-      console.error('❌ Error submitting homework:', error);
+      // Removed debug statement: console.error('❌ Error submitting homework:', error);
       
       // Enhanced error message
       const errorMessage = `❌ Oops! Something went wrong.
@@ -158,7 +158,7 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
         Alert.alert('Success', 'Image added successfully!');
       }
     } catch (error) {
-      console.error('📸 Error picking image:', error);
+      // Removed debug statement: console.error('📸 Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');
     } finally {
       setUploading(false);
@@ -195,7 +195,7 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
         Alert.alert('Success', 'Photo taken successfully!');
       }
     } catch (error) {
-      console.error('📷 Error taking photo:', error);
+      // Removed debug statement: console.error('📷 Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo');
     } finally {
       setUploading(false);
@@ -225,7 +225,7 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
         Alert.alert('Success', 'Document added successfully!');
       }
     } catch (error) {
-      console.error('📄 Error picking document:', error);
+      // Removed debug statement: console.error('📄 Error picking document:', error);
       Alert.alert('Error', 'Failed to pick document');
     } finally {
       setUploading(false);
@@ -264,7 +264,7 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
 
   if (!assignment) return null;
 
-  console.log('📋 HomeworkSubmission component rendering with:', {
+  // Removed debug statement: console.log('📋 HomeworkSubmission component rendering with:', {
     visible,
     assignmentTitle: assignment?.title,
     studentId,

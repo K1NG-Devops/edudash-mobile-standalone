@@ -176,7 +176,7 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
         throw new Error(result.error || 'Failed to generate lesson');
       }
     } catch (error) {
-      console.error('Lesson generation error:', error);
+      // Removed debug statement: console.error('Lesson generation error:', error);
       Alert.alert(
         'Generation Failed',
         error instanceof Error ? error.message : 'Failed to generate lesson. Please try again.',

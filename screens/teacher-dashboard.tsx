@@ -305,7 +305,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
           }
         }
       } catch (aiError) {
-        console.warn('AI insights generation failed:', aiError);
+        // Removed debug statement: console.warn('AI insights generation failed:', aiError);
       }
 
       this.setState({
@@ -319,7 +319,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
       });
 
     } catch (error) {
-      console.error('Error loading teacher data:', error);
+      // Removed debug statement: console.error('Error loading teacher data:', error);
       this.setState({ 
         error: error instanceof Error ? error.message : 'Failed to load dashboard data'
       });

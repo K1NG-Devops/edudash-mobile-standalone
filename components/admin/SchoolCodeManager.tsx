@@ -46,7 +46,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
         setActiveCode(null);
       }
     } catch (error) {
-      console.error('Error loading active code:', error);
+      // Removed debug statement: console.error('Error loading active code:', error);
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
         Alert.alert('Error', 'Failed to generate school code. Please try again.');
       }
     } catch (error) {
-      console.error('Error generating code:', error);
+      // Removed debug statement: console.error('Error generating code:', error);
       Alert.alert('Error', 'Failed to generate school code. Please try again.');
     } finally {
       setLoading(false);
@@ -116,7 +116,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                 Alert.alert('Error', 'Failed to deactivate school code.');
               }
             } catch (error) {
-              console.error('Error deactivating code:', error);
+              // Removed debug statement: console.error('Error deactivating code:', error);
               Alert.alert('Error', 'Failed to deactivate school code.');
             } finally {
               setLoading(false);
@@ -149,7 +149,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
           url: webFallbackUrl, // This will be used on platforms that support URL sharing
         });
       } catch (error) {
-        console.error('Error sharing code:', error);
+        // Removed debug statement: console.error('Error sharing code:', error);
       }
     }
   };

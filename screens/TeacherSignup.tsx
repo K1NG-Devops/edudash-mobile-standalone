@@ -55,7 +55,7 @@ export default function TeacherSignup({ invitationCode }: TeacherSignupProps) {
       setFormData(prev => ({ ...prev, name: ((invitationData as any).name as string) || '' }));
       setStep('details');
     } catch (error) {
-      console.error('Error verifying code:', error);
+      // Removed debug statement: console.error('Error verifying code:', error);
       Alert.alert('Error', 'Failed to verify invitation code');
     } finally {
       setLoading(false);
@@ -105,7 +105,7 @@ export default function TeacherSignup({ invitationCode }: TeacherSignupProps) {
         ]
       );
     } catch (error) {
-      console.error('Error completing signup:', error);
+      // Removed debug statement: console.error('Error completing signup:', error);
       Alert.alert('Error', 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);

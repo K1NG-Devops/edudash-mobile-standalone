@@ -171,7 +171,7 @@ export function IconSymbol({
   if (!mapped) {
     // Log once per missing key to avoid noisy logs
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(`[IconSymbol] Unmapped icon name "${name}". Falling back to "${safeName}".`);
+      // Removed debug statement: console.warn(`[IconSymbol] Unmapped icon name "${name}". Falling back to "${safeName}".`);
     }
   }
   return <MaterialIcons color={color} size={size} name={safeName} style={style} />;

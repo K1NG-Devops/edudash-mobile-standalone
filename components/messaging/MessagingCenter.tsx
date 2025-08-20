@@ -230,7 +230,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
       setConversations(Array.from(conversationMap.values()));
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      // Removed debug statement: console.error('Error loading conversations:', error);
       Alert.alert('Error', 'Failed to load conversations');
     } finally {
       setLoading(false);
@@ -285,7 +285,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
       setAnnouncements(mapped);
     } catch (error) {
-      console.error('Error loading announcements:', error);
+      // Removed debug statement: console.error('Error loading announcements:', error);
     }
   };
 
@@ -341,7 +341,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
       scrollToBottom();
     } catch (error) {
-      console.error('Error loading messages:', error);
+      // Removed debug statement: console.error('Error loading messages:', error);
     }
   };
 
@@ -392,7 +392,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       await loadMessages(selectedConversation);
       await loadConversations();
     } catch (error) {
-      console.error('Error sending message:', error);
+      // Removed debug statement: console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message');
     } finally {
       setSending(false);

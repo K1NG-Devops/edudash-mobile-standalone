@@ -66,7 +66,7 @@ export default function UsersScreen() {
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error('Error loading users:', error);
+      // Removed debug statement: console.error('Error loading users:', error);
       Alert.alert('Error', 'Failed to load users');
     } finally {
       setLoading(false);
@@ -114,7 +114,7 @@ export default function UsersScreen() {
         `User ${!currentStatus ? 'activated' : 'deactivated'} successfully`
       );
     } catch (error) {
-      console.error('Error updating user status:', error);
+      // Removed debug statement: console.error('Error updating user status:', error);
       Alert.alert('Error', 'Failed to update user status');
     }
   };
@@ -159,7 +159,7 @@ export default function UsersScreen() {
         await loadUsers();
       }
     } catch (error) {
-      console.error('Error creating user:', error);
+      // Removed debug statement: console.error('Error creating user:', error);
       Alert.alert('Error', 'Failed to create user');
     }
   };

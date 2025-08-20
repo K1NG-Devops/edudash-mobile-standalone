@@ -40,13 +40,13 @@ export class NotificationService {
         .limit(50);
 
       if (error) {
-        console.error('❌ [NotificationService] Database error:', error);
+        log.error('❌ [NotificationService] Database error:', error);
         throw new Error(error.message);
       }
 
       return data || [];
     } catch (error) {
-      console.error('❌ [NotificationService] Error fetching notifications:', error);
+      log.error('❌ [NotificationService] Error fetching notifications:', error);
       throw error;
     }
   }
@@ -63,13 +63,13 @@ export class NotificationService {
         .eq('is_read', false);
 
       if (error) {
-        console.error('❌ [NotificationService] Error getting unread count:', error);
+        log.error('❌ [NotificationService] Error getting unread count:', error);
         return 0;
       }
 
       return count || 0;
     } catch (error) {
-      console.error('❌ [NotificationService] Error getting unread count:', error);
+      log.error('❌ [NotificationService] Error getting unread count:', error);
       return 0;
     }
   }
@@ -88,12 +88,12 @@ export class NotificationService {
         .eq('id', notificationId);
 
       if (error) {
-        console.error('❌ [NotificationService] Error marking as read:', error);
+        log.error('❌ [NotificationService] Error marking as read:', error);
         throw new Error(error.message);
       }
 
     } catch (error) {
-      console.error('❌ [NotificationService] Error marking as read:', error);
+      log.error('❌ [NotificationService] Error marking as read:', error);
       throw error;
     }
   }
@@ -113,12 +113,12 @@ export class NotificationService {
         .eq('is_read', false);
 
       if (error) {
-        console.error('❌ [NotificationService] Error marking all as read:', error);
+        log.error('❌ [NotificationService] Error marking all as read:', error);
         throw new Error(error.message);
       }
 
     } catch (error) {
-      console.error('❌ [NotificationService] Error marking all as read:', error);
+      log.error('❌ [NotificationService] Error marking all as read:', error);
       throw error;
     }
   }
@@ -153,12 +153,12 @@ export class NotificationService {
         .insert([notification]);
 
       if (error) {
-        console.error('❌ [NotificationService] Error creating notification:', error);
+        log.error('❌ [NotificationService] Error creating notification:', error);
         throw new Error(error.message);
       }
 
     } catch (error) {
-      console.error('❌ [NotificationService] Error creating notification:', error);
+      log.error('❌ [NotificationService] Error creating notification:', error);
       throw error;
     }
   }
@@ -193,12 +193,12 @@ export class NotificationService {
         .insert(notifications);
 
       if (error) {
-        console.error('❌ [NotificationService] Error creating bulk notifications:', error);
+        log.error('❌ [NotificationService] Error creating bulk notifications:', error);
         throw new Error(error.message);
       }
 
     } catch (error) {
-      console.error('❌ [NotificationService] Error creating bulk notifications:', error);
+      log.error('❌ [NotificationService] Error creating bulk notifications:', error);
       throw error;
     }
   }
@@ -229,7 +229,7 @@ export class NotificationService {
         .insert([activityLog]);
 
       if (activityError) {
-        console.error('❌ [NotificationService] Error logging activity:', activityError);
+        log.error('❌ [NotificationService] Error logging activity:', activityError);
         // Don't throw here, as notifications shouldn't fail because of activity logging
       } else {
 
@@ -238,7 +238,7 @@ export class NotificationService {
       // Create notifications based on activity type
       await this.handleActivityNotifications(userId, action, entityType, entityId, details);
     } catch (error) {
-      console.error('❌ [NotificationService] Error in logActivity:', error);
+      log.error('❌ [NotificationService] Error in logActivity:', error);
       // Don't throw to prevent breaking the main flow
     }
   }
@@ -337,7 +337,7 @@ export class NotificationService {
           break;
       }
     } catch (error) {
-      console.error('❌ [NotificationService] Error handling activity notifications:', error);
+      log.error('❌ [NotificationService] Error handling activity notifications:', error);
     }
   }
 
@@ -377,7 +377,7 @@ export class NotificationService {
       );
 
     } catch (error) {
-      console.error('❌ [NotificationService] Error notifying super admins:', error);
+      log.error('❌ [NotificationService] Error notifying super admins:', error);
     }
   }
 
@@ -395,12 +395,12 @@ export class NotificationService {
         .lt('created_at', thirtyDaysAgo.toISOString());
 
       if (error) {
-        console.error('❌ [NotificationService] Error cleaning up old notifications:', error);
+        log.error('❌ [NotificationService] Error cleaning up old notifications:', error);
         throw new Error(error.message);
       }
 
     } catch (error) {
-      console.error('❌ [NotificationService] Error cleaning up old notifications:', error);
+      log.error('❌ [NotificationService] Error cleaning up old notifications:', error);
       throw error;
     }
   }
@@ -418,13 +418,13 @@ export class NotificationService {
         .limit(limit);
 
       if (error) {
-        console.error('❌ [NotificationService] Error fetching activity logs:', error);
+        log.error('❌ [NotificationService] Error fetching activity logs:', error);
         throw new Error(error.message);
       }
 
       return data || [];
     } catch (error) {
-      console.error('❌ [NotificationService] Error fetching activity logs:', error);
+      log.error('❌ [NotificationService] Error fetching activity logs:', error);
       throw error;
     }
   }

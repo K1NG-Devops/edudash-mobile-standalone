@@ -15,7 +15,7 @@ export default function StudentProfileScreen() {
       await studentService.createStudent(student);
       alert('Student created successfully!');
     } catch (error) {
-      console.error('Error creating student:', error);
+      // Removed debug statement: console.error('Error creating student:', error);
       alert('Failed to create student.');
     }
   };

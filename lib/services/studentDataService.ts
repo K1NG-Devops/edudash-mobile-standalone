@@ -101,7 +101,7 @@ export class StudentDataService {
         .single();
 
       if (parentError || !parentProfile) {
-        console.error('❌ [StudentService] Parent not found:', parentError);
+        log.error('❌ [StudentService] Parent not found:', parentError);
         return [];
       }
 
@@ -131,7 +131,7 @@ export class StudentDataService {
         .eq('is_active', true);
 
       if (studentsError) {
-        console.error('❌ [StudentService] Failed to fetch students:', studentsError);
+        log.error('❌ [StudentService] Failed to fetch students:', studentsError);
         return [];
       }
 
@@ -184,7 +184,7 @@ export class StudentDataService {
       return enhancedStudents;
 
     } catch (error) {
-      console.error('❌ [StudentService] Unexpected error:', error);
+      log.error('❌ [StudentService] Unexpected error:', error);
       return [];
     }
   }
@@ -228,7 +228,7 @@ export class StudentDataService {
 
       return progressData;
     } catch (error) {
-      console.error('❌ [StudentService] Error fetching student progress:', error);
+      log.error('❌ [StudentService] Error fetching student progress:', error);
       return null;
     }
   }
@@ -254,7 +254,7 @@ export class StudentDataService {
         upcoming_events: upcomingEvents
       };
     } catch (error) {
-      console.error('❌ [StudentService] Error fetching dashboard data:', error);
+      log.error('❌ [StudentService] Error fetching dashboard data:', error);
       return {
         children: [],
         recent_updates: [],
@@ -308,13 +308,13 @@ export class StudentDataService {
         .eq('status', 'pending');
 
       if (error) {
-        console.error('Error fetching pending homework:', error);
+        log.error('Error fetching pending homework:', error);
         return 0;
       }
 
       return data?.length || 0;
     } catch (error) {
-      console.error('Error in getPendingHomeworkCount:', error);
+      log.error('Error in getPendingHomeworkCount:', error);
       return 0;
     }
   }
@@ -377,7 +377,7 @@ export class StudentDataService {
 
       return { completion_rate, total, completed };
     } catch (error) {
-      console.error('Error in getHomeworkCompletionStats:', error);
+      log.error('Error in getHomeworkCompletionStats:', error);
       return { completion_rate: 0, total: 0, completed: 0 };
     }
   }

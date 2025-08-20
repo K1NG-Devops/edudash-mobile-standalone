@@ -59,7 +59,7 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
       const data = await SuperAdminDataService.getRecentUsers();
       setUsers(data);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      // Removed debug statement: console.error('Error fetching users:', error);
       Alert.alert('Error', 'Failed to load users');
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
       const data = await SuperAdminDataService.getRecentSchools();
       setSchools(data);
     } catch (error) {
-      console.error('Error fetching schools:', error);
+      // Removed debug statement: console.error('Error fetching schools:', error);
     }
   };
 

@@ -66,7 +66,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
       setLoading(true);
 
       if (!profile?.preschool_id) {
-        console.warn('No preschool_id found in profile');
+        // Removed debug statement: console.warn('No preschool_id found in profile');
         setSchoolName('Your Preschool');
         return;
       }
@@ -87,7 +87,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
 
         setStats(statsResult.data);
       } else {
-        console.error('❌ [DEBUG] Failed to load stats:', statsResult.error);
+        // Removed debug statement: console.error('❌ [DEBUG] Failed to load stats:', statsResult.error);
         // Keep existing stats or use defaults
       }
 
@@ -104,7 +104,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
       }
 
     } catch (error) {
-      console.error('Error loading principal stats:', error);
+      // Removed debug statement: console.error('Error loading principal stats:', error);
       Alert.alert('Error', 'Failed to load school statistics');
       setSchoolName('Your Preschool');
     } finally {

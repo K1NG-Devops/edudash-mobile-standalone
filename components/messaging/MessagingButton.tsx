@@ -99,7 +99,7 @@ const MessagingButton: React.FC<MessagingButtonProps> = ({
 
       setUnreadCount(count || 0);
     } catch (error) {
-      console.error('Error loading unread count:', error);
+      // Removed debug statement: console.error('Error loading unread count:', error);
     } finally {
       setLoading(false);
     }

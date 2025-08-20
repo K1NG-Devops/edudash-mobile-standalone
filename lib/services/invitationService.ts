@@ -66,7 +66,7 @@ export class InvitationService {
 
       return invitationCode;
     } catch (error) {
-      console.error('Error in createInvitation:', error);
+      log.error('Error in createInvitation:', error);
       throw error;
     }
   }
@@ -112,7 +112,7 @@ export class InvitationService {
         .single();
 
       if (error) {
-        console.error('Error creating user:', error);
+        log.error('Error creating user:', error);
         throw new Error(error.message || 'Failed to create user');
       }
 
@@ -123,7 +123,7 @@ export class InvitationService {
 
       return newUser.id;
     } catch (error) {
-      console.error('Error in useInvitationCode:', error);
+      log.error('Error in useInvitationCode:', error);
       throw error;
     }
   }
@@ -144,7 +144,7 @@ export class InvitationService {
 
       return invitation || null;
     } catch (error) {
-      console.error('Error in getInvitationByCode:', error);
+      log.error('Error in getInvitationByCode:', error);
       throw error;
     }
   }
@@ -161,7 +161,7 @@ export class InvitationService {
       const existingInvitations = JSON.parse(localStorage.getItem('pendingInvitations') || '[]');
       return existingInvitations.filter((inv: InvitationCode) => inv.preschool_id === preschoolId);
     } catch (error) {
-      console.error('Error in getPreschoolInvitations:', error);
+      log.error('Error in getPreschoolInvitations:', error);
       throw error;
     }
   }
@@ -203,7 +203,7 @@ export class InvitationService {
       }
       */
     } catch (error) {
-      console.error('Error sending invitation email:', error);
+      log.error('Error sending invitation email:', error);
       // Don't throw here - invitation was created successfully, just email failed
     }
   }
@@ -232,7 +232,7 @@ export class InvitationService {
         invitation.role
       );
     } catch (error) {
-      console.error('Error resending invitation:', error);
+      log.error('Error resending invitation:', error);
       throw error;
     }
   }
@@ -250,7 +250,7 @@ export class InvitationService {
       const filteredInvitations = existingInvitations.filter((inv: InvitationCode) => inv.id !== invitationId);
       localStorage.setItem('pendingInvitations', JSON.stringify(filteredInvitations));
     } catch (error) {
-      console.error('Error in cancelInvitation:', error);
+      log.error('Error in cancelInvitation:', error);
       throw error;
     }
   }

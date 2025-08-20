@@ -223,7 +223,7 @@ export class LessonGeneratorService {
         lessonId: lessonData.id
       };
     } catch (error) {
-      console.error('Error saving generated lesson:', error);
+      log.error('Error saving generated lesson:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to save lesson'
@@ -275,7 +275,7 @@ export class LessonGeneratorService {
         suggestions
       };
     } catch (error) {
-      console.error('Error getting lesson suggestions:', error);
+      log.error('Error getting lesson suggestions:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get suggestions'

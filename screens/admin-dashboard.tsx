@@ -89,7 +89,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardProps> = ({ profile, onSignOu
         pendingPayments,
       });
     } catch (error) {
-      console.error('Error loading admin stats:', error);
+      // Removed debug statement: console.error('Error loading admin stats:', error);
       Alert.alert('Error', 'Failed to load dashboard statistics');
     } finally {
       setLoading(false);

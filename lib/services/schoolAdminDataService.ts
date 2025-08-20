@@ -169,7 +169,7 @@ export class SchoolAdminDataService {
       };
 
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error fetching dashboard data:', error);
+      log.error('❌ [SchoolAdmin] Error fetching dashboard data:', error);
       throw error;
     }
   }
@@ -186,20 +186,20 @@ export class SchoolAdminDataService {
         .single();
 
       if (error || !user) {
-        console.error('❌ [SchoolAdmin] User not found:', error);
+        log.error('❌ [SchoolAdmin] User not found:', error);
         return null;
       }
 
       const role = String(user.role || '').toLowerCase();
       const isSchoolAdmin = ['preschool_admin', 'principal', 'school_admin'].includes(role);
       if (!isSchoolAdmin || !user.is_active) {
-        console.error('❌ [SchoolAdmin] Invalid permissions or inactive user');
+        log.error('❌ [SchoolAdmin] Invalid permissions or inactive user');
         return null;
       }
 
       return user;
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Permission verification failed:', error);
+      log.error('❌ [SchoolAdmin] Permission verification failed:', error);
       return null;
     }
   }
@@ -267,7 +267,7 @@ export class SchoolAdminDataService {
         storage_usage_gb: Math.floor(Math.random() * 50) + 10 // Mock storage
       };
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error fetching school stats:', error);
+      log.error('❌ [SchoolAdmin] Error fetching school stats:', error);
       return {
         total_students: 0,
         total_teachers: 0,
@@ -309,7 +309,7 @@ export class SchoolAdminDataService {
         .limit(20);
 
       if (error || !students) {
-        console.error('❌ [SchoolAdmin] Error fetching students:', error);
+        log.error('❌ [SchoolAdmin] Error fetching students:', error);
         return [];
       }
 
@@ -334,7 +334,7 @@ export class SchoolAdminDataService {
 
       return enhancedStudents;
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error fetching recent students:', error);
+      log.error('❌ [SchoolAdmin] Error fetching recent students:', error);
       return [];
     }
   }
@@ -352,7 +352,7 @@ export class SchoolAdminDataService {
         .eq('is_active', true);
 
       if (error || !teachers) {
-        console.error('❌ [SchoolAdmin] Error fetching teachers:', error);
+        log.error('❌ [SchoolAdmin] Error fetching teachers:', error);
         return [];
       }
 
@@ -406,7 +406,7 @@ export class SchoolAdminDataService {
 
       return enhancedTeachers;
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error fetching teachers:', error);
+      log.error('❌ [SchoolAdmin] Error fetching teachers:', error);
       return [];
     }
   }
@@ -425,7 +425,7 @@ export class SchoolAdminDataService {
         .limit(20);
 
       if (error || !parents) {
-        console.error('❌ [SchoolAdmin] Error fetching parents:', error);
+        log.error('❌ [SchoolAdmin] Error fetching parents:', error);
         return [];
       }
 
@@ -457,7 +457,7 @@ export class SchoolAdminDataService {
 
       return enhancedParents;
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error fetching parents:', error);
+      log.error('❌ [SchoolAdmin] Error fetching parents:', error);
       return [];
     }
   }
@@ -474,7 +474,7 @@ export class SchoolAdminDataService {
         .eq('preschool_id', schoolId);
 
       if (error || !classes) {
-        console.error('❌ [SchoolAdmin] Error fetching classes:', error);
+        log.error('❌ [SchoolAdmin] Error fetching classes:', error);
         return [];
       }
 
@@ -527,7 +527,7 @@ export class SchoolAdminDataService {
 
       return enhancedClasses;
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error fetching classes:', error);
+      log.error('❌ [SchoolAdmin] Error fetching classes:', error);
       return [];
     }
   }
@@ -627,7 +627,7 @@ export class SchoolAdminDataService {
         payment_trends: paymentTrends
       };
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error fetching financials:', error);
+      log.error('❌ [SchoolAdmin] Error fetching financials:', error);
       return {
         monthly_revenue: 0,
         pending_payments: 0,
@@ -694,7 +694,7 @@ export class SchoolAdminDataService {
 
       return Math.min(100, Math.max(85, baseRate + variance));
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error calculating attendance rate:', error);
+      log.error('❌ [SchoolAdmin] Error calculating attendance rate:', error);
       return 92; // Default fallback
     }
   }
@@ -741,7 +741,7 @@ export class SchoolAdminDataService {
 
       return { success: true, student: data };
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error enrolling student:', error);
+      log.error('❌ [SchoolAdmin] Error enrolling student:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -769,7 +769,7 @@ export class SchoolAdminDataService {
 
       return { success: true, teacher: data };
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error adding teacher:', error);
+      log.error('❌ [SchoolAdmin] Error adding teacher:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -797,7 +797,7 @@ export class SchoolAdminDataService {
 
       return { success: true, class: data };
     } catch (error) {
-      console.error('❌ [SchoolAdmin] Error creating class:', error);
+      log.error('❌ [SchoolAdmin] Error creating class:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }

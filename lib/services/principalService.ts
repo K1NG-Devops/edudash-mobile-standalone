@@ -58,7 +58,7 @@ export class PrincipalService {
         .eq('is_active', true);
 
       if (studentsError && studentsError.code !== 'PGRST116') { // Ignore "no rows" error
-        console.warn('Error fetching student count:', studentsError);
+        log.warn('Error fetching student count:', studentsError);
       }
 
       // Get total teachers
@@ -70,7 +70,7 @@ export class PrincipalService {
         .eq('is_active', true);
 
       if (teachersError && teachersError.code !== 'PGRST116') {
-        console.warn('Error fetching teacher count:', teachersError);
+        log.warn('Error fetching teacher count:', teachersError);
       }
 
       // Get total parents
@@ -82,7 +82,7 @@ export class PrincipalService {
         .eq('is_active', true);
 
       if (parentsError && parentsError.code !== 'PGRST116') {
-        console.warn('Error fetching parent count:', parentsError);
+        log.warn('Error fetching parent count:', parentsError);
       }
 
       // Get active classes
@@ -93,7 +93,7 @@ export class PrincipalService {
         .eq('is_active', true);
 
       if (classesError && classesError.code !== 'PGRST116') {
-        console.warn('Error fetching classes count:', classesError);
+        log.warn('Error fetching classes count:', classesError);
       }
 
       // Get new enrollments this month
@@ -108,7 +108,7 @@ export class PrincipalService {
         .gte('created_at', startOfMonth.toISOString());
 
       if (enrollmentsError && enrollmentsError.code !== 'PGRST116') {
-        console.warn('Error fetching new enrollments:', enrollmentsError);
+        log.warn('Error fetching new enrollments:', enrollmentsError);
       }
 
       // Calculate attendance rate (mock for now - would need attendance table)
@@ -133,7 +133,7 @@ export class PrincipalService {
 
       return { data: stats, error: null };
     } catch (error) {
-      console.error('Error fetching principal stats:', error);
+      log.error('Error fetching principal stats:', error);
       return { data: null, error };
     }
   }
@@ -150,12 +150,15 @@ export class PrincipalService {
         .from('preschools')
         .select('*')
         .eq('id', preschoolId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) {
+        return { data: null, error: 'School not found' };
+      }
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching school info:', error);
+      log.error('Error fetching school info:', error);
       return { data: null, error };
     }
   }
@@ -208,7 +211,7 @@ export class PrincipalService {
 
       return { data: code, error: null };
     } catch (error) {
-      console.error('Error generating school invitation code:', error);
+      log.error('Error generating school invitation code:', error);
       return { data: null, error };
     }
   }
@@ -227,7 +230,7 @@ export class PrincipalService {
 
       return { data: activeCode || null, error: null };
     } catch (error) {
-      console.error('Error getting active school invitation code:', error);
+      log.error('Error getting active school invitation code:', error);
       return { data: null, error };
     }
   }
@@ -248,7 +251,7 @@ export class PrincipalService {
       await StorageUtil.setJSON('schoolInvitationCodes', updatedCodes);
       return { success: true, error: null };
     } catch (error) {
-      console.error('Error deactivating school invitation code:', error);
+      log.error('Error deactivating school invitation code:', error);
       return { success: false, error };
     }
   }
@@ -274,7 +277,7 @@ export class PrincipalService {
         .maybeSingle();
 
       if (checkError && checkError.code !== 'PGRST116') {
-        console.warn('Error checking for existing user:', checkError);
+        log.warn('Error checking for existing user:', checkError);
       }
 
       if (existingUser) {
@@ -310,7 +313,7 @@ export class PrincipalService {
         .from('users')
         .select('name')
         .eq('id', invitedBy)
-        .single();
+  .maybeSingle();
 
       // Send invitation email using EmailService
       const emailData: TeacherInvitationEmailData = {
@@ -324,7 +327,7 @@ export class PrincipalService {
       const emailResult = await EmailService.sendTeacherInvitation(teacherData.email, emailData);
 
       if (!emailResult.success) {
-        console.warn(`⚠️ Failed to send email invitation to ${teacherData.email}:`, emailResult.error);
+        log.warn(`⚠️ Failed to send email invitation to ${teacherData.email}:`, emailResult.error);
         // Still return success since the invitation was created in database
         // The principal can resend the email manually or share the code directly
       } else {
@@ -333,7 +336,7 @@ export class PrincipalService {
 
       return { data: invitation, error: null };
     } catch (error) {
-      console.error('Error creating teacher invitation:', error);
+      log.error('Error creating teacher invitation:', error);
       return { data: null, error };
     }
   }
@@ -359,7 +362,7 @@ export class PrincipalService {
 
       return { data: updatedInvitations, error: null };
     } catch (error) {
-      console.error('Error getting teacher invitations:', error);
+      log.error('Error getting teacher invitations:', error);
       return { data: [], error };
     }
   }
@@ -399,7 +402,7 @@ export class PrincipalService {
 
       return { data: enriched, error: null };
     } catch (error) {
-      console.error('Error fetching school teachers:', error);
+      log.error('Error fetching school teachers:', error);
       return { data: null, error };
     }
   }
@@ -440,7 +443,7 @@ export class PrincipalService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching school students:', error);
+      log.error('Error fetching school students:', error);
       return { data: null, error };
     }
   }
@@ -489,7 +492,7 @@ export class PrincipalService {
 
       return { data: enriched, error: null };
     } catch (error) {
-      console.error('Error fetching school parents:', error);
+      log.error('Error fetching school parents:', error);
       return { data: null, error };
     }
   }
@@ -588,7 +591,7 @@ export class PrincipalService {
 
       return { data: activities, error: null };
     } catch (error) {
-      console.error('Error fetching recent activity:', error);
+      log.error('Error fetching recent activity:', error);
       return { data: ['School activity tracking is being set up'], error };
     }
   }
@@ -708,7 +711,7 @@ export class PrincipalService {
 
       return { data: tasks, error: null };
     } catch (error) {
-      console.error('Error fetching pending tasks:', error);
+      log.error('Error fetching pending tasks:', error);
       return {
         data: [{
           priority: 'low',
@@ -764,7 +767,7 @@ export class PrincipalService {
       const monthlyFeePerStudent = this.getMonthlyFeePerStudent();
       return Math.round(totalStudents * monthlyFeePerStudent);
     } catch (error) {
-      console.warn('Error calculating monthly revenue, using estimate:', error);
+      log.warn('Error calculating monthly revenue, using estimate:', error);
       // Final fallback: estimated revenue
       return Math.round(totalStudents * this.getMonthlyFeePerStudent());
     }
@@ -823,7 +826,7 @@ export class PrincipalService {
         .from('users')
         .select('name')
         .eq('id', invitation.invited_by)
-        .single();
+  .maybeSingle();
 
       // Send invitation email using EmailService
       const emailData: TeacherInvitationEmailData = {
@@ -837,13 +840,13 @@ export class PrincipalService {
       const emailResult = await EmailService.sendTeacherInvitation(invitation.email, emailData);
 
       if (!emailResult.success) {
-        console.warn(`⚠️ Failed to resend email invitation to ${invitation.email}:`, emailResult.error);
+        log.warn(`⚠️ Failed to resend email invitation to ${invitation.email}:`, emailResult.error);
         return { success: false, error: emailResult.error || 'Failed to send email' };
       }
 
       return { success: true };
     } catch (error) {
-      console.error('Error resending teacher invitation:', error);
+      log.error('Error resending teacher invitation:', error);
       return { success: false, error: 'Failed to resend invitation' };
     }
   }
@@ -867,7 +870,19 @@ export class PrincipalService {
           .select('id')
           .single();
         if (!dbErr && updated) {
-
+          // Keep local cache in sync for UI that reads from local storage
+          const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
+          const idx = existingInvitations.findIndex((inv: TeacherInvitation) =>
+            inv.id === invitationId && inv.preschool_id === preschoolId
+          );
+          if (idx !== -1) {
+            existingInvitations[idx] = {
+              ...existingInvitations[idx],
+              status: 'cancelled' as const,
+              cancelled_at: new Date().toISOString(),
+            };
+            await StorageUtil.setJSON('teacherInvitations', existingInvitations);
+          }
           return { success: true };
         }
       } catch (_) {
@@ -901,7 +916,7 @@ export class PrincipalService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error revoking teacher invitation:', error);
+      log.error('Error revoking teacher invitation:', error);
       return { success: false, error: 'Failed to revoke invitation' };
     }
   }
@@ -924,7 +939,15 @@ export class PrincipalService {
           .select('id')
           .single();
         if (!dbErr && deleted) {
-
+          // Keep local cache in sync for UI that reads from local storage
+          const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
+          const idx = existingInvitations.findIndex((inv: TeacherInvitation) =>
+            inv.id === invitationId && inv.preschool_id === preschoolId
+          );
+          if (idx !== -1) {
+            existingInvitations.splice(idx, 1);
+            await StorageUtil.setJSON('teacherInvitations', existingInvitations);
+          }
           return { success: true };
         }
       } catch (_) {
@@ -948,7 +971,7 @@ export class PrincipalService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error deleting teacher invitation:', error);
+      log.error('Error deleting teacher invitation:', error);
       return { success: false, error: 'Failed to delete invitation' };
     }
   }
@@ -984,7 +1007,7 @@ export class PrincipalService {
 
       return { success: true, deletedCount: expiredInvitations.length };
     } catch (error) {
-      console.error('Error cleaning up expired invitations:', error);
+      log.error('Error cleaning up expired invitations:', error);
       return { success: false, deletedCount: 0, error: 'Failed to cleanup invitations' };
     }
   }

@@ -59,7 +59,7 @@ const CompleteProfileScreen: React.FC = () => {
         emergency_contact_phone: profile.emergency_contact_phone || '',
       });
     } catch (error) {
-      console.error('Error loading profile:', error);
+      // Removed debug statement: console.error('Error loading profile:', error);
     } finally {
       setLoading(false);
     }
@@ -128,7 +128,7 @@ const CompleteProfileScreen: React.FC = () => {
         ]
       );
     } catch (error) {
-      console.error('Error saving profile:', error);
+      // Removed debug statement: console.error('Error saving profile:', error);
       Alert.alert(
         'Error',
         'Failed to update profile. Please try again.'

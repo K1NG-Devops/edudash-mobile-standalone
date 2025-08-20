@@ -22,7 +22,7 @@ export default function StudentsScreen() {
         .from('students')
         .select('*');
 
-      if (error) console.error('Error fetching students:', error);
+      if (error) // Removed debug statement: console.error('Error fetching students:', error);
       else setStudents(data || []);
 
       setLoading(false);

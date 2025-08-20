@@ -168,7 +168,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
 
       setContacts(allContacts);
     } catch (error) {
-      console.error('Error loading contacts:', error);
+      // Removed debug statement: console.error('Error loading contacts:', error);
       Alert.alert('Error', 'Failed to load contacts');
     } finally {
       setLoading(false);
@@ -263,7 +263,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         const failedUploads = uploadResults.filter(result => result.error);
         
         if (failedUploads.length > 0) {
-          console.warn('Some media uploads failed:', failedUploads);
+          // Removed debug statement: console.warn('Some media uploads failed:', failedUploads);
         }
       }
 
@@ -275,7 +275,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       onMessageSent();
       onClose();
     } catch (error) {
-      console.error('Error sending message:', error);
+      // Removed debug statement: console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message');
     } finally {
       setSending(false);
@@ -329,7 +329,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         }]);
       }
     } catch (error) {
-      console.error('Error picking image from camera:', error);
+      // Removed debug statement: console.error('Error picking image from camera:', error);
       Alert.alert('Error', 'Failed to take photo. Please check camera permissions.');
     } finally {
       setUploadingMedia(false);
@@ -349,7 +349,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         }]);
       }
     } catch (error) {
-      console.error('Error picking image from gallery:', error);
+      // Removed debug statement: console.error('Error picking image from gallery:', error);
       Alert.alert('Error', 'Failed to select photo. Please check gallery permissions.');
     } finally {
       setUploadingMedia(false);

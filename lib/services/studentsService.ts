@@ -44,7 +44,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching students by teacher:', error);
+      log.error('Error fetching students by teacher:', error);
       return { data: null, error };
     }
   }
@@ -61,7 +61,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching student by ID:', error);
+      log.error('Error fetching student by ID:', error);
       return { data: null, error };
     }
   }
@@ -79,7 +79,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching students by parent:', error);
+      log.error('Error fetching students by parent:', error);
       return { data: null, error };
     }
   }
@@ -101,7 +101,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching students by preschool:', error);
+      log.error('Error fetching students by preschool:', error);
       return { data: null, error };
     }
   }
@@ -118,7 +118,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error creating student:', error);
+      log.error('Error creating student:', error);
       return { data: null, error };
     }
   }
@@ -139,7 +139,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error updating student:', error);
+      log.error('Error updating student:', error);
       return { data: null, error };
     }
   }
@@ -160,7 +160,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error deleting student:', error);
+      log.error('Error deleting student:', error);
       return { data: null, error };
     }
   }
@@ -199,7 +199,7 @@ export class StudentsService {
         error: null
       };
     } catch (error) {
-      console.error('Error fetching student stats:', error);
+      log.error('Error fetching student stats:', error);
       return { data: null, error };
     }
   }

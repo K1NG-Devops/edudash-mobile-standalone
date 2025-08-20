@@ -95,7 +95,7 @@ export class TeacherDataService {
         .single();
 
       if (teacherError || !teacherProfile) {
-        console.error('❌ [TeacherService] Teacher not found:', teacherError);
+        log.error('❌ [TeacherService] Teacher not found:', teacherError);
         return [];
       }
 
@@ -121,7 +121,7 @@ export class TeacherDataService {
         .eq('is_active', true);
 
       if (classesError) {
-        console.error('❌ [TeacherService] Failed to fetch classes:', classesError);
+        log.error('❌ [TeacherService] Failed to fetch classes:', classesError);
         return [];
       }
 
@@ -168,7 +168,7 @@ export class TeacherDataService {
       return teacherClasses;
 
     } catch (error) {
-      console.error('❌ [TeacherService] Unexpected error:', error);
+      log.error('❌ [TeacherService] Unexpected error:', error);
       return [];
     }
   }
@@ -199,7 +199,7 @@ export class TeacherDataService {
             .single();
 
           if (studentError || !studentDetails) {
-            console.warn('⚠️ Could not fetch details for student:', student.id);
+            log.warn('⚠️ Could not fetch details for student:', student.id);
             continue;
           }
 
@@ -241,7 +241,7 @@ export class TeacherDataService {
       return allStudents;
 
     } catch (error) {
-      console.error('❌ [TeacherService] Error fetching students:', error);
+      log.error('❌ [TeacherService] Error fetching students:', error);
       return [];
     }
   }
@@ -275,7 +275,7 @@ export class TeacherDataService {
         daily_summary: dailySummary
       };
     } catch (error) {
-      console.error('❌ [TeacherService] Error fetching dashboard data:', error);
+      log.error('❌ [TeacherService] Error fetching dashboard data:', error);
       return {
         classes: [],
         total_students: 0,
@@ -340,13 +340,13 @@ export class TeacherDataService {
         .single();
 
       if (error) {
-        console.error('❌ Error creating homework assignment:', error);
+        log.error('❌ Error creating homework assignment:', error);
         return { success: false, error: error.message };
       }
 
       return { success: true, assignment_id: data.id };
     } catch (error) {
-      console.error('❌ Unexpected error creating homework:', error);
+      log.error('❌ Unexpected error creating homework:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   }
