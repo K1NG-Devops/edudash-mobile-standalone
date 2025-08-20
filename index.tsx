@@ -18,9 +18,14 @@ class WelcomeScreen extends React.Component {
     const { user, loading } = auth;
 
     // Auto-redirect if user is logged in
+    // Do not hardcode tabs; let the app-level index handle role-based routing
     if (user && !loading) {
-      router.replace('/(tabs)');
-      return null;
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.loadingText}>Preparing your dashboard...</Text>
+        </View>
+      );
     }
 
     if (loading) {
@@ -74,7 +79,7 @@ class WelcomeScreen extends React.Component {
 
               <TouchableOpacity
                 style={styles.parentSignupButton}
-                onPress={() => router.push('/(auth)/parent-signup')}
+                onPress={() => router.push('/(auth)/parent-signup' as any)}
               >
                 <Text style={styles.parentSignupText}>Join as Parent →</Text>
               </TouchableOpacity>

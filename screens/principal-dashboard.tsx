@@ -1,24 +1,23 @@
 /* eslint-disable */
 // @ts-nocheck
+import { SchoolCodeManager } from '@/components/admin/SchoolCodeManager';
+import { TeacherManagement } from '@/components/admin/TeacherManagement';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
-import { supabase } from '@/lib/supabase';
+import { PrincipalService } from '@/lib/services/principalService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { PrincipalService } from '@/lib/services/principalService';
-import { TeacherManagement } from '@/components/admin/TeacherManagement';
-import { SchoolCodeManager } from '@/components/admin/SchoolCodeManager';
 import {
-    Alert,
-    Dimensions,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -56,7 +55,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
   const [showSchoolCodeManager, setShowSchoolCodeManager] = useState(false);
   const [recentActivity, setRecentActivity] = useState<string[]>([]);
-  const [pendingTasks, setPendingTasks] = useState<Array<{priority: string, text: string, color: string}>>([]);
+  const [pendingTasks, setPendingTasks] = useState<Array<{ priority: string, text: string, color: string }>>([]);
 
   useEffect(() => {
     loadPrincipalStats();
@@ -65,7 +64,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   const loadPrincipalStats = async () => {
     try {
       setLoading(true);
-      
+
       if (!profile?.preschool_id) {
         console.warn('No preschool_id found in profile');
         setSchoolName('Your Preschool');
@@ -81,7 +80,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
 
         setSchoolName('Your Preschool');
       }
-      
+
       // Fetch real stats from database
       const statsResult = await PrincipalService.getPrincipalStats(profile.preschool_id);
       if (statsResult.data) {
@@ -127,8 +126,8 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
     color: string;
     onPress?: () => void;
   }) => (
-    <TouchableOpacity 
-      style={[styles.metricCard, { borderTopColor: color, borderTopWidth: 3 }]} 
+    <TouchableOpacity
+      style={[styles.metricCard, { borderTopColor: color, borderTopWidth: 3 }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -196,15 +195,10 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Welcome Section */}
+        {/* Overview Header (matches Super Admin look) */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Welcome, Principal! 🏫</Text>
-          <Text style={styles.welcomeSubtitle}>
-            Managing {schoolName} with {stats.totalStudents} students
-          </Text>
-          <View style={styles.attendanceBadge}>
-            <Text style={styles.attendanceText}>📊 {stats.attendanceRate}% Attendance Rate</Text>
-          </View>
+          <Text style={styles.welcomeTitle}>📊 School Overview</Text>
+          <Text style={styles.welcomeSubtitle}>Manage {schoolName}</Text>
         </View>
 
         {/* School Statistics */}
@@ -216,15 +210,15 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               value={stats.totalStudents}
               subtitle={`${stats.newEnrollments} new this month`}
               icon="graduationcap.fill"
-              color="#3B82F6"
+              color="#EA4335"
               onPress={() => handleNavigate('students')}
             />
             <MetricCard
               title="Teaching Staff"
               value={stats.totalTeachers}
               subtitle={`${stats.activeClasses} active classes`}
-              icon="person.2.square.stack.fill"
-              color="#10B981"
+              icon="person.2.fill"
+              color="#EA4335"
               onPress={() => handleNavigate('teachers')}
             />
             <MetricCard
@@ -232,15 +226,15 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               value={stats.totalParents}
               subtitle="Engaged families"
               icon="heart.fill"
-              color="#F59E0B"
+              color="#EA4335"
               onPress={() => handleNavigate('parents')}
             />
             <MetricCard
               title="Monthly Revenue"
               value={`R${(stats.monthlyRevenue / 1000).toFixed(0)}k`}
               subtitle={`${stats.pendingPayments} pending payments`}
-              icon="dollarsign.circle.fill"
-              color="#EF4444"
+              icon="creditcard.fill"
+              color="#EA4335"
               onPress={() => router.push('/(tabs)/payment')}
             />
           </View>
@@ -253,43 +247,43 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
             <ActionCard
               title="Teacher Management"
               subtitle="Invite & manage teachers"
-              icon="person.crop.circle.badge.plus"
-              color="#3B82F6"
+              icon="person.badge.plus"
+              color="#4285F4"
               onPress={() => setShowTeacherManagement(true)}
             />
             <ActionCard
               title="School Code"
               subtitle="Parent invitation codes"
               icon="qrcode.viewfinder"
-              color="#10B981"
+              color="#34A853"
               onPress={() => setShowSchoolCodeManager(true)}
             />
             <ActionCard
               title="Financial Reports"
               subtitle="Revenue & expenses"
               icon="chart.bar.fill"
-              color="#F59E0B"
+              color="#FBBC05"
               onPress={() => router.push('/(tabs)/payment')}
             />
             <ActionCard
               title="Parent Communication"
               subtitle="Send announcements"
               icon="megaphone.fill"
-              color="#EF4444"
+              color="#EA4335"
               onPress={() => router.push('/(tabs)/messages')}
             />
             <ActionCard
               title="School Analytics"
               subtitle="Performance insights"
               icon="chart.line.uptrend.xyaxis"
-              color="#8B5CF6"
+              color="#4285F4"
               onPress={() => handleNavigate('analytics')}
             />
             <ActionCard
               title="School Settings"
               subtitle="Configure policies"
               icon="gearshape.fill"
-              color="#06B6D4"
+              color="#34A853"
               onPress={() => router.push('/(tabs)/settings')}
             />
           </View>
@@ -300,19 +294,19 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
           <Text style={styles.sectionTitle}>🚀 Quick Actions</Text>
           <View style={styles.quickActionsList}>
             <TouchableOpacity style={styles.quickActionItem} onPress={() => handleNavigate('register-child')}>
-              <IconSymbol name="plus.circle.fill" size={20} color="#3B82F6" />
+              <IconSymbol name="plus.circle.fill" size={20} color="#4285F4" />
               <Text style={styles.quickActionText}>Add New Student</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickActionItem} onPress={() => handleNavigate('teachers')}>
-              <IconSymbol name="person.badge.plus" size={20} color="#10B981" />
+              <IconSymbol name="person.badge.plus" size={20} color="#34A853" />
               <Text style={styles.quickActionText}>Hire Teacher</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickActionItem} onPress={() => router.push('/(tabs)/messages')}>
-              <IconSymbol name="envelope.fill" size={20} color="#F59E0B" />
+              <IconSymbol name="envelope.fill" size={20} color="#FBBC05" />
               <Text style={styles.quickActionText}>Send Announcement</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickActionItem} onPress={() => handleNavigate('support')}>
-              <IconSymbol name="questionmark.circle.fill" size={20} color="#EF4444" />
+              <IconSymbol name="questionmark.circle.fill" size={20} color="#EA4335" />
               <Text style={styles.quickActionText}>Get Support</Text>
             </TouchableOpacity>
           </View>
@@ -381,7 +375,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               loadPrincipalStats();
             }}
           />
-          
+
           <SchoolCodeManager
             visible={showSchoolCodeManager}
             preschoolId={profile.preschool_id}
@@ -451,11 +445,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   metricCard: {
-    width: (screenWidth - 60) / 2,
+    width: (screenWidth - 80) / 2, // slightly smaller tiles to match Super Admin
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 20,
-    marginBottom: 15,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -470,29 +464,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   metricIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   metricValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#1F2937',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   metricTitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 4,
   },
   metricSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#9CA3AF',
     textAlign: 'center',
   },

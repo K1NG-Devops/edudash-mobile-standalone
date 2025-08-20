@@ -159,7 +159,7 @@ const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
   // Use admin client to find all super admin users (bypass RLS)
   const client = supabaseAdmin || supabase;
   console.log('🔍 [OnboardingService] Looking for superadmins using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
-  
+
   const { data: superAdmins, error: superAdminError } = await client
     .from('users')
     .select('id, name, email')
@@ -397,7 +397,7 @@ export const getAllOnboardingRequests = async (): Promise<Partial<PreschoolOnboa
   // Use admin client for fetching requests to bypass RLS
   const client = supabaseAdmin || supabase;
   console.log('📋 [OnboardingService] Fetching requests using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
-  
+
   const { data, error } = await client
     .from('preschool_onboarding_requests')
     .select('*')
@@ -416,7 +416,33 @@ export const approveOnboardingRequest = async (requestId: string) => {
   const { data, error } = await supabase.functions.invoke('superadmin_approve_onboarding', {
     body: { requestId },
   });
-  if (error) throw error;
+
+  // Surface detailed error information from Edge Function responses
+  if (error) {
+    // Attempt to parse the Response object body if available
+    const ctx: any = (error as any)?.context;
+    let detailed: any = (error as any)?.message;
+    try {
+      if (ctx && typeof ctx.json === 'function') {
+        const parsed = await ctx.json();
+        detailed = parsed?.error || JSON.stringify(parsed);
+      } else if (ctx && typeof ctx.text === 'function') {
+        const txt = await ctx.text();
+        detailed = txt || detailed;
+      } else if ((error as any)?.context?.body?.error) {
+        detailed = (error as any).context.body.error;
+      }
+    } catch (_) {
+      // ignore parsing issues; fall back to message
+    }
+    throw new Error(detailed || 'Failed to approve request via Edge Function');
+  }
+
+  // Edge function may return an { error } payload with 200; guard for that too
+  if ((data as any)?.error) {
+    throw new Error((data as any).error);
+  }
+
   return data as any;
 };
 

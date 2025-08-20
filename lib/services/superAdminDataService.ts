@@ -486,8 +486,29 @@ export class SuperAdminDataService {
         // Try to get active connections via RPC function
         const { data: connections, error: rpcError } = await supabase
           .rpc('get_active_connections' as any);
-        if (!rpcError && connections) {
-          activeConnections = connections;
+        if (!rpcError && connections !== undefined && connections !== null) {
+          // Normalize various possible shapes into a numeric count
+          let normalized = 0;
+          const c: any = connections as any;
+
+          if (typeof c === 'number') {
+            normalized = c;
+          } else if (Array.isArray(c)) {
+            // If RPC returns rows, use length
+            normalized = c.length;
+          } else if (typeof c === 'object') {
+            // Common patterns: { count: number } or an object map
+            if (typeof c.count === 'number') {
+              normalized = c.count;
+            } else {
+              normalized = Object.keys(c).length;
+            }
+          } else if (typeof c === 'string') {
+            const parsed = Number(c);
+            normalized = Number.isNaN(parsed) ? 0 : parsed;
+          }
+
+          activeConnections = Math.max(0, Number(normalized) || 0);
         } else {
           throw new Error('RPC function not available');
         }

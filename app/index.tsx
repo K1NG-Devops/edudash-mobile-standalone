@@ -2,6 +2,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import {
   Animated,
   Dimensions,
@@ -51,6 +52,37 @@ export default function WelcomeScreen() {
   const sliderRef = useRef<ScrollView | null>(null);
 
   useEffect(() => {
+    // If already authenticated, route based on role
+    (async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const authId = sessionData.session?.user?.id;
+        if (authId) {
+          // Try to read role with a couple retries to avoid RLS/replication delays
+          const getRole = async (id: string, attempts = 6, delayMs = 200): Promise<string | null> => {
+            for (let i = 0; i < attempts; i++) {
+              const { data: profile } = await supabase
+                .from('users')
+                .select('role')
+                .eq('auth_user_id', id)
+                .single();
+              if (profile?.role) return profile.role as string;
+              await new Promise((r) => setTimeout(r, delayMs));
+            }
+            return null;
+          };
+
+          const role = await getRole(authId);
+          if (role === 'superadmin') {
+            router.replace('/screens/super-admin-dashboard');
+            return;
+          }
+          router.replace('/(tabs)/dashboard');
+          return;
+        }
+      } catch {}
+    })();
+
     // Initial animation
     Animated.parallel([
       Animated.timing(fadeAnim, {

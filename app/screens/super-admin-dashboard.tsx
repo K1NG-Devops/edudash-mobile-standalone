@@ -3,7 +3,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Dimensions,
   RefreshControl,
   ScrollView,
@@ -19,15 +18,15 @@ import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { NotificationService } from '@/lib/services/notificationService';
 import {
   SuperAdminDashboardData,
   SuperAdminDataService
 } from '@/lib/services/superAdminDataService';
-import { NotificationService } from '@/lib/services/notificationService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-type TabType = 'overview' | 'schools' | 'onboarding' | 'users' | 'activity' | 'system';
+type TabType = 'overview' | 'schools' | 'onboarding' | 'users' | 'activity' | 'system' | 'analytics' | 'billing' | 'ai-usage' | 'moderation' | 'reports' | 'announcements';
 
 const SuperAdminDashboardScreen: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -42,7 +41,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
   // Fetch notification count
   const fetchNotificationCount = async () => {
     if (!user?.id) return;
-    
+
     try {
       const count = await NotificationService.getUnreadCount(user.id);
       setNotificationCount(count);
@@ -54,21 +53,26 @@ const SuperAdminDashboardScreen: React.FC = () => {
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
-    if (!user?.id) return;
-    
+    if (!user?.id) {
+      console.log('🔍 [SuperAdmin] No user ID available');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
+      console.log('🔍 [SuperAdmin] Fetching dashboard data for user:', user.id);
 
       // Fetch dashboard data and notification count in parallel
       const [data] = await Promise.all([
         SuperAdminDataService.getSuperAdminDashboardData(user.id),
         fetchNotificationCount()
       ]);
-      
+
+
       setDashboardData(data);
     } catch (err: any) {
-      console.error('Error fetching super admin dashboard data:', err);
+      console.error('❌ [SuperAdmin] Error fetching dashboard data:', err);
       setError(err.message || 'Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
@@ -149,9 +153,9 @@ const SuperAdminDashboardScreen: React.FC = () => {
   // Render platform stats cards
   const renderStatsCards = () => {
     if (!dashboardData) return null;
-    
+
     const { platform_stats } = dashboardData;
-    
+
     return (
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
@@ -165,7 +169,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
           <Text style={styles.statLabel}>Total Users</Text>
         </View>
         <View style={styles.statCard}>
-          <IconSymbol name="graduationcap" size={24} color="#8B5CF6" />
+          <IconSymbol name="graduationcap" size={24} color="#DC2626" />
           <Text style={styles.statValue}>{platform_stats.total_students}</Text>
           <Text style={styles.statLabel}>Students</Text>
         </View>
@@ -191,15 +195,15 @@ const SuperAdminDashboardScreen: React.FC = () => {
   // Render system health indicator
   const renderSystemHealth = () => {
     if (!dashboardData) return null;
-    
+
     const { system_health } = dashboardData;
-    
+
     return (
       <View style={styles.healthCard}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>🖥️ System Health</Text>
-          <View style={[styles.healthStatus, { 
-            backgroundColor: system_health.database_status === 'healthy' ? '#10B981' : '#EF4444' 
+          <View style={[styles.healthStatus, {
+            backgroundColor: system_health.database_status === 'healthy' ? '#10B981' : '#EF4444'
           }]}>
             <Text style={styles.healthStatusText}>
               {system_health.database_status === 'healthy' ? 'Healthy' : 'Issues'}
@@ -234,32 +238,32 @@ const SuperAdminDashboardScreen: React.FC = () => {
     <View style={styles.quickActionsSection}>
       <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
       <View style={styles.quickActionsGrid}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.quickActionCard}
           onPress={() => setSelectedTab('onboarding')}
         >
           <IconSymbol name="plus.app" size={24} color="#3B82F6" />
           <Text style={styles.quickActionLabel}>Manage Onboarding</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.quickActionCard}
           onPress={() => setSelectedTab('activity')}
         >
           <IconSymbol name="chart.bar.doc.horizontal" size={24} color="#10B981" />
           <Text style={styles.quickActionLabel}>Platform Reports</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.quickActionCard}
           onPress={() => setSelectedTab('system')}
         >
           <IconSymbol name="gear.badge" size={24} color="#F59E0B" />
           <Text style={styles.quickActionLabel}>System Settings</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.quickActionCard}
           onPress={() => setSelectedTab('users')}
         >
-          <IconSymbol name="person.badge.shield.checkmark" size={24} color="#8B5CF6" />
+          <IconSymbol name="person.badge.shield.checkmark" size={24} color="#DC2626" />
           <Text style={styles.quickActionLabel}>User Management</Text>
         </TouchableOpacity>
       </View>
@@ -284,7 +288,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
           <IconSymbol
             name={tab.icon as any}
             size={16}
-            color={selectedTab === tab.key ? '#8B5CF6' : '#6B7280'}
+            color={selectedTab === tab.key ? '#DC2626' : '#6B7280'}
           />
           <Text style={[styles.tabLabel, selectedTab === tab.key && styles.tabLabelActive]}>
             {tab.label}
@@ -306,6 +310,8 @@ const SuperAdminDashboardScreen: React.FC = () => {
     );
   }
 
+
+
   // Loading state
   if (loading && !refreshing && !dashboardData) {
     return (
@@ -317,14 +323,18 @@ const SuperAdminDashboardScreen: React.FC = () => {
             avatar: user.avatar_url
           }}
           schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => {/* TODO: Implement action */}}
+          onNotificationsPress={() => {/* TODO: Implement action */ }}
           onSignOut={signOut}
           onNavigate={handleNavigate}
           notificationCount={0}
         />
         <View style={styles.loadingContainer}>
-          <LoadingSpinner size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Loading platform data...</Text>
+          <LoadingSpinner
+            size="large"
+            color="#DC2626"
+            showGradient={false}
+            message="Loading platform data..."
+          />
         </View>
       </View>
     );
@@ -341,7 +351,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
             avatar: user.avatar_url
           }}
           schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => {/* TODO: Implement action */}}
+          onNotificationsPress={() => {/* TODO: Implement action */ }}
           onSignOut={signOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -358,13 +368,15 @@ const SuperAdminDashboardScreen: React.FC = () => {
     );
   }
 
+
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <MobileHeader
         user={{
           name: user.name || 'Super Admin',
-          role: user.role || 'superadmin',
+          role: 'superadmin',
           avatar: user.avatar_url
         }}
         schoolName="EduDash Pro Platform"
@@ -388,11 +400,20 @@ const SuperAdminDashboardScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
+
           {/* Header Text */}
           <View style={styles.headerTextSection}>
             <Text style={styles.greeting}>🔱 Super Admin Dashboard</Text>
             <Text style={styles.subtitle}>
               Manage the entire EduDash Pro platform
+            </Text>
+          </View>
+
+          {/* Platform Overview Section */}
+          <View style={styles.platformOverviewSection}>
+            <Text style={styles.platformOverviewTitle}>📊 Platform Overview</Text>
+            <Text style={styles.platformOverviewSubtitle}>
+              Real-time insights into your EduDash Pro platform performance
             </Text>
           </View>
 
@@ -410,6 +431,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
           )}
 
           {/* Tab Content */}
+
           {selectedTab === 'overview' && (
             <>
               {renderStatsCards()}
@@ -494,6 +516,84 @@ const SuperAdminDashboardScreen: React.FC = () => {
             </View>
           )}
 
+          {selectedTab === 'analytics' && (
+            <View style={styles.analyticsSection}>
+              <Text style={styles.sectionTitle}>📈 Platform Analytics</Text>
+              <View style={styles.comingSoonCard}>
+                <IconSymbol name="chart.line.uptrend.xyaxis" size={48} color="#DC2626" />
+                <Text style={styles.comingSoonTitle}>Analytics Dashboard</Text>
+                <Text style={styles.comingSoonText}>
+                  Advanced analytics and insights coming soon. Track growth metrics, user engagement, and platform performance.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {selectedTab === 'billing' && (
+            <View style={styles.billingSection}>
+              <Text style={styles.sectionTitle}>💳 Billing & Subscriptions</Text>
+              <View style={styles.comingSoonCard}>
+                <IconSymbol name="creditcard.fill" size={48} color="#DC2626" />
+                <Text style={styles.comingSoonTitle}>Revenue Management</Text>
+                <Text style={styles.comingSoonText}>
+                  Comprehensive billing dashboard coming soon. Monitor subscriptions, revenue, and payment analytics.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {selectedTab === 'ai-usage' && (
+            <View style={styles.aiUsageSection}>
+              <Text style={styles.sectionTitle}>🧠 AI Usage Monitoring</Text>
+              <View style={styles.comingSoonCard}>
+                <IconSymbol name="brain.head.profile" size={48} color="#DC2626" />
+                <Text style={styles.comingSoonTitle}>AI Cost Tracking</Text>
+                <Text style={styles.comingSoonText}>
+                  Monitor AI usage, costs, and set limits across all schools. Advanced AI analytics coming soon.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {selectedTab === 'moderation' && (
+            <View style={styles.moderationSection}>
+              <Text style={styles.sectionTitle}>🚩 Content Moderation</Text>
+              <View style={styles.comingSoonCard}>
+                <IconSymbol name="flag.fill" size={48} color="#DC2626" />
+                <Text style={styles.comingSoonTitle}>Content Review</Text>
+                <Text style={styles.comingSoonText}>
+                  Review flagged content, manage reports, and maintain platform safety standards.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {selectedTab === 'reports' && (
+            <View style={styles.reportsSection}>
+              <Text style={styles.sectionTitle}>📊 Platform Reports</Text>
+              <View style={styles.comingSoonCard}>
+                <IconSymbol name="doc.text.fill" size={48} color="#DC2626" />
+                <Text style={styles.comingSoonTitle}>Export & Compliance</Text>
+                <Text style={styles.comingSoonText}>
+                  Generate comprehensive reports for compliance, auditing, and business intelligence.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {selectedTab === 'announcements' && (
+            <View style={styles.announcementsSection}>
+              <Text style={styles.sectionTitle}>📢 Platform Announcements</Text>
+              <View style={styles.comingSoonCard}>
+                <IconSymbol name="megaphone.fill" size={48} color="#DC2626" />
+                <Text style={styles.comingSoonTitle}>Broadcast System</Text>
+                <Text style={styles.comingSoonText}>
+                  Send announcements to all schools, manage communications, and track engagement.
+                </Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.bottomSpacing} />
         </ScrollView>
       )}
@@ -532,6 +632,24 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
+  // Platform Overview Section
+  platformOverviewSection: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 24,
+  },
+  platformOverviewTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  platformOverviewSubtitle: {
+    fontSize: 15,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+
   // Bottom Tab Navigation
   tabNavigationBottom: {
     position: 'absolute',
@@ -564,7 +682,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabLabelActive: {
-    color: '#8B5CF6',
+    color: '#DC2626',
     fontWeight: '600',
   },
 
@@ -882,6 +1000,50 @@ const styles = StyleSheet.create({
 
   bottomSpacing: {
     height: 20,
+  },
+
+  // New Tab Sections
+  analyticsSection: {
+    padding: 20,
+  },
+  billingSection: {
+    padding: 20,
+  },
+  aiUsageSection: {
+    padding: 20,
+  },
+  moderationSection: {
+    padding: 20,
+  },
+  reportsSection: {
+    padding: 20,
+  },
+  announcementsSection: {
+    padding: 20,
+  },
+  comingSoonCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  comingSoonTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  comingSoonText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });
 

@@ -13,16 +13,16 @@ export class LoadingSpinner extends React.Component<LoadingSpinnerProps> {
   render() {
     const { 
       message = 'Loading...', 
-      color = '#667eea', 
+      color = '#4285F4', 
       size = 'large',
-      showGradient = true 
+      showGradient = false 
     } = this.props;
 
     if (showGradient) {
       return (
         <View style={styles.container}>
           <LinearGradient
-            colors={['#667eea', '#764ba2']}
+            colors={['#4285F4', '#34A853']}
             style={styles.gradientContainer}
           >
             <View style={styles.spinnerContainer}>

@@ -371,27 +371,33 @@ export class PrincipalService {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select(`
-          id,
-          name,
-          email,
-          phone,
-          is_active,
-          created_at,
-          classes:classes!teacher_id(
-            id,
-            name,
-            room_number,
-            current_enrollment,
-            max_capacity
-          )
-        `)
+        .select('id, name, email, phone, is_active, created_at')
         .eq('role', 'teacher')
         .eq('preschool_id', preschoolId)
         .order('name');
 
       if (error) throw error;
-      return { data, error: null };
+      // Fetch classes for listed teachers in bulk
+      const teacherIds = (data || []).map((t: any) => t.id);
+      let classesMap = new Map<string, any[]>();
+      if (teacherIds.length) {
+        const { data: cls } = await supabase
+          .from('classes')
+          .select('id, name, current_enrollment, max_capacity, teacher_id')
+          .in('teacher_id', teacherIds as string[]);
+        (cls || []).forEach((c: any) => {
+          const arr = classesMap.get(c.teacher_id) || [];
+          arr.push(c);
+          classesMap.set(c.teacher_id, arr);
+        });
+      }
+
+      const enriched = (data || []).map((t: any) => ({
+        ...t,
+        classes: classesMap.get(t.id) || []
+      }));
+
+      return { data: enriched, error: null };
     } catch (error) {
       console.error('Error fetching school teachers:', error);
       return { data: null, error };
@@ -446,26 +452,42 @@ export class PrincipalService {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select(`
-          id,
-          name,
-          email,
-          phone,
-          is_active,
-          created_at,
-          children:students!parent_id(
-            id,
-            first_name,
-            last_name,
-            class:classes(name, room_number)
-          )
-        `)
+        .select('id, name, email, phone, is_active, created_at')
         .eq('role', 'parent')
         .eq('preschool_id', preschoolId)
         .order('name');
 
       if (error) throw error;
-      return { data, error: null };
+      // Fetch children for these parents and attach basic class info
+      const parentIds = (data || []).map((p: any) => p.id);
+      let childrenByParent = new Map<string, any[]>();
+      if (parentIds.length) {
+        const { data: kids } = await supabase
+          .from('students')
+          .select('id, first_name, last_name, parent_id, class_id')
+          .in('parent_id', parentIds as string[]);
+
+        // Fetch class names for those class_ids
+        const classIds = Array.from(new Set((kids || []).map(k => k.class_id).filter(Boolean)));
+        const { data: classes } = classIds.length
+          ? await supabase.from('classes').select('id, name').in('id', classIds as string[])
+          : { data: [] as any[] } as any;
+        const classMap = new Map<string, string>();
+        (classes || []).forEach((c: any) => classMap.set(c.id, c.name));
+
+        (kids || []).forEach((k: any) => {
+          const arr = childrenByParent.get(k.parent_id) || [];
+          arr.push({ ...k, class_name: classMap.get(k.class_id) || null });
+          childrenByParent.set(k.parent_id, arr);
+        });
+      }
+
+      const enriched = (data || []).map((p: any) => ({
+        ...p,
+        children: childrenByParent.get(p.id) || []
+      }));
+
+      return { data: enriched, error: null };
     } catch (error) {
       console.error('Error fetching school parents:', error);
       return { data: null, error };

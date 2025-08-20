@@ -6,34 +6,24 @@
  * Features: Student management, teacher oversight, financial tracking, parent communication
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  StyleSheet,
-  Dimensions,
-  Alert,
-  Animated,
-  StatusBar,
-  ImageBackground,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { TeacherManagement } from '@/components/admin/TeacherManagement';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { BlurView } from 'expo-blur';
-import { TeacherManagement } from '@/components/admin/TeacherManagement';
 import {
-  SchoolAdminDataService,
   SchoolAdminDashboardData,
-  SchoolStats,
-  StudentOverview,
-  TeacherOverview,
-  ParentOverview,
-  ClassOverview
+  SchoolAdminDataService
 } from '@/lib/services/schoolAdminDataService';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState } from 'react';
+import {
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isSmallScreen = screenWidth <= 350;
@@ -163,85 +153,59 @@ export default function SchoolAdminDashboard({
 
     return (
       <View style={styles.tabContent}>
-        {/* Header with Quick Actions */}
-        <LinearGradient
-          colors={['#667eea', '#764ba2']}
-          style={styles.overviewHeader}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.overviewTitle}>School Overview 📱</Text>
-          <Text style={styles.overviewSubtitle}>Real-time insights • Screen: {screenWidth}px {isSmallScreen ? '(Small)' : '(Large)'}</Text>
-          
-          {/* Quick Actions */}
-          <View style={styles.quickActionsRow}>
-            <TouchableOpacity style={styles.quickActionButton}>
-              <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-              <Text style={styles.quickActionText}>Add Student</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.quickActionButton}>
-              <IconSymbol name="message.fill" size={20} color="#FFFFFF" />
-              <Text style={styles.quickActionText}>Send Notice</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+        {/* Overview Header (compact, matches Super Admin) */}
+        <View style={[styles.overviewHeaderLite]}>
+          <Text style={styles.overviewTitleLite}>📊 School Overview</Text>
+          <Text style={styles.overviewSubtitleLite}>Real-time insights into your school</Text>
+        </View>
 
         {/* Stats Grid - Responsive Layout */}
         <View style={styles.statsGridContainer}>
           <View style={[styles.statsGrid, isSmallScreen && styles.statsGridSmall]}>
-            <View style={[styles.statTile, isSmallScreen && styles.statTileSmall]}>
-              <LinearGradient
-                colors={['#3B82F6', '#1D4ED8']}
-                style={styles.statTileGradient}
-              >
-                <View style={styles.statIconContainer}>
-                  <IconSymbol name="person.3.fill" size={32} color="#FFFFFF" />
+            <View style={[styles.statCardLite, isSmallScreen && styles.statCardLiteSmall]}>
+              <View style={[styles.statAccentBar]} />
+              <View style={styles.statContentLite}>
+                <View style={[styles.statIconLite, { backgroundColor: '#EA433520' }]}>
+                  <IconSymbol name="person.3.fill" size={20} color="#EA4335" />
                 </View>
-                <Text style={styles.statNumber}>{stats.total_students}</Text>
-                <Text style={styles.statLabel}>Students</Text>
-              </LinearGradient>
+                <Text style={styles.statValueLite}>{stats.total_students}</Text>
+                <Text style={styles.statLabelLite}>Students</Text>
+              </View>
             </View>
-            
-            <View style={[styles.statTile, isSmallScreen && styles.statTileSmall]}>
-              <LinearGradient
-                colors={['#10B981', '#059669']}
-                style={styles.statTileGradient}
-              >
-                <View style={styles.statIconContainer}>
-                  <IconSymbol name="person.badge.plus" size={32} color="#FFFFFF" />
+
+            <View style={[styles.statCardLite, isSmallScreen && styles.statCardLiteSmall]}>
+              <View style={[styles.statAccentBar]} />
+              <View style={styles.statContentLite}>
+                <View style={[styles.statIconLite, { backgroundColor: '#EA433520' }]}>
+                  <IconSymbol name="person.badge.plus" size={20} color="#EA4335" />
                 </View>
-                <Text style={styles.statNumber}>{stats.total_teachers}</Text>
-                <Text style={styles.statLabel}>Teachers</Text>
-              </LinearGradient>
+                <Text style={styles.statValueLite}>{stats.total_teachers}</Text>
+                <Text style={styles.statLabelLite}>Teachers</Text>
+              </View>
             </View>
           </View>
-          
+
           <View style={[styles.statsGrid, isSmallScreen && styles.statsGridSmall]}>
-            <View style={[styles.statTile, isSmallScreen && styles.statTileSmall]}>
-              <LinearGradient
-                colors={['#8B5CF6', '#7C3AED']}
-                style={styles.statTileGradient}
-              >
-                <View style={styles.statIconContainer}>
-                  <IconSymbol name="building.2" size={32} color="#FFFFFF" />
+            <View style={[styles.statCardLite, isSmallScreen && styles.statCardLiteSmall]}>
+              <View style={[styles.statAccentBar]} />
+              <View style={styles.statContentLite}>
+                <View style={[styles.statIconLite, { backgroundColor: '#EA433520' }]}>
+                  <IconSymbol name="building.2" size={20} color="#EA4335" />
                 </View>
-                <Text style={styles.statNumber}>{stats.total_classes}</Text>
-                <Text style={styles.statLabel}>Classes</Text>
-              </LinearGradient>
+                <Text style={styles.statValueLite}>{stats.total_classes}</Text>
+                <Text style={styles.statLabelLite}>Classes</Text>
+              </View>
             </View>
-            
-            <View style={[styles.statTile, isSmallScreen && styles.statTileSmall]}>
-              <LinearGradient
-                colors={['#F59E0B', '#D97706']}
-                style={styles.statTileGradient}
-              >
-                <View style={styles.statIconContainer}>
-                  <IconSymbol name="person.2.fill" size={32} color="#FFFFFF" />
+
+            <View style={[styles.statCardLite, isSmallScreen && styles.statCardLiteSmall]}>
+              <View style={[styles.statAccentBar]} />
+              <View style={styles.statContentLite}>
+                <View style={[styles.statIconLite, { backgroundColor: '#EA433520' }]}>
+                  <IconSymbol name="person.2.fill" size={20} color="#EA4335" />
                 </View>
-                <Text style={styles.statNumber}>{stats.total_parents}</Text>
-                <Text style={styles.statLabel}>Parents</Text>
-              </LinearGradient>
+                <Text style={styles.statValueLite}>{stats.total_parents}</Text>
+                <Text style={styles.statLabelLite}>Parents</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -286,15 +250,15 @@ export default function SchoolAdminDashboard({
               <IconSymbol name="chevron.right" size={16} color="#3B82F6" />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.activityList}>
             {dashboardData.recent_activities.slice(0, 4).map((activity, index) => (
               <View key={activity.id} style={[styles.activityItem, index === dashboardData.recent_activities.slice(0, 4).length - 1 && styles.lastActivityItem]}>
                 <View style={[styles.activityIconContainer, { backgroundColor: activity.priority === 'high' ? '#FEE2E2' : '#EBF4FF' }]}>
                   <IconSymbol
-                    name={activity.type === 'payment_received' ? 'creditcard.fill' : 
-                          activity.type === 'student_enrolled' ? 'person.badge.plus' : 
-                          activity.type === 'teacher_added' ? 'person.fill.checkmark' :
+                    name={activity.type === 'payment_received' ? 'creditcard.fill' :
+                      activity.type === 'student_enrolled' ? 'person.badge.plus' :
+                        activity.type === 'teacher_added' ? 'person.fill.checkmark' :
                           'bell.fill'}
                     size={18}
                     color={activity.priority === 'high' ? '#EF4444' : '#3B82F6'}
@@ -394,8 +358,8 @@ export default function SchoolAdminDashboard({
                         {student.full_name.split(' ').map(n => n[0]).join('')}
                       </Text>
                     </LinearGradient>
-                    <View style={[styles.statusIndicator, { 
-                      backgroundColor: student.monthly_fee_status === 'paid' ? '#10B981' : '#F59E0B' 
+                    <View style={[styles.statusIndicator, {
+                      backgroundColor: student.monthly_fee_status === 'paid' ? '#10B981' : '#F59E0B'
                     }]} />
                   </View>
                   <View style={styles.enhancedStudentInfo}>
@@ -423,10 +387,10 @@ export default function SchoolAdminDashboard({
                   <View style={styles.studentStatDivider} />
                   <View style={styles.studentStatItem}>
                     <View style={styles.paymentStatusRow}>
-                      <IconSymbol 
-                        name={student.monthly_fee_status === 'paid' ? 'checkmark.circle.fill' : 'clock.fill'} 
-                        size={16} 
-                        color={student.monthly_fee_status === 'paid' ? '#10B981' : '#F59E0B'} 
+                      <IconSymbol
+                        name={student.monthly_fee_status === 'paid' ? 'checkmark.circle.fill' : 'clock.fill'}
+                        size={16}
+                        color={student.monthly_fee_status === 'paid' ? '#10B981' : '#F59E0B'}
                       />
                       <Text style={[
                         styles.paymentStatusText,
@@ -475,7 +439,7 @@ export default function SchoolAdminDashboard({
               <IconSymbol name="line.3.horizontal.decrease" size={18} color="#6B7280" />
               <Text style={styles.filterButtonText}>Filter</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.enhancedAddButton}
               onPress={() => setShowTeacherManagement(true)}
             >
@@ -512,7 +476,7 @@ export default function SchoolAdminDashboard({
                         {(teacher.name || '').split(' ').map(n => n[0]).join('')}
                       </Text>
                     </LinearGradient>
-                    <View style={[styles.performanceIndicator, { 
+                    <View style={[styles.performanceIndicator, {
                       backgroundColor: teacher.performance_rating >= 4 ? '#10B981' : teacher.performance_rating >= 3 ? '#F59E0B' : '#EF4444'
                     }]} />
                   </View>
@@ -633,7 +597,7 @@ export default function SchoolAdminDashboard({
                         {(parent.name || '').split(' ').map(n => n[0]).join('')}
                       </Text>
                     </LinearGradient>
-                    <View style={[styles.parentStatusIndicator, { 
+                    <View style={[styles.parentStatusIndicator, {
                       backgroundColor: parent.payment_status === 'current' ? '#10B981' : '#EF4444'
                     }]} />
                   </View>
@@ -681,10 +645,10 @@ export default function SchoolAdminDashboard({
                 {/* Payment Status */}
                 <View style={styles.parentPaymentRow}>
                   <View style={styles.paymentStatusContainer}>
-                    <IconSymbol 
-                      name={parent.payment_status === 'current' ? 'checkmark.circle.fill' : 'exclamationmark.triangle.fill'} 
-                      size={16} 
-                      color={parent.payment_status === 'current' ? '#10B981' : '#EF4444'} 
+                    <IconSymbol
+                      name={parent.payment_status === 'current' ? 'checkmark.circle.fill' : 'exclamationmark.triangle.fill'}
+                      size={16}
+                      color={parent.payment_status === 'current' ? '#10B981' : '#EF4444'}
                     />
                     <Text style={[
                       styles.paymentStatusText,
@@ -754,7 +718,7 @@ export default function SchoolAdminDashboard({
     return (
       <View style={styles.tabContent}>
         <Text style={styles.sectionTitle}>Financial Overview</Text>
-        
+
         {/* Revenue Cards */}
         <View style={styles.financeGrid}>
           <View style={styles.financeCard}>
@@ -829,7 +793,7 @@ export default function SchoolAdminDashboard({
       <MobileHeader
         user={userProfile}
         schoolName={schoolName}
-        onNotificationsPress={() => {/* TODO: Implement action */}}
+        onNotificationsPress={() => {/* TODO: Implement action */ }}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
         notificationCount={dashboardData?.alerts.length || 0}
@@ -2048,55 +2012,45 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 16,
   },
-  statTile: {
+  // Compact stat cards (match Super Admin)
+  statCardLite: {
     width: '48%',
-    borderRadius: 20,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  // Small screen: full width tiles
-  statTileSmall: {
+  statCardLiteSmall: {
     width: '100%',
+  },
+  statAccentBar: {
+    height: 3,
+    backgroundColor: '#EA4335',
+    width: '100%',
+  },
+  statContentLite: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  statIconLite: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
   },
-  statTileGradient: {
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    minHeight: 140,
-    justifyContent: 'center',
+  statValueLite: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 2,
   },
-  statIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFFFFF20',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#FFFFFF30',
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 6,
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  statLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF90',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  statLabelLite: {
+    fontSize: 12,
+    color: '#6B7280',
   },
   // Enhanced Teachers Section Styles
   teacherCountBadge: {

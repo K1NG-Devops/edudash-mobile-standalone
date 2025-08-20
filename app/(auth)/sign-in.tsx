@@ -1,5 +1,6 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -36,6 +37,38 @@ export default function SignIn() {
       if (result.error) {
         Alert.alert('Sign In Failed', result.error);
       } else {
+        // After sign-in, decide destination by role
+        // Wait briefly for profile to be available to avoid race with auth listener/RLS
+        try {
+          const { data: userResult } = await supabase.auth.getUser();
+          const authId = userResult.user?.id;
+
+          const waitForRole = async (
+            id: string,
+            attempts = 8,
+            delayMs = 200
+          ): Promise<string | null> => {
+            for (let i = 0; i < attempts; i++) {
+              const { data: profile, error: roleErr } = await supabase
+                .from('users')
+                .select('role')
+                .eq('auth_user_id', id)
+                .single();
+              if (!roleErr && profile?.role) return profile.role as string;
+              await new Promise((r) => setTimeout(r, delayMs));
+            }
+            return null;
+          };
+
+          if (authId) {
+            const role = await waitForRole(authId);
+            if (role === 'superadmin') {
+              router.replace('/screens/super-admin-dashboard');
+              return;
+            }
+          }
+        } catch {}
+        // Fallback route for non-superadmin or if lookup fails
         router.replace('/(tabs)/dashboard');
       }
     } catch (error) {

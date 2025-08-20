@@ -559,19 +559,19 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
           switch (profile?.role) {
             case 'parent':
               return this.renderParentDashboard(profile, signOut);
-            
+
             case 'superadmin':
               // Redirect to the main Super Admin dashboard screen
               router.replace('/screens/super-admin-dashboard');
               return null;
-            
+
             case 'preschool_admin':
             case 'principal':
               return this.renderPrincipalDashboard(profile, signOut);
-            
+
             case 'teacher':
               return this.renderTeacherDashboard(profile, signOut);
-            
+
             default:
               // Unknown role - show error
               return (

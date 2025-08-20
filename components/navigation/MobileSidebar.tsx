@@ -68,6 +68,8 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
   };
 
   private getMenuItems = (role?: string): MenuItem[] => {
+    console.log('🔍 [MobileSidebar] Getting menu items for role:', role);
+
     const commonItems: MenuItem[] = [
       {
         id: 'profile',
@@ -100,6 +102,14 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             color: '#DC2626',
           },
           {
+            id: 'analytics',
+            title: 'Platform Analytics',
+            subtitle: 'Growth metrics & insights',
+            icon: 'chart.bar.fill',
+            route: 'screens/super-admin-dashboard?tab=analytics',
+            color: '#DC2626',
+          },
+          {
             id: 'onboarding',
             title: 'School Onboarding',
             subtitle: 'Approve pending schools',
@@ -124,6 +134,30 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             color: '#DC2626',
           },
           {
+            id: 'billing',
+            title: 'Billing & Subscriptions',
+            subtitle: 'Revenue & payment tracking',
+            icon: 'creditcard.fill',
+            route: 'screens/super-admin-dashboard?tab=billing',
+            color: '#DC2626',
+          },
+          {
+            id: 'ai-usage',
+            title: 'AI Usage Monitoring',
+            subtitle: 'Track AI costs & limits',
+            icon: 'brain.head.profile',
+            route: 'screens/super-admin-dashboard?tab=ai-usage',
+            color: '#DC2626',
+          },
+          {
+            id: 'content-moderation',
+            title: 'Content Moderation',
+            subtitle: 'Review flagged content',
+            icon: 'flag',
+            route: 'screens/super-admin-dashboard?tab=moderation',
+            color: '#DC2626',
+          },
+          {
             id: 'system',
             title: 'System Health',
             subtitle: 'Platform monitoring',
@@ -132,11 +166,27 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             color: '#DC2626',
           },
           {
+            id: 'reports',
+            title: 'Platform Reports',
+            subtitle: 'Export & compliance',
+            icon: 'doc.text.fill',
+            route: 'screens/super-admin-dashboard?tab=reports',
+            color: '#DC2626',
+          },
+          {
             id: 'settings',
             title: 'Platform Settings',
             subtitle: 'Global configuration',
             icon: 'gearshape.fill',
             route: '/screens/settings',
+            color: '#DC2626',
+          },
+          {
+            id: 'announcements',
+            title: 'Platform Announcements',
+            subtitle: 'Broadcast to all schools',
+            icon: 'megaphone',
+            route: 'screens/super-admin-dashboard?tab=announcements',
             color: '#DC2626',
           },
           { id: 'divider1', title: '', divider: true },
@@ -496,6 +546,9 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
     if (!this.props.isVisible) return null;
 
     const menuItems = this.getMenuItems(this.props.userProfile?.role);
+
+    console.log('🔍 [MobileSidebar] Final menu items count:', menuItems.length);
+    console.log('🔍 [MobileSidebar] User profile role:', this.props.userProfile?.role);
 
     return (
       <Modal

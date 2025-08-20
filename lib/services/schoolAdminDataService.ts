@@ -247,10 +247,10 @@ export class SchoolAdminDataService {
 
       // Calculate real metrics from actual data
       const enrollmentRate = Math.min(100, studentCount ? Math.floor((studentCount / (classCount || 1) * 25) * 100) : 0);
-      
+
       // Try to get actual attendance data, fallback to calculated average
       const attendanceRate = await this.calculateAttendanceRate(schoolId) || 92;
-      
+
       const monthlyRevenue = studentCount ? studentCount * 750 : 0; // R750 per student standard rate
       const activeSubscriptions = school?.subscription_status === 'active' ? 1 : 0;
 
@@ -467,23 +467,34 @@ export class SchoolAdminDataService {
    */
   static async getClasses(schoolId: string): Promise<ClassOverview[]> {
     try {
+      // Select only columns that exist; avoid nested relationship selects to prevent FK lookup errors
       const { data: classes, error } = await supabase
         .from('classes')
-        .select(`
-          *,
-          users!classes_teacher_id_fkey (
-            name
-          ),
-          age_groups!classes_age_group_id_fkey (
-            name
-          )
-        `)
+        .select('id, name, max_capacity, teacher_id, age_group_id')
         .eq('preschool_id', schoolId);
 
       if (error || !classes) {
         console.error('❌ [SchoolAdmin] Error fetching classes:', error);
         return [];
       }
+
+      // Build maps for teacher names and age group names in bulk
+      const teacherIds = Array.from(new Set((classes as any[]).map(c => c.teacher_id).filter(Boolean)));
+      const ageGroupIds = Array.from(new Set((classes as any[]).map(c => c.age_group_id).filter(Boolean)));
+
+      const [teachersRes, ageGroupsRes] = await Promise.all([
+        teacherIds.length
+          ? supabase.from('users').select('id, name').in('id', teacherIds as string[])
+          : Promise.resolve({ data: [] as any[] } as any),
+        ageGroupIds.length
+          ? supabase.from('age_groups').select('id, name').in('id', ageGroupIds as string[])
+          : Promise.resolve({ data: [] as any[] } as any)
+      ]);
+
+      const teacherMap = new Map<string, string>();
+      const ageGroupMap = new Map<string, string>();
+      (teachersRes.data || []).forEach((u: any) => teacherMap.set(u.id, u.name));
+      (ageGroupsRes.data || []).forEach((ag: any) => ageGroupMap.set(ag.id, ag.name));
 
       const enhancedClasses: ClassOverview[] = await Promise.all(
         classes.map(async (classItem: any) => {
@@ -500,8 +511,8 @@ export class SchoolAdminDataService {
           return {
             ...classItem,
             student_count: studentCount || 0,
-            teacher_name: classItem.users?.name || 'No Teacher Assigned',
-            age_group_name: classItem.age_groups?.name || 'General',
+            teacher_name: teacherMap.get(classItem.teacher_id) || 'No Teacher Assigned',
+            age_group_name: ageGroupMap.get(classItem.age_group_id) || 'General',
             capacity_percentage: capacityPercentage,
             recent_activities: [
               'Morning circle time',
@@ -663,7 +674,7 @@ export class SchoolAdminDataService {
   /**
    * Helper methods
    */
-  
+
   /**
    * Calculate attendance rate for the school
    */
@@ -676,18 +687,18 @@ export class SchoolAdminDataService {
         .select('*', { count: 'exact', head: true })
         .eq('preschool_id', schoolId)
         .eq('is_active', true);
-      
+
       // Base attendance rate with some variance based on school size
       const baseRate = 92;
       const variance = activeStudents ? Math.min(8, Math.max(-5, (activeStudents - 20) * 0.2)) : 0;
-      
+
       return Math.min(100, Math.max(85, baseRate + variance));
     } catch (error) {
       console.error('❌ [SchoolAdmin] Error calculating attendance rate:', error);
       return 92; // Default fallback
     }
   }
-  
+
   static calculateAge(dateOfBirth: string): number {
     const birthDate = new Date(dateOfBirth);
     const today = new Date();
