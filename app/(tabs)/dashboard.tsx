@@ -1,6 +1,6 @@
-import ParentDashboard from '@/components/dashboard/ParentDashboard';
+import GoogleStyleParentDashboard from '@/components/dashboard/GoogleStyleParentDashboard';
 import SchoolAdminDashboard from '@/components/dashboard/SchoolAdminDashboard';
-import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
+// SuperAdminDashboard now located at app/screens/super-admin-dashboard.tsx
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
@@ -328,7 +328,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
 
     // Use the new ParentDashboard component with real data
     return (
-      <ParentDashboard
+      <GoogleStyleParentDashboard
         userId={profile?.auth_user_id || ''}
         userProfile={{
           name: profile?.name || 'Parent',
@@ -497,48 +497,90 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
     );
   };
 
+  // Method to render Principal dashboard with school isolation
+  private renderPrincipalDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
+    // Always fetch tenant info for principal users if we have a profile and preschool_id
+    if (profile && profile.preschool_id && !this.state.tenantName) {
+      this.fetchTenantInfo(profile);
+    }
+
+    return (
+      <SchoolAdminDashboard
+        userId={profile?.auth_user_id || ''}
+        userProfile={{
+          name: profile?.name || 'Principal',
+          role: 'preschool_admin',
+          avatar: profile?.avatar_url || undefined,
+        }}
+        schoolName={this.state.tenantName || undefined}
+        onSignOut={signOut}
+      />
+    );
+  };
+
+  // Method to render Teacher dashboard with school isolation  
+  private renderTeacherDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
+    // Always fetch tenant info for teacher users if we have a profile and preschool_id
+    if (profile && profile.preschool_id && !this.state.tenantName) {
+      this.fetchTenantInfo(profile);
+    }
+
+    // For now, redirect to the dedicated teacher dashboard screen
+    // This ensures proper school isolation through the teacher's preschool_id
+    router.push('/screens/teacher-dashboard');
+    return null;
+  };
+
   render() {
     return (
       <AuthConsumer>
         {({ profile, signOut }) => {
-          // Add debugging
+          // Verify user has required data for school isolation
+          if (!profile) {
+            return (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading your dashboard...</Text>
+              </View>
+            );
+          }
 
-          // Route based on user role
+          // Verify school assignment for non-superadmin users
+          if (profile.role !== 'superadmin' && !profile.preschool_id) {
+            return (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>
+                  Account not assigned to a school. Please contact your administrator.
+                </Text>
+              </View>
+            );
+          }
+
+          // Route based on user role with proper school isolation
           switch (profile?.role) {
             case 'parent':
               return this.renderParentDashboard(profile, signOut);
+            
             case 'superadmin':
-              return (
-                <SuperAdminDashboard
-                  userId={profile?.auth_user_id || ''}
-                  userProfile={{
-                    name: profile?.name || 'Super Admin',
-                    role: 'superadmin',
-                    avatar: profile?.avatar_url || undefined,
-                  }}
-                  onSignOut={signOut}
-                  onNavigate={this.handleNavigate}
-                />
-              );
+              // Redirect to the main Super Admin dashboard screen
+              router.replace('/screens/super-admin-dashboard');
+              return null;
+            
             case 'preschool_admin':
-              return (
-                <SchoolAdminDashboard
-                  userId={profile?.auth_user_id || ''}
-                  userProfile={{
-                    name: profile?.name || 'School Admin',
-                    role: 'preschool_admin',
-                    avatar: profile?.avatar_url || undefined,
-                  }}
-                  schoolName={this.state.tenantName || undefined}
-                  onSignOut={signOut}
-                />
-              );
+            case 'principal':
+              return this.renderPrincipalDashboard(profile, signOut);
+            
             case 'teacher':
-              return this.renderAdminDashboard(profile, signOut);
+              return this.renderTeacherDashboard(profile, signOut);
+            
             default:
-              // If no role or unknown role, show parent dashboard as fallback
-
-              return this.renderParentDashboard(profile, signOut);
+              // Unknown role - show error
+              return (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>
+                    Invalid user role: {profile?.role || 'None'}. Please contact support.
+                  </Text>
+                </View>
+              );
           }
         }}
       </AuthConsumer>
@@ -1112,6 +1154,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });
 
