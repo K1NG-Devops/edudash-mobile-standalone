@@ -206,7 +206,7 @@ export async function updateUserPasswordAdmin(authUserId: string, newPassword: s
 
 /**
  * Send forgot password email with custom template
- * Enhanced version with better email template and error handling
+ * Uses Supabase auth with proper reset link - single email approach
  */
 export async function sendForgotPasswordEmail(email: string, customResetUrl?: string) {
   try {
@@ -234,39 +234,20 @@ export async function sendForgotPasswordEmail(email: string, customResetUrl?: st
       };
     }
 
-    // Request password reset
-    const resetResult = await requestPasswordReset({
-      email: email,
-      resetUrl: customResetUrl || 'https://app.edudashpro.org.za/reset-password'
-    });
-
-    if (!resetResult.success) {
-      throw new Error(resetResult.error || 'Failed to send reset email');
-    }
-
-    // Optionally send enhanced email template using edge function
-    try {
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: email,
-          subject: '🔐 Password Reset - EduDash Pro',
-          html: generateForgotPasswordEmailTemplate(user.name, email),
-          templateType: 'notification',
-          metadata: {
-            userId: user.id,
-            resetRequestedAt: new Date().toISOString()
-          }
-        }
-      });
-
-      if (emailError) {
-        log.warn('⚠️ Enhanced email template failed, fallback sent:', emailError);
-      } else {
-        log.info('📧 Enhanced forgot password email sent successfully');
+    // Use ONLY Supabase's password reset (which includes the working reset link)
+    const { data, error } = await supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: customResetUrl || 'https://app.edudashpro.org.za/(auth)/reset-password'
       }
-    } catch (templateError) {
-      log.warn('⚠️ Enhanced email template error, fallback sent:', templateError);
+    );
+
+    if (error) {
+      log.error('❌ Password reset request failed:', error);
+      throw new Error(`Password reset failed: ${error.message}`);
     }
+
+    log.info('✅ Password reset email sent successfully via Supabase');
 
     return {
       success: true,

@@ -21,7 +21,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 async function testForgotPasswordFlow() {
   console.log('🔐 Testing Forgot Password Flow\n');
   
-  const testEmail = 'kingakeem.dev@gmail.com'; // Change this to your test email
+  const testEmail = 'superadmin@edudashpro.org.za'; // Using existing superadmin user
   
   // Step 1: Check if user exists in database
   console.log('1️⃣ Checking if user exists...');
