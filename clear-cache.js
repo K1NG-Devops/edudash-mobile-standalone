@@ -11,7 +11,7 @@ const cachePaths = [
 ];
 
 cachePaths.forEach(cachePath => {
-  const fullPath = path.join(__dirname, cachePath);
+  const fullPath = path.resolve(process.cwd(), cachePath);
   if (fs.existsSync(fullPath)) {
     try {
       fs.rmSync(fullPath, { recursive: true, force: true });

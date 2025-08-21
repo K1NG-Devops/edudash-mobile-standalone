@@ -55,13 +55,6 @@ export const HomeworkSubmission: React.FC<HomeworkSubmissionProps> = ({
 
     setSubmitting(true);
     try {
-      // Removed debug statement: console.log('🚀 Submitting homework:', {
-        assignment: assignment.id,
-        student: studentId,
-        text: submissionText.trim(),
-        attachments: attachments.length
-      });
-      
       // Convert attachments to the format expected by HomeworkService
       const mediaFiles = attachments.map(attachment => ({
         uri: attachment.uri,
@@ -237,12 +230,8 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
   };
 
   const showAttachmentOptions = () => {
-
-    ; // Will be web in this case
-    
     // For web environments, Alert might not work properly, let's try a direct call first
     if (typeof window !== 'undefined') {
-
       const choice = window.confirm('Choose attachment type:\n\n1. Take Photo\n2. Choose from Library\n3. Choose Document\n\nClick OK to choose from library, Cancel to see more options');
       if (choice) {
         pickImage();
@@ -263,13 +252,6 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}
   };
 
   if (!assignment) return null;
-
-  // Removed debug statement: console.log('📋 HomeworkSubmission component rendering with:', {
-    visible,
-    assignmentTitle: assignment?.title,
-    studentId,
-    attachmentsCount: attachments.length
-  });
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">

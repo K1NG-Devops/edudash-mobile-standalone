@@ -22,8 +22,11 @@ export default function StudentsScreen() {
         .from('students')
         .select('*');
 
-      if (error) // Removed debug statement: console.error('Error fetching students:', error);
-      else setStudents(data || []);
+      if (error) {
+        // Intentionally ignore; UI will show empty list or handle via loading state
+      } else {
+        setStudents(data || []);
+      }
 
       setLoading(false);
     };

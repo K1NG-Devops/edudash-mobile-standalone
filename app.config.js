@@ -23,7 +23,8 @@ export default {
       package: "com.edudashpro.app",
       versionCode: 1,
       permissions: [
-        "INTERNET"
+        "INTERNET",
+        "CAMERA"
       ]
     },
     web: {

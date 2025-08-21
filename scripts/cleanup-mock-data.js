@@ -80,7 +80,7 @@ function findMockData(content) {
 }
 
 function analyzeMockDataInFile(filePath) {
-  const fullPath = path.join(__dirname, '..', filePath);
+  const fullPath = path.resolve(process.cwd(), filePath);
   
   if (!fs.existsSync(fullPath)) {
 
