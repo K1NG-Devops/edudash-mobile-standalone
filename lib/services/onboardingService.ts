@@ -497,7 +497,7 @@ export const approveOnboardingRequest = async (requestId: string) => {
         const adminClient = supabaseAdmin || supabase;
         await adminClient
           .from('preschool_onboarding_requests')
-          .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+          .update({ status: 'approved', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
           .eq('id', requestId);
       }
     } catch (_) {

@@ -66,7 +66,7 @@ serve(async (req) => {
       // Ensure request is marked approved (and verify it actually updated)
       const { data: updatedReq, error: updErr } = await admin
         .from("preschool_onboarding_requests")
-        .update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: caller.id })
+        .update({ status: "approved", reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq("id", requestId)
         .select("id, status, reviewed_at, reviewed_by")
         .single();
@@ -88,7 +88,7 @@ serve(async (req) => {
     {
       const { error: updErr } = await admin
         .from("preschool_onboarding_requests")
-        .update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: caller.id })
+        .update({ status: "approved", reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq("id", requestId);
       if (updErr) {
         console.error("Failed to mark onboarding request as approved (pre-creation):", updErr);
@@ -222,7 +222,7 @@ serve(async (req) => {
     // Double-confirm the onboarding request status is approved after all steps
     const { data: finalReq, error: finalUpdErr } = await admin
       .from("preschool_onboarding_requests")
-      .update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: caller.id })
+      .update({ status: "approved", reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", requestId)
       .select("id, status, reviewed_at, reviewed_by")
       .single();
