@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import OnboardingRequestManager from '@/components/admin/OnboardingRequestManager';
 import UserManagementScreen from '@/components/admin/UserManagementScreen';
@@ -102,6 +103,34 @@ const SuperAdminDashboardScreen: React.FC = () => {
     setRefreshing(true);
     await fetchDashboardData();
   };
+
+  // Register global refresh callback for OnboardingRequestManager
+  useFocusEffect(
+    React.useCallback(() => {
+      // Register the global callback function for immediate refresh after onboarding approval
+      (global as any).refreshSuperAdminDashboard = () => {
+        console.log('📊 [SuperAdminDashboard] Global refresh callback triggered');
+        // Add small delay to ensure database consistency after approvals
+        setTimeout(() => {
+          console.log('📊 [SuperAdminDashboard] Executing delayed refresh after approval');
+          fetchDashboardData();
+        }, 1000);
+      };
+
+      // Set up periodic refresh every 30 seconds while screen is focused
+      const refreshInterval = setInterval(() => {
+        console.log('⏰ [SuperAdminDashboard] Periodic refresh triggered');
+        fetchDashboardData();
+      }, 30000); // 30 seconds
+
+      // Cleanup function when screen loses focus
+      return () => {
+        console.log('🧹 [SuperAdminDashboard] Cleaning up - removing global callback and clearing interval');
+        clearInterval(refreshInterval);
+        delete (global as any).refreshSuperAdminDashboard;
+      };
+    }, [user?.id]) // Dependency on user.id to re-register when user changes
+  );
 
   // Handle navigation
   const handleNavigate = (route: string) => {

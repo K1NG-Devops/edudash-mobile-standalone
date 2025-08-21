@@ -453,9 +453,17 @@ export const approveOnboardingRequest = async (requestId: string) => {
     log.info('✅ [OnboardingService] User permissions verified, calling Edge Function');
     
     // Route approval + provisioning through Edge Function to use service role safely
-    // The supabase.functions.invoke() automatically handles authentication
+    // We need to manually pass the authentication token to the Edge Function
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('Failed to get authentication session for Edge Function call');
+    }
+    
     const { data, error } = await supabase.functions.invoke('superadmin_approve_onboarding', {
-      body: { requestId }
+      body: { requestId },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
     });
     
     log.info('📞 [OnboardingService] Edge Function response:', { data, error });
@@ -493,15 +501,23 @@ export const approveOnboardingRequest = async (requestId: string) => {
 
     // Defensive: if edge returns success but request still shows pending locally, update it via admin client
     try {
-      if ((data as any)?.success) {
+      if ((data as any)?.success && (data as any)?.request_status !== 'approved') {
+        log.info('🔄 [OnboardingService] Performing defensive status update...');
         const adminClient = supabaseAdmin || supabase;
-        await adminClient
+        const { error: updateError } = await adminClient
           .from('preschool_onboarding_requests')
-          .update({ status: 'approved', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .update({ status: 'approved', updated_at: new Date().toISOString() })
           .eq('id', requestId);
+        
+        if (updateError) {
+          log.warn('⚠️ [OnboardingService] Defensive update failed (non-critical):', updateError.message);
+        } else {
+          log.info('✅ [OnboardingService] Defensive status update completed');
+        }
       }
-    } catch (_) {
-      // non-fatal safeguard
+    } catch (err) {
+      // non-fatal safeguard - log but don't fail
+      log.warn('⚠️ [OnboardingService] Defensive update exception (non-critical):', err);
     }
 
     return data as any;
@@ -515,9 +531,14 @@ export const approveOnboardingRequest = async (requestId: string) => {
 export const rejectOnboardingRequest = async (requestId: string, reviewerId: string) => {
   // Keep rejection simple via RLS (superadmin) or use service role when available
   const client = supabaseAdmin || supabase;
-  const updateData: any = { status: 'rejected', reviewed_at: new Date().toISOString() };
-  const { data: reviewer } = await client.from('users').select('id').eq('id', reviewerId).single();
-  if (reviewer) updateData.reviewed_by = reviewerId;
+  const updateData: any = { status: 'rejected', updated_at: new Date().toISOString() };
+  
+  // Add notes field if we want to track who reviewed it (since reviewed_by doesn't exist)
+  const { data: reviewer } = await client.from('users').select('name').eq('id', reviewerId).single();
+  if (reviewer?.name) {
+    updateData.notes = `Rejected by ${reviewer.name} at ${new Date().toISOString()}`;
+  }
+  
   const { data, error } = await client
     .from('preschool_onboarding_requests')
     .update(updateData)

@@ -173,10 +173,17 @@ export class SuperAdminDataService {
    */
   static async getPlatformStats(): Promise<PlatformStats> {
     try {
+      log.info('📊 [SuperAdmin] Getting platform stats...');
+      
+      // Use admin client to bypass RLS restrictions for accurate counts
+      const client = supabaseAdmin || supabase;
+      
       // Get school count
-      const { count: schoolCount } = await supabase
+      const { count: schoolCount } = await client
         .from('preschools')
         .select('*', { count: 'exact', head: true });
+      
+      log.info('📊 [SuperAdmin] School count:', schoolCount);
 
       // Get user counts by role
       const { data: userStats } = await supabase
@@ -1186,19 +1193,28 @@ export class SuperAdminDataService {
     try {
       log.info('📧 [SuperAdmin] Resending welcome instructions for school:', schoolId);
 
+      // Use admin client to bypass RLS restrictions for preschools table access
+      const client = supabaseAdmin || supabase;
+      if (!supabaseAdmin) {
+        log.warn('⚠️ [SuperAdmin] Admin client not available, using regular client (may fail due to RLS)');
+      }
+
       // Get school and admin details from database
-      const { data: school, error: schoolError } = await supabase
+      const { data: school, error: schoolError } = await client
         .from('preschools')
         .select('*')
         .eq('id', schoolId)
         .maybeSingle();
 
       if (schoolError || !school) {
+        log.error('❌ [SuperAdmin] School lookup failed:', { schoolId, schoolError });
         throw new Error(`School not found: ${schoolError?.message || 'Invalid school ID'}`);
       }
 
+      log.info('✅ [SuperAdmin] Found school:', { id: school.id, name: school.name });
+
       // Get the principal/admin user for this school
-      const { data: admins, error: adminError } = await supabase
+      const { data: admins, error: adminError } = await client
         .from('users')
         .select('*')
         .eq('preschool_id', schoolId)

@@ -105,7 +105,9 @@ export class EmailService {
    */
   private static async sendWithResend(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
     try {
-      const apiKey = process.env.EXPO_PUBLIC_RESEND_API_KEY || process.env.RESEND_API_KEY;
+    // SECURITY: Never use EXPO_PUBLIC_* API keys for outbound email in the client.
+    // Only allow server-side key (RESEND_API_KEY). For mobile/web, prefer edge function invocations.
+    const apiKey = process.env.RESEND_API_KEY;
       const fromEmail = process.env.EXPO_PUBLIC_FROM_EMAIL || process.env.FROM_EMAIL || 'noreply@edudashpro.org.za';
 
       const response = await fetch('https://api.resend.com/emails', {

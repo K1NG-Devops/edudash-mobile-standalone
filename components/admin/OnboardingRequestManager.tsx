@@ -91,13 +91,26 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       const approvedRequests = requests.filter(r => r.status === 'approved');
       const statusMap: Record<string, boolean> = {};
 
+      // Use admin client to bypass RLS restrictions for preschools table access
+      const adminClient = supabaseAdmin || (window as any).supabaseClients?.supabaseAdmin;
+      
+      if (!adminClient) {
+        console.warn('⚠️ [OnboardingManager] Admin client not available for school status check, skipping...');
+        // If admin client is not available, assume all approved requests need setup completion
+        approvedRequests.forEach(request => {
+          statusMap[request.id] = false;
+        });
+        setSchoolCreationStatus(statusMap);
+        return;
+      }
+
       for (const request of approvedRequests) {
         try {
-          const { data: school, error } = await supabase
+          const { data: school, error } = await adminClient
             .from('preschools')
             .select('id, name, setup_completed, onboarding_status')
             .eq('email', request.admin_email)
-            .single();
+            .maybeSingle(); // Use maybeSingle to handle case where no school exists
 
           if (!error && school) {
             // School exists and is properly set up
@@ -202,6 +215,13 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         await new Promise(res => setTimeout(res, 400));
         // Re-fetch to synchronize with the backend, even though UI is updated
         await fetchRequests();
+        
+        // Trigger dashboard refresh if callback is provided
+        if (typeof (global as any).refreshSuperAdminDashboard === 'function') {
+          console.log('📊 [OnboardingManager] Triggering dashboard refresh after approval');
+          (global as any).refreshSuperAdminDashboard();
+        }
+        
         console.log('✅ [OnboardingManager] Approval process completed successfully');
       } else {
         console.error('❌ [OnboardingManager] Approval failed:', result?.error);
@@ -278,16 +298,41 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       // First, find the actual school that was created from this onboarding request
       // Removed debug statement: console.log('🔍 [OnboardingManager] Looking for school with admin email:', request.admin_email);
 
-      const { data: schoolData, error: schoolError } = await supabase
+      // Use admin client to bypass RLS restrictions - this is required for preschools table access
+      const adminClient = supabaseAdmin || (window as any).supabaseClients?.supabaseAdmin;
+      
+      if (!adminClient) {
+        if (typeof window !== 'undefined') {
+          window.alert('Admin client not available. Cannot query preschools table due to RLS restrictions.\n\nPlease ensure the service role key is properly configured or use server-side operations.');
+        }
+        return;
+      }
+      
+      const { data: schoolData, error: schoolError } = await adminClient
         .from('preschools')
         .select('id')
         .eq('email', request.admin_email)
-        .single();
+        .maybeSingle(); // Use maybeSingle to handle case where no school exists
 
       if (schoolError || !schoolData) {
         // Removed debug statement: console.error('❌ [OnboardingManager] School not found for admin:', request.admin_email, schoolError);
+        let errorMessage = `School not found for admin email: ${request.admin_email}`;
+        
+        if (schoolError) {
+          // Check for specific error types
+          if (schoolError.code === '406' || schoolError.message?.includes('406') || schoolError.message?.includes('Not Acceptable')) {
+            errorMessage = `Database permission error (406) when looking up school for ${request.admin_email}.\n\nThis may be due to Row Level Security restrictions. Please contact technical support.`;
+          } else if (schoolError.code === 'PGRST116' || schoolError.message?.includes('PGRST116')) {
+            errorMessage = `No school found for admin email: ${request.admin_email}.\n\nThe school may not have been created yet. Please approve the request first.`;
+          } else {
+            errorMessage = `Database error when looking up school: ${schoolError.message || schoolError.code || 'Unknown error'}`;
+          }
+        } else {
+          errorMessage = `No school found for admin email: ${request.admin_email}.\n\nThe school may not have been created yet. Please approve the request first.`;
+        }
+        
         if (typeof window !== 'undefined') {
-          window.alert(`School not found for admin email: ${request.admin_email}\n\nThe school may not have been created yet. Please approve the request first.`);
+          window.alert(errorMessage);
         }
         return;
       }

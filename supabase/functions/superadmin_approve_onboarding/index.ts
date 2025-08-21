@@ -66,9 +66,9 @@ serve(async (req) => {
       // Ensure request is marked approved (and verify it actually updated)
       const { data: updatedReq, error: updErr } = await admin
         .from("preschool_onboarding_requests")
-        .update({ status: "approved", reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .update({ status: "approved", updated_at: new Date().toISOString() })
         .eq("id", requestId)
-        .select("id, status, reviewed_at, reviewed_by")
+        .select("id, status, updated_at")
         .single();
 
       if (updErr) {
@@ -88,7 +88,7 @@ serve(async (req) => {
     {
       const { error: updErr } = await admin
         .from("preschool_onboarding_requests")
-        .update({ status: "approved", reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .update({ status: "approved", updated_at: new Date().toISOString() })
         .eq("id", requestId);
       if (updErr) {
         console.error("Failed to mark onboarding request as approved (pre-creation):", updErr);
@@ -125,7 +125,7 @@ serve(async (req) => {
       // Revert request to pending on failure
       await admin
         .from("preschool_onboarding_requests")
-        .update({ status: "pending", reviewed_at: null, reviewed_by: null })
+        .update({ status: "pending", updated_at: new Date().toISOString() })
         .eq("id", requestId);
       return json({ error: `Failed to create school: ${schoolErr?.message || "unknown"}` }, 500);
     }
@@ -150,7 +150,7 @@ serve(async (req) => {
       await admin.from("preschools").delete().eq("id", school.id);
       await admin
         .from("preschool_onboarding_requests")
-        .update({ status: "pending", reviewed_at: null, reviewed_by: null })
+        .update({ status: "pending", updated_at: new Date().toISOString() })
         .eq("id", requestId);
       return json({ error: `Failed to create admin user: ${authErr?.message || "unknown"}` }, 500);
     }
@@ -222,9 +222,9 @@ serve(async (req) => {
     // Double-confirm the onboarding request status is approved after all steps
     const { data: finalReq, error: finalUpdErr } = await admin
       .from("preschool_onboarding_requests")
-      .update({ status: "approved", reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .update({ status: "approved", updated_at: new Date().toISOString() })
       .eq("id", requestId)
-      .select("id, status, reviewed_at, reviewed_by")
+      .select("id, status, updated_at")
       .single();
     if (finalUpdErr) {
       console.error("Warning: Final approval status update failed:", finalUpdErr);

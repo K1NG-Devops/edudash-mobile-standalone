@@ -104,13 +104,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Admin client for service role operations (development only)
-// WARNING: This exposes the service role key to the client - only for development!
-const supabaseServiceRoleKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || (USE_LOCAL_DB
-  ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
-  : undefined);
+// Admin client for service role operations (development-only)
+// IMPORTANT SECURITY NOTE:
+// - Never include service role keys in production builds or public runtime.
+// - Only enable the admin client when explicitly allowed AND not in production.
+const ENABLE_ADMIN_CLIENT = (process.env.EXPO_PUBLIC_ENABLE_ADMIN_CLIENT === 'true') && (process.env.NODE_ENV !== 'production');
 
-export const supabaseAdmin = supabaseServiceRoleKey
+// Only read a service role key when explicitly enabled for local development.
+// Prefer a non-public env var if available; DO NOT use EXPO_PUBLIC_* in production.
+const supabaseServiceRoleKey = ENABLE_ADMIN_CLIENT
+  ? (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || (USE_LOCAL_DB
+      ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+      : undefined))
+  : undefined;
+
+export const supabaseAdmin = (ENABLE_ADMIN_CLIENT && supabaseServiceRoleKey)
   ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
@@ -121,11 +129,12 @@ export const supabaseAdmin = supabaseServiceRoleKey
   : null;
 
 if (DEBUG_SUPABASE) {
-  if (supabaseServiceRoleKey) {
-    log.debug('✅ Supabase Admin client configured with service role');
-    log.debug('🔑 Service role key (first 20 chars):', supabaseServiceRoleKey.substring(0, 20) + '...');
+  if (!ENABLE_ADMIN_CLIENT) {
+    log.debug('ℹ️ Admin client disabled. Set EXPO_PUBLIC_ENABLE_ADMIN_CLIENT=true for local dev only.');
+  } else if (supabaseServiceRoleKey) {
+    log.debug('✅ Admin client enabled for local development');
   } else {
-    log.warn('⚠️ Service role key not found - admin operations will not work');
+    log.warn('⚠️ Admin client requested but no service role key found (expected SUPABASE_SERVICE_ROLE_KEY in local env)');
     log.debug('🔍 Available env vars:', Object.keys(process.env).filter(key => key.includes('SUPABASE')));
   }
 }
@@ -165,7 +174,8 @@ export const getUserSchool = (profile: any) => {
 if (typeof window !== 'undefined' && DEBUG_SUPABASE) {
   (window as any).supabaseClients = {
     supabase,
-    supabaseAdmin
+    // Only expose admin client if explicitly enabled for dev
+    supabaseAdmin: ENABLE_ADMIN_CLIENT ? supabaseAdmin : null,
   };
   log.info('🔧 [Debug] Supabase clients exposed globally for debugging');
 }

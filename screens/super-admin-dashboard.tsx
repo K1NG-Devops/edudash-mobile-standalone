@@ -76,7 +76,20 @@ export default function SuperAdminDashboard({ navigation, route }: SuperAdminDas
   useFocusEffect(
     useCallback(() => {
       loadDashboardData();
-    }, [])
+      
+      // Set up periodic refresh to catch changes from approvals/school creation
+      const refreshInterval = setInterval(() => {
+        // Only refresh if component is still mounted and not already loading
+        if (!loading && !refreshing) {
+          log.info('🔄 [SuperAdminDashboard] Periodic refresh to sync latest data');
+          loadDashboardData();
+        }
+      }, 30000); // Refresh every 30 seconds
+      
+      return () => {
+        clearInterval(refreshInterval);
+      };
+    }, [loading, refreshing])
   );
 
   const handleRefresh = () => {
