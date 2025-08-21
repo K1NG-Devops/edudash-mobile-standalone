@@ -1,5 +1,8 @@
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { PreschoolOnboardingRequest } from '@/types/types';
+import { createLogger } from '@/lib/utils/logger';
+
+const log = createLogger('OnboardingService');
 
 interface OnboardingRequestInput {
   preschoolName: string;
@@ -412,38 +415,100 @@ export const getAllOnboardingRequests = async (): Promise<Partial<PreschoolOnboa
 
 // Approve an onboarding request (for super admins)
 export const approveOnboardingRequest = async (requestId: string) => {
-  // Route approval + provisioning through Edge Function to use service role safely
-  const { data, error } = await supabase.functions.invoke('superadmin_approve_onboarding', {
-    body: { requestId },
-  });
+  try {
+    log.info('🔥 [OnboardingService] approveOnboardingRequest: Starting approval for requestId:', requestId);
+    
+    // Check current user authentication before calling Edge Function
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      log.error('❌ [OnboardingService] Authentication failed:', authError?.message);
+      throw new Error('Authentication required. Please sign in again.');
+    }
+    
+    log.info('🔑 [OnboardingService] User authenticated:', {
+      userId: user.id,
+      email: user.email
+    });
+    
+    // Verify user has superadmin role before proceeding
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('role, is_active')
+      .eq('auth_user_id', user.id)
+      .single();
+      
+    if (profileError || !userProfile) {
+      log.error('❌ [OnboardingService] User profile not found:', profileError?.message);
+      throw new Error('User profile not found. Please contact support.');
+    }
+    
+    if (userProfile.role !== 'superadmin' || !userProfile.is_active) {
+      log.error('❌ [OnboardingService] Insufficient permissions:', {
+        role: userProfile.role,
+        active: userProfile.is_active
+      });
+      throw new Error('Insufficient permissions. Superadmin role required.');
+    }
+    
+    log.info('✅ [OnboardingService] User permissions verified, calling Edge Function');
+    
+    // Route approval + provisioning through Edge Function to use service role safely
+    // The supabase.functions.invoke() automatically handles authentication
+    const { data, error } = await supabase.functions.invoke('superadmin_approve_onboarding', {
+      body: { requestId }
+    });
+    
+    log.info('📞 [OnboardingService] Edge Function response:', { data, error });
 
-  // Surface detailed error information from Edge Function responses
-  if (error) {
-    // Attempt to parse the Response object body if available
-    const ctx: any = (error as any)?.context;
-    let detailed: any = (error as any)?.message;
+    // Surface detailed error information from Edge Function responses
+    if (error) {
+      log.error('❌ [OnboardingService] Edge Function error:', error);
+      
+      // Attempt to parse the Response object body if available
+      const ctx: any = (error as any)?.context;
+      let detailed: any = (error as any)?.message;
+      try {
+        if (ctx && typeof ctx.json === 'function') {
+          const parsed = await ctx.json();
+          detailed = parsed?.error || JSON.stringify(parsed);
+        } else if (ctx && typeof ctx.text === 'function') {
+          const txt = await ctx.text();
+          detailed = txt || detailed;
+        } else if ((error as any)?.context?.body?.error) {
+          detailed = (error as any).context.body.error;
+        }
+      } catch (_) {
+        // ignore parsing issues; fall back to message
+      }
+      throw new Error(detailed || 'Failed to approve request via Edge Function');
+    }
+
+    // Edge function may return an { error } payload with 200; guard for that too
+    if ((data as any)?.error) {
+      log.error('❌ [OnboardingService] Edge Function returned error in data:', (data as any).error);
+      throw new Error((data as any).error);
+    }
+    
+    log.info('✅ [OnboardingService] Approval completed successfully:', data);
+
+    // Defensive: if edge returns success but request still shows pending locally, update it via admin client
     try {
-      if (ctx && typeof ctx.json === 'function') {
-        const parsed = await ctx.json();
-        detailed = parsed?.error || JSON.stringify(parsed);
-      } else if (ctx && typeof ctx.text === 'function') {
-        const txt = await ctx.text();
-        detailed = txt || detailed;
-      } else if ((error as any)?.context?.body?.error) {
-        detailed = (error as any).context.body.error;
+      if ((data as any)?.success) {
+        const adminClient = supabaseAdmin || supabase;
+        await adminClient
+          .from('preschool_onboarding_requests')
+          .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+          .eq('id', requestId);
       }
     } catch (_) {
-      // ignore parsing issues; fall back to message
+      // non-fatal safeguard
     }
-    throw new Error(detailed || 'Failed to approve request via Edge Function');
-  }
 
-  // Edge function may return an { error } payload with 200; guard for that too
-  if ((data as any)?.error) {
-    throw new Error((data as any).error);
+    return data as any;
+  } catch (error) {
+    log.error('💥 [OnboardingService] Exception in approveOnboardingRequest:', error);
+    throw error;
   }
-
-  return data as any;
 };
 
 // Reject an onboarding request (for super admins)

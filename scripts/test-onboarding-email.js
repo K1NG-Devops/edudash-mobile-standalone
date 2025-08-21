@@ -21,8 +21,24 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 async function testOnboardingEmailFlow() {
   console.log('📧 Testing School Onboarding Email Flow\n');
   
+  // Step 0: Sign in as superadmin to get auth token
+  console.log('0️⃣ Authenticating as superadmin...');
+  
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email: 'superadmin@edudashpro.org.za',
+    password: 'superadmin123!' // You may need to update this password
+  });
+
+  if (authError) {
+    console.error('❌ Failed to authenticate as superadmin:', authError);
+    console.log('💡 Please ensure the superadmin user exists with email: superadmin@edudashpro.org.za');
+    return false;
+  }
+
+  console.log('✅ Authenticated as superadmin:', authData.user.email);
+  
   // Step 1: Create a test onboarding request
-  console.log('1️⃣ Creating test onboarding request...');
+  console.log('\n1️⃣ Creating test onboarding request...');
   
   const testSchoolData = {
     preschool_name: 'Test Preschool Academy',

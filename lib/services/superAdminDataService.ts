@@ -585,14 +585,17 @@ export class SuperAdminDataService {
    */
   static async getPendingApprovals() {
     try {
+      // Use admin client to bypass RLS for counting pending requests
+      const client = supabaseAdmin || supabase;
+      
       // Get pending onboarding requests (schools)
-      const { count: pendingSchools } = await supabase
+      const { count: pendingSchools } = await client
         .from('preschool_onboarding_requests')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
 
       // Get inactive users that might need approval
-      const { count: pendingUsers } = await supabase
+      const { count: pendingUsers } = await client
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('is_active', false)

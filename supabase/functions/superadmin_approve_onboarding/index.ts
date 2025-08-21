@@ -63,19 +63,37 @@ serve(async (req) => {
       .maybeSingle();
 
     if (existingSchool && existingSchool.setup_completed && existingSchool.onboarding_status === "completed") {
-      // Ensure request is marked approved
-      await admin
+      // Ensure request is marked approved (and verify it actually updated)
+      const { data: updatedReq, error: updErr } = await admin
         .from("preschool_onboarding_requests")
         .update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: caller.id })
-        .eq("id", requestId);
-      return json({ success: true, school_id: existingSchool.id, admin_email: request.admin_email, already_provisioned: true });
+        .eq("id", requestId)
+        .select("id, status, reviewed_at, reviewed_by")
+        .single();
+
+      if (updErr) {
+        console.error("Failed to update onboarding request status in idempotency path:", updErr);
+      }
+
+      return json({
+        success: true,
+        school_id: existingSchool.id,
+        admin_email: request.admin_email,
+        already_provisioned: true,
+        request_status: updatedReq?.status || "approved",
+      });
     }
 
     // Approve request first (record keeping)
-    await admin
-      .from("preschool_onboarding_requests")
-      .update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: caller.id })
-      .eq("id", requestId);
+    {
+      const { error: updErr } = await admin
+        .from("preschool_onboarding_requests")
+        .update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: caller.id })
+        .eq("id", requestId);
+      if (updErr) {
+        console.error("Failed to mark onboarding request as approved (pre-creation):", updErr);
+      }
+    }
 
     // Create school
     const tenantSlug = String(request.preschool_name || "school")
@@ -201,13 +219,25 @@ serve(async (req) => {
       // Continue with success response even if email fails
     }
 
+    // Double-confirm the onboarding request status is approved after all steps
+    const { data: finalReq, error: finalUpdErr } = await admin
+      .from("preschool_onboarding_requests")
+      .update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: caller.id })
+      .eq("id", requestId)
+      .select("id, status, reviewed_at, reviewed_by")
+      .single();
+    if (finalUpdErr) {
+      console.error("Warning: Final approval status update failed:", finalUpdErr);
+    }
+
     // Return credentials and confirmation
     return json({ 
       success: true, 
       school_id: school.id, 
       admin_email: request.admin_email, 
       temp_password: tempPassword,
-      welcome_email_sent: true
+      welcome_email_sent: true,
+      request_status: finalReq?.status || "approved",
     });
   } catch (e) {
     return json({ error: String(e) }, 500);

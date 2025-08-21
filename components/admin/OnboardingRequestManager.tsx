@@ -66,22 +66,22 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
   const fetchRequests = async () => {
     try {
-      // Removed debug statement: console.log('🔄 [OnboardingManager] fetchRequests: Starting to fetch requests...');
+      console.log('🔄 [OnboardingManager] fetchRequests: Starting to fetch requests...');
       setLoading(true);
       const data = await getAllOnboardingRequests();
-      // Removed debug statement: console.log('📊 [OnboardingManager] fetchRequests: Received data:', data);
-      // Removed debug statement: console.log('📊 [OnboardingManager] fetchRequests: Data length:', data?.length || 0);
+      console.log('📊 [OnboardingManager] fetchRequests: Received data:', data);
+      console.log('📊 [OnboardingManager] fetchRequests: Data length:', data?.length || 0);
       setRequests(data as OnboardingRequest[]);
-      // Removed debug statement: console.log('✅ [OnboardingManager] fetchRequests: State updated with', data?.length || 0, 'requests');
+      console.log('✅ [OnboardingManager] fetchRequests: State updated with', data?.length || 0, 'requests');
       
       // Check school creation status for approved requests
       await checkSchoolCreationStatus(data as OnboardingRequest[]);
     } catch (error) {
-      // Removed debug statement: console.error('❌ [OnboardingManager] fetchRequests: Error fetching onboarding requests:', error);
-      Alert.alert('Error', 'Failed to load onboarding requests');
+      console.error('❌ [OnboardingManager] fetchRequests: Error fetching onboarding requests:', error);
+      Alert.alert('Error', 'Failed to load onboarding requests: ' + (error as any)?.message);
     } finally {
       setLoading(false);
-      // Removed debug statement: console.log('🏁 [OnboardingManager] fetchRequests: Finished (loading=false)');
+      console.log('🏁 [OnboardingManager] fetchRequests: Finished (loading=false)');
     }
   };
 
@@ -157,47 +157,64 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
   const performApproval = async (request: OnboardingRequest) => {
     try {
-      // Removed debug statement: console.log('🚀 [OnboardingManager] Starting approval process...');
+      console.log('🔥 [OnboardingManager] performApproval: Starting approval for request:', request.id);
       setProcessing(request.id);
-
-      // Removed debug statement: console.log('📝 [OnboardingManager] Approving & provisioning via Edge Function...');
+      
+      // Log current user authentication state
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('🔑 [OnboardingManager] Current user auth state:', {
+        userId: user?.id,
+        email: user?.email,
+        authError: authError?.message
+      });
+      
+      if (!user) {
+        throw new Error('Not authenticated. Please sign in again.');
+      }
+      
+      console.log('📞 [OnboardingManager] Calling approveOnboardingRequest with requestId:', request.id);
       const result = await approveOnboardingRequest(request.id) as any;
-
-      // Removed debug statement: console.log('🏫 [OnboardingManager] Provisioning result:', result);
+      console.log('📊 [OnboardingManager] Approval result:', result);
 
       if (result?.success) {
-        // Update UI to approved
-        setRequests(prevRequests =>
-          prevRequests.map(r =>
-            r.id === request.id
-              ? { ...r, status: 'approved' as const, reviewed_by: superAdminUserId, reviewed_at: new Date().toISOString() }
-              : r
+        console.log('✅ [OnboardingManager] Approval successful, updating UI');
+        // Optimistically update UI to prevent stale state from showing
+        setRequests(currentRequests =>
+          currentRequests.map(r =>
+            r.id === request.id ? { ...r, status: 'approved', reviewed_at: new Date().toISOString() as any } : r
           )
         );
-        // TODO: Test Alert on mobile - using fallback for web
+        setSchoolCreationStatus(prev => ({...prev, [request.id]: true}));
+
+        const adminEmail = result.admin_email || request.admin_email;
+        const tempPassword = result.temp_password || '(Password previously sent)';
+
         if (typeof window !== 'undefined') {
-          window.alert(`School "${request.preschool_name}" has been created successfully!\n\nAdmin Email: ${result.admin_email}\nTemporary Password: ${result.temp_password}`);
-        } else {
-          // Alert.alert('Success', `School "${request.preschool_name}" has been created successfully!\n\nAdmin Email: ${result.admin_email}\nTemporary Password: ${result.temp_password}`);
+          if (result.already_provisioned) {
+            window.alert(`School \"${request.preschool_name}\" was already set up!\n\nThe school and admin account already exist.\nStatus: Already provisioned`);
+          } else {
+            window.alert(`School \"${request.preschool_name}\" has been created successfully!\n\nAdmin Email: ${adminEmail}\nTemporary Password: ${tempPassword}\n\nA welcome email has been sent with login instructions.`);
+          }
         }
-        // Removed debug statement: console.log('🎉 [OnboardingManager] Success!');
+        
+        console.log('🔄 [OnboardingManager] Re-fetching requests after approval');
+        // Small delay to avoid read-after-write replication lag
+        await new Promise(res => setTimeout(res, 400));
+        // Re-fetch to synchronize with the backend, even though UI is updated
+        await fetchRequests();
+        console.log('✅ [OnboardingManager] Approval process completed successfully');
       } else {
-        // Removed debug statement: console.error('❌ [OnboardingManager] School creation failed:', result.error);
+        console.error('❌ [OnboardingManager] Approval failed:', result?.error);
         if (typeof window !== 'undefined') {
           window.alert(result.error || 'Failed to create school');
-        } else {
-          // Alert.alert('Error', result.error || 'Failed to create school');
         }
       }
     } catch (error: any) {
-      // Removed debug statement: console.error('💥 [OnboardingManager] Exception during approval:', error);
+      console.error('💥 [OnboardingManager] Exception during approval:', error);
       if (typeof window !== 'undefined') {
         window.alert(error.message || 'Failed to approve request');
-      } else {
-        // Alert.alert('Error', error.message || 'Failed to approve request');
       }
     } finally {
-      // Removed debug statement: console.log('🏁 [OnboardingManager] Approval process finished');
       setProcessing(null);
     }
   };
@@ -205,16 +222,10 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   const handleReject = async (request: OnboardingRequest) => {
     // Removed debug statement: console.log('❌ [OnboardingManager] Rejecting request for:', request.preschool_name);
 
-    const confirmed = await new Promise<boolean>((resolve) => {
-      Alert.alert(
-        'Reject Request',
-        `Are you sure you want to reject "${request.preschool_name}"?\n\nThis action will mark the request as rejected.`,
-        [
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Reject', style: 'destructive', onPress: () => resolve(true) },
-        ],
-      );
-    });
+    // Use window.confirm for web compatibility
+    const confirmed = typeof window !== 'undefined'
+      ? window.confirm(`Are you sure you want to reject "${request.preschool_name}"?\n\nThis action will mark the request as rejected.`)
+      : true;
 
     if (!confirmed) {
       // Removed debug statement: console.log('❌ [OnboardingManager] User cancelled rejection');
@@ -229,16 +240,14 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
       // Removed debug statement: console.log('✅ [OnboardingManager] Request rejected successfully');
 
-      // Immediately update the request status in UI
-      setRequests(prevRequests =>
-        prevRequests.map(r =>
-          r.id === request.id
-            ? { ...r, status: 'rejected' as const, reviewed_by: superAdminUserId, reviewed_at: new Date().toISOString() }
-            : r
-        )
-      );
-
-      Alert.alert('Success', `Request for "${request.preschool_name}" has been rejected.`);
+      if (typeof window !== 'undefined') {
+        window.alert(`Request for "${request.preschool_name}" has been rejected.`);
+      } else {
+        Alert.alert('Success', `Request for "${request.preschool_name}" has been rejected.`);
+      }
+      
+      // Refresh data from server to get latest state
+      await fetchRequests();
 
     } catch (error: any) {
       // Removed debug statement: console.error('💥 [OnboardingManager] Exception during rejection:', error);
@@ -298,6 +307,9 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
           window.alert(`Instructions resent successfully!\n\nEmail sent to: ${resendResult.admin_email}\n${resendResult.password_updated ? 'New password generated.' : 'Please contact support if issues persist.'}`);
         }
         // Removed debug statement: console.log('🎉 [OnboardingManager] Instructions resent successfully!');
+        
+        // Refresh data from server to get updated school creation status
+        await fetchRequests();
       } else {
         // Removed debug statement: console.error('❌ [OnboardingManager] Resend failed:', resendResult?.error);
         if (typeof window !== 'undefined') {
@@ -351,16 +363,10 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   const handleDeleteSchool = async (request: OnboardingRequest) => {
     // Removed debug statement: console.log('🗑️ [OnboardingManager] Deleting approved school for:', request.preschool_name);
 
-    const confirmed = await new Promise<boolean>((resolve) => {
-      Alert.alert(
-        '⚠️ DANGEROUS OPERATION ⚠️',
-        `Permanently delete the ENTIRE SCHOOL "${request.preschool_name}"?\n\n🚨 This will delete:\n- The school record\n- All admin users\n- All associated data\n\nThis action CANNOT be undone!`,
-        [
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'DELETE SCHOOL', style: 'destructive', onPress: () => resolve(true) },
-        ],
-      );
-    });
+    // Use window.confirm for web compatibility
+    const confirmed = typeof window !== 'undefined'
+      ? window.confirm(`⚠️ DANGEROUS OPERATION ⚠️\n\nPermanently delete the ENTIRE SCHOOL "${request.preschool_name}"?\n\n🚨 This will delete:\n- The school record\n- All admin users\n- All associated data\n\nThis action CANNOT be undone!`)
+      : true;
 
     if (!confirmed) {
       // Removed debug statement: console.log('❌ [OnboardingManager] User cancelled school deletion');
@@ -419,16 +425,10 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   const handleDeleteRequest = async (request: OnboardingRequest) => {
     // Removed debug statement: console.log('🗑️ [OnboardingManager] Deleting request for:', request.preschool_name);
 
-    const confirmed = await new Promise<boolean>((resolve) => {
-      Alert.alert(
-        'Delete request',
-        `Permanently delete the request for "${request.preschool_name}"? This cannot be undone.`,
-        [
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
-        ],
-      );
-    });
+    // Use window.confirm for web compatibility
+    const confirmed = typeof window !== 'undefined'
+      ? window.confirm(`Permanently delete the request for "${request.preschool_name}"? This cannot be undone.`)
+      : true;
 
     if (!confirmed) {
       // Removed debug statement: console.log('❌ [OnboardingManager] User cancelled deletion');
@@ -451,14 +451,10 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
       // Removed debug statement: console.log('✅ [OnboardingManager] Request deleted successfully');
 
-      // Immediately update UI by filtering out the deleted item
-      setRequests(prevRequests => {
-        const filtered = prevRequests.filter(r => r.id !== request.id);
-        // Removed debug statement: console.log(`🔄 [OnboardingManager] UI updated immediately: ${prevRequests.length} -> ${filtered.length} requests`);
-        return filtered;
-      });
-
       Alert.alert('Deleted', `Request for "${request.preschool_name}" has been permanently deleted.`);
+      
+      // Refresh data from server to get latest state
+      await fetchRequests();
 
     } catch (error: any) {
       // Removed debug statement: console.error('💥 [OnboardingManager] Exception during deletion:', error);

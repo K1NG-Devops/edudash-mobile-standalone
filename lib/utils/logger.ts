@@ -19,25 +19,25 @@ export const createLogger = (namespace?: string) => ({
   debug: (message?: unknown, ...args: unknown[]) => {
     if (isDebugEnabled(namespace)) {
       // eslint-disable-next-line no-console
-
+      console.debug(...format('debug', namespace, message, ...args));
     }
   },
   info: (message?: unknown, ...args: unknown[]) => {
     if (isDebugEnabled(namespace)) {
       // eslint-disable-next-line no-console
-
+      console.info(...format('info', namespace, message, ...args));
     }
   },
   warn: (message?: unknown, ...args: unknown[]) => {
     if (isDebugEnabled(namespace)) {
       // eslint-disable-next-line no-console
-      log.warn(...format('warn', namespace, message, ...args));
+      console.warn(...format('warn', namespace, message, ...args));
     }
   },
   error: (message?: unknown, ...args: unknown[]) => {
     // Errors always log
     // eslint-disable-next-line no-console
-    log.error(...format('error', namespace, message, ...args));
+    console.error(...format('error', namespace, message, ...args));
   },
 });
 
