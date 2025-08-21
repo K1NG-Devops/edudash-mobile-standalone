@@ -1,6 +1,7 @@
 import { claudeService } from '@/lib/ai/claudeService';
 import { HomeworkAssignment, HomeworkFilter, HomeworkNotification, HomeworkSubmissionData, HomeworkSummary, StudentHomeworkSubmission } from '@/types/homework-types';
 import { supabase } from '../supabase';
+import { logger as log } from '@/lib/utils/logger';
 
 export class HomeworkService {
   // Subscriptions for real-time updates

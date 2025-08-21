@@ -166,7 +166,21 @@ export default function NotificationsScreen() {
         <View style={styles.headerLeft}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              try {
+                // Prefer safe back; if none, go home
+                // @ts-ignore
+                if (router.canGoBack && router.canGoBack()) {
+                  router.back();
+                } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  router.replace('/screens/principal-dashboard' as any);
+                }
+              } catch {
+                router.replace('/screens/principal-dashboard' as any);
+              }
+            }}
           >
             <IconSymbol name="chevron.left" size={24} color="#1F2937" />
           </TouchableOpacity>
@@ -178,14 +192,38 @@ export default function NotificationsScreen() {
           </View>
         </View>
         
-        {unreadCount > 0 && (
-          <TouchableOpacity
-            style={styles.markAllButton}
-            onPress={markAllAsRead}
-          >
-            <Text style={styles.markAllText}>Mark all read</Text>
-          </TouchableOpacity>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {__DEV__ && (
+            <TouchableOpacity
+              style={[styles.markAllButton, { backgroundColor: '#10B981' }]}
+              onPress={async () => {
+                try {
+                  if (!user?.id) return;
+                  await NotificationService.createNotification(
+                    user.id,
+                    'Test notification',
+                    'This is a test notification for verification.',
+                    'activity'
+                  );
+                  await fetchNotifications();
+                } catch (e: any) {
+                  Alert.alert('Not allowed', 'Your current permissions or RLS policies do not allow creating notifications from the client. This is expected in production.');
+                }
+              }}
+            >
+              <Text style={styles.markAllText}>Add test</Text>
+            </TouchableOpacity>
+          )}
+
+          {unreadCount > 0 && (
+            <TouchableOpacity
+              style={styles.markAllButton}
+              onPress={markAllAsRead}
+            >
+              <Text style={styles.markAllText}>Mark all read</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Content */}

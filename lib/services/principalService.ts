@@ -173,43 +173,44 @@ export class PrincipalService {
       description?: string;
       maxUsage?: number;
       expiryDays?: number;
+      invitationType?: 'teacher' | 'parent' | 'admin';
+      invitedEmail?: string;
     } = {}
   ): Promise<{ data: string | null; error: any }> {
     try {
-      // Generate a unique 8-character code
+      // Generate a unique code and compute expiry
       const code = this.generateRandomCode();
-
-      // Calculate expiry date (default: 30 days)
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + (options.expiryDays || 30));
 
-      // For now, store in a custom table structure or use localStorage
-      // TODO: Create proper school_invitation_codes table
-      const invitationData: SchoolInvitationCode = {
-        id: crypto.randomUUID(),
-        code,
-        preschool_id: preschoolId,
-        created_by: createdBy,
-        created_at: new Date().toISOString(),
-        expires_at: expiryDate.toISOString(),
-        is_active: true,
-        usage_count: 0,
-        max_usage: options.maxUsage ?? undefined,
-        description: options.description || 'School-wide parent invitation code',
-      };
+      // Deactivate any existing active parent code if needed (single active recommended)
+      await supabase
+        .from('school_invitation_codes')
+        .update({ is_active: false })
+        .eq('preschool_id', preschoolId)
+        .eq('invitation_type', options.invitationType || 'parent')
+        .eq('is_active', true);
 
-      // Store temporarily in AsyncStorage until proper table is created
-      const existingCodes = await StorageUtil.getJSON<SchoolInvitationCode[]>('schoolInvitationCodes', []);
+      const { data, error } = await supabase
+        .from('school_invitation_codes')
+        .insert({
+          preschool_id: preschoolId,
+          code,
+          invitation_type: options.invitationType || 'parent',
+          invited_email: options.invitedEmail || 'parent@pending.local',
+          invited_by: createdBy,
+          expires_at: expiryDate.toISOString(),
+          max_uses: options.maxUsage ?? 1,
+          current_uses: 0,
+          is_active: true,
+          description: options.description || 'School-wide parent invitation code',
+          metadata: {},
+        })
+        .select('code')
+        .single();
 
-      // Remove any existing active codes for this school (only one active at a time)
-      const filteredCodes = existingCodes.filter((c: SchoolInvitationCode) =>
-        c.preschool_id !== preschoolId || !c.is_active
-      );
-
-      filteredCodes.push(invitationData);
-      await StorageUtil.setJSON('schoolInvitationCodes', filteredCodes);
-
-      return { data: code, error: null };
+      if (error) throw error;
+      return { data: data?.code || code, error: null };
     } catch (error) {
       log.error('Error generating school invitation code:', error);
       return { data: null, error };
@@ -219,16 +220,18 @@ export class PrincipalService {
   /**
    * Get active school invitation code
    */
-  static async getActiveSchoolInvitationCode(preschoolId: string): Promise<{ data: SchoolInvitationCode | null; error: any }> {
+  static async getActiveSchoolInvitationCode(preschoolId: string): Promise<{ data: any | null; error: any }> {
     try {
-      const existingCodes = await StorageUtil.getJSON<SchoolInvitationCode[]>('schoolInvitationCodes', []);
-      const activeCode = existingCodes.find((code: SchoolInvitationCode) =>
-        code.preschool_id === preschoolId &&
-        code.is_active &&
-        new Date(code.expires_at) > new Date()
-      );
-
-      return { data: activeCode || null, error: null };
+      const { data, error } = await supabase
+        .from('school_invitation_codes')
+        .select('*')
+        .eq('preschool_id', preschoolId)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .maybeSingle();
+      if (error) throw error;
+      return { data: data || null, error: null };
     } catch (error) {
       log.error('Error getting active school invitation code:', error);
       return { data: null, error };
@@ -240,15 +243,12 @@ export class PrincipalService {
    */
   static async deactivateSchoolInvitationCode(preschoolId: string): Promise<{ success: boolean; error: any }> {
     try {
-      const existingCodes = await StorageUtil.getJSON<SchoolInvitationCode[]>('schoolInvitationCodes', []);
-      const updatedCodes = existingCodes.map((code: SchoolInvitationCode) => {
-        if (code.preschool_id === preschoolId && code.is_active) {
-          return { ...code, is_active: false };
-        }
-        return code;
-      });
-
-      await StorageUtil.setJSON('schoolInvitationCodes', updatedCodes);
+      const { error } = await supabase
+        .from('school_invitation_codes')
+        .update({ is_active: false })
+        .eq('preschool_id', preschoolId)
+        .eq('is_active', true);
+      if (error) throw error;
       return { success: true, error: null };
     } catch (error) {
       log.error('Error deactivating school invitation code:', error);

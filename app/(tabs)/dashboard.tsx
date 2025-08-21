@@ -6,6 +6,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import type { Href } from 'expo-router';
 import React from 'react';
 import {
   Dimensions,
@@ -269,39 +270,39 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
 
     if (route.startsWith('/(tabs)')) {
       // Handle tab routes directly
-      router.push(route as any);
+      router.push(route as Href);
     } else if (route.includes('?tab=')) {
       // Handle routes with tab query parameters
-      router.push(route as any);
+      router.push(route as Href);
     } else if (route.startsWith('/screens/') || route.startsWith('screens/')) {
       // Handle screen routes - normalize to ensure proper format
       const cleanRoute = route.startsWith('/') ? route : `/${route}`;
-      router.push(cleanRoute as any);
+      router.push(cleanRoute as Href);
     } else if (route.startsWith('/')) {
       // Handle other absolute routes
-      router.push(route as any);
+      router.push(route as Href);
     } else {
       // Handle relative routes by making them absolute
-      router.push(`/${route}` as any);
+      router.push(`/${route}` as Href);
     }
   };
 
   private handleQuickAction = (action: string) => {
     switch (action) {
       case 'home':
-        router.push('/(tabs)/dashboard');
+        router.push('/(tabs)/dashboard' as Href);
         break;
       case 'homework':
-        router.push('/screens/homework' as any);
+        router.push('/screens/homework' as Href);
         break;
       case 'activities':
-        router.push('/(tabs)/activities');
+        router.push('/(tabs)/activities' as Href);
         break;
       case 'calendar':
-        router.push('/(tabs)/lessons');
+        router.push('/(tabs)/lessons' as Href);
         break;
       case 'messages':
-        router.push('/(tabs)/messages');
+        router.push('/(tabs)/messages' as Href);
         break;
       default:
 
@@ -395,7 +396,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
                 <>
                   <TouchableOpacity
                     style={styles.teacherActionCard}
-                    onPress={() => router.push('/(teacher)/reports')}
+                    onPress={() => router.push('/(teacher)/reports' as Href)}
                   >
                     <View style={styles.teacherActionIcon}>
                       <IconSymbol name="doc.text.fill" size={24} color="#3B82F6" />
@@ -406,7 +407,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
 
                   <TouchableOpacity
                     style={styles.teacherActionCard}
-                    onPress={() => router.push('/(tabs)/videocalls')}
+                    onPress={() => router.push('/(tabs)/videocalls' as Href)}
                   >
                     <View style={styles.teacherActionIcon}>
                       <IconSymbol name="video.fill" size={24} color="#10B981" />
@@ -417,7 +418,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
 
                   <TouchableOpacity
                     style={styles.teacherActionCard}
-                    onPress={() => router.push('/(tabs)/messages')}
+                    onPress={() => router.push('/(tabs)/messages' as Href)}
                   >
                     <View style={styles.teacherActionIcon}>
                       <IconSymbol name="message.fill" size={24} color="#F59E0B" />
@@ -556,18 +557,32 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
           }
 
           // Route based on user role with proper school isolation
-          switch (profile?.role) {
+          const normalizedRole = (String(profile?.role) === 'principal') ? 'preschool_admin' : profile?.role as any;
+          switch (normalizedRole) {
             case 'parent':
               return this.renderParentDashboard(profile, signOut);
 
             case 'superadmin':
-              // Redirect to the main Super Admin dashboard screen
-              router.replace('/screens/super-admin-dashboard');
-              return null;
+              // Schedule navigation after render to avoid setState during render warnings
+              setTimeout(() => {
+                try { router.replace('/screens/super-admin-dashboard' as Href); } catch {}
+              }, 0);
+              return (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Redirecting to Super Admin…</Text>
+                </View>
+              );
 
             case 'preschool_admin':
-            case 'principal':
-              return this.renderPrincipalDashboard(profile, signOut);
+              // Schedule navigation after render to avoid setState during render warnings
+              setTimeout(() => {
+                try { router.replace('/screens/principal-dashboard' as Href); } catch {}
+              }, 0);
+              return (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Redirecting to Principal Dashboard…</Text>
+                </View>
+              );
 
             case 'teacher':
               return this.renderTeacherDashboard(profile, signOut);

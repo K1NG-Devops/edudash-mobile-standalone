@@ -8,8 +8,16 @@ import {
   StyleSheet,
   Share,
   Clipboard,
+  Image,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+let QRCodeComponent: any = null;
+try {
+  // Optional dependency; fallback to image if unavailable
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const mod = require('react-native-qrcode-svg');
+  QRCodeComponent = mod?.default || mod?.QRCode || null;
+} catch (_) {}
 import { PrincipalService, SchoolInvitationCode } from '@/lib/services/principalService';
 
 interface SchoolCodeManagerProps {
@@ -29,6 +37,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
 }) => {
   const [activeCode, setActiveCode] = useState<SchoolInvitationCode | null>(null);
   const [loading, setLoading] = useState(false);
+  const [qrVisible, setQrVisible] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -140,8 +149,8 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
     if (codeToUse) {
       try {
         // Create deep link URL that will open the app directly to signup with the code
-        const deepLinkUrl = `edudash://parent-signup?school_code=${codeToUse}&school_name=${encodeURIComponent(schoolName)}`;
-        const webFallbackUrl = `https://edudashpro.app/join?code=${codeToUse}&school=${encodeURIComponent(schoolName)}`;
+        const deepLinkUrl = `edudashpro://invite/${codeToUse}`;
+        const webFallbackUrl = `https://edudashpro.app/invite/${codeToUse}`;
         
         await Share.share({
           message: `🎓 Join ${schoolName} on EduDash Pro!\n\n📱 If you have the app installed, tap this link:\n${deepLinkUrl}\n\n🌐 Or use our web portal:\n${webFallbackUrl}\n\n📋 Manual setup:\n1. Download EduDash Pro from your app store\n2. Tap "Join School"\n3. Enter school code: ${codeToUse}\n\nWelcome to our school community! 🏫✨`,
@@ -157,8 +166,8 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
   const copyCodeWithLink = async (code?: string) => {
     const codeToUse = code || activeCode?.code;
     if (codeToUse) {
-      const deepLinkUrl = `edudash://parent-signup?school_code=${codeToUse}&school_name=${encodeURIComponent(schoolName)}`;
-      const webFallbackUrl = `https://edudashpro.app/join?code=${codeToUse}&school=${encodeURIComponent(schoolName)}`;
+      const deepLinkUrl = `edudashpro://invite/${codeToUse}`;
+      const webFallbackUrl = `https://edudashpro.app/invite/${codeToUse}`;
       
       const textToCopy = `Join ${schoolName} on EduDash Pro!\n\nApp Link: ${deepLinkUrl}\nWeb Link: ${webFallbackUrl}\nSchool Code: ${codeToUse}`;
       
@@ -205,6 +214,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
+        {/* Emerald accent to match principal theme */}
         {/* Header */}
         <View style={styles.modalHeader}>
           <View>
@@ -223,7 +233,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
               <View style={styles.activeCodeCard}>
                 <View style={styles.codeHeader}>
                   <View style={styles.codeIconContainer}>
-                    <IconSymbol name="qrcode.viewfinder" size={32} color="#3B82F6" />
+                    <IconSymbol name="qrcode.viewfinder" size={32} color="#059669" />
                   </View>
                   <View style={styles.codeInfo}>
                     <Text style={styles.codeLabel}>Active School Code</Text>
@@ -241,7 +251,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
 
                 <View style={styles.codeDetails}>
                   <View style={styles.detailRow}>
-                    <IconSymbol name="calendar" size={16} color="#6B7280" />
+                    <IconSymbol name="calendar" size={16} color="#065F46" />
                     <Text style={styles.detailText}>
                       Created: {formatDate(activeCode.created_at)} at {formatTime(activeCode.created_at)}
                     </Text>
@@ -257,6 +267,15 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                       ({getDaysUntilExpiry(activeCode.expires_at)} days remaining)
                     </Text>
                   </View>
+
+                  {!!activeCode.description && (
+                    <View style={styles.detailRow}>
+                      <IconSymbol name="text.alignleft" size={16} color="#6B7280" />
+                      <Text style={styles.detailText} numberOfLines={2}>
+                        {activeCode.description}
+                      </Text>
+                    </View>
+                  )}
 
                   <View style={styles.detailRow}>
                     <IconSymbol name="person.2.fill" size={16} color="#6B7280" />
@@ -274,6 +293,14 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                   >
                     <IconSymbol name="doc.on.doc" size={20} color="#3B82F6" />
                     <Text style={styles.secondaryButtonText}>Copy Code</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={() => setQrVisible(true)}
+                  >
+                    <IconSymbol name="qrcode" size={20} color="#059669" />
+                    <Text style={[styles.secondaryButtonText, { color: '#059669' }]}>Show QR</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -319,6 +346,24 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {/* Optional metadata display */}
+              {!!(activeCode as any)?.metadata && (
+                <View style={styles.instructionsCard}>
+                  <Text style={styles.instructionsTitle}>Metadata</Text>
+                  {Object.entries((activeCode as any).metadata || {}).length === 0 ? (
+                    <Text style={styles.detailText}>No metadata set</Text>
+                  ) : (
+                    <View style={{ marginLeft: 8 }}>
+                      {Object.entries((activeCode as any).metadata).map(([k, v]) => (
+                        <Text key={k} style={styles.instructionItem}>
+                          {k}: {(typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 120)}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
 
               {/* Usage Instructions */}
               <View style={styles.instructionsCard}>
@@ -379,6 +424,53 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
           )}
         </View>
       </View>
+
+      {/* QR Modal */}
+      <Modal
+        visible={qrVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQrVisible(false)}
+      >
+        <View style={styles.qrOverlay}>
+          <View style={styles.qrCard}>
+            <Text style={styles.qrTitle}>Scan to Join {schoolName}</Text>
+            {activeCode && (
+              QRCodeComponent ? (
+                <QRCodeComponent
+                  value={`edudashpro://invite/${activeCode.code}`}
+                  size={280}
+                  backgroundColor="#FFFFFF"
+                  color="#111827"
+                />
+              ) : (
+                <Image
+                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(`edudashpro://invite/${activeCode.code}`)}` }}
+                  style={{ width: 280, height: 280, borderRadius: 12, backgroundColor: '#FFFFFF' }}
+                  resizeMode="contain"
+                />
+              )
+            )}
+            <Text style={styles.qrHint}>If the app is not installed, visit https://edudashpro.app/invite/{activeCode?.code}</Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => copyCodeWithLink()}
+              >
+                <IconSymbol name="link" size={20} color="#10B981" />
+                <Text style={[styles.secondaryButtonText, { color: '#10B981' }]}>Copy Links</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => setQrVisible(false)}
+              >
+                <IconSymbol name="xmark" size={20} color="#FFFFFF" />
+                <Text style={styles.primaryButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 };
@@ -647,5 +739,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  qrOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  qrCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 360,
+  },
+  qrTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  qrHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

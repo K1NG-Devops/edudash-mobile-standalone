@@ -62,12 +62,17 @@ const MAPPING: IconMapping = {
   'bell': 'notifications',
   'bell.fill': 'notifications',
   'clock': 'schedule',
+  'megaphone.fill': 'campaign',
+  'megaphone': 'campaign',
+  'envelope.fill': 'email',
+  'envelope': 'email',
 
   // Media & Devices
   'video.fill': 'videocam',
   'gamecontroller.fill': 'sports-esports',
 
   // Actions
+  'flag.fill': 'flag',
   'plus.circle.fill': 'add-circle',
   'plus.app': 'add',
   'plus': 'add',
@@ -78,9 +83,7 @@ const MAPPING: IconMapping = {
   'qrcode.viewfinder': 'qr-code-scanner',
   'sparkles': 'auto-awesome',
   'trash': 'delete',
-  'envelope': 'email',
-  'envelope.fill': 'email',
-  'phone.fill': 'phone',
+'phone.fill': 'phone',
   'lock.fill': 'lock',
   'lock': 'lock',
   'person.2': 'people',

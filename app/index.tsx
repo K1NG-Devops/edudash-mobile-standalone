@@ -268,6 +268,18 @@ export default function WelcomeScreen() {
               <TouchableOpacity
                 style={styles.secondaryButton}
                 onPress={() => {
+                  // Quick join for invited users (QR or code)
+                  router.push('/(auth)/join-with-code');
+                }}
+                activeOpacity={0.8}
+              >
+                <IconSymbol name="qrcode" size={20} color="#FFFFFF" />
+                <Text style={styles.secondaryButtonText}>Join with Code</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => {
                   // Register your school flow (3-step wizard)
                   router.push('/(auth)/school-onboarding');
                 }}
@@ -350,6 +362,7 @@ const styles = StyleSheet.create({
   featuresSection: {
     paddingHorizontal: 24,
     paddingVertical: 40,
+    alignItems: 'center',
   },
   featuresTitle: {
     fontSize: 24,
@@ -363,18 +376,22 @@ const styles = StyleSheet.create({
   },
   featuresScroll: {
     marginBottom: 24,
+    alignSelf: 'stretch',
   },
   featuresScrollContent: {
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   featurePage: {
     width: screenWidth,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
   },
   featureCard: {
-    width: '100%',
+    width: '90%',
+    maxWidth: 360,
+    alignSelf: 'center',
     borderRadius: 24,
     overflow: 'hidden',
   },

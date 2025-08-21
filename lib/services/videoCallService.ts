@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger as log } from '@/lib/utils/logger';
 
 export class VideoCallService {
   // Schedule a video call

@@ -99,15 +99,15 @@ export const getRoleColors = (role: string, theme: 'light' | 'dark' = 'light') =
       };
     case 'preschool_admin':
     case 'principal':
-      // Google-style red header for principal dashboard to match Super Admin look-and-feel
+      // Softer, trustworthy principal theme (emerald/teal blend)
       return {
-        primary: '#EA4335',
+        primary: '#10B981',
         gradient: theme === 'light'
-          ? ['#EA4335', '#C5221F']
-          : ['#F28B82', '#EA4335'],
+          ? ['#10B981', '#059669']
+          : ['#34D399', '#10B981'],
         background: theme === 'light'
-          ? 'rgba(234, 67, 53, 0.1)'
-          : 'rgba(242, 139, 130, 0.1)',
+          ? 'rgba(16, 185, 129, 0.10)'
+          : 'rgba(52, 211, 153, 0.10)',
       };
     case 'teacher':
       return {

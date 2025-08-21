@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { logger as log } from '@/lib/utils/logger';
 
 /**
  * Storage utility that works across React Native and web platforms

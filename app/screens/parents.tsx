@@ -5,14 +5,14 @@ import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
-interface TeacherRow { id: string; name: string; email?: string | null; }
+interface ParentRow { id: string; name: string; email?: string | null; phone?: string | null; }
 
-export default function TeachersScreen() {
+export default function ParentsScreen() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [q, setQ] = useState('');
-  const [items, setItems] = useState<TeacherRow[]>([]);
+  const [items, setItems] = useState<ParentRow[]>([]);
   const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
   const load = async () => {
@@ -21,13 +21,13 @@ export default function TeachersScreen() {
       setLoading(true);
       let query = supabase
         .from('users')
-        .select('id, name, email, role, preschool_id, is_active')
+        .select('id, name, email, phone, preschool_id, role, is_active')
         .eq('preschool_id', profile.preschool_id)
-        .eq('role', 'teacher')
+        .eq('role', 'parent')
         .order('name');
       if (status !== 'all') query = query.eq('is_active', status === 'active');
       const { data } = await query;
-      const rows = (data || []).map((t: any) => ({ id: t.id, name: t.name, email: t.email, is_active: t.is_active }));
+      const rows = (data || []).map((u: any) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, is_active: u.is_active }));
       setItems(rows);
     } finally {
       setLoading(false);
@@ -37,7 +37,7 @@ export default function TeachersScreen() {
 
   useEffect(() => { load(); }, [profile?.preschool_id, status]);
 
-  const filtered = items.filter(t => (t.name || '').toLowerCase().includes(q.toLowerCase()));
+  const filtered = items.filter(p => (p.name || '').toLowerCase().includes(q.toLowerCase()));
 
   return (
     <View style={styles.container}>
@@ -47,18 +47,18 @@ export default function TeachersScreen() {
           <TouchableOpacity style={[styles.filterBtn, status==='active'&&styles.filterActive]} onPress={()=>setStatus('active')}><Text style={[styles.filterText, status==='active'&&styles.filterTextActive]}>Active</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.filterBtn, status==='inactive'&&styles.filterActive]} onPress={()=>setStatus('inactive')}><Text style={[styles.filterText, status==='inactive'&&styles.filterTextActive]}>Inactive</Text></TouchableOpacity>
         </View>
-        <Text style={styles.title}>Teachers</Text>
-        <TextInput placeholder="Search teachers" value={q} onChangeText={setQ} style={styles.search} />
+        <Text style={styles.title}>Parents</Text>
+        <TextInput placeholder="Search parents" value={q} onChangeText={setQ} style={styles.search} />
       </View>
       <FlatList
         data={filtered}
-        keyExtractor={(t) => t.id}
+        keyExtractor={(p) => p.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         contentContainerStyle={styles.list}
         ListEmptyComponent={!loading ? (
           <View style={styles.empty}>
             <IconSymbol name="person.slash" size={28} color="#9CA3AF" />
-            <Text style={styles.emptyText}>No teachers found</Text>
+            <Text style={styles.emptyText}>No parents found</Text>
           </View>
         ) : null}
         renderItem={({ item }) => (
@@ -66,9 +66,9 @@ export default function TeachersScreen() {
             <View style={styles.avatar}><Text style={styles.avatarText}>{(item.name || '?').charAt(0)}</Text></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.sub}>{item.email || '—'}</Text>
+              <Text style={styles.sub}>{item.email || item.phone || '—'}</Text>
             </View>
-            <TouchableOpacity style={styles.action} onPress={()=>router.push({ pathname: '/screens/teacher-view', params: { id: item.id } } as any)}>
+            <TouchableOpacity style={styles.action} onPress={()=>router.push({ pathname: '/screens/parent-view', params: { id: item.id } } as any)}>
               <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
@@ -98,3 +98,4 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyText: { marginTop: 8, color: '#9CA3AF' },
 });
+

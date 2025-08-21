@@ -24,6 +24,7 @@ export interface TeacherInvitationEmailData {
 }
 
 import { supabase } from '@/lib/supabase';
+import { logger as log } from '@/lib/utils/logger';
 
 export class EmailService {
   /**
@@ -36,6 +37,12 @@ export class EmailService {
     try {
       const htmlBody = this.generateTeacherInvitationHTML(data);
       const textBody = this.generateTeacherInvitationText(data);
+
+      // Build deep links (native scheme and web fallback)
+      const appScheme = 'edudashpro://join-with-code?code=' + encodeURIComponent(data.invitationCode);
+      const shortScheme = 'edudashpro://invite/' + encodeURIComponent(data.invitationCode);
+      const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://app.edudashpro.org.za';
+      const webUrl = `${webUrlBase}/join-with-code?code=${encodeURIComponent(data.invitationCode)}`;
 
       const emailOptions: EmailOptions = {
         to: email,
@@ -208,6 +215,10 @@ export class EmailService {
    * Generate HTML email template for teacher invitation
    */
   private static generateTeacherInvitationHTML(data: TeacherInvitationEmailData): string {
+    const appScheme = 'edudashpro://join-with-code?code=' + encodeURIComponent(data.invitationCode);
+    const shortScheme = 'edudashpro://invite/' + encodeURIComponent(data.invitationCode);
+    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://app.edudashpro.org.za';
+    const webUrl = `${webUrlBase}/join-with-code?code=${encodeURIComponent(data.invitationCode)}`;
     return `
 <!DOCTYPE html>
 <html>
@@ -246,11 +257,9 @@ export class EmailService {
     
     <h3 style="color: #1f2937;">🚀 How to Get Started</h3>
     <ol style="padding-left: 20px;">
-      <li style="margin-bottom: 10px;">Download the <strong>EduDash Pro</strong> app from your app store</li>
-      <li style="margin-bottom: 10px;">Tap <strong>"Join as Teacher"</strong> during signup</li>
-      <li style="margin-bottom: 10px;">Enter your invitation code: <code style="background: #f3f4f6; padding: 2px 4px; border-radius: 3px;">${data.invitationCode}</code></li>
-      <li style="margin-bottom: 10px;">Complete your teacher profile</li>
-      <li style="margin-bottom: 10px;">Start creating amazing lessons for your students! ✨</li>
+      <li style="margin-bottom: 10px;">On your phone, tap <a href="${appScheme}">Open in app</a> (or <a href="${shortScheme}">short link</a>)</li>
+      <li style="margin-bottom: 10px;">If the app isn’t installed, use the web link: <a href="${webUrl}">${webUrl}</a></li>
+      <li style="margin-bottom: 10px;">Enter your details to complete setup</li>
     </ol>
     
     <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3B82F6;">
@@ -287,6 +296,10 @@ export class EmailService {
    * Generate plain text version for teacher invitation
    */
   private static generateTeacherInvitationText(data: TeacherInvitationEmailData): string {
+    const appScheme = 'edudashpro://join-with-code?code=' + encodeURIComponent(data.invitationCode);
+    const shortScheme = 'edudashpro://invite/' + encodeURIComponent(data.invitationCode);
+    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://app.edudashpro.org.za';
+    const webUrl = `${webUrlBase}/join-with-code?code=${encodeURIComponent(data.invitationCode)}`;
     return `
 Welcome to EduDash Pro!
 
@@ -303,11 +316,9 @@ Your Invitation Code: ${data.invitationCode}
     })}
 
 How to Get Started:
-1. Download the EduDash Pro app from your app store
-2. Tap "Join as Teacher" during signup  
-3. Enter your invitation code: ${data.invitationCode}
-4. Complete your teacher profile
-5. Start creating amazing lessons for your students!
+• Open on your phone: ${appScheme}
+• Short link: ${shortScheme}
+• Web fallback: ${webUrl}
 
 What You Can Do:
 • Create and manage your classes

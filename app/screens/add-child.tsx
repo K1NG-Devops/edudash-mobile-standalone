@@ -1,23 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { router } from 'expo-router';
 
 export default function AddChildScreen() {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dob, setDob] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleSave = async () = {
+  const handleSave = async () => {
     if (!firstName.trim() || !lastName.trim() || !dob.trim()) {
       Alert.alert('Missing info', 'Please fill in all fields.');
       return;
     }
-    if (!profile?.preschool_id) {
-      Alert.alert('Error', 'Your account is not linked to a school yet.');
+    if (!profile?.preschool_id || !profile?.id) {
+      Alert.alert('Error', 'Your account is not fully set up yet.');
+      return;
+    }
+
+    // Basic YYYY-MM-DD validation
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dob.trim())) {
+      Alert.alert('Invalid date', 'Please use the YYYY-MM-DD format for date of birth.');
       return;
     }
 
@@ -29,10 +35,9 @@ export default function AddChildScreen() {
           preschool_id: profile.preschool_id,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          date_of_birth: dob,
+          date_of_birth: dob.trim(),
           is_active: true,
-          // Depending on schema: store parent link here if you have parent_id, or skip if junction table is used
-          // parent_id: profile.id
+          parent_id: profile.id,
         } as any);
 
       if (error) {
@@ -50,20 +55,20 @@ export default function AddChildScreen() {
   };
 
   return (
-    KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      View style={styles.card}>
-        Text style={styles.title}>Add your child/Text>
-        Text style={styles.subtitle}>Provide basic details to register your child/Text>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.card}>
+        <Text style={styles.title}>Add your child</Text>
+        <Text style={styles.subtitle}>Provide basic details to register your child</Text>
 
-        TextInput placeholder="First Name" value={firstName} onChangeText={setFirstName} style={styles.input} />
-        TextInput placeholder="Last Name" value={lastName} onChangeText={setLastName} style={styles.input} />
-        TextInput placeholder="Date of Birth (YYYY-MM-DD)" value={dob} onChangeText={setDob} style={styles.input} />
+        <TextInput placeholder="First Name" value={firstName} onChangeText={setFirstName} style={styles.input} />
+        <TextInput placeholder="Last Name" value={lastName} onChangeText={setLastName} style={styles.input} />
+        <TextInput placeholder="Date of Birth (YYYY-MM-DD)" value={dob} onChangeText={setDob} style={styles.input} />
 
-        TouchableOpacity disabled={saving} onPress={handleSave} style={[styles.button, saving  styles.buttonDisabled]}>
-          Text style={styles.buttonText}>{saving ? 'Saving...' : 'Add Child'}/Text>
-        /TouchableOpacity>
-      /View>
-    /KeyboardAvoidingView>
+        <TouchableOpacity disabled={saving} onPress={handleSave} style={[styles.button, saving && styles.buttonDisabled]}>
+          <Text style={styles.buttonText}>{saving ? 'Saving...' : 'Add Child'}</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -76,7 +76,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
         title: 'Profile Settings',
         subtitle: 'Manage your account',
         icon: 'person.circle.fill',
-        route: '/profile',
+        route: '/screens/profile',
         color: '#6366F1',
       },
       {
@@ -201,7 +201,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Teacher Management',
             subtitle: 'Manage teaching staff',
             icon: 'person.2.fill',
-            route: '/teachers',
+            route: '/screens/teachers',
             color: '#059669',
           },
           {
@@ -209,7 +209,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Student Directory',
             subtitle: 'All student information',
             icon: 'graduationcap.fill',
-            route: '/students',
+            route: '/screens/students',
             color: '#059669',
           },
           {
@@ -217,7 +217,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Parent Communications',
             subtitle: 'Parent engagement tools',
             icon: 'person.3.fill',
-            route: '/parents',
+            route: '/screens/parents',
             badge: 8,
             color: '#059669',
           },
@@ -226,7 +226,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'School Reports',
             subtitle: 'Performance analytics',
             icon: 'doc.text.fill',
-            route: '/reports',
+            route: '/screens/principal-reports',
             color: '#059669',
           },
           {
@@ -234,7 +234,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'School Calendar',
             subtitle: 'Events & schedules',
             icon: 'calendar',
-            route: '/calendar',
+            route: '/(tabs)/lessons',
             color: '#059669',
           },
           {
@@ -265,7 +265,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Teacher Management',
             subtitle: 'Manage teaching staff',
             icon: 'person.2.fill',
-            route: '/teachers',
+            route: '/screens/teachers',
             color: '#059669',
           },
           {
@@ -273,7 +273,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Student Directory',
             subtitle: 'All student information',
             icon: 'graduationcap.fill',
-            route: '/students',
+            route: '/screens/students',
             color: '#059669',
           },
           {
@@ -281,7 +281,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Parent Communications',
             subtitle: 'Parent engagement tools',
             icon: 'person.3.fill',
-            route: '/parents',
+            route: '/screens/parents',
             badge: 8,
             color: '#059669',
           },
@@ -290,7 +290,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'School Reports',
             subtitle: 'Performance analytics',
             icon: 'doc.text.fill',
-            route: '/reports',
+            route: '/screens/principal-reports',
             color: '#059669',
           },
           {
@@ -298,7 +298,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'School Calendar',
             subtitle: 'Events & schedules',
             icon: 'calendar',
-            route: '/calendar',
+            route: '/(tabs)/lessons',
             color: '#059669',
           },
           {

@@ -43,8 +43,18 @@ export default {
           resizeMode: "contain",
           backgroundColor: "#ffffff"
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          android_app_id: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713"
+        }
       ]
     ],
+    // Some libraries read from this key in app.json/config
+    "react-native-google-mobile-ads": {
+      android_app_id: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713"
+    },
     experiments: {
       typedRoutes: true
     },

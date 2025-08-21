@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger as log } from '@/lib/utils/logger';
 
 export interface TeacherData {
   id?: string;

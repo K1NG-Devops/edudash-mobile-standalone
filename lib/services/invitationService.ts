@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { logger as log } from '@/lib/utils/logger';
 
 export interface CreateInvitationParams {
   email: string;

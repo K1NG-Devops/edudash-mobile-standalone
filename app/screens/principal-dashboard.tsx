@@ -1,23 +1,21 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import PrincipalDashboard from '../../screens/principal-dashboard';
+import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
+import { Stack } from 'expo-router';
+import Head from 'expo-router/head';
 
 export default function PrincipalDashboardScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Principal Dashboard Screen - Coming Soon</Text>
-    </View>
+    <>
+      <Head>
+        <title>EduDash Pro – Principal</title>
+      </Head>
+      <Stack.Screen options={{ headerShown: false, title: ' ' }} />
+      <AuthConsumer>
+        {({ profile, signOut }) => (
+          <PrincipalDashboard profile={profile} onSignOut={signOut} />
+        )}
+      </AuthConsumer>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  text: {
-    fontSize: 18,
-    textAlign: 'center',
-  },
-});

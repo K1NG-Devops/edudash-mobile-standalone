@@ -9,6 +9,13 @@ export default function ScreensLayout() {
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ headerShown: false }} />
+      <Stack.Screen name="teachers" options={{ headerShown: false }} />
+      <Stack.Screen name="students" options={{ headerShown: false }} />
+      <Stack.Screen name="parents" options={{ headerShown: false }} />
+      <Stack.Screen name="principal-reports" options={{ headerShown: false }} />
+      <Stack.Screen name="teacher-view" options={{ headerShown: false }} />
+      <Stack.Screen name="student-view" options={{ headerShown: false }} />
+      <Stack.Screen name="parent-view" options={{ headerShown: false }} />
     </Stack>
   );
 }

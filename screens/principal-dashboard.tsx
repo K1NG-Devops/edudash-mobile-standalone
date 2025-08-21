@@ -235,7 +235,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               subtitle={`${stats.pendingPayments} pending payments`}
               icon="creditcard.fill"
               color="#EA4335"
-              onPress={() => router.push('/(tabs)/payment')}
+              onPress={() => handleNavigate('/screens/principal-reports')}
             />
           </View>
         </View>
@@ -263,7 +263,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               subtitle="Revenue & expenses"
               icon="chart.bar.fill"
               color="#FBBC05"
-              onPress={() => router.push('/(tabs)/payment')}
+              onPress={() => handleNavigate('/screens/principal-reports')}
             />
             <ActionCard
               title="Parent Communication"
@@ -321,12 +321,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
                 <Text key={index} style={styles.activityItem}>• {activity}</Text>
               ))
             ) : (
-              <>
-                <Text style={styles.activityItem}>• {stats.newEnrollments} new student enrollments this month</Text>
-                <Text style={styles.activityItem}>• 23 parent-teacher meetings scheduled</Text>
-                <Text style={styles.activityItem}>• R{(stats.monthlyRevenue * 0.15).toFixed(0)} collected this week</Text>
-                <Text style={styles.activityItem}>• 4 staff training sessions completed</Text>
-              </>
+              <Text style={styles.activityItem}>No recent activity.</Text>
             )}
           </View>
         </View>
@@ -343,24 +338,27 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
                 </View>
               ))
             ) : (
-              <>
-                <View style={styles.taskItem}>
-                  <View style={[styles.taskDot, { backgroundColor: '#EF4444' }]} />
-                  <Text style={styles.taskText}>Review {stats.pendingPayments} payment confirmations</Text>
-                </View>
-                <View style={styles.taskItem}>
-                  <View style={[styles.taskDot, { backgroundColor: '#F59E0B' }]} />
-                  <Text style={styles.taskText}>Approve 3 new teacher applications</Text>
-                </View>
-                <View style={styles.taskItem}>
-                  <View style={[styles.taskDot, { backgroundColor: '#10B981' }]} />
-                  <Text style={styles.taskText}>Schedule parent information session</Text>
-                </View>
-              </>
+              <Text style={styles.taskText}>No pending tasks.</Text>
             )}
           </View>
         </View>
       </ScrollView>
+
+      {/* Compact Bottom Nav */}
+      <View style={styles.tabNavigationBottom}>
+        {[
+          { key: 'overview', label: 'Overview', icon: 'chart.bar' , onPress: () => {}},
+          { key: 'teachers', label: 'Teachers', icon: 'person.2.fill', onPress: () => handleNavigate('/screens/teachers') },
+          { key: 'students', label: 'Students', icon: 'graduationcap.fill', onPress: () => handleNavigate('/screens/students') },
+          { key: 'messages', label: 'Messages', icon: 'message.fill', onPress: () => router.push('/(tabs)/messages' as any) },
+          { key: 'settings', label: 'Settings', icon: 'gear', onPress: () => handleNavigate('/screens/settings') },
+        ].map(tab => (
+          <TouchableOpacity key={tab.key} style={styles.tabButton} onPress={tab.onPress}>
+            <IconSymbol name={tab.icon as any} size={16} color={'#059669'} />
+            <Text style={styles.tabLabel}>{tab.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       {/* Management Modals */}
       {profile?.preschool_id && profile?.id && (
@@ -598,6 +596,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4B5563',
     flex: 1,
+  },
+  // Bottom Tab Navigation (compact)
+  tabNavigationBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  tabLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 4,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });
 

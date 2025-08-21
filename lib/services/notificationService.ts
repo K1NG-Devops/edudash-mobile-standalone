@@ -1,6 +1,8 @@
 /* eslint-disable */
 // @ts-nocheck
 import { supabase } from '@/lib/supabase';
+import { createLogger } from '@/lib/utils/logger';
+const log = createLogger('notifications');
 
 export interface Notification {
   id: string;
@@ -26,16 +28,48 @@ export interface ActivityLogEntry {
 }
 
 export class NotificationService {
+  // Resolve app user id (users.id) from either users.id or auth user id
+  private static async resolveUserId(userOrAuthId: string): Promise<string | null> {
+    try {
+      // First, try as users.id
+      const { count: asUserIdCount } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('id', userOrAuthId);
+      if ((asUserIdCount || 0) > 0) return userOrAuthId;
+
+      // Fallback: treat input as auth_user_id and map to users.id
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', userOrAuthId)
+        .single();
+      return userRow?.id || null;
+    } catch {
+      return null;
+    }
+  }
+
   /**
-   * Get all notifications for a specific user
+   * Get all notifications for a specific user (accepts users.id or auth_user_id)
    */
   static async getUserNotifications(userId: string): Promise<Notification[]> {
-
     try {
+      const resolved = await this.resolveUserId(userId);
+      const targetId = resolved || userId;
       const { data, error } = await supabase
         .from('notifications')
-        .select('*')
-        .eq('user_id', userId)
+        .select(`
+          id,
+          title,
+          message,
+          type,
+          is_read,
+          created_at,
+          user_id,
+          action_url
+        `)
+        .eq('user_id', targetId)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -44,22 +78,36 @@ export class NotificationService {
         throw new Error(error.message);
       }
 
-      return data || [];
+      // Normalize is_read -> read for UI
+      const normalized = (data || []).map((n: any) => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        read: Boolean(n.is_read),
+        created_at: n.created_at,
+        user_id: n.user_id,
+        action_url: n.action_url,
+      }));
+
+      return normalized;
     } catch (error) {
-      log.error('❌ [NotificationService] Error fetching notifications:', error);
+      try { log.error('❌ [NotificationService] Error fetching notifications:', error); } catch {}
       throw error;
     }
   }
 
   /**
-   * Get unread notification count for a user
+   * Get unread notification count for a user (accepts users.id or auth_user_id)
    */
   static async getUnreadCount(userId: string): Promise<number> {
     try {
+      const resolved = await this.resolveUserId(userId);
+      const targetId = resolved || userId;
       const { count, error } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
+        .eq('user_id', targetId)
         .eq('is_read', false);
 
       if (error) {
@@ -99,17 +147,19 @@ export class NotificationService {
   }
 
   /**
-   * Mark all notifications as read for a user
+   * Mark all notifications as read for a user (accepts users.id or auth_user_id)
    */
   static async markAllAsRead(userId: string): Promise<void> {
     try {
+      const resolved = await this.resolveUserId(userId);
+      const targetId = resolved || userId;
       const { error } = await supabase
         .from('notifications')
         .update({ 
           is_read: true,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', userId)
+        .eq('user_id', targetId)
         .eq('is_read', false);
 
       if (error) {
@@ -131,9 +181,7 @@ export class NotificationService {
     title: string,
     message: string,
     type: 'info' | 'success' | 'warning' | 'error' | 'activity' = 'info',
-    actionUrl?: string,
-    relatedEntityType?: string,
-    relatedEntityId?: string
+    actionUrl?: string
   ): Promise<void> {
     try {
       const notification = {
@@ -143,8 +191,6 @@ export class NotificationService {
         type,
         is_read: false,
         action_url: actionUrl,
-        related_entity_type: relatedEntityType,
-        related_entity_id: relatedEntityId,
         created_at: new Date().toISOString()
       };
 
@@ -171,9 +217,7 @@ export class NotificationService {
     title: string,
     message: string,
     type: 'info' | 'success' | 'warning' | 'error' | 'activity' = 'info',
-    actionUrl?: string,
-    relatedEntityType?: string,
-    relatedEntityId?: string
+    actionUrl?: string
   ): Promise<void> {
     try {
       const notifications = userIds.map(userId => ({
@@ -183,8 +227,6 @@ export class NotificationService {
         type,
         is_read: false,
         action_url: actionUrl,
-        related_entity_type: relatedEntityType,
-        related_entity_id: relatedEntityId,
         created_at: new Date().toISOString()
       }));
 
@@ -301,9 +343,7 @@ export class NotificationService {
             '👤 New User Registration',
             `A new ${details?.role || 'user'} has registered: ${details?.name || 'Unknown'}`,
             'activity',
-            '/screens/super-admin-dashboard?tab=users',
-            'user',
-            entityId
+            '/screens/super-admin-dashboard?tab=users'
           );
           break;
 
@@ -313,9 +353,7 @@ export class NotificationService {
             '🏫 New School Onboarding Request',
             `${details?.school_name || 'A school'} has requested onboarding approval.`,
             'activity',
-            '/screens/super-admin-dashboard?tab=onboarding',
-            'preschool',
-            entityId
+            '/screens/super-admin-dashboard?tab=onboarding'
           );
           break;
 
@@ -325,9 +363,7 @@ export class NotificationService {
             '🎫 New Support Ticket',
             `A new support ticket has been created: ${details?.subject || 'No subject'}`,
             'activity',
-            '/screens/super-admin-dashboard?tab=system',
-            'support_ticket',
-            entityId
+            '/screens/super-admin-dashboard?tab=system'
           );
           break;
 
@@ -348,9 +384,7 @@ export class NotificationService {
     title: string,
     message: string,
     type: 'info' | 'success' | 'warning' | 'error' | 'activity' = 'info',
-    actionUrl?: string,
-    relatedEntityType?: string,
-    relatedEntityId?: string
+    actionUrl?: string
   ): Promise<void> {
     try {
       // Get all super admin user IDs
@@ -371,9 +405,7 @@ export class NotificationService {
         title,
         message,
         type,
-        actionUrl,
-        relatedEntityType,
-        relatedEntityId
+        actionUrl
       );
 
     } catch (error) {
@@ -402,6 +434,48 @@ export class NotificationService {
     } catch (error) {
       log.error('❌ [NotificationService] Error cleaning up old notifications:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Call secure Edge Function to create a notification (server/admin contexts only)
+   * IMPORTANT: Requires a server-provided token. Do NOT bundle tokens in public clients.
+   */
+  static async sendServerNotification(params: {
+    userId: string;
+    title: string;
+    message: string;
+    type?: 'info' | 'success' | 'warning' | 'error' | 'activity';
+    actionUrl?: string;
+    token?: string; // MUST be provided at call time from a secure store
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { userId, title, message, type = 'info', actionUrl, token } = params || {} as any;
+      if (!token) {
+        return { success: false, error: 'Missing server token. Do not call from public clients.' };
+      }
+      if (!userId || !title || !message) {
+        return { success: false, error: 'Missing required fields' };
+      }
+      const { data, error } = await (supabase as any).functions.invoke('notify-user', {
+        body: {
+          user_id: userId,
+          title,
+          message,
+          type,
+          action_url: actionUrl || null,
+        },
+        headers: { 'X-Edudash-Token': token },
+      });
+      if (error) {
+        return { success: false, error: error.message || 'Invoke failed' };
+      }
+      if (data && data.error) {
+        return { success: false, error: data.error };
+      }
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Failed to call notify-user' };
     }
   }
 

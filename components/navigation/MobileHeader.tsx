@@ -10,11 +10,13 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { AppState } from 'react-native';
 import { MobileSidebar } from './MobileSidebar';
 import { NotificationService } from '@/lib/services/notificationService';
 
 interface MobileHeaderProps {
   user: {
+    id?: string; // optional user id for fetching unread count
     name: string;
     role: string;
     avatar?: string;
@@ -23,18 +25,20 @@ interface MobileHeaderProps {
   onNotificationsPress?: () => void;
   onNavigate?: (route: string) => void;
   onSignOut?: () => void;
-  notificationCount?: number;
+  notificationCount?: number; // if provided, overrides internal fetch
 }
 
 interface MobileHeaderState {
   colorScheme: 'light' | 'dark';
   sidebarVisible: boolean;
+  internalUnreadCount: number;
 }
 
 export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeaderState> {
   state: MobileHeaderState = {
     colorScheme: 'light',
     sidebarVisible: false,
+    internalUnreadCount: 0,
   };
 
   private getRoleTitle = (role: string): string => {
@@ -88,14 +92,66 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
     }
   };
 
+  private _unreadTimer: any = null;
+
   private toggleTheme = () => {
     this.setState({
       colorScheme: this.state.colorScheme === 'light' ? 'dark' : 'light'
     });
   };
 
+  private fetchUnreadCount = async () => {
+    try {
+      const userId = (this.props.user as any)?.id;
+      if (!userId) return;
+      const count = await NotificationService.getUnreadCount(userId);
+      this.setState({ internalUnreadCount: count || 0 });
+    } catch {
+      // silently ignore in UI
+    }
+  };
+
+  componentDidMount(): void {
+    // Initial fetch if we can resolve a user id
+    this.fetchUnreadCount();
+    // Poll periodically to keep badge fresh
+    this._unreadTimer = setInterval(this.fetchUnreadCount, 15000);
+
+    // Refresh when app becomes active
+    try {
+      AppState.addEventListener('change', this._onAppStateChange);
+    } catch {}
+    // Refresh on window focus (web)
+    try {
+      // @ts-ignore
+      if (typeof window !== 'undefined' && window.addEventListener) {
+        // @ts-ignore
+        window.addEventListener('focus', this.fetchUnreadCount);
+      }
+    } catch {}
+  }
+
+  componentWillUnmount(): void {
+    if (this._unreadTimer) clearInterval(this._unreadTimer);
+    try { AppState.removeEventListener?.('change', this._onAppStateChange as any); } catch {}
+    try {
+      // @ts-ignore
+      if (typeof window !== 'undefined' && window.removeEventListener) {
+        // @ts-ignore
+        window.removeEventListener('focus', this.fetchUnreadCount);
+      }
+    } catch {}
+  }
+
+  private _onAppStateChange = (state: string) => {
+    if (state === 'active') {
+      this.fetchUnreadCount();
+    }
+  };
+
   render() {
     const { user, onNotificationsPress, notificationCount } = this.props;
+    const badgeCount = typeof notificationCount === 'number' ? notificationCount : this.state.internalUnreadCount;
     const { sidebarVisible } = this.state;
     const roleColors = getRoleColors(user?.role || 'default', this.state.colorScheme);
     const firstName = user?.name?.split(' ')[0] || 'User';
@@ -185,10 +241,10 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                     activeOpacity={0.7}
                   >
                     <IconSymbol name="bell" size={18} color="#FFFFFF" />
-                    {(notificationCount && notificationCount > 0) && (
+                    {badgeCount > 0 && (
                       <View style={styles.modernNotificationBadge}>
                         <Text style={styles.notificationBadgeText}>
-                          {notificationCount > 99 ? '99+' : notificationCount.toString()}
+                          {badgeCount > 99 ? '99+' : badgeCount.toString()}
                         </Text>
                       </View>
                     )}

@@ -1,6 +1,7 @@
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import AdPlacement from '@/components/ui/AdPlacement';
 import { router } from 'expo-router';
+import type { Href } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,16 +19,16 @@ interface TabLayoutProps {
 
 export function TabLayout({ children, user, onSignOut, notificationCount }: TabLayoutProps) {
   const insets = useSafeAreaInsets();
-  const handleNavigate = (route: string) => {
-    router.push(route);
+  const handleNavigate = (route: string | Href) => {
+    router.push(route as Href);
   };
 
   const handleNotificationsPress = () => {
-    router.push('/notifications');
+    router.push('/notifications' as Href);
   };
 
   const handleSearchPress = () => {
-    router.push('/search');
+    router.push('/search' as Href);
   };
 
   return (

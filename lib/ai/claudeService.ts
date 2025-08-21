@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger as log } from '@/lib/utils/logger';
 
 // AI Configuration
 const CLAUDE_API_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
