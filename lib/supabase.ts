@@ -27,7 +27,11 @@ log.info('🔧 Supabase Configuration:', {
   hasEnvKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
 });
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || (USE_LOCAL_DB ? 'http://127.0.0.1:54321' : '');
+// Sanitize Supabase URL to avoid common mistakes (e.g., trailing slash, www.)
+const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || (USE_LOCAL_DB ? 'http://127.0.0.1:54321' : '');
+const supabaseUrl = rawUrl
+  ? rawUrl.trim().replace(/\/$/, '').replace(/^https:\/\/www\./, 'https://')
+  : '';
 
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || (USE_LOCAL_DB ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' : '');
 
@@ -168,6 +172,23 @@ export const hasRole = (profile: any, role: string): boolean => {
 // Helper function to get user's school
 export const getUserSchool = (profile: any) => {
   return profile?.schools;
+};
+
+// Sign out helper to ensure tokens are fully cleared across platforms
+export const safeSignOut = async () => {
+  try {
+    await supabase.auth.signOut();
+  } finally {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem('supabase_auth_client');
+        }
+      } else {
+        await SecureStore.deleteItemAsync('supabase_auth_client');
+      }
+    } catch (_) {}
+  }
 };
 
 // Expose clients globally for debugging (development only)

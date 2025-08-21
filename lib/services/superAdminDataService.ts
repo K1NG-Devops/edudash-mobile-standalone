@@ -173,19 +173,37 @@ export class SuperAdminDataService {
    */
   static async getPlatformStats(): Promise<PlatformStats> {
     try {
-      log.info('📊 [SuperAdmin] Getting platform stats...');
-      
-      // Use admin client to bypass RLS restrictions for accurate counts
-      const client = supabaseAdmin || supabase;
-      
-      // Get school count
-      const { count: schoolCount } = await client
+      log.info('📊 [SuperAdmin] Getting platform stats (via edge function)...');
+
+      // Prefer secure Edge Function to bypass RLS with service role
+      const { data, error } = await supabase.functions.invoke('platform-stats', {
+        body: {}
+      });
+
+      if (error) {
+        log.warn('⚠️ [SuperAdmin] Edge function failed, falling back to direct queries:', error.message);
+      }
+
+      if (data && data.success) {
+        return {
+          total_schools: data.total_schools || 0,
+          total_users: data.total_users || 0,
+          total_students: data.total_students || 0,
+          total_teachers: data.total_teachers || 0,
+          total_parents: data.total_parents || 0,
+          active_subscriptions: data.active_subscriptions || 0,
+          monthly_revenue: 0,
+          growth_rate: 0,
+          ai_usage_count: data.ai_usage_count || 0,
+          storage_usage_gb: 0
+        };
+      }
+
+      // Fallback (non-privileged): best-effort using anon client
+      const { count: schoolCount } = await supabase
         .from('preschools')
         .select('*', { count: 'exact', head: true });
-      
-      log.info('📊 [SuperAdmin] School count:', schoolCount);
 
-      // Get user counts by role
       const { data: userStats } = await supabase
         .from('users')
         .select('role')
@@ -197,35 +215,10 @@ export class SuperAdminDataService {
         return acc;
       }, {}) || {};
 
-      // Get student count
       const { count: studentCount } = await supabase
         .from('students')
         .select('*', { count: 'exact', head: true })
         .eq('is_active', true);
-
-      // Calculate subscription stats (real values available)
-      const { data: subscriptions } = await supabase
-        .from('preschools')
-        .select('subscription_status, subscription_plan');
-
-      const activeSubscriptions = subscriptions?.filter(s => s.subscription_status === 'active').length || 0;
-
-      // Best-effort counts for optional fields (fallback to 0 if table not present)
-      let aiUsageCount = 0;
-      try {
-        const { count: aiCount, error: aiError } = await supabase
-          .from('ai_usage_logs' as any)
-          .select('*', { count: 'exact', head: true });
-        if (!aiError && aiCount !== null && aiCount !== undefined) {
-          aiUsageCount = aiCount;
-        } else {
-          // Table likely doesn't exist, use fallback
-          aiUsageCount = 0;
-        }
-      } catch (_) {
-        // Table doesn't exist or other error
-        aiUsageCount = 0;
-      }
 
       return {
         total_schools: schoolCount || 0,
@@ -233,11 +226,10 @@ export class SuperAdminDataService {
         total_students: studentCount || 0,
         total_teachers: userCounts.teacher || 0,
         total_parents: userCounts.parent || 0,
-        active_subscriptions: activeSubscriptions,
-        // The following metrics require external systems; return 0 until integrated
+        active_subscriptions: 0,
         monthly_revenue: 0,
         growth_rate: 0,
-        ai_usage_count: aiUsageCount,
+        ai_usage_count: 0,
         storage_usage_gb: 0
       };
     } catch (error) {

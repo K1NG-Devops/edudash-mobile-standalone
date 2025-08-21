@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
-import { supabase, getCurrentUserWithRole } from '@/lib/supabase';
+import { supabase, getCurrentUserWithRole, safeSignOut } from '@/lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface UserProfile {
@@ -181,7 +181,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signOut = async () => {
     try {
       setLoading(true);
-      await supabase.auth.signOut();
+      await safeSignOut();
       
       // Clear cached profile
       try {

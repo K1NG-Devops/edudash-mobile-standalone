@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase, safeSignOut } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
 import React from 'react';
@@ -338,7 +338,7 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
   signOut = async () => {
     try {
       this.setState({ loading: true });
-      await supabase.auth.signOut();
+      await safeSignOut();
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {

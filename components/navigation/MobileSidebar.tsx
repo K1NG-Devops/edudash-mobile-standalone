@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 90, // Extra padding to ensure space above sign out button
+    paddingBottom: 140, // More space so the sticky Sign Out is not hidden
   },
   menuItem: {
     flexDirection: 'row',
@@ -760,13 +760,15 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     overflow: 'hidden',
+    zIndex: 10,
+    elevation: 30,
   },
   signOutGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    paddingBottom: 28,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 36,
     borderTopWidth: 2,
     borderTopColor: '#FCA5A5',
   },
