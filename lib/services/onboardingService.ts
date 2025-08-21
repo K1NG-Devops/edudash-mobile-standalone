@@ -158,7 +158,7 @@ const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
 
   // Use admin client to find all super admin users (bypass RLS)
   const client = supabaseAdmin || supabase;
-  log.log('🔍 [OnboardingService] Looking for superadmins using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
+  log.info('🔍 [OnboardingService] Looking for superadmins using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
 
   const { data: superAdmins, error: superAdminError } = await client
     .from('users')
@@ -172,7 +172,7 @@ const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
   }
 
   if (!superAdmins || superAdmins.length === 0) {
-    log.log('No super admins found to notify');
+    log.info('No super admins found to notify');
     return;
   }
 
@@ -303,7 +303,7 @@ const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
       if (error) {
         log.error(`Failed to send notification to ${admin.email}:`, error);
       } else {
-        log.log(`Notification sent successfully to ${admin.email}`);
+        log.info(`Notification sent successfully to ${admin.email}`);
       }
 
       return { admin: admin.email, success: !error, error };
@@ -320,7 +320,7 @@ const notifySuperAdmins = async (emailData: OnboardingEmailData) => {
   const successful = results.filter(r => r.status === 'fulfilled').length;
   const failed = results.length - successful;
 
-  log.log(`Super admin notifications: ${successful} sent, ${failed} failed`);
+  log.info(`Super admin notifications: ${successful} sent, ${failed} failed`);
 
   return results;
 };
@@ -330,7 +330,7 @@ export const createOnboardingRequest = async (requestData: OnboardingRequestInpu
 
   // Use admin client for inserting onboarding requests to bypass RLS
   const client = supabaseAdmin || supabase;
-  log.log('🔥 [OnboardingService] Using client for insert:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
+  log.info('🔥 [OnboardingService] Using client for insert:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
 
   // Insert the onboarding request into the database
   const { data, error } = await client
@@ -355,7 +355,7 @@ export const createOnboardingRequest = async (requestData: OnboardingRequestInpu
     throw error;
   }
 
-  log.log('✅ [OnboardingService] Successfully inserted onboarding request:', data);
+  log.info('✅ [OnboardingService] Successfully inserted onboarding request:', data);
 
   // Send confirmation email to the school admin
   try {
@@ -396,7 +396,7 @@ export const createOnboardingRequest = async (requestData: OnboardingRequestInpu
 export const getAllOnboardingRequests = async (): Promise<Partial<PreschoolOnboardingRequest>[]> => {
   // Use admin client for fetching requests to bypass RLS
   const client = supabaseAdmin || supabase;
-  log.log('📋 [OnboardingService] Fetching requests using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
+  log.info('📋 [OnboardingService] Fetching requests using client:', supabaseAdmin ? 'Admin (Service Role)' : 'Regular (Anon)');
 
   const { data, error } = await client
     .from('preschool_onboarding_requests')

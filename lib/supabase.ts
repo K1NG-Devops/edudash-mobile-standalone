@@ -20,7 +20,7 @@ if (DEBUG_SUPABASE) {
 const USE_LOCAL_DB = false;
 
 // Log current configuration for debugging
-log.log('🔧 Supabase Configuration:', {
+log.info('🔧 Supabase Configuration:', {
   USE_LOCAL_DB,
   url: USE_LOCAL_DB ? 'LOCAL' : 'PRODUCTION',
   hasEnvUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -167,5 +167,5 @@ if (typeof window !== 'undefined' && DEBUG_SUPABASE) {
     supabase,
     supabaseAdmin
   };
-  log.log('🔧 [Debug] Supabase clients exposed globally for debugging');
+  log.info('🔧 [Debug] Supabase clients exposed globally for debugging');
 }

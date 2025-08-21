@@ -37,7 +37,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
     sidebarVisible: false,
   };
 
-  private getRoleTitle = (role: string) => {
+  private getRoleTitle = (role: string): string => {
     // If we have a school name, prioritize showing it for school roles
     if (this.props.schoolName && (role === 'preschool_admin' || role === 'principal' || role === 'teacher')) {
       return this.props.schoolName;
@@ -59,7 +59,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
     }
   };
 
-  private getGreeting = () => {
+  private getGreeting = (): string => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';

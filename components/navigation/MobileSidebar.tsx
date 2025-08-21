@@ -423,8 +423,8 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
           },
           {
             id: 'payments',
-            title: 'Payments  Fees',
-            subtitle: 'School billing  payments',
+            title: 'Payments & Fees',
+            subtitle: 'School billing & payments',
             icon: 'creditcard.fill',
             route: '/payments',
             color: '#2563EB',
@@ -432,7 +432,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
           {
             id: 'videocalls',
             title: 'Video Calls',
-            subtitle: 'Schedule  join meetings',
+            subtitle: 'Schedule & join meetings',
             icon: 'video.fill',
             route: '/(tabs)/videocalls',
             color: '#2563EB',
@@ -486,7 +486,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
         onPress={() => this.handleItemPress(item)}
         activeOpacity={0.7}
       >
-        <View style={[styles.menuIcon, { backgroundColor: item.color + '15' }]}>
+        <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
           <IconSymbol name={item.icon as any} size={22} color={item.color || '#6B7280'} />
         </View>
         <View style={styles.menuContent}>

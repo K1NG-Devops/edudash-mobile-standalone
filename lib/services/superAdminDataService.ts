@@ -737,7 +737,7 @@ export class SuperAdminDataService {
     subscription_plan?: string;
   }) {
     try {
-      log.log('🏫 [SuperAdmin] Creating school:', schoolData);
+      log.info('🏫 [SuperAdmin] Creating school:', schoolData);
 
       // Check if admin client is available before proceeding
       if (!supabaseAdmin) {
@@ -749,16 +749,16 @@ export class SuperAdminDataService {
       }
 
       // Debug: Log admin client status
-      log.log('🔧 [SuperAdmin] Admin client available, testing connection...');
+      log.info('🔧 [SuperAdmin] Admin client available, testing connection...');
       try {
         const { data: testData, error: testError } = await supabaseAdmin
           .from('users')
           .select('id')
           .limit(1)
           .maybeSingle();
-        log.log('🔧 [SuperAdmin] Admin client test result:', { testData, testError });
+        log.info('🔧 [SuperAdmin] Admin client test result:', { testData, testError });
       } catch (testEx) {
-        log.log('🔧 [SuperAdmin] Admin client test exception:', testEx);
+        log.info('🔧 [SuperAdmin] Admin client test exception:', testEx);
       }
 
       // First, create the school record using admin client
@@ -781,7 +781,7 @@ export class SuperAdminDataService {
 
         // Handle duplicate email case
         if (schoolError.code === '23505' && schoolError.message.includes('preschools_email_key')) {
-          log.log('🔍 [SuperAdmin] School with this email already exists, checking if setup is complete...');
+          log.info('🔍 [SuperAdmin] School with this email already exists, checking if setup is complete...');
 
           // Check if existing school is complete
           const { data: existingSchool, error: fetchError } = await supabaseAdmin
@@ -817,7 +817,7 @@ export class SuperAdminDataService {
         throw schoolError;
       }
 
-      log.log('✅ [SuperAdmin] School record created:', schoolRecord.id);
+      log.info('✅ [SuperAdmin] School record created:', schoolRecord.id);
 
       // Create a temporary password that meets all Supabase requirements:
       // - lowercase letters, uppercase letters, digits, symbols
@@ -848,7 +848,7 @@ export class SuperAdminDataService {
       const tempPassword = generateSecurePassword();
 
       // Create auth user with minimal metadata to avoid trigger conflicts
-      log.log('🔐 [SuperAdmin] Creating auth user with minimal metadata...');
+      log.info('🔐 [SuperAdmin] Creating auth user with minimal metadata...');
 
       // Prefer service-role client when available (local/dev). In production mobile apps, server functions should be used.
       const adminClient = supabaseAdmin ?? null;
@@ -880,7 +880,7 @@ export class SuperAdminDataService {
         };
       }
 
-      log.log('✅ [SuperAdmin] Auth user created:', authUser.user?.id);
+      log.info('✅ [SuperAdmin] Auth user created:', authUser.user?.id);
 
       // Wait a moment for trigger to complete, then check if user profile was created
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -893,7 +893,7 @@ export class SuperAdminDataService {
         .single();
 
       if (checkError || !existingProfile) {
-        log.log('🔧 [SuperAdmin] Trigger did not create user profile, creating manually...');
+        log.info('🔧 [SuperAdmin] Trigger did not create user profile, creating manually...');
 
         // Manually create the user profile record since trigger failed using admin client
         const { error: userInsertError } = await supabaseAdmin
@@ -914,10 +914,10 @@ export class SuperAdminDataService {
           log.warn('⚠️ [SuperAdmin] User profile creation failed, but auth user exists.');
           // Don't fail the entire process - at minimum the auth user exists
         } else {
-          log.log('✅ [SuperAdmin] User profile created manually');
+          log.info('✅ [SuperAdmin] User profile created manually');
         }
       } else {
-        log.log('✅ [SuperAdmin] User profile created by trigger, updating with preschool info...');
+        log.info('✅ [SuperAdmin] User profile created by trigger, updating with preschool info...');
 
         // Update the profile with the preschool information using admin client
         const { error: updateError } = await supabaseAdmin
@@ -933,11 +933,11 @@ export class SuperAdminDataService {
         if (updateError) {
           log.warn('⚠️ [SuperAdmin] Could not update user profile with preschool info:', updateError);
         } else {
-          log.log('✅ [SuperAdmin] User profile updated with preschool info');
+          log.info('✅ [SuperAdmin] User profile updated with preschool info');
         }
       }
 
-      log.log('✅ [SuperAdmin] School and admin created successfully');
+      log.info('✅ [SuperAdmin] School and admin created successfully');
 
       // Send welcome email with login credentials and onboarding guide
       try {
@@ -948,14 +948,14 @@ export class SuperAdminDataService {
           tempPassword: tempPassword,
           schoolId: schoolRecord.id
         });
-        log.log('📧 [SuperAdmin] Welcome email sent successfully');
+        log.info('📧 [SuperAdmin] Welcome email sent successfully');
       } catch (emailError) {
         log.error('❌ [SuperAdmin] Failed to send welcome email:', emailError);
         // Don't fail the entire process if email fails
       }
 
       // Log the temporary password for admin reference
-      log.log(`🔑 [SuperAdmin] Temporary password for ${schoolData.email}: ${tempPassword}`);
+      log.info(`🔑 [SuperAdmin] Temporary password for ${schoolData.email}: ${tempPassword}`);
 
       return {
         success: true,
@@ -1181,7 +1181,7 @@ export class SuperAdminDataService {
    */
   static async resendWelcomeInstructions(schoolId: string, reason?: string) {
     try {
-      log.log('📧 [SuperAdmin] Resending welcome instructions for school:', schoolId);
+      log.info('📧 [SuperAdmin] Resending welcome instructions for school:', schoolId);
 
       // Get school and admin details from database
       const { data: school, error: schoolError } = await supabase
@@ -1243,7 +1243,7 @@ export class SuperAdminDataService {
         // Generate a fallback password for the email when auth update fails
         finalPassword = `Temp${Math.random().toString(36).slice(-6)}${Date.now().toString().slice(-4)}!`;
         passwordUpdated = false;
-        log.log('📧 [SuperAdmin] Using fallback password for email due to auth update failure');
+        log.info('📧 [SuperAdmin] Using fallback password for email due to auth update failure');
       }
 
       // Send the welcome email with credentials
@@ -1272,7 +1272,7 @@ export class SuperAdminDataService {
         severity: 'low'
       });
 
-      log.log('✅ [SuperAdmin] Welcome instructions resent successfully');
+      log.info('✅ [SuperAdmin] Welcome instructions resent successfully');
 
       return {
         success: true,
@@ -1710,7 +1710,7 @@ export class SuperAdminDataService {
   }) {
     try {
       // Optional: log to a generic activity table if available, otherwise no-op
-      log.log('[SuperAdmin] Action:', action.action, action.severity);
+      log.info('[SuperAdmin] Action:', action.action, action.severity);
     } catch (error) {
       log.error('❌ [SuperAdmin] Error logging system action:', error);
     }

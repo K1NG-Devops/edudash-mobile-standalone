@@ -251,7 +251,7 @@ export async function sendForgotPasswordEmail(email: string, customResetUrl?: st
           to: email,
           subject: '🔐 Password Reset - EduDash Pro',
           html: generateForgotPasswordEmailTemplate(user.name, email),
-          templateType: 'password_reset',
+          templateType: 'notification',
           metadata: {
             userId: user.id,
             resetRequestedAt: new Date().toISOString()
