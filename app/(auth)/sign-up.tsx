@@ -109,9 +109,15 @@ export default function SignUp() {
                                 </>
                             )}
 
-                            <TouchableOpacity style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={submitting} activeOpacity={0.8}>
+                            	<TouchableOpacity style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={submitting} activeOpacity={0.8}>
                                 <Text style={styles.buttonText}>{isSchoolFlow ? 'Submit for Approval' : 'Create Account'}</Text>
                             </TouchableOpacity>
+
+                            {!isSchoolFlow && (
+                              <TouchableOpacity style={[styles.altButton]} onPress={() => router.push('/(auth)/join-with-code')}>
+                                <Text style={styles.altButtonText}>Have a code? Join with code</Text>
+                              </TouchableOpacity>
+                            )}
                         </ScrollView>
                     </SafeAreaView>
                 </KeyboardAvoidingView>
@@ -136,6 +142,8 @@ const styles = StyleSheet.create({
     button: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 10 },
     buttonDisabled: { backgroundColor: '#FFFFFF90' },
     buttonText: { color: '#1e3c72', fontSize: 16, fontWeight: 'bold' },
+    altButton: { padding: 12, alignItems: 'center' },
+    altButtonText: { color: '#FFFFFF', fontSize: 15, textDecorationLine: 'underline' },
 });
 
 
