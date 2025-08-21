@@ -93,6 +93,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
   };
 
   private _unreadTimer: any = null;
+  private _appStateSub: any = null;
 
   private toggleTheme = () => {
     this.setState({
@@ -119,7 +120,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
 
     // Refresh when app becomes active
     try {
-      AppState.addEventListener('change', this._onAppStateChange);
+      this._appStateSub = AppState.addEventListener('change', this._onAppStateChange as any);
     } catch {}
     // Refresh on window focus (web)
     try {
@@ -133,7 +134,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
 
   componentWillUnmount(): void {
     if (this._unreadTimer) clearInterval(this._unreadTimer);
-    try { AppState.removeEventListener?.('change', this._onAppStateChange as any); } catch {}
+    try { this._appStateSub?.remove?.(); } catch {}
     try {
       // @ts-ignore
       if (typeof window !== 'undefined' && window.removeEventListener) {

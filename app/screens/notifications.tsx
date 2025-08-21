@@ -16,6 +16,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { NotificationService } from '@/lib/services/notificationService';
+import AdPlacement from '@/components/ui/AdPlacement';
 
 interface Notification {
   id: string;
@@ -161,7 +162,9 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      {/* Optional Ad banner */}
+      <AdPlacement>
+        {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity
@@ -304,6 +307,7 @@ export default function NotificationsScreen() {
           <View style={styles.bottomSpacing} />
         </ScrollView>
       )}
+      </AdPlacement>
     </SafeAreaView>
   );
 }
