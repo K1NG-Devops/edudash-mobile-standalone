@@ -25,7 +25,9 @@
     "dev": "./start-development.sh",
     "dev:tunnel": "npx expo start --tunnel --clear",
     "build:dev": "npx eas build --platform android --profile development --local",
-    "preview": "eas build --platform android --profile preview"
+    "preview": "eas build --platform android --profile preview",
+    "test:invite": "node scripts/smoke-test-teacher-invite.js",
+    "test:invite:parent": "node scripts/smoke-test-parent-invite.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.58.0",

@@ -47,11 +47,13 @@ export default {
       [
         "react-native-google-mobile-ads",
         {
-          android_app_id: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713"
+          // Use correct camelCase keys expected by the plugin
+          androidAppId: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713",
+          iosAppId: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID || "ca-app-pub-3940256099942544~1458002511"
         }
       ]
     ],
-    // Some libraries read from this key in app.json/config
+    // Some libraries read from this key in app.json/config (kept for compatibility)
     "react-native-google-mobile-ads": {
       android_app_id: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713"
     },
