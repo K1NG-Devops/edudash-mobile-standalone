@@ -21,11 +21,11 @@ export default {
         backgroundColor: "#ffffff"
       },
       package: "com.edudashpro.app",
-      versionCode: 1,
       permissions: [
         "INTERNET",
         "CAMERA"
-      ]
+      ],
+      edgeToEdgeEnabled: true
     },
     web: {
       bundler: "metro",
@@ -35,6 +35,7 @@ export default {
     plugins: [
       "expo-router",
       "expo-dev-client",
+      "expo-secure-store",
       [
         "expo-splash-screen",
         {
@@ -55,7 +56,8 @@ export default {
     ],
     // Some libraries read from this key in app.json/config (kept for compatibility)
     "react-native-google-mobile-ads": {
-      android_app_id: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713"
+      android_app_id: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713",
+      ios_app_id: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID || "ca-app-pub-3940256099942544~1458002511"
     },
     experiments: {
       typedRoutes: true

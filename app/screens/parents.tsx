@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, RefreshControl, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
@@ -15,7 +15,7 @@ export default function ParentsScreen() {
   const [items, setItems] = useState<ParentRow[]>([]);
   const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!profile?.preschool_id) return;
     try {
       setLoading(true);
@@ -33,9 +33,9 @@ export default function ParentsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [profile?.preschool_id, status]);
 
-  useEffect(() => { load(); }, [profile?.preschool_id, status]);
+  useEffect(() => { load(); }, [profile?.preschool_id, status, load]);
 
   const filtered = items.filter(p => (p.name || '').toLowerCase().includes(q.toLowerCase()));
 

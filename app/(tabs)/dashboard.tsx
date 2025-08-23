@@ -3,13 +3,13 @@ import SchoolAdminDashboard from '@/components/dashboard/SchoolAdminDashboard';
 // SuperAdminDashboard now located at app/screens/super-admin-dashboard.tsx
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import ThemedCard from '@/components/ui/ThemedCard';
 import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
 import type { Href } from 'expo-router';
+import { router } from 'expo-router';
 import React from 'react';
 import {
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,7 +17,6 @@ import {
   View
 } from 'react-native';
 
-const { width: screenWidth } = Dimensions.get('window');
 
 interface Child {
   id: string;
@@ -65,7 +64,7 @@ interface UpcomingEvent {
   location?: string;
 }
 
-class DashboardScreen extends React.Component<{}, DashboardState> {
+class DashboardScreen extends React.Component<Record<string, never>, DashboardState> {
   state: DashboardState = {
     refreshing: false,
     selectedChildId: null,
@@ -116,8 +115,8 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
           });
         }
       }
-    } catch (error) {
-
+    } catch {
+      // Handle error silently
     }
   };
 
@@ -218,7 +217,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
           error: 'No children found for this parent'
         });
       }
-    } catch (error) {
+    } catch {
       // Removed debug statement: console.error('Unexpected error:', error);
       this.setState({
         loading: false,
@@ -261,7 +260,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
     try {
       // This will be handled by AuthConsumer context
       router.replace('/(auth)/sign-in');
-    } catch (error) {
+    } catch {
       // Removed debug statement: console.error('Sign out error:', error);
     }
   };
@@ -367,7 +366,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
         />
 
         <ScrollView
-          style={styles.scrollView}
+          style={[styles.scrollView, { marginBottom: 56 }]}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
@@ -394,76 +393,100 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
             <View style={styles.teacherQuickActions}>
               {profile?.role === 'teacher' && (
                 <>
-                  <TouchableOpacity
-                    style={styles.teacherActionCard}
-                    onPress={() => router.push('/(teacher)/reports' as Href)}
-                  >
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="doc.text.fill" size={24} color="#3B82F6" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Child Evaluations</Text>
-                    <Text style={styles.teacherActionSubtitle}>Reports & assessments for students</Text>
-                  </TouchableOpacity>
+                  <ThemedCard>
+                    <TouchableOpacity
+                      style={styles.teacherActionRow}
+                      onPress={() => router.push('/(teacher)/reports' as Href)}
+                    >
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="doc.text.fill" size={24} color="#3B82F6" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Child Evaluations</Text>
+                        <Text style={styles.teacherActionSubtitle}>Reports & assessments for students</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
 
-                  <TouchableOpacity
-                    style={styles.teacherActionCard}
-                    onPress={() => router.push('/(tabs)/videocalls' as Href)}
-                  >
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="video.fill" size={24} color="#10B981" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Video Calls</Text>
-                    <Text style={styles.teacherActionSubtitle}>Schedule parent meetings</Text>
-                  </TouchableOpacity>
+                  <ThemedCard>
+                    <TouchableOpacity
+                      style={styles.teacherActionRow}
+                      onPress={() => router.push('/(tabs)/videocalls' as Href)}
+                    >
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="video.fill" size={24} color="#10B981" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Video Calls</Text>
+                        <Text style={styles.teacherActionSubtitle}>Schedule parent meetings</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
 
-                  <TouchableOpacity
-                    style={styles.teacherActionCard}
-                    onPress={() => router.push('/(tabs)/messages' as Href)}
-                  >
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="message.fill" size={24} color="#F59E0B" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Messages</Text>
-                    <Text style={styles.teacherActionSubtitle}>Communicate with parents</Text>
-                  </TouchableOpacity>
+                  <ThemedCard>
+                    <TouchableOpacity
+                      style={styles.teacherActionRow}
+                      onPress={() => router.push('/(tabs)/messages' as Href)}
+                    >
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="message.fill" size={24} color="#F59E0B" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Messages</Text>
+                        <Text style={styles.teacherActionSubtitle}>Communicate with parents</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
 
-                  <TouchableOpacity
-                    style={styles.teacherActionCard}
-                    onPress={() => {/* TODO: Navigate to classes */ }}
-                  >
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="person.3.fill" size={24} color="#8B5CF6" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>My Classes</Text>
-                    <Text style={styles.teacherActionSubtitle}>Manage students & activities</Text>
-                  </TouchableOpacity>
+                  <ThemedCard>
+                    <TouchableOpacity
+                      style={styles.teacherActionRow}
+                      onPress={() => {/* TODO: Navigate to classes */ }}
+                    >
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="person.3.fill" size={24} color="#8B5CF6" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>My Classes</Text>
+                        <Text style={styles.teacherActionSubtitle}>Manage students & activities</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
                 </>
               )}
 
               {profile?.role !== 'teacher' && (
                 <>
-                  <TouchableOpacity style={styles.teacherActionCard}>
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="gear" size={24} color="#6B7280" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Settings</Text>
-                    <Text style={styles.teacherActionSubtitle}>System configuration</Text>
-                  </TouchableOpacity>
+                  <ThemedCard>
+                    <TouchableOpacity style={styles.teacherActionRow}>
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="gear" size={24} color="#6B7280" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Settings</Text>
+                        <Text style={styles.teacherActionSubtitle}>System configuration</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
 
-                  <TouchableOpacity style={styles.teacherActionCard}>
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="person.2.fill" size={24} color="#6B7280" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Users</Text>
-                    <Text style={styles.teacherActionSubtitle}>Manage teachers & parents</Text>
-                  </TouchableOpacity>
+                  <ThemedCard>
+                    <TouchableOpacity style={styles.teacherActionRow}>
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="person.2.fill" size={24} color="#6B7280" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Users</Text>
+                        <Text style={styles.teacherActionSubtitle}>Manage teachers & parents</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
                 </>
               )}
             </View>
 
             {/* Today's Summary for Teachers */}
             {profile?.role === 'teacher' && (
-              <View style={styles.teacherSummaryCard}>
+              <ThemedCard>
                 <Text style={styles.teacherSummaryTitle}>📊 Today&apos;s Overview</Text>
                 <View style={styles.teacherSummaryRow}>
                   <View style={styles.teacherSummaryItem}>
@@ -479,11 +502,11 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
                     <Text style={styles.teacherSummaryLabel}>Video Calls</Text>
                   </View>
                 </View>
-              </View>
+              </ThemedCard>
             )}
 
             {/* Recent Activity */}
-            <View style={styles.adminCard}>
+            <ThemedCard>
               <Text style={styles.adminCardTitle}>Recent Activity</Text>
               <Text style={styles.adminCardText}>
                 {profile?.role === 'teacher'
@@ -491,7 +514,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
                   : 'System activity and user management updates will be shown here.'
                 }
               </Text>
-            </View>
+            </ThemedCard>
           </View>
         </ScrollView>
       </View>
@@ -519,17 +542,37 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
     );
   };
 
-  // Method to render Teacher dashboard with school isolation  
+  // Method to render Teacher dashboard with school isolation
   private renderTeacherDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
     // Always fetch tenant info for teacher users if we have a profile and preschool_id
     if (profile && profile.preschool_id && !this.state.tenantName) {
       this.fetchTenantInfo(profile);
     }
 
-    // For now, redirect to the dedicated teacher dashboard screen
-    // This ensures proper school isolation through the teacher's preschool_id
-    router.push('/screens/teacher-dashboard');
-    return null;
+    // Render the teacher dashboard inline to avoid cross-stack redirects
+    try {
+      // Dynamically require to avoid potential circular import issues during bundling
+       
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const TeacherModule = require('../screens/teacher-dashboard');
+      const TeacherDashboardInner = TeacherModule?.TeacherDashboardInner || TeacherModule?.default;
+      if (TeacherDashboardInner) {
+        return (
+          <View style={{ flex: 1 }}>
+            <TeacherDashboardInner profile={profile} />
+          </View>
+        );
+      }
+    } catch {
+      // Fallback UI if the module fails to load
+    }
+
+    // As a last resort, show a lightweight teacher welcome
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading Teacher Dashboard…</Text>
+      </View>
+    );
   };
 
   render() {
@@ -565,7 +608,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
             case 'superadmin':
               // Schedule navigation after render to avoid setState during render warnings
               setTimeout(() => {
-                try { router.replace('/screens/super-admin-dashboard' as Href); } catch {}
+                try { router.replace('/screens/super-admin-dashboard' as Href); } catch { }
               }, 0);
               return (
                 <View style={styles.loadingContainer}>
@@ -576,7 +619,7 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
             case 'preschool_admin':
               // Schedule navigation after render to avoid setState during render warnings
               setTimeout(() => {
-                try { router.replace('/screens/principal-dashboard' as Href); } catch {}
+                try { router.replace('/screens/principal-dashboard' as Href); } catch { }
               }, 0);
               return (
                 <View style={styles.loadingContainer}>
@@ -1130,6 +1173,11 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 16,
+  },
+  teacherActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   teacherSummaryCard: {
     backgroundColor: '#FFFFFF',

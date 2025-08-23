@@ -17,7 +17,6 @@ const parentColor = '#2563EB'; // Blue-600
 // Neutral colors
 const textPrimary = '#111827'; // Gray-900
 const textSecondary = '#6B7280'; // Gray-500
-const textTertiary = '#9CA3AF'; // Gray-400
 
 export const Colors = {
   light: {
@@ -52,33 +51,33 @@ export const Colors = {
   },
   dark: {
     // Primary text and background  
-    text: '#F9FAFB', // Gray-50
-    background: '#111827', // Gray-900
+    text: '#FFFFFF', // Pure white for maximum contrast
+    background: '#0B1220', // Slightly darker for stronger contrast
 
     // Tab bar colors
-    tint: '#818CF8', // Indigo-400
-    icon: '#9CA3AF', // Gray-400
-    tabIconDefault: '#6B7280', // Gray-500
-    tabIconSelected: '#818CF8', // Indigo-400
+    tint: '#A5B4FC', // Lighter indigo for dark mode
+    icon: '#E5E7EB', // Gray-200
+    tabIconDefault: '#CBD5E1', // Slate-300
+    tabIconSelected: '#A5B4FC', // Lighter indigo
 
     // Additional theme colors
-    primary: '#818CF8', // Indigo-400
-    secondary: '#A78BFA', // Violet-400
-    success: '#34D399', // Emerald-400
-    warning: '#FBBF24', // Amber-400
-    error: '#F87171', // Red-400
+    primary: '#A5B4FC', // Lighter Indigo
+    secondary: '#C4B5FD', // Lighter Violet
+    success: '#6EE7B7', // Lighter Emerald
+    warning: '#FDE68A', // Lighter Amber
+    error: '#FCA5A5', // Lighter Red
 
     // Surface colors
-    surface: '#1F2937', // Gray-800
-    surfaceVariant: '#374151', // Gray-700
-    outline: '#4B5563', // Gray-600
+    surface: '#0F172A', // Slate-900
+    surfaceVariant: '#1F2937', // Gray-800
+    outline: '#475569', // Slate-600
 
     // Role colors
-    superadmin: '#F87171', // Red-400
-    preschool_admin: '#34D399', // Emerald-400
-    principal: '#34D399', // Emerald-400
-    teacher: '#A78BFA', // Violet-400
-    parent: '#60A5FA', // Blue-400
+    superadmin: '#FCA5A5', // Red-300
+    preschool_admin: '#6EE7B7', // Emerald-300
+    principal: '#6EE7B7', // Emerald-300
+    teacher: '#C4B5FD', // Violet-300
+    parent: '#93C5FD', // Blue-300
   },
 };
 
