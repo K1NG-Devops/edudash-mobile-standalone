@@ -156,3 +156,14 @@ app-example
 .cursor/
 .vscode/
 .warp/
+
+# Temporary build and development files
+.tmp-bundle/
+build-fixes.md
+
+# GitHub workflows (if local only)
+.github/workflows/
+
+# Temporary documentation
+*-temp.md
+*-draft.md
