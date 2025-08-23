@@ -335,6 +335,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Improved School Creation**: Guided wizard with validation
 - **Better Code Organization**: Clean file structure and imports
 
+### 🛠 New: Supabase Edge Function — admin-notify
+A secure serverless endpoint for creating system/admin notifications bypassing RLS via the service role key.
+
+Setup
+- Store your service role key securely in Supabase as an env var for the function: SUPABASE_SERVICE_ROLE_KEY
+- The function reads SUPABASE_URL automatically
+
+Deploy
+- supabase functions deploy admin-notify
+
+Call example
+- POST https://<PROJECT_REF>.functions.supabase.co/admin-notify
+- Headers: Authorization: Bearer {{SUPABASE_SERVICE_ROLE_KEY}}, Content-Type: application/json
+- Body: { "user_id": "<uuid>", "title": "System notice", "body": "Message", "data": {"severity":"info"} }
+
 ### 🚀 Next Milestones
 - **Payment Integration**: Stripe subscription management
 - **Advanced Analytics**: Real-time usage dashboards  
@@ -342,10 +357,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **API Documentation**: Interactive API explorer
 
 Built with ❤️ for the education community
-
-<citations>
-  <document>
-      <document_type>RULE</document_type>
-      <document_id>F9dl9Z01J1tDmDkAYWCDPG</document_id>
-  </document>
-</citations>

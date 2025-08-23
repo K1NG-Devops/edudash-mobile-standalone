@@ -82,19 +82,24 @@ jspm_packages/
 .yarn-integrity
 
 # dotenv environment variables file
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.server.local.example
 
 # Temporary folders
 tmp/
 temp/
 
-# Development monitoring
+# Development monitoring and local scripts
 monitor-server.sh
+start-development.sh
+build-local.sh
+scripts/*.js
+scripts/**/*.js
 
-# Test files
+# Test files and scripts
 __tests__/
 *.test.js
 *.test.ts
@@ -102,13 +107,18 @@ __tests__/
 *.spec.js
 *.spec.ts
 *.spec.tsx
+scripts/*.js
+scripts/**/*.js
 
-# Documentation
-README.md
-FIXES_APPLIED.md
+# Documentation (exclude markdown except key project docs)
+*.md
+!README.md
+!PRODUCTION_READY_CHECKLIST.md
+!ENV_VALIDATION.md
+!PRODUCTION-SETUP.md
+!MANUAL_DATABASE_SETUP.md
+
 docs/
-BUILD-AND-RELEASE-GUIDE.md
-PLAY_STORE_DEPLOYMENT_TODO.md
 
 # Local backups or archives (keep out of build uploads)
 archive/
@@ -131,6 +141,10 @@ screenshots/
 
 # Validation scripts
 validate-setup.js
+
+# Server-side code not needed for mobile build
+supabase/**
+functions/**
 
 # Large asset files that should be optimized
 # (uncomment if you have large assets)

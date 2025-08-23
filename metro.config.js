@@ -3,7 +3,8 @@
 
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
-const exclusionList = require('metro-config/src/defaults/exclusionList');
+// Note: Avoid using metro-config's exclusionList for cross-env compatibility.
+// We'll build a single RegExp manually for blockList.
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
@@ -13,35 +14,29 @@ config.resolver.alias = {
   '@': path.resolve(__dirname, './'),
 };
 
-// Exclusions (use Metro's exclusionList to create a single RegExp)
-config.resolver.blockList = exclusionList([
-  /(^|\/)\.git\//,
-  /(^|\/)\.expo\//,
-  /(^|\/)\.cache\//,
-  /(^|\/)\.cursor\//,
-  /(^|\/)android\/build\//,
-  /(^|\/)ios\/build\//,
-  /(^|\/)web\/dist\//,
-  /(^|\/)web\/build\//,
-  /(^|\/)archive\//,
-  /(^|\/)docs\//,
-  /.*\.bak$/,
-  /scripts\/.*\.js$/,
-  /.*_test\.js$/,
-  /.*\.test\.js$/,
-  /check_.*\.js$/,
-  /fix_.*\.js$/,
-  /test_.*\.js$/,
-  /create_.*\.js$/,
-  /complete_.*\.js$/,
-  /quick_.*\.js$/,
-  /verify_.*\.js$/,
-  /simple_.*\.js$/,
-  /inspect_.*\.js$/,
-  /.*\.sql$/,
-  /database-migrations\/.*$/,
-  /logs\/.*$/,
-]);
+// Helper to escape regex special chars
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Exclude only specific project directories by absolute path.
+// Avoid broad patterns that could unintentionally match files in node_modules.
+const blockListDirs = [
+  '.git',
+  '.expo',
+  '.cache',
+  '.cursor',
+  'android/build',
+  'ios/build',
+  'web/dist',
+  'web/build',
+  'archive',
+  'docs',
+  // 'scripts', // uncomment if you need to exclude your root scripts dir
+];
+
+const blockListRegexParts = blockListDirs.map((rel) => `${escapeRegExp(path.resolve(__dirname, rel))}/.*`);
+config.resolver.blockList = new RegExp(blockListRegexParts.join('|'));
 
 // Ensure extensions include ts/tsx/jsx (dedup)
 config.resolver.sourceExts = Array.from(new Set([
