@@ -16,8 +16,8 @@ serve(async (req) => {
 
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const NOTIFY_FUNCTION_TOKEN = Deno.env.get("NOTIFY_FUNCTION_TOKEN");
+    const SERVICE_ROLE_KEY = Deno.env.get("SERVER_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const NOTIFY_FUNCTION_TOKEN = Deno.env.get("SERVER_NOTIFY_FUNCTION_TOKEN") || Deno.env.get("NOTIFY_FUNCTION_TOKEN");
     if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Service not configured" }, 500);
 
     // Simple shared-secret check

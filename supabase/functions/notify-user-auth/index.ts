@@ -70,7 +70,7 @@ serve(async (req) => {
 
     // Insert notification using service role to avoid client RLS restrictions on writes,
     // but only after we have validated the caller via RLS.
-    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const SERVICE_ROLE_KEY = Deno.env.get("SERVER_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!SERVICE_ROLE_KEY) return json({ error: "Service role missing" }, 500);
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 

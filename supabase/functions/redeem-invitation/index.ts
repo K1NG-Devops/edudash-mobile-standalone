@@ -18,7 +18,7 @@ serve(async (req) => {
 
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const SERVICE_ROLE_KEY = Deno.env.get("SERVER_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Service not configured" }, 500);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
@@ -40,43 +40,114 @@ serve(async (req) => {
       if (error) throw error;
       invite = Array.isArray(data) ? data[0] : data;
     } catch (_e) {
-      // Fallback: read from invitation_codes table
-      const { data } = await admin
-        .from('invitation_codes' as any)
+      // ignore RPC errors and fall through to table-based validation
+    }
+
+    // Fallback: if RPC not available or returned no match, try tables
+    if (!invite) {
+      const now = new Date();
+      const nowIso = now.toISOString();
+
+      // First, load the row regardless of filters to give precise error reasons
+      const { data: rawSic } = await admin
+        .from('school_invitation_codes' as any)
         .select('*')
         .eq('code', code)
         .maybeSingle();
-      invite = data;
+
+      if (rawSic) {
+        // Email restriction (do not enforce for general/parent-wide codes)
+        const invitedEmail = String(rawSic.invited_email || '').toLowerCase();
+        const isPlaceholder = invitedEmail === 'parent@pending.local' || invitedEmail === 'any' || invitedEmail === 'any@any';
+        const enforceEmailMatch = !!invitedEmail && rawSic.invitation_type !== 'parent' && !isPlaceholder;
+        if (enforceEmailMatch && invitedEmail !== email) {
+          return json({ error: 'This invitation code is restricted to a different email address.' }, 400);
+        }
+        // Expiry check
+        if (rawSic.expires_at && new Date(rawSic.expires_at) <= now) {
+          return json({ error: 'This invitation code has expired.' }, 400);
+        }
+        // Activity / usage check
+        if (rawSic.is_active === false) {
+          return json({ error: 'This invitation code is no longer active.' }, 400);
+        }
+        if (typeof rawSic.max_uses === 'number' && rawSic.max_uses > 0) {
+          const nextUses = (rawSic.current_uses ?? 0) + 1;
+          if (nextUses > rawSic.max_uses) {
+            return json({ error: 'This invitation code has reached its usage limit.' }, 400);
+          }
+        }
+        // If all checks pass, treat as valid
+        invite = {
+          ...rawSic,
+          preschool_id: rawSic.preschool_id,
+          invited_role: rawSic.invitation_type,
+        };
+      }
+
+      // Legacy fallback: invitation_codes
+      if (!invite) {
+        const { data: ic } = await admin
+          .from('invitation_codes' as any)
+          .select('*')
+          .eq('code', code)
+          .maybeSingle();
+        invite = ic || null;
+      }
     }
 
     if (!invite) return json({ error: "Invalid or expired invitation code" }, 400);
 
     // Basic fields expected from invitation
     const preschool_id: string | null = invite.preschool_id ?? invite.school_id ?? null;
-    const role: string = invite.role ?? invite.invited_role ?? 'teacher';
+    const role: string = invite.role ?? invite.invited_role ?? invite.invitation_type ?? 'teacher';
 
     if (!preschool_id) return json({ error: "Invitation not linked to a school" }, 400);
 
     // Create or get auth user
     let authUserId: string | null = null;
 
-    // Check if user exists
-    try {
-      const existingUser = await admin.auth.admin.listUsers({ page: 1, perPage: 1, email });
-      if ((existingUser?.data?.users || []).length > 0) {
-        authUserId = existingUser.data!.users![0].id;
-      }
-    } catch (_) {}
+    // Try to create the user first
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name, role, preschool_id },
+    });
 
-    if (!authUserId) {
-      const { data: created, error: authErr } = await admin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { name, role, preschool_id },
-      });
-      if (authErr || !created?.user) return json({ error: `Failed to create auth user: ${authErr?.message || 'unknown'}` }, 500);
+    if (created?.user?.id) {
       authUserId = created.user.id;
+    } else {
+      // If the user already exists, look them up by email (paginate a few pages to find)
+      const maybeAlreadyExists = (createErr?.message || '').toLowerCase();
+      if (
+        maybeAlreadyExists.includes('already') ||
+        maybeAlreadyExists.includes('exists') ||
+        maybeAlreadyExists.includes('duplicate')
+      ) {
+        try {
+          const PER_PAGE = 200;
+          const MAX_PAGES = 5;
+          for (let page = 1; page <= MAX_PAGES && !authUserId; page++) {
+            const { data: list } = await admin.auth.admin.listUsers({ page, perPage: PER_PAGE } as any);
+            const found = (list?.users || []).find((u: any) => String(u.email || '').toLowerCase() === email);
+            if (found) authUserId = found.id;
+            if ((list?.users || []).length < PER_PAGE) break; // last page
+          }
+        } catch (_) { }
+        if (!authUserId) {
+          return json({ error: `Auth user exists but could not be fetched by email: ${email}` }, 500);
+        }
+        // Best-effort: update metadata to include role/preschool
+        try {
+          await admin.auth.admin.updateUserById(authUserId, {
+            email_confirm: true,
+            user_metadata: { name, role, preschool_id }
+          });
+        } catch (_) { }
+      } else {
+        return json({ error: `Failed to create auth user: ${createErr?.message || 'unknown'}` }, 500);
+      }
     }
 
     // Ensure profile exists/updated
@@ -113,15 +184,33 @@ serve(async (req) => {
       await (admin as any).rpc('use_invitation_code', {
         p_code: code,
         p_auth_user_id: authUserId,
-        p_email: email,
+        p_name: name,
+        p_phone: null,
       });
     } catch (_e) {
       try {
+        // Legacy table
         await admin
           .from('invitation_codes' as any)
-          .update({ used: true, used_by: email, used_at: new Date().toISOString() })
+          .update({ used: true, used_by: email, used_at: new Date().toISOString() } as any)
           .eq('code', code);
-      } catch (_) {}
+      } catch (_) { }
+
+      try {
+        // New table: update usage counters and deactivate when max_uses reached
+        const nextUses = (invite?.current_uses ?? 0) + 1;
+        const hasMax = typeof invite?.max_uses === 'number' && invite.max_uses > 0;
+        const stillActive = hasMax ? nextUses < invite.max_uses : true;
+        await admin
+          .from('school_invitation_codes' as any)
+          .update({
+            used_at: new Date().toISOString(),
+            used_by: authUserId,
+            current_uses: nextUses,
+            is_active: stillActive,
+          } as any)
+          .eq('code', code);
+      } catch (_) { }
     }
 
     // Optional: audit log
@@ -133,7 +222,7 @@ serve(async (req) => {
         metadata: { email, role, preschool_id, code: code.slice(0, 2) + '***' },
         created_at: new Date().toISOString(),
       });
-    } catch (_) {}
+    } catch (_) { }
 
     return json({ success: true, role, preschool_id });
   } catch (e) {

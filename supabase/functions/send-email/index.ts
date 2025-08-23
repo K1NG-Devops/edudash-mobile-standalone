@@ -25,11 +25,11 @@ serve(async (req) => {
 
   try {
     // Get environment variables
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    const resendApiKey = Deno.env.get('SERVER_RESEND_API_KEY') || Deno.env.get('RESEND_API_KEY')
     const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@edudashpro.org.za'
     
     if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY environment variable is not set')
+      throw new Error('SERVER_RESEND_API_KEY/RESEND_API_KEY environment variable is not set')
     }
 
     // Parse the request body
@@ -74,7 +74,7 @@ serve(async (req) => {
 
     // Log email sent (optional - for analytics)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const supabaseServiceKey = Deno.env.get('SERVER_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
     if (supabaseUrl && supabaseServiceKey) {
       const supabase = createClient(supabaseUrl, supabaseServiceKey)
