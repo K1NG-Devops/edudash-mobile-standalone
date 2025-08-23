@@ -100,11 +100,14 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
   };
 
   const deactivateCode = async () => {
-    if (!activeCode) return;
+    if (!activeCode) {
+      Alert.alert('Error', 'No active code found to deactivate.');
+      return;
+    }
 
     Alert.alert(
       'Deactivate School Code',
-      'Are you sure you want to deactivate the current school code? Parents will no longer be able to use it to join your school.',
+      `Are you sure you want to deactivate the school code "${activeCode.code}"?\n\nParents will no longer be able to use it to join your school.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -113,16 +116,31 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
           onPress: async () => {
             try {
               setLoading(true);
+              console.log('🔄 Deactivating code for preschool:', preschoolId);
+              
               const result = await PrincipalService.deactivateSchoolInvitationCode(preschoolId);
+              console.log('✅ Deactivation result:', result);
+              
               if (result.success) {
-                Alert.alert('Success', 'School code has been deactivated.');
-                setActiveCode(null);
+                Alert.alert(
+                  'Success! ✅', 
+                  `School code "${activeCode.code}" has been deactivated. Parents can no longer use it to join your school.`
+                );
+                // Refresh the active code to reflect the change
+                await loadActiveCode();
               } else {
-                Alert.alert('Error', 'Failed to deactivate school code.');
+                console.error('❌ Deactivation failed:', result.error);
+                Alert.alert(
+                  'Error', 
+                  `Failed to deactivate school code.\n\nError: ${result.error || 'Unknown error'}`
+                );
               }
             } catch (error) {
-              // Removed debug statement: console.error('Error deactivating code:', error);
-              Alert.alert('Error', 'Failed to deactivate school code.');
+              console.error('❌ Exception during deactivation:', error);
+              Alert.alert(
+                'Error', 
+                `An error occurred while deactivating the code.\n\nPlease try again or contact support if the problem persists.`
+              );
             } finally {
               setLoading(false);
             }
@@ -322,12 +340,17 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                 {/* Code Management */}
                 <View style={styles.managementButtons}>
                   <TouchableOpacity
-                    style={styles.warningButton}
-                    onPress={deactivateCode}
+                    style={[styles.warningButton, loading && styles.disabledButton]}
+                    onPress={() => {
+                      console.log('🔴 Deactivate button pressed!');
+                      deactivateCode();
+                    }}
                     disabled={loading}
                   >
-                    <IconSymbol name="xmark.circle" size={20} color="#EF4444" />
-                    <Text style={styles.warningButtonText}>Deactivate Code</Text>
+                    <IconSymbol name="xmark.circle" size={20} color={loading ? '#9CA3AF' : '#EF4444'} />
+                    <Text style={[styles.warningButtonText, loading && { color: '#9CA3AF' }]}>
+                      {loading ? 'Deactivating...' : 'Deactivate Code'}
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
