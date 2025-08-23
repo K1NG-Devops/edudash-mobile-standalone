@@ -166,3 +166,6 @@ functions/**
 ../.next/
 ../.vercel/
 ../build/
+
+# Project scripts and documentation (development only)
+project-scripts/

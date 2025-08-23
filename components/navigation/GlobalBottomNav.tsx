@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { useTheme } from '@/contexts/ThemeContext';
 import { router, usePathname } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -15,6 +16,8 @@ interface TabItem {
 export default function GlobalBottomNav() {
   const pathname = usePathname?.() || '/';
   const { profile, loading } = useAuth();
+  const { colorScheme } = useTheme();
+  const isDark = colorScheme === 'dark';
 
   // Hide the global nav on welcome and auth screens
   const hide = pathname === '/' || pathname.startsWith('/(auth)');
@@ -42,13 +45,21 @@ export default function GlobalBottomNav() {
 
   const tabs: TabItem[] = normalizedRole === 'teacher' ? teacherTabs : adminTabs;
 
+  const iconColor = isDark ? '#6EE7B7' : '#059669';
+  const textColor = isDark ? '#E5E7EB' : '#6B7280';
+  const backgroundColor = isDark ? '#0F172A' : '#FFFFFF';
+  const borderColor = isDark ? '#475569' : '#E5E7EB';
+
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
-      <View style={styles.tabNavigationBottom}>
+      <View style={[styles.tabNavigationBottom, {
+        backgroundColor,
+        borderTopColor: borderColor,
+      }]}>
         {tabs.map((tab) => (
           <TouchableOpacity key={tab.key} style={styles.tabButton} onPress={tab.onPress}>
-            <IconSymbol name={tab.icon as any} size={16} color={'#059669'} />
-            <Text style={styles.tabLabel}>{tab.label}</Text>
+            <IconSymbol name={tab.icon as any} size={16} color={iconColor} />
+            <Text style={[styles.tabLabel, { color: textColor }]}>{tab.label}</Text>
           </TouchableOpacity>
         ))}
       </View>

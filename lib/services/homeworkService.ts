@@ -74,11 +74,11 @@ export class HomeworkService {
           await supabase
             .from('homework_submissions')
             .update({
-              ai_score: gradingResult.score,
-              ai_feedback: gradingResult.feedback,
+              grade: gradingResult.score.toString(),
+              teacher_feedback: gradingResult.feedback,
               graded_at: new Date().toISOString(),
-              graded_by: 'ai',
-              status: 'graded'
+              reviewed_by: 'ai',
+              status: 'reviewed'
             })
             .eq('id', submissionId);
 

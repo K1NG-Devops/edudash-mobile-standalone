@@ -9,6 +9,8 @@ import {
   Share,
   Image,
   Platform,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -33,6 +35,9 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
   const [activeCode, setActiveCode] = useState<SchoolInvitationCode | null>(null);
   const [loading, setLoading] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [maxUsage, setMaxUsage] = useState<string>('1000');
+  const [expiryDays, setExpiryDays] = useState<string>('90');
 
   useEffect(() => {
     if (visible) {
@@ -61,6 +66,21 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
     try {
       setLoading(true);
       
+      // Parse and validate input values
+      const parsedMaxUsage = parseInt(maxUsage, 10);
+      const parsedExpiryDays = parseInt(expiryDays, 10);
+      
+      // Validation
+      if (isNaN(parsedMaxUsage) || parsedMaxUsage < 1) {
+        Alert.alert('Invalid Input', 'Maximum usage must be a positive number.');
+        return;
+      }
+      
+      if (isNaN(parsedExpiryDays) || parsedExpiryDays < 1 || parsedExpiryDays > 365) {
+        Alert.alert('Invalid Input', 'Expiry days must be between 1 and 365 days.');
+        return;
+      }
+      
       // Deactivate any existing code first
       if (activeCode) {
         await PrincipalService.deactivateSchoolInvitationCode(preschoolId);
@@ -71,14 +91,15 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
         principalId,
         {
           description: `Parent invitation code for ${schoolName}`,
-          expiryDays: 90, // 3 months
+          expiryDays: parsedExpiryDays,
+          maxUsage: parsedMaxUsage,
         }
       );
 
       if (result.data) {
         Alert.alert(
           'New School Code Generated! 🎉',
-          `Your new parent invitation code is: ${result.data}\n\nParents can use this code to join ${schoolName}.\n\nThe code expires in 90 days.`,
+          `Your new parent invitation code is: ${result.data}\n\nParents can use this code to join ${schoolName}.\n\nMax usage: ${parsedMaxUsage} parents\nExpires in: ${parsedExpiryDays} days`,
           [
             { text: 'Copy Code', onPress: () => copyCodeToClipboard(result.data!) },
             { text: 'Share Code', onPress: () => shareCode(result.data!) },
@@ -86,6 +107,9 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
           ]
         );
 
+        // Reset advanced options visibility after successful generation
+        setShowAdvancedOptions(false);
+        
         // Reload the active code
         await loadActiveCode();
       } else {
@@ -100,54 +124,116 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
   };
 
   const deactivateCode = async () => {
+    console.log('🟡 deactivateCode function called!');
+    
     if (!activeCode) {
+      console.log('❌ No active code found');
       Alert.alert('Error', 'No active code found to deactivate.');
       return;
     }
 
-    Alert.alert(
-      'Deactivate School Code',
-      `Are you sure you want to deactivate the school code "${activeCode.code}"?\n\nParents will no longer be able to use it to join your school.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Deactivate',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              console.log('🔄 Deactivating code for preschool:', preschoolId);
-              
-              const result = await PrincipalService.deactivateSchoolInvitationCode(preschoolId);
-              console.log('✅ Deactivation result:', result);
-              
-              if (result.success) {
-                Alert.alert(
-                  'Success! ✅', 
-                  `School code "${activeCode.code}" has been deactivated. Parents can no longer use it to join your school.`
-                );
-                // Refresh the active code to reflect the change
-                await loadActiveCode();
-              } else {
-                console.error('❌ Deactivation failed:', result.error);
-                Alert.alert(
-                  'Error', 
-                  `Failed to deactivate school code.\n\nError: ${result.error || 'Unknown error'}`
-                );
-              }
-            } catch (error) {
-              console.error('❌ Exception during deactivation:', error);
-              Alert.alert(
-                'Error', 
-                `An error occurred while deactivating the code.\n\nPlease try again or contact support if the problem persists.`
-              );
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+    console.log('🟡 Showing confirmation for code:', activeCode.code);
+    
+    // Use platform-specific confirmation
+    if (Platform.OS === 'web') {
+      console.log('🟡 Using web confirm dialog');
+      const confirmed = window.confirm(
+        `Are you sure you want to delete the school code "${activeCode.code}"?\n\nThis will permanently remove the code from the database and parents will no longer be able to use it to join your school.`
+      );
+      
+      if (confirmed) {
+        console.log('🟡 User confirmed deletion (web), proceeding...');
+        await performDeactivation();
+      } else {
+        console.log('🟡 User cancelled deletion (web)');
+      }
+    } else {
+      console.log('🟡 Using native Alert dialog');
+      try {
+        Alert.alert(
+          'Delete School Code',
+          `Are you sure you want to delete the school code "${activeCode.code}"?\n\nThis will permanently remove the code from the database and parents will no longer be able to use it to join your school.`,
+          [
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => console.log('🟡 User cancelled deletion (native)')
+            },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: async () => {
+                console.log('🟡 User confirmed deletion (native), proceeding...');
+                await performDeactivation();
+              },
+            },
+          ]
+        );
+      } catch (alertError) {
+        console.error('❌ Alert error:', alertError);
+        // Fallback: proceed with web confirm
+        console.log('🟡 Alert failed, using web confirm as fallback');
+        const confirmed = window.confirm(
+          `Are you sure you want to delete the school code "${activeCode.code}"?\n\nThis will permanently remove the code from the database and parents will no longer be able to use it to join your school.`
+        );
+        
+        if (confirmed) {
+          console.log('🟡 User confirmed deletion (fallback), proceeding...');
+          await performDeactivation();
+        }
+      }
+    }
+  };
+
+  const performDeactivation = async () => {
+    if (!activeCode) return;
+    
+    try {
+      setLoading(true);
+      console.log('🔄 Starting deletion for preschool:', preschoolId);
+      console.log('🔄 Code to delete:', activeCode.code);
+      
+      // Use deleteSchoolInvitationCode instead of deactivateSchoolInvitationCode
+      const result = await PrincipalService.deleteSchoolInvitationCode(preschoolId);
+      console.log('✅ Deletion result:', JSON.stringify(result, null, 2));
+      
+      if (result.success) {
+        console.log('✅ Deletion successful!');
+        try {
+          Alert.alert(
+            'Code Deleted! ✅', 
+            `School code "${activeCode.code}" has been permanently deleted from the database. Parents can no longer use it to join your school.`
+          );
+        } catch (alertError) {
+          console.log('⚠️ Success alert failed, but deletion succeeded');
+        }
+        // Refresh the active code to reflect the change
+        await loadActiveCode();
+      } else {
+        console.error('❌ Deletion failed:', result.error);
+        try {
+          Alert.alert(
+            'Error', 
+            `Failed to delete school code.\n\nError: ${result.error || 'Unknown error'}`
+          );
+        } catch (alertError) {
+          console.error('❌ Error alert failed:', alertError);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Exception during deletion:', error);
+      try {
+        Alert.alert(
+          'Error', 
+          `An error occurred while deleting the code.\n\nPlease try again or contact support if the problem persists.`
+        );
+      } catch (alertError) {
+        console.error('❌ Exception alert failed:', alertError);
+      }
+    } finally {
+      setLoading(false);
+      console.log('🔄 Deletion process completed');
+    }
   };
 
   const copyCodeToClipboard = async (code?: string) => {
@@ -294,7 +380,10 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                   <View style={styles.detailRow}>
                     <IconSymbol name="person.2.fill" size={16} color="#6B7280" />
                     <Text style={styles.detailText}>
-                      Used: {activeCode.usage_count} times
+                      Used: {activeCode.usage_count} / {activeCode.max_usage || '∞'} times
+                      {activeCode.max_usage && (
+                        ` (${Math.round((activeCode.usage_count / activeCode.max_usage) * 100)}% capacity)`
+                      )}
                     </Text>
                   </View>
                 </View>
@@ -416,6 +505,91 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                   Generate a school code that parents can use to join {schoolName}
                 </Text>
               </View>
+
+              {/* Advanced Options */}
+              <TouchableOpacity
+                style={[
+                  styles.advancedToggle,
+                  showAdvancedOptions && { backgroundColor: '#10B981' }
+                ]}
+                onPress={() => setShowAdvancedOptions(!showAdvancedOptions)}
+              >
+                <IconSymbol 
+                  name={showAdvancedOptions ? 'gearshape.fill' : 'gearshape'} 
+                  size={18} 
+                  color={showAdvancedOptions ? '#FFFFFF' : '#10B981'} 
+                />
+                <Text style={[styles.advancedToggleText, showAdvancedOptions && styles.advancedToggleTextActive]}>
+                  {showAdvancedOptions ? 'Hide Advanced Options' : 'Customize Settings'}
+                </Text>
+              </TouchableOpacity>
+
+              {showAdvancedOptions && (
+                <View style={styles.advancedOptionsCard}>
+                  <Text style={styles.advancedOptionsTitle}>Code Configuration</Text>
+                  
+                  <View style={styles.inputGroup}>
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Maximum Usage</Text>
+                      <Text style={styles.inputHint}>How many parents can use this code</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={maxUsage}
+                        onChangeText={setMaxUsage}
+                        placeholder="1000"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Expiry (Days)</Text>
+                      <Text style={styles.inputHint}>How long the code remains valid</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={expiryDays}
+                        onChangeText={setExpiryDays}
+                        placeholder="90"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.presetButtons}>
+                    <TouchableOpacity
+                      style={styles.presetButton}
+                      onPress={() => {
+                        setMaxUsage('100');
+                        setExpiryDays('30');
+                      }}
+                    >
+                      <Text style={styles.presetButtonText}>Small School</Text>
+                      <Text style={styles.presetButtonSubtext}>100 parents, 30 days</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.presetButton}
+                      onPress={() => {
+                        setMaxUsage('500');
+                        setExpiryDays('90');
+                      }}
+                    >
+                      <Text style={styles.presetButtonText}>Medium School</Text>
+                      <Text style={styles.presetButtonSubtext}>500 parents, 90 days</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.presetButton}
+                      onPress={() => {
+                        setMaxUsage('1000');
+                        setExpiryDays('180');
+                      }}
+                    >
+                      <Text style={styles.presetButtonText}>Large School</Text>
+                      <Text style={styles.presetButtonSubtext}>1000 parents, 180 days</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
 
               <TouchableOpacity
                 style={[styles.generateButton, loading && styles.disabledButton]}
@@ -777,5 +951,100 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 8,
+  },
+  // Advanced Options Styles
+  advancedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#10B981',
+    marginBottom: 16,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  advancedToggleText: {
+    fontSize: 15,
+    color: '#10B981',
+    fontWeight: '600',
+    marginLeft: 10,
+  },
+  advancedToggleTextActive: {
+    color: '#FFFFFF',
+  },
+  advancedOptionsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  advancedOptionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  inputGroup: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+  },
+  inputContainer: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  presetButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  presetButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  presetButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  presetButtonSubtext: {
+    fontSize: 10,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });

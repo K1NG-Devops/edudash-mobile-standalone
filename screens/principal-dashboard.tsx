@@ -138,9 +138,9 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         <View style={[styles.metricIcon, { backgroundColor: `${color}20` }]}>
           <IconSymbol name={icon as any} size={28} color={color} />
         </View>
-        <Text style={styles.metricValue}>{value}</Text>
-        <Text style={styles.metricTitle}>{title}</Text>
-        <Text style={styles.metricSubtitle}>{subtitle}</Text>
+        <Text style={[styles.metricValue, { color: isDark ? '#FFFFFF' : '#1F2937' }]}>{value}</Text>
+        <Text style={[styles.metricTitle, { color: isDark ? '#E5E7EB' : '#6B7280' }]}>{title}</Text>
+        <Text style={[styles.metricSubtitle, { color: isDark ? '#CBD5E1' : '#9CA3AF' }]}>{subtitle}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -160,8 +160,8 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         <View style={[styles.actionIcon, { backgroundColor: color }]}>
           <IconSymbol name={icon as any} size={28} color="#FFFFFF" />
         </View>
-        <Text style={styles.actionTitle}>{title}</Text>
-        <Text style={styles.actionSubtitle}>{subtitle}</Text>
+        <Text style={[styles.actionTitle, { color: isDark ? '#FFFFFF' : '#1F2937' }]}>{title}</Text>
+        <Text style={[styles.actionSubtitle, { color: isDark ? '#E5E7EB' : '#6B7280' }]}>{subtitle}</Text>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -321,7 +321,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
           <View style={[styles.activityCard, { backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }] }>
             {recentActivity.length > 0 ? (
               recentActivity.map((activity, index) => (
-                <Text key={index} style={styles.activityItem}>• {activity}</Text>
+                <Text key={index} style={[styles.activityItem, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>• {activity}</Text>
               ))
             ) : (
               <Text style={[styles.activityItem, { color: isDark ? '#94A3B8' : '#4B5563' }]}>No recent activity.</Text>
@@ -330,7 +330,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         </View>
 
         {/* Pending Tasks */}
-        <View style={styles.tasksSection}>
+        <View style={[styles.tasksSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>📋 Pending Tasks</Text>
           <View style={styles.tasksList}>
             {pendingTasks.length > 0 ? (
@@ -461,20 +461,20 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    // color will be dynamically set based on theme
     textAlign: 'center',
     marginBottom: 2,
   },
   metricTitle: {
     fontSize: 13,
-    color: '#6B7280',
+    // color will be dynamically set based on theme
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 4,
   },
   metricSubtitle: {
     fontSize: 11,
-    color: '#9CA3AF',
+    // color will be dynamically set based on theme
     textAlign: 'center',
   },
   actionsSection: {

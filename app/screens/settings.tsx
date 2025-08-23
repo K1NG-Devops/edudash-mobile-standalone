@@ -33,7 +33,7 @@ export default function SettingsScreen() {
     notifications_enabled: true,
     email_notifications: true,
     push_notifications: true,
-    dark_mode: false,
+    dark_mode: colorScheme === 'dark',
     language: 'en'
   });
   const [loading, setLoading] = useState(true);
@@ -43,6 +43,11 @@ export default function SettingsScreen() {
   useEffect(() => {
     loadSettings();
   }, [user]);
+
+  // Sync dark mode setting when theme changes from external sources (like header toggle)
+  useEffect(() => {
+    setSettings(prev => ({ ...prev, dark_mode: colorScheme === 'dark' }));
+  }, [colorScheme]);
 
   const loadSettings = async () => {
     if (!user) {
@@ -251,11 +256,11 @@ export default function SettingsScreen() {
 
         {/* Admin Actions */}
         {(currentRole === 'superadmin' || currentRole === 'preschool_admin' || currentRole === 'principal') && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Admin</Text>
+          <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
+            <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Admin</Text>
 
             <TouchableOpacity
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]}
               onPress={async () => {
                 try {
                   const { data: profile } = await supabase.from('users').select('id').eq('auth_user_id', user!.id).maybeSingle();
@@ -290,24 +295,24 @@ const { data: { session } } = await supabase.auth.getSession();
                 }
               }}
             >
-              <IconSymbol name="paperplane" size={20} color="#10B981" />
-              <Text style={styles.actionButtonText}>Send test notification</Text>
-              <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+              <IconSymbol name="paperplane" size={20} color={colorScheme === 'dark' ? '#6EE7B7' : '#10B981'} />
+              <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Send test notification</Text>
+              <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
             </TouchableOpacity>
           </View>
         )}
 
         {/* Account Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+        <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
+          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Account</Text>
 
-          <TouchableOpacity style={styles.actionButton} onPress={() => handleNavigate('/screens/profile')}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => handleNavigate('/screens/profile')}>
             <IconSymbol name="person.circle" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>View Profile</Text>
             <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton} onPress={clearCache}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={clearCache}>
             <IconSymbol name="trash" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Clear Cache</Text>
             <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
@@ -315,16 +320,16 @@ const { data: { session } } = await supabase.auth.getSession();
         </View>
 
         {/* Privacy & Security Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy & Security</Text>
+        <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
+          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Privacy & Security</Text>
 
-          <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Privacy Policy', 'Privacy policy would be shown here')}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => Alert.alert('Privacy Policy', 'Privacy policy would be shown here')}>
             <IconSymbol name="lock.shield" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Privacy Policy</Text>
             <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Terms of Service', 'Terms of service would be shown here')}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => Alert.alert('Terms of Service', 'Terms of service would be shown here')}>
             <IconSymbol name="doc.text" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Terms of Service</Text>
             <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
@@ -332,16 +337,16 @@ const { data: { session } } = await supabase.auth.getSession();
         </View>
 
         {/* Support Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Support</Text>
+        <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
+          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Support</Text>
 
-          <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Help', 'Help documentation would be shown here')}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => Alert.alert('Help', 'Help documentation would be shown here')}>
             <IconSymbol name="questionmark.circle" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Help & FAQ</Text>
             <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Contact', 'Contact support form would be shown here')}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => Alert.alert('Contact', 'Contact support form would be shown here')}>
             <IconSymbol name="envelope" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Contact Support</Text>
             <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
@@ -349,10 +354,10 @@ const { data: { session } } = await supabase.auth.getSession();
         </View>
 
         {/* Danger Zone */}
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
           <Text style={[styles.sectionTitle, { color: '#EF4444' }]}>Danger Zone</Text>
 
-          <TouchableOpacity style={[styles.actionButton, styles.dangerButton]} onPress={handleSignOut}>
+          <TouchableOpacity style={[styles.actionButton, styles.dangerButton, { backgroundColor: colorScheme === 'dark' ? '#450A0A' : '#FEF2F2' }]} onPress={handleSignOut}>
             <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color="#EF4444" />
             <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Sign Out</Text>
             <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />

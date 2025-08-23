@@ -32,7 +32,14 @@
     "func:invoke": "make func-invoke FN=$FN DATA=$DATA ENV=$ENV",
     "func:deploy": "make func-deploy FN=$FN PROJECT_REF=$PROJECT_REF",
     "func:secrets": "make secrets PROJECT_REF=$PROJECT_REF SERVER_SUPABASE_SERVICE_ROLE_KEY=$SERVER_SUPABASE_SERVICE_ROLE_KEY SERVER_RESEND_API_KEY=$SERVER_RESEND_API_KEY SERVER_NOTIFY_FUNCTION_TOKEN=$SERVER_NOTIFY_FUNCTION_TOKEN FROM_EMAIL=$FROM_EMAIL",
-    "func:secrets-legacy": "make secrets-legacy PROJECT_REF=$PROJECT_REF SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY RESEND_API_KEY=$RESEND_API_KEY NOTIFY_FUNCTION_TOKEN=$NOTIFY_FUNCTION_TOKEN"
+    "func:secrets-legacy": "make secrets-legacy PROJECT_REF=$PROJECT_REF SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY RESEND_API_KEY=$RESEND_API_KEY NOTIFY_FUNCTION_TOKEN=$NOTIFY_FUNCTION_TOKEN",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:principal": "jest __tests__/principal-dashboard.test.ts",
+    "test:components": "jest __tests__/components/",
+    "test:integration": "jest __tests__/integration/",
+    "test:all": "npm run test:principal && npm run test:components && npm run test:integration"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.58.0",
@@ -89,12 +96,18 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@expo/ngrok": "^4.1.3",
+    "@testing-library/react-native": "^12.8.1",
+    "@types/jest": "^29.5.12",
     "@types/react": "~19.0.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "babel-plugin-transform-remove-console": "^6.9.4",
     "eas-cli": "^16.17.4",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
+    "jest": "^29.7.0",
+    "jest-expo": "~53.0.10",
+    "react-test-renderer": "^19.0.0",
+    "ts-jest": "^29.2.5",
     "typescript": "~5.8.3"
   },
   "resolutions": {

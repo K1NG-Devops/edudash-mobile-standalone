@@ -200,7 +200,7 @@ export class PrincipalService {
           invited_email: options.invitedEmail || 'parent@pending.local',
           invited_by: createdBy,
           expires_at: expiryDate.toISOString(),
-          max_uses: options.maxUsage ?? 1,
+          max_uses: options.maxUsage ?? (options.invitationType === 'parent' ? 1000 : 1),
           current_uses: 0,
           is_active: true,
           description: options.description || 'School-wide parent invitation code',
@@ -307,7 +307,7 @@ export class PrincipalService {
   }
 
   /**
-   * Deactivate school invitation code
+   * Deactivate school invitation code (marks as inactive but keeps record)
    */
   static async deactivateSchoolInvitationCode(preschoolId: string): Promise<{ success: boolean; error: any }> {
     try {
@@ -320,6 +320,30 @@ export class PrincipalService {
       return { success: true, error: null };
     } catch (error) {
       log.error('Error deactivating school invitation code:', error);
+      return { success: false, error };
+    }
+  }
+
+  /**
+   * Delete school invitation code completely from database
+   * This removes the record entirely to avoid database clutter
+   */
+  static async deleteSchoolInvitationCode(preschoolId: string): Promise<{ success: boolean; error: any }> {
+    try {
+      log.info(`Deleting all invitation codes for preschool: ${preschoolId}`);
+      
+      const { error } = await supabase
+        .from('school_invitation_codes')
+        .delete()
+        .eq('preschool_id', preschoolId)
+        .eq('is_active', true);
+        
+      if (error) throw error;
+      
+      log.info(`Successfully deleted invitation codes for preschool: ${preschoolId}`);
+      return { success: true, error: null };
+    } catch (error) {
+      log.error('Error deleting school invitation code:', error);
       return { success: false, error };
     }
   }

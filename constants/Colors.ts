@@ -22,6 +22,7 @@ export const Colors = {
   light: {
     // Primary text and background
     text: textPrimary,
+    textSecondary: textSecondary,
     background: '#FFFFFF',
 
     // Tab bar colors
@@ -48,10 +49,14 @@ export const Colors = {
     principal: principalColor,
     teacher: teacherColor,
     parent: parentColor,
+
+    // Link color
+    link: '#0a7ea4', // Blue for light mode
   },
   dark: {
     // Primary text and background  
     text: '#FFFFFF', // Pure white for maximum contrast
+    textSecondary: '#E5E7EB', // Light gray for secondary text in dark mode
     background: '#0B1220', // Slightly darker for stronger contrast
 
     // Tab bar colors
@@ -78,6 +83,9 @@ export const Colors = {
     principal: '#6EE7B7', // Emerald-300
     teacher: '#C4B5FD', // Violet-300
     parent: '#93C5FD', // Blue-300
+
+    // Link color
+    link: '#60A5FA', // Light blue for dark mode
   },
 };
 
