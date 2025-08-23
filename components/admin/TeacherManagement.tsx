@@ -11,6 +11,7 @@ import {
   Alert,
   StyleSheet,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { PrincipalService, TeacherInvitation } from '@/lib/services/principalService';
@@ -53,6 +54,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
   const [loading, setLoading] = useState(false);
   // Per-invitation processing state to improve responsiveness feedback
   const [processing, setProcessing] = useState<{ [id: string]: 'resend' | 'revoke' | 'delete' | undefined }>({});
+
+  // Invitations tab UI state
+  const [invFilter, setInvFilter] = useState<'all' | 'pending' | 'accepted' | 'expired' | 'cancelled'>('all');
+  const [invQuery, setInvQuery] = useState('');
 
   // Form state for inviting new teacher
   const [inviteForm, setInviteForm] = useState({
@@ -174,7 +179,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
 
   const handleResendInvitation = async (invitation: TeacherInvitation) => {
     try {
-  setProcessing((s) => ({ ...s, [invitation.id]: 'resend' }));
+      setProcessing((s) => ({ ...s, [invitation.id]: 'resend' }));
       const result = await PrincipalService.resendTeacherInvitation(
         invitation.id,
         preschoolId
@@ -198,81 +203,93 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
   };
 
   const handleRevokeInvitation = async (invitation: TeacherInvitation) => {
-    Alert.alert(
-      'Revoke Invitation?',
-      `Are you sure you want to revoke the invitation for ${invitation.name}?\n\nThis will cancel the invitation but keep the record. The invitation code will no longer work.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Revoke',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setProcessing((s) => ({ ...s, [invitation.id]: 'revoke' }));
-              const result = await PrincipalService.revokeTeacherInvitation(
-                invitation.id,
-                preschoolId
-              );
+    // Cross-platform confirm
+    let confirmed = true;
+    if (Platform.OS === 'web') {
+      confirmed = window.confirm(
+        `Revoke Invitation?\n\nAre you sure you want to revoke the invitation for ${invitation.name}? This will cancel the invitation but keep the record. The invitation code will no longer work.`
+      );
+    } else {
+      // Native Alert with buttons
+      return Alert.alert(
+        'Revoke Invitation?',
+        `Are you sure you want to revoke the invitation for ${invitation.name}?\n\nThis will cancel the invitation but keep the record. The invitation code will no longer work.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Revoke', style: 'destructive', onPress: () => handleRevokeInvitation(invitation) },
+        ]
+      ) as any;
+    }
 
-              if (result.success) {
-                Alert.alert(
-                  'Invitation Revoked',
-                  `The invitation for ${invitation.name} has been revoked. The invitation code is no longer valid.`,
-                  [{ text: 'OK' }]
-                );
-                await loadInvitations();
-              } else {
-                Alert.alert('Error', result.error || 'Failed to revoke invitation');
-              }
-            } catch (error) {
-              // Removed debug statement: console.error('Error revoking invitation:', error);
-              Alert.alert('Error', 'Failed to revoke invitation. Please try again.');
-            } finally {
-              setProcessing((s) => ({ ...s, [invitation.id]: undefined }));
-            }
-          },
-        },
-      ]
-    );
+    if (!confirmed) return;
+
+    try {
+      setProcessing((s) => ({ ...s, [invitation.id]: 'revoke' }));
+      const result = await PrincipalService.revokeTeacherInvitation(
+        invitation.id,
+        preschoolId
+      );
+
+      if (result.success) {
+        Alert.alert(
+          'Invitation Revoked',
+          `The invitation for ${invitation.name} has been revoked. The invitation code is no longer valid.`,
+          [{ text: 'OK' }]
+        );
+        await loadInvitations();
+      } else {
+        Alert.alert('Error', result.error || 'Failed to revoke invitation');
+      }
+    } catch (error) {
+      // Removed debug statement: console.error('Error revoking invitation:', error);
+      Alert.alert('Error', 'Failed to revoke invitation. Please try again.');
+    } finally {
+      setProcessing((s) => ({ ...s, [invitation.id]: undefined }));
+    }
   };
 
   const handleDeleteInvitation = async (invitation: TeacherInvitation) => {
-    Alert.alert(
-      'Delete Invitation?',
-      `Are you sure you want to permanently delete the invitation for ${invitation.name}?\n\nThis action cannot be undone and will completely remove the invitation record.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setProcessing((s) => ({ ...s, [invitation.id]: 'delete' }));
-              const result = await PrincipalService.deleteTeacherInvitation(
-                invitation.id,
-                preschoolId
-              );
+    let confirmed = true;
+    if (Platform.OS === 'web') {
+      confirmed = window.confirm(
+        `Delete Invitation?\n\nAre you sure you want to permanently delete the invitation for ${invitation.name}? This cannot be undone.`
+      );
+    } else {
+      return Alert.alert(
+        'Delete Invitation?',
+        `Are you sure you want to permanently delete the invitation for ${invitation.name}?\n\nThis action cannot be undone and will completely remove the invitation record.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => handleDeleteInvitation(invitation) },
+        ]
+      ) as any;
+    }
 
-              if (result.success) {
-                Alert.alert(
-                  'Invitation Deleted',
-                  `The invitation for ${invitation.name} has been permanently deleted.`,
-                  [{ text: 'OK' }]
-                );
-                await loadInvitations();
-              } else {
-                Alert.alert('Error', result.error || 'Failed to delete invitation');
-              }
-            } catch (error) {
-              // Removed debug statement: console.error('Error deleting invitation:', error);
-              Alert.alert('Error', 'Failed to delete invitation. Please try again.');
-            } finally {
-              setProcessing((s) => ({ ...s, [invitation.id]: undefined }));
-            }
-          },
-        },
-      ]
-    );
+    if (!confirmed) return;
+
+    try {
+      setProcessing((s) => ({ ...s, [invitation.id]: 'delete' }));
+      const result = await PrincipalService.deleteTeacherInvitation(
+        invitation.id,
+        preschoolId
+      );
+
+      if (result.success) {
+        Alert.alert(
+          'Invitation Deleted',
+          `The invitation for ${invitation.name} has been permanently deleted.`,
+          [{ text: 'OK' }]
+        );
+        await loadInvitations();
+      } else {
+        Alert.alert('Error', result.error || 'Failed to delete invitation');
+      }
+    } catch (error) {
+      // Removed debug statement: console.error('Error deleting invitation:', error);
+      Alert.alert('Error', 'Failed to delete invitation. Please try again.');
+    } finally {
+      setProcessing((s) => ({ ...s, [invitation.id]: undefined }));
+    }
   };
 
   const handleCleanupExpired = async () => {
@@ -324,6 +341,50 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      // Prefer modern clipboard API when available and secure
+      if (typeof navigator !== 'undefined' && navigator.clipboard && (window as any).isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        Alert.alert('Copied', 'Invitation code copied to clipboard');
+        return;
+      }
+      // Dom-based fallback for web (insecure contexts)
+      if (typeof document !== 'undefined') {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          Alert.alert('Copied', 'Invitation code copied to clipboard');
+          document.body.removeChild(ta);
+          return;
+        } catch {}
+        document.body.removeChild(ta);
+      }
+    } catch {}
+    // Fallback: show the code so the user can copy manually
+    Alert.alert('Invitation Code', text);
+  };
+
+  const shareInvite = async (payload: { name: string; email: string; code: string; expires: string }) => {
+    try {
+      const message = `Teacher Invitation\n\nName: ${payload.name}\nEmail: ${payload.email}\nCode: ${payload.code}\nExpires: ${formatDate(payload.expires)}`;
+      // Web Share API if available
+      if (typeof navigator !== 'undefined' && (navigator as any).share) {
+        await (navigator as any).share({ title: 'Teacher Invitation', text: message });
+      } else {
+        await copyToClipboard(payload.code);
+      }
+    } catch {
+      await copyToClipboard(payload.code);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -418,6 +479,23 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
       inv.status === 'pending' && new Date(inv.expires_at) < new Date()
     );
 
+    const counts = {
+      pending: invitations.filter((i) => i.status === 'pending').length,
+      accepted: invitations.filter((i) => i.status === 'accepted').length,
+      expired: invitations.filter((i) => i.status === 'expired').length,
+      cancelled: invitations.filter((i) => i.status === 'cancelled').length,
+    };
+
+    const filtered = invitations
+      .filter((i) => invFilter === 'all' ? true : i.status === invFilter)
+      .filter((i) =>
+        invQuery.trim().length === 0
+          ? true
+          : (i.name || '').toLowerCase().includes(invQuery.toLowerCase()) ||
+            (i.email || '').toLowerCase().includes(invQuery.toLowerCase()) ||
+            (i.invitation_code || '').toLowerCase().includes(invQuery.toLowerCase())
+      );
+
     return (
       <ScrollView style={styles.tabContent}>
         <View style={styles.sectionHeader}>
@@ -433,6 +511,34 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Search */}
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by name, email or code"
+          placeholderTextColor="#9CA3AF"
+          value={invQuery}
+          onChangeText={setInvQuery}
+        />
+
+        {/* Filters */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsRow}>
+          {([
+            { key: 'all', label: `All (${invitations.length})` },
+            { key: 'pending', label: `Pending (${counts.pending})` },
+            { key: 'accepted', label: `Accepted (${counts.accepted})` },
+            { key: 'expired', label: `Expired (${counts.expired})` },
+            { key: 'cancelled', label: `Cancelled (${counts.cancelled})` },
+          ] as any[]).map((chip) => (
+            <TouchableOpacity
+              key={chip.key}
+              onPress={() => setInvFilter(chip.key)}
+              style={[styles.chip, invFilter === chip.key && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, invFilter === chip.key && styles.chipTextActive]}>{chip.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
         
         {invitations.length === 0 ? (
           <View style={styles.emptyState}>
@@ -440,8 +546,14 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
             <Text style={styles.emptyText}>No invitations sent</Text>
             <Text style={styles.emptySubtext}>Send your first teacher invitation</Text>
           </View>
+        ) : filtered.length === 0 ? (
+          <View style={styles.emptyState}>
+            <IconSymbol name="magnifyingglass" size={48} color="#9CA3AF" />
+            <Text style={styles.emptyText}>No matches found</Text>
+            <Text style={styles.emptySubtext}>Try a different search or filter</Text>
+          </View>
         ) : (
-          invitations.map((invitation) => (
+          filtered.map((invitation) => (
             <View key={invitation.id} style={styles.invitationCard}>
               <View style={styles.invitationHeader}>
                 <View style={styles.invitationInfo}>
@@ -451,10 +563,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
                     <Text style={styles.invitationPhone}>{invitation.phone}</Text>
                   )}
                 </View>
-                <View style={[
-                  styles.statusBadge,
-                  { backgroundColor: getStatusColor(invitation.status) }
-                ]}>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(invitation.status) }]}>
                   <Text style={styles.statusText}>
                     {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
                   </Text>
@@ -462,81 +571,71 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
               </View>
               
               <View style={styles.invitationDetails}>
-                <View style={styles.codeContainer}>
-                  <Text style={styles.codeLabel}>Invitation Code:</Text>
-                  <Text style={styles.codeText}>{invitation.invitation_code}</Text>
+                <View style={styles.codeRow}>
+                  <View style={styles.codeContainer}>
+                    <Text style={styles.codeLabel}>Code</Text>
+                    <Text style={styles.codeText}>{invitation.invitation_code}</Text>
+                  </View>
+                  <View style={styles.codeActions}>
+                    <TouchableOpacity style={styles.iconButton} onPress={() => copyToClipboard(invitation.invitation_code)}>
+                      <IconSymbol name="doc.on.doc" size={16} color="#3B82F6" />
+                      <Text style={styles.iconButtonText}>Copy</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.iconButton} onPress={() => shareInvite({ name: invitation.name, email: invitation.email, code: invitation.invitation_code, expires: invitation.expires_at })}>
+                      <IconSymbol name="square.and.arrow.up" size={16} color="#3B82F6" />
+                      <Text style={styles.iconButtonText}>Share</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 
-                <Text style={styles.invitationDate}>
-                  Sent: {formatDate(invitation.created_at)}
-                </Text>
-                <Text style={styles.expiryDate}>
-                  Expires: {formatDate(invitation.expires_at)}
-                </Text>
+                <View style={styles.datesRow}>
+                  <Text style={styles.invitationDate}>Sent: {formatDate(invitation.created_at)}</Text>
+                  <Text style={styles.expiryDate}>Expires: {formatDate(invitation.expires_at)}</Text>
+                </View>
                 
                 {invitation.accepted_at && (
-                  <Text style={styles.acceptedDate}>
-                    Accepted: {formatDate(invitation.accepted_at)}
-                  </Text>
+                  <Text style={styles.acceptedDate}>Accepted: {formatDate(invitation.accepted_at)}</Text>
                 )}
-                
                 {invitation.cancelled_at && (
-                  <Text style={styles.cancelledDate}>
-                    Cancelled: {formatDate(invitation.cancelled_at)}
-                  </Text>
+                  <Text style={styles.cancelledDate}>Cancelled: {formatDate(invitation.cancelled_at)}</Text>
                 )}
                 
                 {/* Action buttons */}
-                <View style={styles.actionButtonsContainer}>
-                  {/* Resend button for pending invitations */}
+                <View style={styles.cardActionsBar}>
                   {invitation.status === 'pending' && new Date(invitation.expires_at) > new Date() && (
                     <TouchableOpacity
-                      style={[
-                        styles.actionButton,
-                        styles.resendButton,
-                        (processing[invitation.id] === 'resend') && styles.disabledButton
-                      ]}
+                      style={[styles.actionButton, styles.resendButton, (processing[invitation.id] === 'resend') && styles.disabledButton]}
                       onPress={() => handleResendInvitation(invitation)}
                       disabled={processing[invitation.id] === 'resend'}
                     >
                       <IconSymbol name="arrow.clockwise" size={14} color="#3B82F6" />
                       <Text style={styles.resendButtonText}>
-                        {processing[invitation.id] === 'resend' ? 'Resending...' : 'Resend'}
+                        {processing[invitation.id] === 'resend' ? 'Resending…' : 'Resend'}
                       </Text>
                     </TouchableOpacity>
                   )}
-                  
-                  {/* Revoke button for pending invitations */}
+
                   {invitation.status === 'pending' && (
                     <TouchableOpacity
-                      style={[
-                        styles.actionButton,
-                        styles.revokeButton,
-                        (processing[invitation.id] === 'revoke') && styles.disabledButton
-                      ]}
+                      style={[styles.actionButton, styles.revokeButton, (processing[invitation.id] === 'revoke') && styles.disabledButton]}
                       onPress={() => handleRevokeInvitation(invitation)}
                       disabled={processing[invitation.id] === 'revoke'}
                     >
                       <IconSymbol name="xmark.circle" size={14} color="#F59E0B" />
                       <Text style={styles.revokeButtonText}>
-                        {processing[invitation.id] === 'revoke' ? 'Revoking...' : 'Revoke'}
+                        {processing[invitation.id] === 'revoke' ? 'Revoking…' : 'Revoke'}
                       </Text>
                     </TouchableOpacity>
                   )}
-                  
-                  {/* Delete button for all invitations */}
+
                   <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      styles.deleteButton,
-                      (processing[invitation.id] === 'delete') && styles.disabledButton
-                    ]}
+                    style={[styles.actionButton, styles.deleteButton, (processing[invitation.id] === 'delete') && styles.disabledButton]}
                     onPress={() => handleDeleteInvitation(invitation)}
                     disabled={processing[invitation.id] === 'delete'}
                   >
                     <IconSymbol name="trash" size={14} color="#EF4444" />
                     <Text style={styles.deleteButtonText}>
-                      {processing[invitation.id] === 'delete' ? 'Deleting...' : 'Delete'}
+                      {processing[invitation.id] === 'delete' ? 'Deleting…' : 'Delete'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -648,7 +747,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({
             onPress={() => setActiveTab('invitations')}
           />
           <TabButton
-            title="Invite New"
+            title="Invite"
             isActive={activeTab === 'invite'}
             onPress={() => setActiveTab('invite')}
           />
@@ -688,14 +787,16 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   tabButton: {
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    marginRight: 10,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 0,
   },
   activeTabButton: {
     borderBottomWidth: 2,
@@ -866,15 +967,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 10,
+  },
   codeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: 8,
   },
   codeLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
-    marginRight: 8,
   },
   codeText: {
     fontSize: 13,
@@ -883,7 +990,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
+  },
+  codeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  iconButtonText: {
+    marginLeft: 6,
+    fontSize: 12,
+    color: '#3B82F6',
+    fontWeight: '500',
+  },
+  datesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   invitationDate: {
     fontSize: 12,
@@ -1005,14 +1137,57 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 4,
   },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#111827',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+  },
+  chipsScroll: {
+    marginBottom: 8,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  chipActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#C7D2FE',
+  },
+  chipText: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: '#4F46E5',
+  },
   cancelledDate: {
     fontSize: 12,
     color: '#6B7280',
   },
-  actionButtonsContainer: {
+  cardActionsBar: {
     flexDirection: 'row',
     gap: 8,
     marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
     flexWrap: 'wrap',
   },
   actionButton: {

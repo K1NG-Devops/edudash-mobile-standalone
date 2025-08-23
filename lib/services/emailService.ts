@@ -8,6 +8,9 @@
  * - School announcements
  */
 
+import { supabase } from '@/lib/supabase';
+import { logger as log } from '@/lib/utils/logger';
+
 export interface EmailOptions {
   to: string;
   subject: string;
@@ -22,9 +25,6 @@ export interface TeacherInvitationEmailData {
   principalName: string;
   expiryDate: string;
 }
-
-import { supabase } from '@/lib/supabase';
-import { logger as log } from '@/lib/utils/logger';
 
 export class EmailService {
   /**
@@ -261,7 +261,13 @@ export class EmailService {
       <li style="margin-bottom: 10px;">If the app isn’t installed, use the web link: <a href="${webUrl}">${webUrl}</a></li>
       <li style="margin-bottom: 10px;">Enter your details to complete setup</li>
     </ol>
-    
+
+    <div style="background: #ecfdf5; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #10B981;">
+      <p style="margin: 0; color: #065f46; font-size: 14px;">
+        Important: No email confirmation required for teacher invitations. This invite verifies your email automatically — just complete setup and you're in.
+      </p>
+    </div>
+
     <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3B82F6;">
       <h3 style="color: #1f2937; margin-top: 0;">🌟 What You Can Do</h3>
       <ul style="margin: 0; padding-left: 20px;">
@@ -274,6 +280,12 @@ export class EmailService {
       </ul>
     </div>
     
+    <div style="background: #fff7ed; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #f59e0b;">
+      <p style="margin: 0; color: #92400e; font-size: 13px;">
+        Trouble with the code? If you see “invalid or expired code”, please contact <strong>${data.principalName}</strong> to resend or issue a new invitation.
+      </p>
+    </div>
+
     <div style="text-align: center; margin-top: 30px;">
       <p style="color: #6b7280; font-size: 14px;">
         Need help? Contact <strong>${data.principalName}</strong> or our support team.<br>
@@ -319,6 +331,7 @@ How to Get Started:
 • Open on your phone: ${appScheme}
 • Short link: ${shortScheme}
 • Web fallback: ${webUrl}
+• No email confirmation required — this invite verifies your email automatically. Just complete setup.
 
 What You Can Do:
 • Create and manage your classes
@@ -327,6 +340,8 @@ What You Can Do:
 • Track student progress
 • Communicate with parents
 • Access STEM activities and resources
+
+Trouble with the code? If you see "invalid or expired code", contact ${data.principalName} to resend or issue a new invitation.
 
 Need help? Contact ${data.principalName} or our support team.
 Welcome to the ${data.schoolName} family!

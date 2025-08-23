@@ -208,11 +208,11 @@ export class HomeworkService {
     }
   }
 
-  static async submitHomework(data: HomeworkSubmissionData, mediaFiles?: Array<{
+  static async submitHomework(data: HomeworkSubmissionData, mediaFiles?: {
     uri: string;
     fileName: string;
     mimeType: string;
-  }>): Promise<{ submissionId: string; uploadedFiles: string[] }> {
+  }[]): Promise<{ submissionId: string; uploadedFiles: string[] }> {
     try {
       // First, create the homework submission
       const submissionData = {

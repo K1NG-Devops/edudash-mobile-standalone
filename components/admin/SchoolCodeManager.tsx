@@ -7,18 +7,13 @@ import {
   Alert,
   StyleSheet,
   Share,
-  Clipboard,
   Image,
+  Platform,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-let QRCodeComponent: any = null;
-try {
-  // Optional dependency; fallback to image if unavailable
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const mod = require('react-native-qrcode-svg');
-  QRCodeComponent = mod?.default || mod?.QRCode || null;
-} catch (_) {}
 import { PrincipalService, SchoolInvitationCode } from '@/lib/services/principalService';
+import QRCode from '@/components/common/QRCode';
 
 interface SchoolCodeManagerProps {
   preschoolId: string;
@@ -44,6 +39,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
       loadActiveCode();
     }
   }, [visible, preschoolId]);
+
 
   const loadActiveCode = async () => {
     try {
@@ -139,7 +135,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
   const copyCodeToClipboard = async (code?: string) => {
     const codeToUse = code || activeCode?.code;
     if (codeToUse) {
-      Clipboard.setString(codeToUse);
+      await Clipboard.setStringAsync(codeToUse);
       Alert.alert('Copied!', `School code "${codeToUse}" has been copied to your clipboard.`);
     }
   };
@@ -152,8 +148,8 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
         const deepLinkUrl = `edudashpro://invite/${codeToUse}`;
         const webFallbackUrl = `https://edudashpro.app/invite/${codeToUse}`;
         
-        await Share.share({
-          message: `🎓 Join ${schoolName} on EduDash Pro!\n\n📱 If you have the app installed, tap this link:\n${deepLinkUrl}\n\n🌐 Or use our web portal:\n${webFallbackUrl}\n\n📋 Manual setup:\n1. Download EduDash Pro from your app store\n2. Tap "Join School"\n3. Enter school code: ${codeToUse}\n\nWelcome to our school community! 🏫✨`,
+      await Share.share({
+          message: `🎓 Join ${schoolName} on EduDash Pro!\n\n📱 If you have the app installed, tap this link:\n${deepLinkUrl}\n\n🌐 Or use our web portal:\n${webFallbackUrl}\n\n📋 Manual setup:\n1. Download EduDash Pro from your app store\n2. Tap \"Join School\"\n3. Enter school code: ${codeToUse}\n4. Create your account and check your email to verify it (required)\n\nWelcome to our school community! 🏫✨`,
           title: `Join ${schoolName} - EduDash Pro`,
           url: webFallbackUrl, // This will be used on platforms that support URL sharing
         });
@@ -169,9 +165,9 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
       const deepLinkUrl = `edudashpro://invite/${codeToUse}`;
       const webFallbackUrl = `https://edudashpro.app/invite/${codeToUse}`;
       
-      const textToCopy = `Join ${schoolName} on EduDash Pro!\n\nApp Link: ${deepLinkUrl}\nWeb Link: ${webFallbackUrl}\nSchool Code: ${codeToUse}`;
+      const textToCopy = `Join ${schoolName} on EduDash Pro!\n\nApp Link: ${deepLinkUrl}\nWeb Link: ${webFallbackUrl}\nSchool Code: ${codeToUse}\n\nNote: After signing up, check your email for a verification link to activate your account.`;
       
-      Clipboard.setString(textToCopy);
+      await Clipboard.setStringAsync(textToCopy);
       Alert.alert('Copied!', 'School invitation links and code have been copied to your clipboard.');
     }
   };
@@ -373,13 +369,13 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                     1. Parent downloads EduDash Pro app
                   </Text>
                   <Text style={styles.instructionItem}>
-                    2. Creates account with their email
+                    2. Creates account with their email (they must confirm their email via the link sent to their inbox)
                   </Text>
                   <Text style={styles.instructionItem}>
                     3. Enters school code: <Text style={styles.boldText}>{activeCode.code}</Text>
                   </Text>
                   <Text style={styles.instructionItem}>
-                    4. Gets access to {schoolName} dashboard
+                    4. Confirm email (required) to access the school dashboard
                   </Text>
                   <Text style={styles.instructionItem}>
                     5. Can register their children
@@ -436,20 +432,12 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
           <View style={styles.qrCard}>
             <Text style={styles.qrTitle}>Scan to Join {schoolName}</Text>
             {activeCode && (
-              QRCodeComponent ? (
-                <QRCodeComponent
-                  value={`edudashpro://invite/${activeCode.code}`}
-                  size={280}
-                  backgroundColor="#FFFFFF"
-                  color="#111827"
-                />
-              ) : (
-                <Image
-                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(`edudashpro://invite/${activeCode.code}`)}` }}
-                  style={{ width: 280, height: 280, borderRadius: 12, backgroundColor: '#FFFFFF' }}
-                  resizeMode="contain"
-                />
-              )
+              <QRCode
+                value={`edudashpro://invite/${activeCode.code}`}
+                size={280}
+                backgroundColor="#FFFFFF"
+                color="#111827"
+              />
             )}
             <Text style={styles.qrHint}>If the app is not installed, visit https://edudashpro.app/invite/{activeCode?.code}</Text>
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>

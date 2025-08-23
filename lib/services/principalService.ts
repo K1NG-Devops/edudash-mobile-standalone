@@ -289,6 +289,27 @@ export class PrincipalService {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 7); // 7 days to accept
 
+      // Persist server-side for redemption (primary source of truth)
+      try {
+        await supabase
+          .from('school_invitation_codes')
+          .insert({
+            preschool_id: preschoolId,
+            code: invitationCode,
+            invitation_type: 'teacher',
+            invited_email: teacherData.email,
+            invited_by: invitedBy,
+            expires_at: expiryDate.toISOString(),
+            max_uses: 1,
+            current_uses: 0,
+            is_active: true,
+            description: 'Teacher invitation',
+            metadata: { source: 'principal_app' },
+          });
+      } catch (e) {
+        log.warn('Could not persist invitation to school_invitation_codes:', e);
+      }
+
       const invitation: TeacherInvitation = {
         id: crypto.randomUUID(),
         email: teacherData.email,
@@ -302,7 +323,7 @@ export class PrincipalService {
         expires_at: expiryDate.toISOString(),
       };
 
-      // Store temporarily in AsyncStorage
+      // Store locally for UI listing (secondary cache)
       const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
       existingInvitations.push(invitation);
       await StorageUtil.setJSON('teacherInvitations', existingInvitations);
@@ -601,7 +622,7 @@ export class PrincipalService {
    */
   static async getPendingTasks(preschoolId: string) {
     try {
-      const tasks: Array<{ priority: string, text: string, color: string }> = [];
+      const tasks: { priority: string, text: string, color: string }[] = [];
 
       // Check for pending teacher invitations
       const teacherInvitations = await this.getTeacherInvitations(preschoolId);
@@ -867,9 +888,8 @@ export class PrincipalService {
           .eq('id', invitationId)
           .eq('preschool_id', preschoolId)
           .eq('status', 'pending')
-          .select('id')
-          .single();
-        if (!dbErr && updated) {
+          .select('id');
+        if (!dbErr && Array.isArray(updated) && updated.length > 0) {
           // Keep local cache in sync for UI that reads from local storage
           const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
           const idx = existingInvitations.findIndex((inv: TeacherInvitation) =>
@@ -929,43 +949,44 @@ export class PrincipalService {
     preschoolId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // First, try Supabase table if available
-      try {
-        const { data: deleted, error: dbErr } = await (supabase as any)
-          .from('teacher_invitations')
-          .delete()
-          .eq('id', invitationId)
-          .eq('preschool_id', preschoolId)
-          .select('id')
-          .single();
-        if (!dbErr && deleted) {
-          // Keep local cache in sync for UI that reads from local storage
-          const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
-          const idx = existingInvitations.findIndex((inv: TeacherInvitation) =>
-            inv.id === invitationId && inv.preschool_id === preschoolId
-          );
-          if (idx !== -1) {
-            existingInvitations.splice(idx, 1);
-            await StorageUtil.setJSON('teacherInvitations', existingInvitations);
-          }
-          return { success: true };
-        }
-      } catch (_) {
-        // fallthrough to local storage
-      }
-
+      // Load local invitation to get the code (used in school_invitation_codes)
       const existingInvitations = await StorageUtil.getJSON<TeacherInvitation[]>('teacherInvitations', []);
       const invitationIndex = existingInvitations.findIndex((inv: TeacherInvitation) =>
         inv.id === invitationId && inv.preschool_id === preschoolId
       );
+      const invitation = invitationIndex !== -1 ? existingInvitations[invitationIndex] : null;
 
+      // Preferred: deactivate the matching school_invitation_codes row using the code
+      if (invitation?.invitation_code) {
+        try {
+          await (supabase as any)
+            .from('school_invitation_codes')
+            .update({ is_active: false })
+            .eq('code', invitation.invitation_code)
+            .eq('preschool_id', preschoolId)
+            .eq('is_active', true);
+        } catch (_) {}
+      }
+
+      // Also try legacy teacher_invitations table if present (avoid .single() to prevent 406)
+      try {
+        const { error: dbErr } = await (supabase as any)
+          .from('teacher_invitations')
+          .delete()
+          .eq('id', invitationId)
+          .eq('preschool_id', preschoolId)
+          .select('id');
+        if (!dbErr) {
+          // proceed to remove local cache below
+        }
+      } catch (_) {
+        // ignore
+      }
+
+      // Update local cache for UI
       if (invitationIndex === -1) {
         return { success: false, error: 'Invitation not found' };
       }
-
-      const invitation = existingInvitations[invitationIndex];
-
-      // Remove invitation from array
       existingInvitations.splice(invitationIndex, 1);
       await StorageUtil.setJSON('teacherInvitations', existingInvitations);
 

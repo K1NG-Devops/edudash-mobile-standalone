@@ -9,6 +9,7 @@ import { PrincipalService } from '@/lib/services/principalService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import {
   Alert,
   Dimensions,
@@ -39,6 +40,8 @@ interface PrincipalDashboardProps {
 }
 
 const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSignOut }) => {
+  const { colorScheme } = useTheme();
+  const isDark = colorScheme === 'dark';
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<PrincipalStats>({
     totalStudents: 0,
@@ -127,7 +130,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
     onPress?: () => void;
   }) => (
     <TouchableOpacity
-      style={[styles.metricCard, { borderTopColor: color, borderTopWidth: 3 }]}
+      style={[styles.metricCard, { borderTopColor: color, borderTopWidth: 3, backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -173,7 +176,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]}>
       <MobileHeader
         user={{
           name: profile?.name || 'Principal',
@@ -196,14 +199,14 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         }
       >
         {/* Overview Header (matches Super Admin look) */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>📊 School Overview</Text>
-          <Text style={styles.welcomeSubtitle}>Manage {schoolName}</Text>
+        <View style={[styles.welcomeSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
+          <Text style={[styles.welcomeTitle, { color: isDark ? '#F8FAFC' : '#1F2937' }]}>📊 School Overview</Text>
+          <Text style={[styles.welcomeSubtitle, { color: isDark ? '#94A3B8' : '#6B7280' }]}>Manage {schoolName}</Text>
         </View>
 
         {/* School Statistics */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>🏫 School Overview</Text>
+        <View style={[styles.statsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>🏫 School Overview</Text>
           <View style={styles.statsGrid}>
             <MetricCard
               title="Total Students"
@@ -241,8 +244,8 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         </View>
 
         {/* Principal Actions */}
-        <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>⚡ Principal Tools</Text>
+        <View style={[styles.actionsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>⚡ Principal Tools</Text>
           <View style={styles.actionsGrid}>
             <ActionCard
               title="Teacher Management"
@@ -284,81 +287,67 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               subtitle="Configure policies"
               icon="gearshape.fill"
               color="#34A853"
-              onPress={() => router.push('/(tabs)/settings')}
+              onPress={() => handleNavigate('/screens/settings')}
             />
           </View>
         </View>
 
         {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
-          <Text style={styles.sectionTitle}>🚀 Quick Actions</Text>
+        <View style={[styles.quickActionsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>🚀 Quick Actions</Text>
           <View style={styles.quickActionsList}>
-            <TouchableOpacity style={styles.quickActionItem} onPress={() => handleNavigate('register-child')}>
+            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => handleNavigate('register-child')}>
               <IconSymbol name="plus.circle.fill" size={20} color="#4285F4" />
-              <Text style={styles.quickActionText}>Add New Student</Text>
+              <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Add New Student</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionItem} onPress={() => handleNavigate('teachers')}>
+            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => handleNavigate('teachers')}>
               <IconSymbol name="person.badge.plus" size={20} color="#34A853" />
-              <Text style={styles.quickActionText}>Hire Teacher</Text>
+              <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Hire Teacher</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionItem} onPress={() => router.push('/(tabs)/messages')}>
+            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => router.push('/(tabs)/messages')}>
               <IconSymbol name="envelope.fill" size={20} color="#FBBC05" />
-              <Text style={styles.quickActionText}>Send Announcement</Text>
+              <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Send Announcement</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionItem} onPress={() => handleNavigate('support')}>
+            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => handleNavigate('support')}>
               <IconSymbol name="questionmark.circle.fill" size={20} color="#EA4335" />
-              <Text style={styles.quickActionText}>Get Support</Text>
+              <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Get Support</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Recent Activity */}
-        <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>📈 Recent School Activity</Text>
-          <View style={styles.activityCard}>
+        <View style={[styles.activitySection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>📈 Recent School Activity</Text>
+          <View style={[styles.activityCard, { backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }] }>
             {recentActivity.length > 0 ? (
               recentActivity.map((activity, index) => (
                 <Text key={index} style={styles.activityItem}>• {activity}</Text>
               ))
             ) : (
-              <Text style={styles.activityItem}>No recent activity.</Text>
+              <Text style={[styles.activityItem, { color: isDark ? '#94A3B8' : '#4B5563' }]}>No recent activity.</Text>
             )}
           </View>
         </View>
 
         {/* Pending Tasks */}
         <View style={styles.tasksSection}>
-          <Text style={styles.sectionTitle}>📋 Pending Tasks</Text>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>📋 Pending Tasks</Text>
           <View style={styles.tasksList}>
             {pendingTasks.length > 0 ? (
               pendingTasks.map((task, index) => (
-                <View key={index} style={styles.taskItem}>
+                <View key={index} style={[styles.taskItem, isDark && { backgroundColor: '#0B1220' }]}>
                   <View style={[styles.taskDot, { backgroundColor: task.color }]} />
-                  <Text style={styles.taskText}>{task.text}</Text>
+                  <Text style={[styles.taskText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>{task.text}</Text>
                 </View>
               ))
             ) : (
-              <Text style={styles.taskText}>No pending tasks.</Text>
+              <Text style={[styles.taskText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>No pending tasks.</Text>
             )}
           </View>
         </View>
       </ScrollView>
 
-      {/* Compact Bottom Nav */}
-      <View style={styles.tabNavigationBottom}>
-        {[
-          { key: 'overview', label: 'Overview', icon: 'chart.bar' , onPress: () => {}},
-          { key: 'teachers', label: 'Teachers', icon: 'person.2.fill', onPress: () => handleNavigate('/screens/teachers') },
-          { key: 'students', label: 'Students', icon: 'graduationcap.fill', onPress: () => handleNavigate('/screens/students') },
-          { key: 'messages', label: 'Messages', icon: 'message.fill', onPress: () => router.push('/(tabs)/messages' as any) },
-          { key: 'settings', label: 'Settings', icon: 'gear', onPress: () => handleNavigate('/screens/settings') },
-        ].map(tab => (
-          <TouchableOpacity key={tab.key} style={styles.tabButton} onPress={tab.onPress}>
-            <IconSymbol name={tab.icon as any} size={16} color={'#059669'} />
-            <Text style={styles.tabLabel}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Bottom nav removed; now rendered globally in RootLayout */}
 
       {/* Management Modals */}
       {profile?.preschool_id && profile?.id && (
@@ -596,31 +585,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4B5563',
     flex: 1,
-  },
-  // Bottom Tab Navigation (compact)
-  tabNavigationBottom: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  tabButton: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  tabLabel: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 4,
-    textAlign: 'center',
-    fontWeight: '500',
   },
 });
 

@@ -2,20 +2,19 @@
 // @ts-nocheck
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
+import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import React from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    ActivityIndicator,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { supabase } from '@/lib/supabase';
-import { ClaudeAIService } from '@/lib/ai/claudeService';
-import { format } from 'date-fns';
 
 interface TeacherDashboardProps {
   profile: any;
@@ -87,9 +86,10 @@ interface TeacherDashboardState {
     upcomingTasks: string[];
     recommendations: string[];
   } | null;
+  tenantName?: string | null;
 }
 
-export default class TeacherDashboard extends React.Component<TeacherDashboardProps, TeacherDashboardState> {
+export class TeacherDashboardInner extends React.Component<TeacherDashboardProps, TeacherDashboardState> {
   constructor(props: TeacherDashboardProps) {
     super(props);
     this.state = {
@@ -106,18 +106,45 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
   }
 
   componentDidMount() {
-    this.loadTeacherData();
+    // Only attempt data load once we have a valid profile with ids
+    if (this.hasValidProfile(this.props.profile)) {
+      this.loadTeacherData();
+      this.loadTenantName();
+    } else {
+      // Keep loading until profile arrives via props
+      this.setState({ loading: true });
+    }
   }
 
+  componentDidUpdate(prevProps: TeacherDashboardProps) {
+    // When profile becomes available or changes to a valid one, (re)load data
+    const prevValid = this.hasValidProfile(prevProps.profile);
+    const currValid = this.hasValidProfile(this.props.profile);
+    if (!prevValid && currValid) {
+      this.loadTeacherData();
+      this.loadTenantName();
+    }
+  }
+
+  private hasValidProfile = (profile: any) => !!profile?.id && !!profile?.preschool_id;
+
   loadTeacherData = async () => {
+    // If profile not ready yet, wait without throwing an error
+    if (!this.hasValidProfile(this.props.profile)) {
+      this.setState({ loading: true, error: null });
+      return;
+    }
+
     this.setState({ loading: true, error: null });
-    
+
     try {
       const teacherId = this.props.profile?.id;
       const preschoolId = this.props.profile?.preschool_id;
-      
+
       if (!teacherId || !preschoolId) {
-        throw new Error('Teacher ID or Preschool ID not found');
+        // Profile exists but missing required fields – surface friendly message
+        this.setState({ loading: false, error: 'Your account is missing teacher or school assignment.' });
+        return;
       }
 
       // Load classes taught by this teacher
@@ -135,14 +162,16 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
         .eq('teacher_id', teacherId)
         .eq('preschool_id', preschoolId);
 
-      if (classesError) throw classesError;
+      if (classesError) {
+        console.warn('Classes query failed:', classesError);
+      }
 
       const classes: Class[] = classesData || [];
 
       // Load students for this teacher's classes
       const classIds = classes.map(cls => cls.id);
       let students: Student[] = [];
-      
+
       if (classIds.length > 0) {
         const { data: studentsData, error: studentsError } = await supabase
           .from('students')
@@ -157,8 +186,12 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
           .in('class_id', classIds)
           .eq('is_active', true);
 
-        if (studentsError) throw studentsError;
-        students = studentsData || [];
+        if (studentsError) {
+          console.warn('Students query failed:', studentsError);
+          students = [];
+        } else {
+          students = studentsData || [];
+        }
       }
 
       // Load recent lessons from the lessons table
@@ -180,8 +213,10 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (lessonsError) throw lessonsError;
-      const lessons: Lesson[] = lessonsData || [];
+      if (lessonsError) {
+        console.warn('Lessons query failed:', lessonsError);
+      }
+      let lessons: Lesson[] = lessonsData || [];
 
       // Load homework assignments for teacher's classes
       let homeworkAssignments: HomeworkAssignment[] = [];
@@ -199,11 +234,16 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
             created_at
           `)
           .eq('teacher_id', teacherId)
+          .eq('preschool_id', preschoolId)
           .order('created_at', { ascending: false })
           .limit(10);
 
-        if (homeworkError) throw homeworkError;
-        homeworkAssignments = homeworkData || [];
+        if (homeworkError) {
+          console.warn('Homework query failed:', homeworkError);
+          homeworkAssignments = [];
+        } else {
+          homeworkAssignments = homeworkData || [];
+        }
       }
 
       // Load recent activities from the activities table
@@ -218,11 +258,13 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
           lesson_id,
           sequence_order
         `)
+        // If activities has preschool_id, filter by it. If not present, rely on RLS via lessons linkage.
+        .eq('preschool_id' as any, preschoolId as any)
         .order('sequence_order', { ascending: false })
         .limit(5);
 
       if (activitiesError) {
-        // Removed debug statement: console.warn('Activities query failed:', activitiesError);
+        console.warn('Activities query failed:', activitiesError);
       } else {
         recentActivities = (activitiesData || []).map(activity => ({
           id: activity.id,
@@ -243,7 +285,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
             classPerformance: `Managing ${classes.length} classes with ${students.length} total students. Recent activity includes ${lessons.length} lessons and ${homeworkAssignments.length} homework assignments.`,
             upcomingTasks: [
               'Review student progress',
-              'Prepare upcoming lessons', 
+              'Prepare upcoming lessons',
               'Grade recent assignments'
             ],
             recommendations: [
@@ -269,13 +311,31 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
 
     } catch (error) {
       // Removed debug statement: console.error('Error loading teacher data:', error);
-      this.setState({ 
+      this.setState({
         error: error instanceof Error ? error.message : 'Failed to load dashboard data'
       });
-      Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
+      // Avoid disruptive alerts on initial profile load; only alert if profile is present
+      if (this.hasValidProfile(this.props.profile)) {
+        Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
+      }
     } finally {
       this.setState({ loading: false });
     }
+  };
+
+  loadTenantName = async () => {
+    try {
+      const preschoolId = this.props.profile?.preschool_id;
+      if (!preschoolId) return;
+      const { data } = await supabase
+        .from('preschools')
+        .select('name')
+        .eq('id', preschoolId)
+        .maybeSingle();
+      if (data?.name) {
+        this.setState({ tenantName: data.name });
+      }
+    } catch (_) { }
   };
 
   renderMetricCard = (title: string, value: string | number, icon: string, color: string) => (
@@ -309,7 +369,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
     const isPublic = lesson.is_public;
     const statusColor = isPublic ? '#10B981' : '#F59E0B';
     const statusBg = isPublic ? '#D1FAE5' : '#FEF3C7';
-    
+
     return (
       <TouchableOpacity
         key={lesson.id}
@@ -367,7 +427,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
       return (
         <View style={[styles.container, styles.centered]}>
           <Text style={styles.errorText}>Error: {error}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.retryButton}
             onPress={this.loadTeacherData}
           >
@@ -379,14 +439,22 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
 
     return (
       <View style={styles.container}>
-        <MobileHeader 
-          user={{
-            name: profile?.name || 'Teacher',
-            role: profile?.role || 'teacher',
-            avatar: profile?.avatar_url,
-          }}
-        />
-        
+        <AuthConsumer>
+          {({ signOut }) => (
+            <MobileHeader
+              user={{
+                name: profile?.name || 'Teacher',
+                role: profile?.role || 'teacher',
+                avatar: profile?.avatar_url,
+              }}
+              schoolName={this.state.tenantName || undefined}
+              onSignOut={async () => {
+                try { await signOut(); } catch {}
+              }}
+            />
+          )}
+        </AuthConsumer>
+
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* AI Insights */}
           {aiInsights && (
@@ -395,7 +463,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
               <View style={styles.aiInsightsCard}>
                 <Text style={styles.aiInsightsTitle}>Class Performance Summary</Text>
                 <Text style={styles.aiInsightsText}>{aiInsights.classPerformance}</Text>
-                
+
                 {aiInsights.upcomingTasks.length > 0 && (
                   <View style={styles.aiSection}>
                     <Text style={styles.aiSectionTitle}>Priority Tasks</Text>
@@ -404,7 +472,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
                     ))}
                   </View>
                 )}
-                
+
                 {aiInsights.recommendations.length > 0 && (
                   <View style={styles.aiSection}>
                     <Text style={styles.aiSectionTitle}>Recommendations</Text>
@@ -466,7 +534,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Current Lessons</Text>
             {lessons.slice(0, 3).map(this.renderLessonCard)}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => router.push('/(tabs)/lessons')}
             >
@@ -481,10 +549,10 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
             {homeworkAssignments.map((homework) => {
               const dueInDays = homework.due_date_offset_days;
               const isOverdue = dueInDays < 0;
-              
+
               return (
-                <TouchableOpacity 
-                  key={homework.id} 
+                <TouchableOpacity
+                  key={homework.id}
                   style={styles.assignmentCard}
                   onPress={() => router.push(`/screens/homework?id=${homework.id}` as any)}
                 >
@@ -520,7 +588,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
                 other: { bg: '#F3F4F6', text: '#374151' },
               };
               const colors = activityColors[activity.activity_type as keyof typeof activityColors] || activityColors.other;
-              
+
               return (
                 <View key={activity.id} style={styles.announcementCard}>
                   <View style={styles.announcementHeader}>
@@ -551,6 +619,16 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
       </View>
     );
   }
+}
+
+export default function TeacherDashboard() {
+  return (
+    <AuthConsumer>
+      {({ profile }) => (
+        <TeacherDashboardInner profile={profile} />
+      )}
+    </AuthConsumer>
+  );
 }
 
 const styles = StyleSheet.create({

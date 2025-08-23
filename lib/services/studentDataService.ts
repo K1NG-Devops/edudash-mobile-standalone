@@ -6,8 +6,8 @@
 
 import { supabase } from '@/lib/supabase';
 import { createLogger } from '@/lib/utils/logger';
-const log = createLogger('student');
 import { Database } from '@/types/database';
+const log = createLogger('student');
 
 type Tables = Database['public']['Tables'];
 type Student = Tables['students']['Row'];

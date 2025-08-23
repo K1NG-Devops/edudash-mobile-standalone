@@ -2,6 +2,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import {
   ActivityIndicator,
   Alert,
@@ -53,13 +54,25 @@ interface MessagingCenterProps {
   profile: UserProfile | null;
   childrenList: any[];
   onClose: () => void;
+  showHeader?: boolean;
 }
 
 const MessagingCenter: React.FC<MessagingCenterProps> = ({
   profile,
   childrenList,
   onClose,
+  showHeader = true,
 }) => {
+  const { colorScheme } = useTheme();
+  const isDark = colorScheme === 'dark';
+  const colors = {
+    bg: isDark ? '#0B1220' : '#F8FAFC',
+    card: isDark ? '#0F172A' : '#FFFFFF',
+    border: isDark ? '#334155' : '#E5E7EB',
+    text: isDark ? '#F1F5F9' : '#1F2937',
+    muted: isDark ? '#94A3B8' : '#6B7280',
+    sub: isDark ? '#CBD5E1' : '#4B5563',
+  };
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -440,7 +453,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           key={conversation.id}
           style={[
             styles.conversationItem,
-            selectedConversation === conversation.id && styles.selectedConversation
+            { backgroundColor: colors.card, borderBottomColor: colors.border },
+            selectedConversation === conversation.id && (isDark ? styles.selectedConversationDark : styles.selectedConversation)
           ]}
           onPress={() => {
             setSelectedConversation(conversation.id);
@@ -454,8 +468,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
                 style={styles.avatar}
               />
             ) : (
-              <View style={styles.defaultAvatar}>
-                <Text style={styles.avatarText}>
+              <View style={[styles.defaultAvatar, isDark && { backgroundColor: '#334155' }]}>
+                <Text style={[styles.avatarText, { color: isDark ? '#CBD5E1' : '#6B7280' }]}>
                   {conversation.participant_name.charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -465,12 +479,12 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
           <View style={styles.conversationInfo}>
             <View style={styles.conversationHeader}>
-              <Text style={styles.participantName}>{conversation.participant_name}</Text>
-              <Text style={styles.messageTime}>{conversation.last_message_time}</Text>
+              <Text style={[styles.participantName, { color: colors.text }]}>{conversation.participant_name}</Text>
+              <Text style={[styles.messageTime, { color: colors.muted }]}>{conversation.last_message_time}</Text>
             </View>
 
             <View style={styles.conversationDetails}>
-              <Text style={styles.participantRole}>
+              <Text style={[styles.participantRole, { color: colors.muted }]}>
                 {conversation.participant_role === 'teacher' ? '👩‍🏫 Teacher' : '👨‍💼 Admin'}
                 {conversation.child_name && ` • ${conversation.child_name}`}
               </Text>
@@ -479,7 +493,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             <Text
               style={[
                 styles.lastMessage,
-                conversation.unread_count > 0 && styles.unreadMessage
+                { color: colors.muted },
+                conversation.unread_count > 0 && { color: colors.text, fontWeight: '500' }
               ]}
               numberOfLines={1}
             >
@@ -500,10 +515,9 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           <View style={styles.emptyStateIcon}>
             <IconSymbol name="bubble.left.and.bubble.right" size={64} color="#3B82F6" />
           </View>
-          <Text style={styles.emptyStateTitle}>Start Your First Conversation</Text>
-          <Text style={styles.emptyStateText}>
-            Connect with your child&apos;s teachers, school staff, and other parents.
-            Tap the + button above to send your first message!
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>Start Your First Conversation</Text>
+          <Text style={[styles.emptyStateText, { color: colors.muted }]}>
+            {"Connect with your child's teachers, school staff, and other parents.\nTap the + button above to send your first message!"}
           </Text>
 
           <TouchableOpacity
@@ -514,18 +528,18 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             <Text style={styles.emptyStateButtonText}>Start a Conversation</Text>
           </TouchableOpacity>
 
-          <View style={styles.emptyStateFeatures}>
+          <View style={[styles.emptyStateFeatures, {}]}>
             <View style={styles.featureItem}>
               <IconSymbol name="person.2.fill" size={16} color="#10B981" />
-              <Text style={styles.featureText}>Connect with teachers</Text>
+              <Text style={[styles.featureText, { color: colors.muted }]}>Connect with teachers</Text>
             </View>
             <View style={styles.featureItem}>
               <IconSymbol name="bell.fill" size={16} color="#F59E0B" />
-              <Text style={styles.featureText}>Get real-time updates</Text>
+              <Text style={[styles.featureText, { color: colors.muted }]}>Get real-time updates</Text>
             </View>
             <View style={styles.featureItem}>
               <IconSymbol name="heart.fill" size={16} color="#EF4444" />
-              <Text style={styles.featureText}>Stay involved in learning</Text>
+              <Text style={[styles.featureText, { color: colors.muted }]}>Stay involved in learning</Text>
             </View>
           </View>
         </View>
@@ -538,32 +552,31 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       style={styles.announcementsList}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {announcements.map((announcement) => (
-        <View key={announcement.id} style={styles.announcementItem}>
-          <View style={styles.announcementHeader}>
-            <View style={styles.announcementSender}>
-              <IconSymbol name="megaphone.fill" size={20} color="#3B82F6" />
-              <Text style={styles.announcementSenderName}>
-                {announcement.sender_name || 'School Administration'}
-              </Text>
+      {announcements.map((a) => {
+        const timeStr = formatMessageTime(a.created_at);
+        const senderName = a.sender_name || 'School Administration';
+        return (
+          <View key={a.id} style={[styles.announcementItem, { backgroundColor: colors.card }]}>
+            <View style={styles.announcementHeader}>
+              <View style={styles.announcementSender}>
+                <IconSymbol name="megaphone.fill" size={20} color="#3B82F6" />
+                <Text style={[styles.announcementSenderName, { color: '#3B82F6' }]}>{senderName}</Text>
+              </View>
+              <Text style={[styles.announcementTime, { color: colors.muted }]}>{timeStr}</Text>
             </View>
-            <Text style={styles.announcementTime}>
-              {formatMessageTime(announcement.created_at)}
-            </Text>
+            <Text style={[styles.announcementContent, { color: colors.sub }]}>{a.content}</Text>
           </View>
-          <Text style={styles.announcementContent}>{announcement.content}</Text>
-        </View>
-      ))}
+        );
+      })}
 
       {announcements.length === 0 && !loading && (
         <View style={styles.emptyState}>
-          <View style={styles.emptyStateIcon}>
+          <View style={[styles.emptyStateIcon, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)' }]}>
             <IconSymbol name="megaphone.fill" size={64} color="#8B5CF6" />
           </View>
-          <Text style={styles.emptyStateTitle}>No Announcements Yet</Text>
-          <Text style={styles.emptyStateText}>
-            Important school updates, events, and news will appear here.
-            Stay tuned for the latest from your preschool!
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>No Announcements Yet</Text>
+          <Text style={[styles.emptyStateText, { color: colors.muted }]}>
+            {"Important school updates, events, and news will appear here.\nStay tuned for the latest from your preschool!"}
           </Text>
 
           <View style={styles.emptyStateFeatures}>
@@ -592,8 +605,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     return (
       <View style={styles.chatContainer}>
         {/* Chat Header */}
-        <View style={styles.chatHeader}>
-          <TouchableOpacity
+          <View style={[styles.chatHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+            <TouchableOpacity
             style={styles.backButton}
             onPress={() => setSelectedConversation(null)}
           >
@@ -601,10 +614,9 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           </TouchableOpacity>
 
           <View style={styles.chatHeaderInfo}>
-            <Text style={styles.chatParticipantName}>{conversation.participant_name}</Text>
-            <Text style={styles.chatParticipantRole}>
-              {conversation.participant_role === 'teacher' ? 'Teacher' : 'Administrator'}
-              {conversation.child_name && ` • ${conversation.child_name}`}
+            <Text style={[styles.chatParticipantName, { color: colors.text }]}>{conversation.participant_name}</Text>
+            <Text style={[styles.chatParticipantRole, { color: colors.muted }]}>
+              {`${conversation.participant_role === 'teacher' ? 'Teacher' : 'Administrator'}${conversation.child_name ? ` • ${conversation.child_name}` : ''}`}
             </Text>
           </View>
 
@@ -621,7 +633,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         {/* Messages */}
         <ScrollView
           ref={scrollViewRef}
-          style={styles.messagesContainer}
+          style={[styles.messagesContainer, { backgroundColor: colors.bg }]}
           contentContainerStyle={styles.messagesContent}
           onContentSizeChange={scrollToBottom}
         >
@@ -638,13 +650,13 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
                 <View
                   style={[
                     styles.messageBubble,
-                    isFromParent ? styles.sentBubble : styles.receivedBubble
+                    isFromParent ? styles.sentBubble : [styles.receivedBubble, { backgroundColor: colors.card }]
                   ]}
                 >
                   <Text
                     style={[
                       styles.messageText,
-                      isFromParent ? styles.sentText : styles.receivedText
+                      isFromParent ? styles.sentText : [styles.receivedText, { color: colors.text }]
                     ]}
                   >
                     {message.content}
@@ -652,7 +664,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
                   <Text
                     style={[
                       styles.messageTime,
-                      isFromParent ? styles.sentTime : styles.receivedTime
+                      isFromParent ? styles.sentTime : [styles.receivedTime, { color: colors.muted }]
                     ]}
                   >
                     {formatMessageTime(message.created_at)}
@@ -666,15 +678,15 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         {/* Message Input */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.messageInputContainer}
+          style={[styles.messageInputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}
         >
           <View style={styles.messageInputWrapper}>
             <TextInput
-              style={styles.messageInput}
+              style={[styles.messageInput, { borderColor: colors.border, color: colors.text, backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]}
               value={newMessage}
               onChangeText={setNewMessage}
               placeholder="Type a message..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={isDark ? '#64748B' : '#9CA3AF'}
               multiline
               maxLength={1000}
             />
@@ -700,30 +712,32 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.bg }]}>
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text style={styles.loadingText}>Loading messages...</Text>
+        <Text style={[styles.loadingText, { color: colors.muted }]}>Loading messages...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <IconSymbol name="xmark" size={20} color="#6B7280" />
-        </TouchableOpacity>
+      {showHeader && (
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]} onPress={onClose}>
+            <IconSymbol name="xmark" size={20} color={colors.muted} />
+          </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Messages</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
 
-        <TouchableOpacity
-          style={styles.composeButton}
-          onPress={() => setShowComposeModal(true)}
-        >
-          <IconSymbol name="plus" size={20} color="#3B82F6" />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.composeButton, { backgroundColor: isDark ? '#1E293B' : '#EBF4FF' }]}
+            onPress={() => setShowComposeModal(true)}
+          >
+            <IconSymbol name="plus" size={20} color="#3B82F6" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {selectedConversation ? (
         renderChatView()
@@ -895,6 +909,9 @@ const styles = StyleSheet.create({
   },
   selectedConversation: {
     backgroundColor: '#EBF4FF',
+  },
+  selectedConversationDark: {
+    backgroundColor: 'rgba(59,130,246,0.15)',
   },
   avatarContainer: {
     position: 'relative',

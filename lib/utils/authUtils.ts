@@ -212,46 +212,24 @@ export async function sendForgotPasswordEmail(email: string, customResetUrl?: st
   try {
     log.info(`📧 Sending forgot password email to: ${email}`);
 
-    // First, verify the user exists
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, name, email')
-      .eq('email', email)
-      .eq('is_active', true)
-      .maybeSingle();
+    // Always call Supabase password reset to avoid user enumeration issues
+    // Build redirect URL from env with sensible defaults
+    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://app.edudashpro.org.za';
+    const redirect = customResetUrl || `${webUrlBase}/(auth)/reset-password`;
 
-    if (userError) {
-      log.error('❌ Error checking user existence:', userError);
-      throw new Error('Failed to verify user');
-    }
-
-    if (!user) {
-      // For security, don't reveal whether email exists
-      log.info('⚠️ Forgot password requested for non-existent user');
-      return {
-        success: true,
-        message: 'If this email is registered, you will receive reset instructions'
-      };
-    }
-
-    // Use ONLY Supabase's password reset (which includes the working reset link)
-    const { data, error } = await supabase.auth.resetPasswordForEmail(
-      email,
-      {
-        redirectTo: customResetUrl || 'https://app.edudashpro.org.za/(auth)/reset-password'
-      }
-    );
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirect });
 
     if (error) {
       log.error('❌ Password reset request failed:', error);
       throw new Error(`Password reset failed: ${error.message}`);
     }
 
-    log.info('✅ Password reset email sent successfully via Supabase');
+    log.info('✅ Password reset email (GoTrue) initiated successfully');
 
+    // Intentionally generic message regardless of user existence
     return {
       success: true,
-      message: 'Password reset instructions have been sent to your email'
+      message: 'If this email is registered, you will receive reset instructions.'
     };
   } catch (error) {
     log.error('❌ Error sending forgot password email:', error);

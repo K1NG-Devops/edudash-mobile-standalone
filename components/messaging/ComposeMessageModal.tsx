@@ -53,12 +53,12 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   const [messageContent, setMessageContent] = useState('');
   const [sending, setSending] = useState(false);
   const [activeTab, setActiveTab] = useState<'teachers' | 'parents' | 'admin'>('teachers');
-  const [attachedMedia, setAttachedMedia] = useState<Array<{
+  const [attachedMedia, setAttachedMedia] = useState<{
     uri: string;
     type: string;
     fileName: string;
     fileSize?: number;
-  }>>([]);
+  }[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
   useEffect(() => {

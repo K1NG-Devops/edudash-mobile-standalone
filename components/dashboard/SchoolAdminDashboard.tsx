@@ -96,8 +96,7 @@ export default function SchoolAdminDashboard({
   };
 
   const handleNavigate = (route: string) => {
-
-    // Handle navigation
+    // Integrate with Expo Router navigation if needed
   };
 
   const renderTabButton = (tab: TabType, title: string, icon: string) => (
@@ -805,7 +804,7 @@ export default function SchoolAdminDashboard({
       </View>
 
       <ScrollView
-        style={styles.scrollView}
+        style={[styles.scrollView, { marginBottom: 56 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

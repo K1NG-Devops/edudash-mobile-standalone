@@ -57,19 +57,28 @@ const fetchDashboardStats = async (parentId: string, children: Child[]): Promise
 // Fetch recent updates from real data sources
 const fetchRecentUpdates = async (parentId: string, children: Child[]): Promise<RecentUpdate[]> => {
   try {
-    // Fetch homework updates
+    // Collect class IDs for the parent's children
+    const childIds = children.map(c => c.id).filter(Boolean);
+    let classIds: string[] = [];
+    if (childIds.length > 0) {
+      const { data: childRows } = await supabase
+        .from('students')
+        .select('id, class_id')
+        .in('id', childIds);
+      classIds = (childRows || []).map((r: any) => r.class_id).filter(Boolean);
+    }
+
+    // Fetch homework updates for those classes (or recent global ones as fallback)
     const { data: homeworkData } = await supabase
       .from('homework_assignments')
       .select(`
         id,
         title,
         description,
-        due_date,
         created_at,
-        student_id,
-        students (first_name, last_name)
+        class_id
       `)
-      .in('student_id', children.map(c => c.id))
+      .in('class_id', classIds.length > 0 ? classIds : ['00000000-0000-0000-0000-000000000000'])
       .order('created_at', { ascending: false })
       .limit(5);
 
@@ -91,7 +100,7 @@ const fetchRecentUpdates = async (parentId: string, children: Child[]): Promise<
           title: hw.title || 'New Assignment',
           description: hw.description || 'Check your assignments',
           timestamp: formatRelativeTime(hw.created_at),
-          child_id: hw.student_id,
+          child_id: undefined as any,
           icon: 'doc.text.fill'
         });
       });
@@ -121,63 +130,57 @@ const fetchRecentUpdates = async (parentId: string, children: Child[]): Promise<
 // Fetch upcoming events from real data sources
 const fetchUpcomingEvents = async (parentId: string, children: Child[]): Promise<UpcomingEvent[]> => {
   try {
-    // Fetch homework due dates as events
-    const { data: upcomingHomework } = await supabase
+    // Collect class IDs for the parent's children
+    const childIds = children.map(c => c.id).filter(Boolean);
+    let classIds: string[] = [];
+    if (childIds.length > 0) {
+      const { data: childRows } = await supabase
+        .from('students')
+        .select('id, class_id')
+        .in('id', childIds);
+      classIds = (childRows || []).map((r: any) => r.class_id).filter(Boolean);
+    }
+
+    // Fetch homework assignments for those classes and compute due dates from created_at + offset
+    const { data: hwRows } = await supabase
       .from('homework_assignments')
-      .select(`
-        id,
-        title,
-        due_date,
-        student_id,
-        students (first_name, last_name)
-      `)
-      .in('student_id', children.map(c => c.id))
-      .gte('due_date', new Date().toISOString())
-      .order('due_date', { ascending: true })
-      .limit(5);
+      .select('id, title, created_at, class_id')
+      .in('class_id', classIds.length > 0 ? classIds : ['00000000-0000-0000-0000-000000000000'])
+      .order('created_at', { ascending: true })
+      .limit(15);
 
-    // Fetch scheduled events/activities
-    const { data: eventsData } = await supabase
-      .from('activities')
-      .select('*')
-      .gte('scheduled_date', new Date().toISOString())
-      .order('scheduled_date', { ascending: true })
-      .limit(3);
+    const now = new Date();
+    type RawEvent = { dueMs: number; id: string; title: string };
+    const rawEvents: RawEvent[] = [];
 
-    const events: UpcomingEvent[] = [];
-    
-    // Add homework due dates
-    if (upcomingHomework) {
-      upcomingHomework.forEach(hw => {
-        const dueDate = new Date(hw.due_date);
-        events.push({
+    (hwRows || []).forEach((hw: any) => {
+      const created = new Date(hw.created_at);
+      // Fallback: if no offset column exists, treat due as created_at (same-day)
+      const due = created;
+      if (due >= now) {
+        rawEvents.push({
           id: `hw-${hw.id}`,
           title: hw.title || 'Assignment Due',
-          date: formatUpcomingDate(hw.due_date),
-          time: dueDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          dueMs: due.getTime(),
+        });
+      }
+    });
+
+    const result: UpcomingEvent[] = rawEvents
+      .sort((a, b) => a.dueMs - b.dueMs)
+      .slice(0, 3)
+      .map(ev => {
+        const d = new Date(ev.dueMs);
+        return {
+          id: ev.id,
+          title: ev.title,
+          date: formatUpcomingDate(d.toISOString()),
+          time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
           type: 'assignment',
-          child_id: hw.student_id
-        });
+        } as UpcomingEvent;
       });
-    }
-    
-    // Add scheduled activities
-    if (eventsData) {
-      eventsData.forEach(event => {
-        const eventDate = new Date(event.scheduled_date);
-        events.push({
-          id: `event-${event.id}`,
-          title: event.title || 'School Activity',
-          date: formatUpcomingDate(event.scheduled_date),
-          time: eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-          type: 'activity',
-          location: event.location
-        });
-      });
-    }
-    
-    // Sort by date and return top 3
-    return events.slice(0, 3);
+
+    return result;
   } catch (error) {
     // Removed debug statement: console.error('Error fetching upcoming events:', error);
     return [];

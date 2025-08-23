@@ -17,6 +17,9 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { NotificationService } from '@/lib/services/notificationService';
 import AdPlacement from '@/components/ui/AdPlacement';
+import { useTheme } from '@/contexts/ThemeContext';
+import ThemedCard from '@/components/ui/ThemedCard';
+import ThemedButton from '@/components/ui/ThemedButton';
 
 interface Notification {
   id: string;
@@ -32,6 +35,7 @@ interface Notification {
 }
 
 export default function NotificationsScreen() {
+  const { colorScheme } = useTheme();
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,11 +165,11 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#0B1220' : '#F8FAFC' }]}>
       {/* Optional Ad banner */}
       <AdPlacement>
         {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colorScheme === 'dark' ? '#0F172A' : '#FFFFFF', borderBottomColor: colorScheme === 'dark' ? '#1F2937' : '#E5E7EB' }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity
             style={styles.backButton}
@@ -240,9 +244,7 @@ export default function NotificationsScreen() {
           <IconSymbol name="exclamationmark.triangle.fill" size={48} color="#EF4444" />
           <Text style={styles.errorTitle}>Failed to Load</Text>
           <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchNotifications}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
+          <ThemedButton title="Try Again" onPress={fetchNotifications} />
         </View>
       ) : (
         <ScrollView
@@ -263,43 +265,42 @@ export default function NotificationsScreen() {
           ) : (
             <View style={styles.notificationsList}>
               {notifications.map((notification) => (
-                <TouchableOpacity
-                  key={notification.id}
-                  style={[
-                    styles.notificationCard,
-                    !notification.read && styles.unreadCard
-                  ]}
-                  onPress={() => handleNotificationPress(notification)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.notificationIcon}>
-                    <IconSymbol
-                      name={getNotificationIcon(notification.type)}
-                      size={20}
-                      color={getNotificationColor(notification.type)}
-                    />
-                  </View>
-                  
-                  <View style={styles.notificationContent}>
-                    <View style={styles.notificationHeader}>
-                      <Text style={[
-                        styles.notificationTitle,
-                        !notification.read && styles.unreadTitle
-                      ]}>
-                        {notification.title}
-                      </Text>
-                      <Text style={styles.notificationTime}>
-                        {formatTimeAgo(notification.created_at)}
-                      </Text>
+                <ThemedCard key={notification.id}>
+                  <TouchableOpacity
+                    style={styles.notificationRow}
+                    onPress={() => handleNotificationPress(notification)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.notificationIcon}>
+                      <IconSymbol
+                        name={getNotificationIcon(notification.type)}
+                        size={20}
+                        color={getNotificationColor(notification.type)}
+                      />
                     </View>
                     
-                    <Text style={styles.notificationMessage}>
-                      {notification.message}
-                    </Text>
-                    
-                    {!notification.read && <View style={styles.unreadDot} />}
-                  </View>
-                </TouchableOpacity>
+                    <View style={styles.notificationContent}>
+                      <View style={styles.notificationHeader}>
+                        <Text style={[
+                          styles.notificationTitle,
+                          !notification.read && styles.unreadTitle,
+                          { color: colorScheme === 'dark' ? '#F1F5F9' : '#111827' }
+                        ]}>
+                          {notification.title}
+                        </Text>
+                        <Text style={[styles.notificationTime, { color: colorScheme === 'dark' ? '#94A3B8' : '#6B7280' }]}>
+                          {formatTimeAgo(notification.created_at)}
+                        </Text>
+                      </View>
+                      
+                      <Text style={[styles.notificationMessage, { color: colorScheme === 'dark' ? '#CBD5E1' : '#374151' }]}>
+                        {notification.message}
+                      </Text>
+                      
+                      {!notification.read && <View style={styles.unreadDot} />}
+                    </View>
+                  </TouchableOpacity>
+                </ThemedCard>
               ))}
             </View>
           )}
@@ -425,17 +426,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
   },
-  notificationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+  notificationRow: {
     flexDirection: 'row',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
     position: 'relative',
   },
   unreadCard: {

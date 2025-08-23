@@ -3,6 +3,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -25,6 +27,7 @@ interface UserSettings {
 }
 
 export default function SettingsScreen() {
+  const { colorScheme, setColorScheme } = useTheme();
   const { user, signOut } = useAuth();
   const [settings, setSettings] = useState<UserSettings>({
     notifications_enabled: true,
@@ -35,6 +38,7 @@ export default function SettingsScreen() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [currentRole, setCurrentRole] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     loadSettings();
@@ -58,6 +62,8 @@ export default function SettingsScreen() {
       if (error) {
         // Removed debug statement: console.error('Error loading settings:', error);
       } else {
+        // track role from profile
+        setCurrentRole((data as any)?.role);
         // For now, use defaults since we don't have a settings table yet
         setSettings({
           notifications_enabled: true,
@@ -151,10 +157,12 @@ export default function SettingsScreen() {
     );
   }
 
+  const palette = Colors[colorScheme];
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#0B1220' : '#F8FAFC' }]}>
       <MobileHeader
-        user={{ name: user?.email || 'User', role: 'user' }}
+        user={{ name: user?.email || 'User', role: (currentRole as any) || 'user' }}
         schoolName="Settings"
         onNotificationsPress={() => handleNavigate('/screens/notifications')}
         onSignOut={handleSignOut}
@@ -164,21 +172,21 @@ export default function SettingsScreen() {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <Text style={styles.headerSubtitle}>Customize your app experience</Text>
+        <View style={[styles.header, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderBottomColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
+          <Text style={[styles.headerTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Settings</Text>
+          <Text style={[styles.headerSubtitle, { color: colorScheme === 'dark' ? '#E5E7EB' : '#6B7280' }]}>Customize your app experience</Text>
         </View>
 
         {/* Notifications Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
+        <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
+          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Notifications</Text>
 
-          <View style={styles.settingItem}>
+          <View style={[styles.settingItem, { borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}> 
             <View style={styles.settingInfo}>
-              <IconSymbol name="bell" size={20} color="#6B7280" />
+              <IconSymbol name="bell" size={20} color={colorScheme === 'dark' ? '#E5E7EB' : '#6B7280'} />
               <View style={styles.settingContent}>
-                <Text style={styles.settingLabel}>Push Notifications</Text>
-                <Text style={styles.settingDescription}>
+                <Text style={[styles.settingLabel, { color: colorScheme === 'dark' ? '#FFFFFF' : '#111827' }]}>Push Notifications</Text>
+                <Text style={[styles.settingDescription, { color: colorScheme === 'dark' ? '#E5E7EB' : '#6B7280' }]}> 
                   Receive notifications about important updates
                 </Text>
               </View>
@@ -186,18 +194,18 @@ export default function SettingsScreen() {
             <Switch
               value={settings.push_notifications}
               onValueChange={(value) => updateSetting('push_notifications', value)}
-              trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
-              thumbColor="#FFFFFF"
+              trackColor={{ false: '#475569', true: '#8B5CF6' }}
+              thumbColor={colorScheme === 'dark' ? '#E2E8F0' : '#FFFFFF'}
               disabled={saving}
             />
           </View>
 
-          <View style={styles.settingItem}>
+          <View style={[styles.settingItem, { borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
             <View style={styles.settingInfo}>
-              <IconSymbol name="envelope" size={20} color="#6B7280" />
+              <IconSymbol name="envelope" size={20} color={colorScheme === 'dark' ? '#E5E7EB' : '#6B7280'} />
               <View style={styles.settingContent}>
-                <Text style={styles.settingLabel}>Email Notifications</Text>
-                <Text style={styles.settingDescription}>
+                <Text style={[styles.settingLabel, { color: colorScheme === 'dark' ? '#FFFFFF' : '#111827' }]}>Email Notifications</Text>
+                <Text style={[styles.settingDescription, { color: colorScheme === 'dark' ? '#E5E7EB' : '#6B7280' }]}> 
                   Receive email notifications for important events
                 </Text>
               </View>
@@ -205,51 +213,104 @@ export default function SettingsScreen() {
             <Switch
               value={settings.email_notifications}
               onValueChange={(value) => updateSetting('email_notifications', value)}
-              trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
-              thumbColor="#FFFFFF"
+              trackColor={{ false: '#475569', true: '#8B5CF6' }}
+              thumbColor={colorScheme === 'dark' ? '#E2E8F0' : '#FFFFFF'}
               disabled={saving}
             />
           </View>
         </View>
 
         {/* Appearance Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Appearance</Text>
+        <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
+          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Appearance</Text>
 
-          <View style={styles.settingItem}>
+          <View style={[styles.settingItem, { borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
             <View style={styles.settingInfo}>
-              <IconSymbol name="moon.fill" size={20} color="#6B7280" />
+              <IconSymbol name="moon.fill" size={20} color={colorScheme === 'dark' ? '#E5E7EB' : '#6B7280'} />
               <View style={styles.settingContent}>
-                <Text style={styles.settingLabel}>Dark Mode</Text>
-                <Text style={styles.settingDescription}>
+                <Text style={[styles.settingLabel, { color: colorScheme === 'dark' ? '#FFFFFF' : '#111827' }]}>Dark Mode</Text>
+                <Text style={[styles.settingDescription, { color: colorScheme === 'dark' ? '#E5E7EB' : '#6B7280' }]}> 
                   Use dark theme for better visibility in low light
                 </Text>
               </View>
             </View>
             <Switch
               value={settings.dark_mode}
-              onValueChange={(value) => updateSetting('dark_mode', value)}
-              trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
-              thumbColor="#FFFFFF"
+              onValueChange={(value) => {
+                updateSetting('dark_mode', value);
+                setColorScheme(value ? 'dark' : 'light');
+                // also dispatch for any listeners
+                try { const evt = new CustomEvent('theme-toggle', { detail: value ? 'dark' : 'light' }); if (typeof window !== 'undefined') window.dispatchEvent(evt); } catch {}
+              }}
+              trackColor={{ false: '#475569', true: '#8B5CF6' }}
+              thumbColor={colorScheme === 'dark' ? '#E2E8F0' : '#FFFFFF'}
               disabled={saving}
             />
           </View>
         </View>
+
+        {/* Admin Actions */}
+        {(currentRole === 'superadmin' || currentRole === 'preschool_admin' || currentRole === 'principal') && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Admin</Text>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={async () => {
+                try {
+                  const { data: profile } = await supabase.from('users').select('id').eq('auth_user_id', user!.id).maybeSingle();
+                  if (!profile?.id) return Alert.alert('Error', 'User profile not found');
+
+const { data: { session } } = await supabase.auth.getSession();
+                  const resp = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/notify-user-auth`, {
+                    method: 'POST',
+                    headers: {
+'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${session?.access_token}`,
+                      'apikey': String(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''),
+                    },
+                    body: JSON.stringify({
+                      user_id: profile.id,
+                      title: 'Admin Test Notification',
+                      message: 'This notification was sent via role-authorized function.',
+                      type: 'activity',
+                      action_url: '/screens/notifications'
+                    })
+                  });
+
+                  if (!resp.ok) {
+                    let reason = `HTTP ${resp.status}`;
+                    try { const j = await resp.json(); if (j?.error) reason = j.error; } catch {}
+                    return Alert.alert('Failed', reason);
+                  }
+                  const j = await resp.json().catch(() => ({}));
+                  if (j?.success) Alert.alert('Success', 'Test notification sent.'); else Alert.alert('Notice', JSON.stringify(j));
+                } catch (e: any) {
+                  Alert.alert('Error', e?.message || 'Failed to send test notification');
+                }
+              }}
+            >
+              <IconSymbol name="paperplane" size={20} color="#10B981" />
+              <Text style={styles.actionButtonText}>Send test notification</Text>
+              <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Account Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => handleNavigate('/screens/profile')}>
-            <IconSymbol name="person.circle" size={20} color="#8B5CF6" />
-            <Text style={styles.actionButtonText}>View Profile</Text>
-            <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+            <IconSymbol name="person.circle" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
+            <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>View Profile</Text>
+            <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={clearCache}>
-            <IconSymbol name="trash" size={20} color="#8B5CF6" />
-            <Text style={styles.actionButtonText}>Clear Cache</Text>
-            <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+            <IconSymbol name="trash" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
+            <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Clear Cache</Text>
+            <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
         </View>
 
@@ -258,15 +319,15 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Privacy & Security</Text>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Privacy Policy', 'Privacy policy would be shown here')}>
-            <IconSymbol name="lock.shield" size={20} color="#8B5CF6" />
-            <Text style={styles.actionButtonText}>Privacy Policy</Text>
-            <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+            <IconSymbol name="lock.shield" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
+            <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Privacy Policy</Text>
+            <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Terms of Service', 'Terms of service would be shown here')}>
-            <IconSymbol name="doc.text" size={20} color="#8B5CF6" />
-            <Text style={styles.actionButtonText}>Terms of Service</Text>
-            <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+            <IconSymbol name="doc.text" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
+            <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Terms of Service</Text>
+            <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
         </View>
 
@@ -275,15 +336,15 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Support</Text>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Help', 'Help documentation would be shown here')}>
-            <IconSymbol name="questionmark.circle" size={20} color="#8B5CF6" />
-            <Text style={styles.actionButtonText}>Help & FAQ</Text>
-            <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+            <IconSymbol name="questionmark.circle" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
+            <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Help & FAQ</Text>
+            <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Contact', 'Contact support form would be shown here')}>
-            <IconSymbol name="envelope" size={20} color="#8B5CF6" />
-            <Text style={styles.actionButtonText}>Contact Support</Text>
-            <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+            <IconSymbol name="envelope" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
+            <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Contact Support</Text>
+            <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
         </View>
 

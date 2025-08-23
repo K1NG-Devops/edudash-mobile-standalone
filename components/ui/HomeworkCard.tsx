@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 
-const { width: screenWidth } = Dimensions.get('window');
-
 import { HomeworkAssignment } from '@/types/homework-types';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 interface HomeworkCardProps {
   assignment: HomeworkAssignment;

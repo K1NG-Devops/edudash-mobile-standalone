@@ -1,11 +1,16 @@
 import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary';
 import { AuthProvider } from '@/contexts/SimpleWorkingAuth';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import * as Notifications from 'expo-notifications';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
+import GlobalBottomNav from '@/components/navigation/GlobalBottomNav';
 
 export default function RootLayout() {
+  const pathname = usePathname();
+  const hideBottomNav = pathname === '/' || pathname.startsWith('/(auth)');
+
   useEffect(() => {
     const register = async () => {
       try {
@@ -32,14 +37,25 @@ export default function RootLayout() {
   return (
     <AuthErrorBoundary>
       <AuthProvider>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="screens" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
+        <ThemeProvider>
+          <View style={styles.container}>
+            <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="screens" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            {!hideBottomNav && <GlobalBottomNav />}
+          </View>
+        </ThemeProvider>
       </AuthProvider>
     </AuthErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

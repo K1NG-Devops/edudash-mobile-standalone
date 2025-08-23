@@ -9,10 +9,10 @@ import {
     Text,
     TouchableOpacity,
     View
-} from 'react-native';
-import { AppState } from 'react-native';
+, AppState , Appearance, Platform } from 'react-native';
 import { MobileSidebar } from './MobileSidebar';
 import { NotificationService } from '@/lib/services/notificationService';
+import { setGlobalColorScheme } from '@/contexts/ThemeContext';
 
 interface MobileHeaderProps {
   user: {
@@ -96,9 +96,20 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
   private _appStateSub: any = null;
 
   private toggleTheme = () => {
-    this.setState({
-      colorScheme: this.state.colorScheme === 'light' ? 'dark' : 'light'
-    });
+    const next = this.state.colorScheme === 'light' ? 'dark' : 'light';
+    this.setState({ colorScheme: next });
+    try {
+      // Update global theme across platforms
+      setGlobalColorScheme(next);
+      // Also notify web listeners that rely on window events
+      // @ts-ignore
+      const evt = new CustomEvent('theme-toggle', { detail: next });
+      // @ts-ignore
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        // @ts-ignore
+        window.dispatchEvent(evt);
+      }
+    } catch {}
   };
 
   private fetchUnreadCount = async () => {
@@ -113,6 +124,22 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
   };
 
   componentDidMount(): void {
+    // Initialize theme from persisted value or system preference
+    try {
+      let scheme: 'light' | 'dark' | null = null;
+      // @ts-ignore
+      if (typeof window !== 'undefined' && window.localStorage) {
+        // @ts-ignore
+        const stored = window.localStorage.getItem('ui_color_scheme');
+        if (stored === 'light' || stored === 'dark') scheme = stored;
+      }
+      if (!scheme) {
+        const sys = Appearance?.getColorScheme?.() as 'light' | 'dark' | null;
+        if (sys) scheme = sys;
+      }
+      if (scheme) this.setState({ colorScheme: scheme });
+    } catch {}
+
     // Initial fetch if we can resolve a user id
     this.fetchUnreadCount();
     // Poll periodically to keep badge fresh
@@ -122,12 +149,18 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
     try {
       this._appStateSub = AppState.addEventListener('change', this._onAppStateChange as any);
     } catch {}
-    // Refresh on window focus (web)
+    // Refresh on window focus (web) and listen for theme changes
     try {
       // @ts-ignore
       if (typeof window !== 'undefined' && window.addEventListener) {
         // @ts-ignore
         window.addEventListener('focus', this.fetchUnreadCount);
+        // Keep header in sync if theme changes elsewhere
+        // @ts-ignore
+        window.addEventListener('theme-toggle', (e: any) => {
+          const val = e?.detail;
+          if (val === 'light' || val === 'dark') this.setState({ colorScheme: val });
+        });
       }
     } catch {}
   }

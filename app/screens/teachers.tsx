@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { TeacherManagement } from '@/components/admin/TeacherManagement';
 
 interface TeacherRow { id: string; name: string; email?: string | null; }
 
@@ -14,6 +15,7 @@ export default function TeachersScreen() {
   const [q, setQ] = useState('');
   const [items, setItems] = useState<TeacherRow[]>([]);
   const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [showInvite, setShowInvite] = useState(false);
 
   const load = async () => {
     if (!profile?.preschool_id) return;
@@ -42,10 +44,16 @@ export default function TeachersScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.filtersRow}>
-          <TouchableOpacity style={[styles.filterBtn, status==='all'&&styles.filterActive]} onPress={()=>setStatus('all')}><Text style={[styles.filterText, status==='all'&&styles.filterTextActive]}>All</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.filterBtn, status==='active'&&styles.filterActive]} onPress={()=>setStatus('active')}><Text style={[styles.filterText, status==='active'&&styles.filterTextActive]}>Active</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.filterBtn, status==='inactive'&&styles.filterActive]} onPress={()=>setStatus('inactive')}><Text style={[styles.filterText, status==='inactive'&&styles.filterTextActive]}>Inactive</Text></TouchableOpacity>
+        <View style={[styles.filtersRow, { justifyContent: 'space-between', alignItems: 'center' }]}>
+          <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
+            <TouchableOpacity style={[styles.filterBtn, status==='all'&&styles.filterActive]} onPress={()=>setStatus('all')}><Text style={[styles.filterText, status==='all'&&styles.filterTextActive]}>All</Text></TouchableOpacity>
+            <TouchableOpacity style={[styles.filterBtn, status==='active'&&styles.filterActive]} onPress={()=>setStatus('active')}><Text style={[styles.filterText, status==='active'&&styles.filterTextActive]}>Active</Text></TouchableOpacity>
+            <TouchableOpacity style={[styles.filterBtn, status==='inactive'&&styles.filterActive]} onPress={()=>setStatus('inactive')}><Text style={[styles.filterText, status==='inactive'&&styles.filterTextActive]}>Inactive</Text></TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.inviteBtn} onPress={() => setShowInvite(true)}>
+            <IconSymbol name="plus.circle.fill" size={18} color="#10B981" />
+            <Text style={styles.inviteText}>Invite</Text>
+          </TouchableOpacity>
         </View>
         <Text style={styles.title}>Teachers</Text>
         <TextInput placeholder="Search teachers" value={q} onChangeText={setQ} style={styles.search} />
@@ -74,6 +82,14 @@ export default function TeachersScreen() {
           </View>
         )}
       />
+      {showInvite && (
+        <TeacherManagement
+          preschoolId={String(profile?.preschool_id || '')}
+          principalId={String(profile?.id || '')}
+          visible={showInvite}
+          onClose={() => setShowInvite(false)}
+        />
+      )}
     </View>
   );
 }
@@ -82,6 +98,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: { padding: 16 },
   filtersRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  inviteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ECFDF5', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0' },
+  inviteText: { color: '#065F46', fontWeight: '700' },
   filterBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: '#E5E7EB' },
   filterActive: { backgroundColor: '#05966920', borderWidth: 1, borderColor: '#05966960' },
   filterText: { color: '#374151', fontSize: 12, fontWeight: '600' },

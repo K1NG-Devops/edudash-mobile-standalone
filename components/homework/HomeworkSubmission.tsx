@@ -12,13 +12,13 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-
-const { width: screenWidth } = Dimensions.get('window');
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { HomeworkAssignment } from '@/types/homework-types';
 import { HomeworkService } from '@/lib/services/homeworkService';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 interface HomeworkSubmissionProps {
   visible: boolean;
@@ -36,12 +36,12 @@ export const HomeworkSubmission: React.FC<HomeworkSubmissionProps> = ({
   onSubmit,
 }) => {
   const [submissionText, setSubmissionText] = useState('');
-  const [attachments, setAttachments] = useState<Array<{
+  const [attachments, setAttachments] = useState<{
     uri: string;
     fileName: string;
     mimeType: string;
     fileSize?: number;
-  }>>([]);
+  }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
 

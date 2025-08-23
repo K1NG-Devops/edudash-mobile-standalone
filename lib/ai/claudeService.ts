@@ -97,13 +97,13 @@ export class ClaudeAIService {
       title: string;
       description: string;
       content: string;
-      activities: Array<{
+      activities: {
         title: string;
         description: string;
         instructions: string;
         materials: string[];
         estimatedTime: number;
-      }>;
+      }[];
       assessmentQuestions: string[];
       homeExtension: string[];
     };
@@ -364,11 +364,11 @@ Format as JSON:
   async analyzeStudentProgress(params: {
     studentName: string;
     age: number;
-    recentActivities: Array<{
+    recentActivities: {
       activity: string;
       performance: string;
       date: string;
-    }>;
+    }[];
     teacherNotes: string[];
     userId: string;
     preschoolId: string;
@@ -526,7 +526,7 @@ export const claudeService = {
       }
       return { success: false, content: '' } as { success: boolean; content: string };
     } catch (error) {
-      // eslint-disable-next-line no-console
+       
       log.error('Claude simple generateContent error:', error);
       return { success: false, content: '' } as { success: boolean; content: string };
     }

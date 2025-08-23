@@ -33,7 +33,8 @@ export class MessageService {
           )
         `)
         .or(`recipient_id.eq.${userId},recipient_id.eq.${preschoolId}`)
-        .eq('message.preschool_id', preschoolId)
+        // Filter on the joined messages table (PostgREST expects the table name, not the alias)
+        .eq('messages.preschool_id', preschoolId)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
@@ -88,7 +89,7 @@ export class MessageService {
     subject: string,
     content: string,
     messageType: MessageType,
-    recipients: Array<{ type: MessageRecipientType; id: string }>,
+    recipients: { type: MessageRecipientType; id: string }[],
     options?: {
       priority?: 'low' | 'normal' | 'high' | 'urgent';
       attachmentUrls?: string[];
@@ -359,7 +360,7 @@ export class MessageService {
   // Create notifications for message recipients
   private static async createNotifications(
     messageId: string,
-    recipients: Array<{ type: MessageRecipientType; id: string }>,
+    recipients: { type: MessageRecipientType; id: string }[],
     messageType: MessageType
   ) {
     try {

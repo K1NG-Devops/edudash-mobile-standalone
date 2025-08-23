@@ -14,8 +14,7 @@ import {
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { lessonGenerator, LESSON_TEMPLATES, LessonTemplate } from '@/lib/ai/lessonGenerator';
-import { LessonContent } from '@/lib/ai/claudeService';
-import { isAIAvailable } from '@/lib/ai/claudeService';
+import { LessonContent , isAIAvailable } from '@/lib/ai/claudeService';
 
 const { width: screenWidth } = Dimensions.get('window');
 

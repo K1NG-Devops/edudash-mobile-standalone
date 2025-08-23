@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 // @ts-nocheck
 import { claudeService } from '@/lib/ai/claudeService';
 import { supabase } from '@/lib/supabase';
