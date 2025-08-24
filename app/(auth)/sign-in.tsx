@@ -37,32 +37,53 @@ export default function SignIn() {
       if (result.error) {
         Alert.alert('Sign In Failed', result.error);
       } else {
-        // After sign-in, decide destination by role
+        // After sign-in, decide destination by role and check if password reset is needed
         // Wait briefly for profile to be available to avoid race with auth listener/RLS
         try {
           const { data: userResult } = await supabase.auth.getUser();
           const authId = userResult.user?.id;
 
-          const waitForRole = async (
+          const waitForProfile = async (
             id: string,
             attempts = 8,
             delayMs = 200
-          ): Promise<string | null> => {
+          ): Promise<{ role: string; passwordResetRequired: boolean } | null> => {
             for (let i = 0; i < attempts; i++) {
               const { data: profile, error: roleErr } = await supabase
                 .from('users')
-                .select('role')
+                .select('role, password_reset_required')
                 .eq('auth_user_id', id)
                 .single();
-              if (!roleErr && profile?.role) return profile.role as string;
+              if (!roleErr && profile?.role) {
+                return {
+                  role: profile.role as string,
+                  passwordResetRequired: profile.password_reset_required || false
+                };
+              }
               await new Promise((r) => setTimeout(r, delayMs));
             }
             return null;
           };
 
           if (authId) {
-            const role = await waitForRole(authId);
-            if (role === 'superadmin') {
+            const profileData = await waitForProfile(authId);
+            
+            // Check if user needs to reset their password
+            if (profileData?.passwordResetRequired) {
+              Alert.alert(
+                'Password Reset Required',
+                'Please set a new password to continue.',
+                [
+                  {
+                    text: 'Set New Password',
+                    onPress: () => router.replace('/reset-password')
+                  }
+                ]
+              );
+              return;
+            }
+            
+            if (profileData?.role === 'superadmin') {
               router.replace('/screens/super-admin-dashboard');
               return;
             }
