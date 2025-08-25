@@ -435,3 +435,5 @@ function getFeaturesByTier(tier: SubscriptionTier): string[] {
 function getAllFeatures(): string[] {
     return AVAILABLE_FEATURES.map(feature => feature.id);
 }
+
+export default SubscriptionProvider;

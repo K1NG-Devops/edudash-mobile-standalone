@@ -306,9 +306,17 @@ export const PricingComponent = ({
 
   const handleSelectPlan = async (plan: PricingPlan) => {
     
-    // Check if user is authenticated
+    // For embedded pricing, allow plan selection without auth
+    // Users will be prompted to create accounts during the flow
     if (!session || !user) {
-      setShowAuthModal(true);
+      // Store the selected plan and show role selection
+      setSelectedPlan(plan.id);
+      if (showRoles) {
+        setShowRoleModal(true);
+      } else {
+        // If no roles needed, go directly to auth with plan params
+        router.push(`/(auth)/sign-up?plan=${plan.value}&role=parent&flow_type=individual_family`);
+      }
       return;
     }
 
@@ -405,7 +413,11 @@ export const PricingComponent = ({
     
     if (onPlanSelect) {
       onPlanSelect(plan, role);
+    } else if (!session || !user) {
+      // User not authenticated, route to sign-up with plan and role params
+      router.push(`/(auth)/sign-up?plan=${plan.value}&role=${role}&flow_type=individual_family`);
     } else {
+      // User authenticated, proceed with plan selection
       await processPlanSelection(plan, role);
     }
   };
