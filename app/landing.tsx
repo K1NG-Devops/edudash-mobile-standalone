@@ -853,7 +853,7 @@ const EmbeddedPricingSection = () => {
         
         <PricingComponent 
           embedded={true}
-          showRoles={false}
+          showRoles={true}
           showComparison={false}
         />
         
