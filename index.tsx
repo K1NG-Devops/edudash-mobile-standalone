@@ -78,7 +78,7 @@ class WelcomeScreen extends React.Component {
 
               <TouchableOpacity
                 style={styles.parentSignupButton}
-                onPress={() => router.push('/(auth)/parent-signup' as any)}
+                onPress={() => router.push('/(auth)/sign-up?role=parent&flow_type=individual_family' as any)}
               >
                 <Text style={styles.parentSignupText}>Join as Parent →</Text>
               </TouchableOpacity>

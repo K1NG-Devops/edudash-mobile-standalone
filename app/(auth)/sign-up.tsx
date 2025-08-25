@@ -51,8 +51,17 @@ export default function SignUp() {
             return;
         }
 
-        // Generic account creation (future). For now route to sign-in.
-        router.push('/(auth)/sign-in');
+        // Handle generic account creation with proper routing based on params
+        const plan = params?.plan as string;
+        const role = params?.role as string;
+        
+        if (plan && role) {
+            // User came from pricing page with plan selection
+            router.push(`/(auth)/sign-up-complete?plan=${plan}&role=${role}`);
+        } else {
+            // Basic registration, route to dashboard
+            router.push('/(tabs)/dashboard');
+        }
     };
 
     return (
