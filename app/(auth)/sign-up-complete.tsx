@@ -112,8 +112,17 @@ export default function SignUpComplete() {
     
     try {
       if (planDetails.id === 'free-tier') {
-        // Free tier - go directly to dashboard
-        router.replace('/(tabs)/dashboard');
+        // Free tier - go to welcome page first, then dashboard
+        Alert.alert(
+          'Welcome to EduDash Pro!',
+          'Your free account has been created successfully.',
+          [
+            {
+              text: 'Get Started',
+              onPress: () => router.replace('/welcome-success')
+            }
+          ]
+        );
       } else {
         // Paid plans - initiate payment flow
         // For now, we'll simulate a successful payment
@@ -157,7 +166,7 @@ export default function SignUpComplete() {
         {
           text: 'Start Trial',
           onPress: () => {
-            router.replace('/(tabs)/dashboard');
+            router.replace('/welcome-success');
           }
         }
       ]
@@ -282,7 +291,7 @@ export default function SignUpComplete() {
               
               <TouchableOpacity 
                 style={styles.skipButton}
-                onPress={() => router.replace('/(tabs)/dashboard')}
+                onPress={() => router.replace('/welcome-success')}
               >
                 <Text style={styles.skipButtonText}>Skip for now</Text>
               </TouchableOpacity>

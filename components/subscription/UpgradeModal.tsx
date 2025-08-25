@@ -20,7 +20,7 @@ interface UpgradeModalProps {
     onUpgrade?: () => void;
 }
 
-export const UpgradeModal: React.FC<UpgradeModalProps> = ({
+const UpgradeModal: React.FC<UpgradeModalProps> = ({
     visible,
     featureName,
     featureDescription,
@@ -416,4 +416,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
 });
+
+export default UpgradeModal;
 

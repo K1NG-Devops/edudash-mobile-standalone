@@ -12,7 +12,7 @@ interface PlanStatusProps {
     onUpgrade?: () => void;
 }
 
-export const PlanStatus: React.FC<PlanStatusProps> = ({
+const PlanStatus: React.FC<PlanStatusProps> = ({
     subscription,
     aiUsage,
     loading = false,
@@ -318,4 +318,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 });
+
+export default PlanStatus;
 
