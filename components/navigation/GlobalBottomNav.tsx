@@ -46,8 +46,22 @@ export default function GlobalBottomNav() {
 
   const tabs: TabItem[] = normalizedRole === 'teacher' ? teacherTabs : adminTabs;
 
-  const iconColor = isDark ? '#6EE7B7' : '#059669';
-  const textColor = isDark ? '#E5E7EB' : '#6B7280';
+  // Determine active tab based on pathname
+  const getActiveTab = (pathname: string) => {
+    if (pathname.includes('/dashboard')) return 'overview';
+    if (pathname.includes('/activities')) return 'activities';
+    if (pathname.includes('/messages')) return 'messages';
+    if (pathname.includes('/settings')) return 'settings';
+    if (pathname.includes('/teachers')) return 'teachers';
+    if (pathname.includes('/students')) return 'students';
+    return '';
+  };
+
+  const activeTab = getActiveTab(pathname);
+  const iconColorActive = isDark ? '#6EE7B7' : '#059669';
+  const iconColorInactive = isDark ? '#9CA3AF' : '#9CA3AF';
+  const textColorActive = isDark ? '#E5E7EB' : '#374151';
+  const textColorInactive = isDark ? '#9CA3AF' : '#6B7280';
   const backgroundColor = isDark ? '#0F172A' : '#FFFFFF';
   const borderColor = isDark ? '#475569' : '#E5E7EB';
   return (
@@ -58,12 +72,24 @@ export default function GlobalBottomNav() {
           borderTopColor: borderColor,
         }]}
         >
-          {tabs.map((tab) => (
-            <TouchableOpacity key={tab.key} style={styles.tabButton} onPress={tab.onPress}>
-              <IconSymbol name={tab.icon as any} size={16} color={iconColor} />
-              <Text style={[styles.tabLabel, { color: textColor }]}>{tab.label}</Text>
-            </TouchableOpacity>
-          ))}
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity key={tab.key} style={styles.tabButton} onPress={tab.onPress}>
+                <IconSymbol 
+                  name={tab.icon as any} 
+                  size={16} 
+                  color={isActive ? iconColorActive : iconColorInactive} 
+                />
+                <Text style={[styles.tabLabel, { 
+                  color: isActive ? textColorActive : textColorInactive,
+                  fontWeight: isActive ? '600' : '500'
+                }]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </SafeAreaView>
     </View>
@@ -76,14 +102,25 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    zIndex: 1000,
+    elevation: 1000,
   },
   tabNavigationBottom: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 8,
     paddingVertical: 10,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -3,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
   },
   tabButton: {
     flex: 1,

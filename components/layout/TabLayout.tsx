@@ -1,10 +1,10 @@
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import AdPlacement from '@/components/ui/AdPlacement';
+import { useBottomTabHeight } from '@/hooks/useBottomTabHeight';
 import { router } from 'expo-router';
 import type { Href } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TabLayoutProps {
   children: React.ReactNode;
@@ -18,7 +18,7 @@ interface TabLayoutProps {
 }
 
 export function TabLayout({ children, user, onSignOut, notificationCount }: TabLayoutProps) {
-  const insets = useSafeAreaInsets();
+  const bottomTabHeight = useBottomTabHeight();
   const handleNavigate = (route: string | Href) => {
     router.push(route as Href);
   };
@@ -43,7 +43,7 @@ export function TabLayout({ children, user, onSignOut, notificationCount }: TabL
         />
       )}
       <AdPlacement>
-        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <View style={[styles.content, { paddingBottom: bottomTabHeight }]}>
           {children}
         </View>
       </AdPlacement>
