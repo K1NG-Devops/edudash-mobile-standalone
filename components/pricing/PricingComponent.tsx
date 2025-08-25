@@ -434,13 +434,24 @@ export const PricingComponent = ({
       transparent
       animationType="fade"
       onRequestClose={() => setShowRoleModal(false)}
+      statusBarTranslucent
+      hardwareAccelerated
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.roleModalContent}>
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setShowRoleModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.roleModalContent}
+          activeOpacity={1}
+          onPress={(e) => e.stopPropagation()}
+        >
           <LinearGradient colors={DesignSystem.gradients.hero} style={styles.roleModalGradient}>
             <TouchableOpacity 
               style={styles.modalCloseButton}
               onPress={() => setShowRoleModal(false)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <IconSymbol name="xmark" size={24} color="#ffffff" />
             </TouchableOpacity>
@@ -456,6 +467,7 @@ export const PricingComponent = ({
                   key={role.id}
                   style={styles.roleCard}
                   onPress={() => handleRoleSelection(role.id)}
+                  activeOpacity={0.8}
                 >
                   <LinearGradient
                     colors={[`${role.primary}20`, `${role.secondary}10`]}
@@ -470,8 +482,8 @@ export const PricingComponent = ({
               ))}
             </View>
           </LinearGradient>
-        </View>
-      </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 
@@ -1245,6 +1257,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    zIndex: 1000,
+    elevation: 1000, // For Android
   },
   roleModalContent: {
     width: '100%',
@@ -1252,6 +1266,8 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     borderRadius: DesignSystem.borderRadius.xxl,
     overflow: 'hidden',
+    zIndex: 1001,
+    elevation: 1001, // For Android
   },
   roleModalGradient: {
     padding: 30,
