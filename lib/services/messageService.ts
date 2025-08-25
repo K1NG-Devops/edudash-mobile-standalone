@@ -373,12 +373,14 @@ export class MessageService {
 
       const notifications = userRecipients.map(recipient => ({
         user_id: recipient.id,
-        message_id: messageId,
-        notification_type: notificationType,
+        title: 'New Message',
+        message: `You have a new ${messageType} message`,
+        type: notificationType,
+        action_url: `/messages/${messageId}`,
       }));
 
       const { error } = await supabase
-        .from('message_notifications')
+        .from('notifications')
         .insert(notifications);
 
       if (error) throw error;

@@ -1,6 +1,6 @@
+import { logger as log } from '@/lib/utils/logger';
 import Anthropic from '@anthropic-ai/sdk';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logger as log } from '@/lib/utils/logger';
 
 // AI Configuration
 const CLAUDE_API_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
@@ -526,7 +526,7 @@ export const claudeService = {
       }
       return { success: false, content: '' } as { success: boolean; content: string };
     } catch (error) {
-       
+
       log.error('Claude simple generateContent error:', error);
       return { success: false, content: '' } as { success: boolean; content: string };
     }

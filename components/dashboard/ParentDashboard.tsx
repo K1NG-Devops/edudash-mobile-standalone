@@ -17,6 +17,8 @@ import { router } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { StudentDataService, EnhancedStudent, ParentDashboardData } from '@/lib/services/studentDataService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 
 interface ParentDashboardProps {
   userId: string;
@@ -37,6 +39,8 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
   tenantName,
   onSignOut
 }) => {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
   const [dashboardData, setDashboardData] = useState<ParentDashboardData | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [selectedChild, setSelectedChild] = useState<EnhancedStudent | null>(null);
@@ -158,6 +162,19 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
     ));
   };
 
+  const timeAgo = (isoDate: string) => {
+    const now = Date.now();
+    const then = new Date(isoDate).getTime();
+    const diff = Math.max(0, now - then);
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
   // Navigation handlers
   const handleNavigate = (route: string) => {
 
@@ -194,7 +211,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
   // If loading initially, show a loading indicator
   if (loading && !refreshing && !dashboardData) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: palette.background }]}>
         <MobileHeader
           user={userProfile}
           schoolName={tenantName}
@@ -214,7 +231,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
   // If there's an error, show error message
   if (error && !loading && !refreshing) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: palette.background }]}>
         <MobileHeader
           user={userProfile}
           schoolName={tenantName}
@@ -236,7 +253,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
       {/* Mobile Header */}
       <MobileHeader
         user={userProfile}
@@ -257,15 +274,15 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
       >
         {/* Header Text */}
         <View style={styles.headerTextSection}>
-          <Text style={styles.greeting}>{getGreeting()} 👋</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.greeting, { color: palette.text }]}>{getGreeting()} 👋</Text>
+          <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
             {selectedChild 
               ? `Let's see how ${selectedChild.first_name} is doing today`
               : 'Welcome to your dashboard'}
           </Text>
           {tenantName && (
             <View style={styles.tenantInfo}>
-              <Text style={styles.tenantLabel}>🏫 {tenantName}</Text>
+              <Text style={[styles.tenantLabel, { color: palette.text }]}>🏫 {tenantName}</Text>
             </View>
           )}
         </View>
@@ -354,12 +371,13 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
         {/* Child Selector Dropdown */}
         {showChildSelector && dashboardData && dashboardData.children.length > 1 && (
-          <View style={styles.childDropdown}>
+            <View style={[styles.childDropdown, { backgroundColor: palette.surface }]}>
             {dashboardData.children.map((child) => (
               <TouchableOpacity
                 key={child.id}
                 style={[
                   styles.childDropdownItem,
+                  { borderBottomColor: palette.outline },
                   child.id === selectedChildId && styles.childDropdownItemSelected
                 ]}
                 onPress={() => handleSelectChild(child.id)}
@@ -368,8 +386,8 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   <Text style={styles.childDropdownEmojiText}>👤</Text>
                 </View>
                 <View style={styles.childDropdownInfo}>
-                  <Text style={styles.childDropdownName}>{child.full_name}</Text>
-                  <Text style={styles.childDropdownDetails}>
+                  <Text style={[styles.childDropdownName, { color: palette.text }]}>{child.full_name}</Text>
+                  <Text style={[styles.childDropdownDetails, { color: palette.textSecondary }]}>
                     {child.age} years • {child.class_name || child.age_group_name || 'Unassigned'} • {child.teacher_name || 'No Teacher'}
                   </Text>
                 </View>
@@ -390,10 +408,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
             <View style={styles.quickActionIcon}>
               <IconSymbol name="house.fill" size={24} color="#6B7280" />
             </View>
-            <Text style={styles.quickActionLabel}>
-              Home
-            </Text>
+            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Home</Text>
           </TouchableOpacity>
+
           <TouchableOpacity 
             style={styles.quickAction}
             onPress={() => handleQuickAction('homework')}
@@ -401,10 +418,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
             <View style={styles.quickActionIcon}>
               <IconSymbol name="doc.text.fill" size={24} color="#6B7280" />
             </View>
-            <Text style={styles.quickActionLabel}>
-              Homework
-            </Text>
+            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Homework</Text>
           </TouchableOpacity>
+
           <TouchableOpacity 
             style={styles.quickAction}
             onPress={() => handleQuickAction('activities')}
@@ -412,10 +428,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
             <View style={styles.quickActionIcon}>
               <IconSymbol name="location.fill" size={24} color="#6B7280" />
             </View>
-            <Text style={styles.quickActionLabel}>
-              Activities
-            </Text>
+            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Activities</Text>
           </TouchableOpacity>
+
           <TouchableOpacity 
             style={styles.quickAction}
             onPress={() => handleQuickAction('calendar')}
@@ -423,10 +438,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
             <View style={styles.quickActionIcon}>
               <IconSymbol name="calendar" size={24} color="#6B7280" />
             </View>
-            <Text style={styles.quickActionLabel}>
-              Lessons
-            </Text>
+            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Lessons</Text>
           </TouchableOpacity>
+
           <TouchableOpacity 
             style={styles.quickAction}
             onPress={() => handleQuickAction('messages')}
@@ -434,9 +448,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
             <View style={styles.quickActionIcon}>
               <IconSymbol name="message.fill" size={24} color="#6B7280" />
             </View>
-            <Text style={styles.quickActionLabel}>
-              Messages
-            </Text>
+            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Messages</Text>
           </TouchableOpacity>
         </View>
 
@@ -444,26 +456,78 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         {selectedChild && (
           <View style={styles.metricsSection}>
             <View style={styles.metricsRow}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricValue}>{selectedChild.completed_activities || 0}</Text>
-                <Text style={styles.metricTitle}>Activities</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricValue}>{selectedChild.pending_homework || 0}</Text>
-                <Text style={styles.metricTitle}>Pending Tasks</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricValue}>{selectedChild.attendance_percentage}%</Text>
-                <Text style={styles.metricTitle}>Attendance</Text>
-              </View>
+              <TouchableOpacity style={[styles.metricCard, { backgroundColor: palette.surface }]}>
+                <View style={styles.metricContent}>
+                  <LinearGradient
+                    colors={['#10B981', '#059669']}
+                    style={styles.metricIconContainer}
+                  >
+                    <IconSymbol name="figure.run" size={20} color="#FFFFFF" />
+                  </LinearGradient>
+                  <Text style={[styles.metricValue, { color: palette.text }]}>{selectedChild.completed_activities || 0}</Text>
+                  <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>Activities</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.metricCard, { backgroundColor: palette.surface }]}>
+                <View style={styles.metricContent}>
+                  <LinearGradient
+                    colors={['#F59E0B', '#D97706']}
+                    style={styles.metricIconContainer}
+                  >
+                    <IconSymbol name="doc.text" size={20} color="#FFFFFF" />
+                  </LinearGradient>
+                  <Text style={[styles.metricValue, { color: palette.text }]}>{selectedChild.pending_homework || 0}</Text>
+                  <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>Pending</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.metricCard, { backgroundColor: palette.surface }]}>
+                <View style={styles.metricContent}>
+                  <LinearGradient
+                    colors={['#3B82F6', '#2563EB']}
+                    style={styles.metricIconContainer}
+                  >
+                    <IconSymbol name="checkmark.circle" size={20} color="#FFFFFF" />
+                  </LinearGradient>
+                  <Text style={[styles.metricValue, { color: palette.text }]}>{selectedChild.attendance_percentage}%</Text>
+                  <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>Attendance</Text>
+                </View>
+              </TouchableOpacity>
             </View>
+          </View>
+        )}
+
+        {/* Recent Activity for selected child */}
+        {selectedChild && dashboardData && dashboardData.recent_updates && (
+          <View style={styles.activitySection}>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>🕒 Recent Activity</Text>
+            {dashboardData.recent_updates
+              .filter((u) => !selectedChild || u.student_id === selectedChild.id)
+              .slice(0, 5)
+              .map((u) => (
+                <View key={u.id} style={[styles.activityItemRow, { backgroundColor: palette.surface }] }>
+                  <View style={styles.activityIconWrap}>
+                    <IconSymbol
+                      name={u.icon as any}
+                      size={16}
+                      color={u.type === 'homework' ? '#3B82F6' : u.type === 'activity' ? '#10B981' : '#8B5CF6'}
+                    />
+                  </View>
+                  <View style={styles.activityContent}>
+                    <Text style={[styles.activityTitleText, { color: palette.text }]}>{u.title}</Text>
+                    <Text style={[styles.activityDescText, { color: palette.textSecondary }]}>{u.description}</Text>
+                  </View>
+                  <Text style={[styles.activityTimeText, { color: palette.textSecondary }]}>{timeAgo(u.timestamp)}</Text>
+                </View>
+              ))}
           </View>
         )}
 
         {/* Recent Achievements - Only show if there are achievements */}
         {selectedChild && selectedChild.recent_achievements && selectedChild.recent_achievements.length > 0 && (
           <View style={styles.achievementsSection}>
-            <Text style={styles.sectionTitle}>🏆 Recent Achievements</Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>🏆 Recent Achievements</Text>
             <View style={styles.achievementsList}>
               {selectedChild.recent_achievements.map((achievement, index) => (
                 <View key={index} style={styles.achievementBadge}>
@@ -477,16 +541,16 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         {/* Recent Updates */}
         {dashboardData && dashboardData.recent_updates.length > 0 && (
           <View style={styles.updatesSection}>
-            <Text style={styles.sectionTitle}>📢 Recent Updates</Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>📢 Recent Updates</Text>
             {dashboardData.recent_updates.slice(0, 3).map((update) => (
-              <TouchableOpacity key={update.id} style={styles.updateItem}>
+              <TouchableOpacity key={update.id} style={[styles.updateItem, { backgroundColor: palette.surface }] }>
                 <View style={styles.updateIcon}>
                   <IconSymbol name={update.icon as any} size={16} color="#3B82F6" />
                 </View>
                 <View style={styles.updateContent}>
-                  <Text style={styles.updateTitle}>{update.title}</Text>
-                  <Text style={styles.updateDescription}>{update.description}</Text>
-                  <Text style={styles.updateTimestamp}>{new Date(update.timestamp).toLocaleString()}</Text>
+                  <Text style={[styles.updateTitle, { color: palette.text }]}>{update.title}</Text>
+                  <Text style={[styles.updateDescription, { color: palette.textSecondary }]}>{update.description}</Text>
+                  <Text style={[styles.updateTimestamp, { color: palette.textSecondary }]}>{new Date(update.timestamp).toLocaleString()}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -496,17 +560,17 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         {/* Upcoming Events */}
         {dashboardData && dashboardData.upcoming_events.length > 0 && (
           <View style={styles.eventsSection}>
-            <Text style={styles.sectionTitle}>📅 Upcoming Events</Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>📅 Upcoming Events</Text>
             {dashboardData.upcoming_events.slice(0, 3).map((event) => (
-              <TouchableOpacity key={event.id} style={styles.eventItem}>
+              <TouchableOpacity key={event.id} style={[styles.eventItem, { backgroundColor: palette.surface }]}>
                 <View style={styles.eventDate}>
                   <Text style={styles.eventDateText}>{event.date}</Text>
-                  <Text style={styles.eventTimeText}>{event.time}</Text>
+                  <Text style={[styles.eventTimeText, { color: palette.textSecondary }]}>{event.time}</Text>
                 </View>
                 <View style={styles.eventContent}>
-                  <Text style={styles.eventTitle}>{event.title}</Text>
+                  <Text style={[styles.eventTitle, { color: palette.text }]}>{event.title}</Text>
                   {event.location && (
-                    <Text style={styles.eventLocation}>📍 {event.location}</Text>
+                    <Text style={[styles.eventLocation, { color: palette.textSecondary }]}>📍 {event.location}</Text>
                   )}
                 </View>
               </TouchableOpacity>
@@ -516,9 +580,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
         {/* Today's Mood Card - Only show for selected child */}
         {selectedChild && (
-          <View style={styles.moodCard}>
+          <View style={[styles.moodCard, { backgroundColor: palette.surface }]}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Today's Mood</Text>
+              <Text style={[styles.cardTitle, { color: palette.text }]}>Today's Mood</Text>
               <TouchableOpacity>
                 <IconSymbol name="heart.fill" size={20} color="#EF4444" />
               </TouchableOpacity>
@@ -531,9 +595,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
         {/* Weekly Progress Card - Only show for selected child */}
         {selectedChild && (
-          <View style={styles.progressCard}>
+          <View style={[styles.progressCard, { backgroundColor: palette.surface }]}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Weekly Progress</Text>
+              <Text style={[styles.cardTitle, { color: palette.text }]}>Weekly Progress</Text>
               <View style={styles.progressTrend}>
                 <IconSymbol name="arrow.up.right" size={16} color="#10B981" />
                 <Text style={styles.progressPercentage}>{weeklyProgress}%</Text>
@@ -753,28 +817,40 @@ const styles = StyleSheet.create({
   metricCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
+    borderRadius: 16,
+    padding: 0,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  metricContent: {
+    alignItems: 'center',
+    padding: 18,
+  },
+  metricIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   metricValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   metricTitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#6B7280',
     textAlign: 'center',
+    fontWeight: '500',
   },
   achievementsSection: {
     marginHorizontal: 20,
@@ -851,6 +927,51 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#9CA3AF',
   },
+  // Activity timeline styles
+  activitySection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  activityItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  activityIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  activityDescText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  activityTimeText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginLeft: 8,
+  },
+
   // Events section styles
   eventsSection: {
     marginHorizontal: 20,

@@ -75,7 +75,7 @@ export default function TeacherView() {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState<TeacherProfile | null>(null);
 
-  const canEdit = profile?.role === 'principal' || profile?.role === 'preschool_admin' || profile?.role === 'admin' || profile?.role === 'superadmin';
+const canEdit = profile?.role === 'preschool_admin' || profile?.role === 'superadmin';
 
   useEffect(() => {
     loadTeacher();
@@ -108,8 +108,8 @@ export default function TeacherView() {
         return;
       }
       
-      setTeacher(data);
-      setFormData(data);
+      setTeacher(data as any);
+      setFormData(data as any);
     } catch (err) {
       console.error('Exception loading teacher:', err);
       Alert.alert('Error', 'Failed to load teacher profile');

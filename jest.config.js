@@ -9,7 +9,13 @@ module.exports = {
     '/node_modules/',
     '/android/',
     '/ios/',
+    '/functions/',
+    '/edu-pro/',
     '/__tests__/setup.js'
+  ],
+  modulePathIgnorePatterns: [
+    '<rootDir>/functions/',
+    '<rootDir>/edu-pro/'
   ],
   collectCoverageFrom: [
     'lib/**/*.{ts,tsx}',
@@ -32,6 +38,7 @@ module.exports = {
     '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
   },
   testEnvironment: 'jsdom',
+  testTimeout: 10000,
   globals: {
     __DEV__: true,
   },

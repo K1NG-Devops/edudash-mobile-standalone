@@ -212,7 +212,6 @@ serve(async (req) => {
         console.error('Failed to send welcome email:', emailError);
         // Don't fail the entire process if email fails, but log it
       } else {
-        console.log('✅ Welcome email sent successfully to:', request.admin_email);
       }
     } catch (emailError) {
       console.error('Welcome email sending failed:', emailError);

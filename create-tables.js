@@ -12,7 +12,6 @@ if (!supabaseUrl || !serviceRoleKey) {
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 async function createTables() {
-  console.log('🚀 Creating necessary tables for onboarding functionality...\n');
 
   const queries = [
     // 1. Create schools table
@@ -64,13 +63,11 @@ async function createTables() {
   // Execute table creation queries
   for (let i = 0; i < queries.length; i++) {
     try {
-      console.log(`Creating table ${i + 1}...`);
       const { error } = await supabase.rpc('exec_sql', { sql: queries[i] });
       
       if (error && !error.message.includes('already exists')) {
         console.error(`❌ Failed to create table ${i + 1}:`, error.message);
       } else {
-        console.log(`✅ Table ${i + 1} created successfully`);
       }
     } catch (err) {
       console.error(`❌ Error creating table ${i + 1}:`, err.message);
@@ -78,7 +75,6 @@ async function createTables() {
   }
 
   // Insert sample data
-  console.log('\n📝 Inserting sample data...');
 
   try {
     // Insert superadmin user
@@ -97,7 +93,6 @@ async function createTables() {
     if (superadminError && !superadminError.message.includes('duplicate key')) {
       console.error('❌ Failed to create superadmin:', superadminError.message);
     } else {
-      console.log('✅ Superadmin user created');
     }
 
     // Insert sample schools
@@ -124,7 +119,6 @@ async function createTables() {
     if (schoolError && !schoolError.message.includes('duplicate key')) {
       console.error('❌ Failed to create schools:', schoolError.message);
     } else {
-      console.log('✅ Sample schools created');
     }
 
     // Insert sample onboarding requests
@@ -157,7 +151,6 @@ async function createTables() {
     if (onboardingError && !onboardingError.message.includes('duplicate key')) {
       console.error('❌ Failed to create onboarding requests:', onboardingError.message);
     } else {
-      console.log('✅ Sample onboarding requests created');
     }
 
   } catch (err) {
@@ -165,7 +158,6 @@ async function createTables() {
   }
 
   // Verify tables exist
-  console.log('\n🔍 Verifying table creation...');
   
   const tables = ['schools', 'admin_users', 'onboarding_requests'];
   let allTablesExist = true;
@@ -174,24 +166,16 @@ async function createTables() {
     try {
       const { data, error } = await supabase.from(table).select('count').limit(1);
       if (error) {
-        console.log(`❌ Table '${table}' not accessible:`, error.message);
         allTablesExist = false;
       } else {
-        console.log(`✅ Table '${table}' exists and accessible`);
       }
     } catch (err) {
-      console.log(`❌ Table '${table}' verification failed:`, err.message);
       allTablesExist = false;
     }
   }
 
   if (allTablesExist) {
-    console.log('\n🎉 SUCCESS! Database setup complete.');
-    console.log('📧 Superadmin email: superadmin@edudashpro.org.za');
-    console.log('🔑 Password: #Olivia@17');
-    console.log('\n✅ The resend functionality should now work!');
   } else {
-    console.log('\n⚠️  Some tables may not have been created properly.');
   }
 }
 

@@ -7,11 +7,6 @@
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { createLogger } from '@/lib/utils/logger';
 import { Database } from '@/types/database';
-import { 
-  generateSecurePassword, 
-  requestPasswordReset, 
-  resetPasswordWithToken 
-} from '@/lib/utils/authUtils';
 const log = createLogger('superadmin');
 
 type Tables = Database['public']['Tables'];
@@ -175,26 +170,24 @@ export class SuperAdminDataService {
     try {
       log.info('📊 [SuperAdmin] Getting platform stats (via edge function)...');
 
-      // Prefer secure Edge Function to bypass RLS with service role
-      const { data, error } = await supabase.functions.invoke('platform-stats', {
-        body: {}
-      });
+      // Use the new superadmin database function instead of edge functions
+      const { data, error } = await supabase.rpc('get_platform_stats_for_superadmin');
 
       if (error) {
-        log.warn('⚠️ [SuperAdmin] Edge function failed, falling back to direct queries:', error.message);
+        log.warn('⚠️ [SuperAdmin] Database function failed, falling back to direct queries:', error.message);
       }
 
-      if (data && data.success) {
+      if (data) {
         return {
           total_schools: data.total_schools || 0,
           total_users: data.total_users || 0,
           total_students: data.total_students || 0,
           total_teachers: data.total_teachers || 0,
           total_parents: data.total_parents || 0,
-          active_subscriptions: data.active_subscriptions || 0,
+          active_subscriptions: 0, // TODO: Add to function
           monthly_revenue: 0,
           growth_rate: 0,
-          ai_usage_count: data.ai_usage_count || 0,
+          ai_usage_count: data.ai_requests_today || 0,
           storage_usage_gb: 0
         };
       }
@@ -254,7 +247,34 @@ export class SuperAdminDataService {
    */
   static async getRecentSchools(): Promise<SchoolOverview[]> {
     try {
-      const { data: schools, error } = await supabase
+      log.info('📊 [SuperAdmin] Getting schools data (via edge function)...');
+
+      // Use the new superadmin database function
+      const { data: functionData, error: functionError } = await supabase.rpc('get_all_schools_for_superadmin');
+
+      if (functionData) {
+        log.info('✅ [SuperAdmin] Schools fetched via database function');
+        return functionData.map((school: any) => ({
+          ...school,
+          user_count: 0, // TODO: Add to function
+          student_count: 0, // TODO: Add to function
+          teacher_count: 0, // TODO: Add to function
+          parent_count: 0, // TODO: Add to function
+          last_activity: new Date().toISOString(),
+          monthly_fee: 0,
+          ai_usage: 0,
+          storage_usage: 0
+        }));
+      }
+
+      if (functionError) {
+        log.warn('⚠️ [SuperAdmin] Edge function failed, using fallback method:', functionError.message);
+      }
+
+      // Fallback: Use admin client if available, otherwise regular client with limited access
+      const client = supabaseAdmin || supabase;
+
+      const { data: schools, error } = await client
         .from('preschools')
         .select('*')
         .order('created_at', { ascending: false })
@@ -265,7 +285,7 @@ export class SuperAdminDataService {
         return [];
       }
 
-      // Enhance each school with user counts (pure DB-derived)
+      // Enhance each school with user counts
       const enhancedSchools = await Promise.all(
         schools.map(async (school) => {
           const [userCount, studentCount] = await Promise.all([
@@ -277,7 +297,7 @@ export class SuperAdminDataService {
           let teachers = 0;
           let parents = 0;
           try {
-            const { data: roleCounts } = await supabase
+            const { data: roleCounts } = await client
               .from('users')
               .select('role')
               .eq('preschool_id', school.id)
@@ -317,8 +337,30 @@ export class SuperAdminDataService {
    */
   static async getRecentUsers(): Promise<UserOverview[]> {
     try {
+      log.info('📊 [SuperAdmin] Getting users data (via edge function)...');
+
+      // Use the new superadmin database function
+      const { data: functionData, error: functionError } = await supabase.rpc('get_all_users_for_superadmin');
+
+      if (functionData) {
+        log.info('✅ [SuperAdmin] Users fetched via database function');
+        return functionData.map((user: any) => ({
+          ...user,
+          school_name: null, // TODO: Join with school data
+          last_login: null, // TODO: Add to function
+          is_suspended: !user.is_active
+        }));
+      }
+
+      if (functionError) {
+        log.warn('⚠️ [SuperAdmin] Edge function failed, using fallback method:', functionError.message);
+      }
+
+      // Fallback: Use admin client if available, otherwise regular client with limited access
+      const client = supabaseAdmin || supabase;
+
       // Get users first
-      const { data: users, error } = await supabase
+      const { data: users, error } = await client
         .from('users')
         .select('*')
         .order('created_at', { ascending: false })
@@ -335,7 +377,7 @@ export class SuperAdminDataService {
 
       if (schoolIds.length > 0) {
         try {
-          const { data: schools } = await supabase
+          const { data: schools } = await client
             .from('preschools')
             .select('id, name')
             .in('id', schoolIds as string[]);
@@ -353,7 +395,7 @@ export class SuperAdminDataService {
 
       const enhancedUsers: UserOverview[] = users.map((user: any) => ({
         ...user,
-        school_name: user.preschool_id ? schoolsMap[user.preschool_id] || null : null,
+        school_name: user.preschool_id ? schoolsMap[user.preschool_id] || 'No School Assigned' : 'No School Assigned',
         // These fields require external sources; provide DB-derived only
         last_login: null,
         is_suspended: !user.is_active,
@@ -375,9 +417,10 @@ export class SuperAdminDataService {
   static async getPlatformActivity(): Promise<PlatformActivity[]> {
     try {
       const activities: PlatformActivity[] = [];
+      const client = supabaseAdmin || supabase;
 
       // Get recent preschool registrations
-      const { data: recentSchools } = await supabase
+      const { data: recentSchools } = await client
         .from('preschools')
         .select('id, name, created_at, subscription_plan')
         .order('created_at', { ascending: false })
@@ -398,7 +441,7 @@ export class SuperAdminDataService {
       }
 
       // Get recent user registrations
-      const { data: recentUsers } = await supabase
+      const { data: recentUsers } = await client
         .from('users')
         .select('id, name, role, created_at, preschool_id')
         .order('created_at', { ascending: false })
@@ -411,7 +454,7 @@ export class SuperAdminDataService {
 
         if (userSchoolIds.length > 0) {
           try {
-            const { data: userSchools } = await supabase
+            const { data: userSchools } = await client
               .from('preschools')
               .select('id, name')
               .in('id', userSchoolIds as string[]);
@@ -586,7 +629,7 @@ export class SuperAdminDataService {
     try {
       // Use admin client to bypass RLS for counting pending requests
       const client = supabaseAdmin || supabase;
-      
+
       // Get pending onboarding requests (schools)
       const { count: pendingSchools } = await client
         .from('preschool_onboarding_requests')
@@ -632,7 +675,8 @@ export class SuperAdminDataService {
       // Optional: skip support tickets if table not available in types
 
       // Get suspended schools as security alerts
-      const { data: suspendedSchools } = await supabase
+      const client = supabaseAdmin || supabase;
+      const { data: suspendedSchools } = await client
         .from('preschools')
         .select('id, name, updated_at')
         .eq('subscription_status', 'suspended')
@@ -667,7 +711,8 @@ export class SuperAdminDataService {
    */
 
   static async getSchoolUserCount(schoolId: string) {
-    const { count } = await supabase
+    const client = supabaseAdmin || supabase;
+    const { count } = await client
       .from('users')
       .select('*', { count: 'exact', head: true })
       .eq('preschool_id', schoolId)
@@ -677,7 +722,8 @@ export class SuperAdminDataService {
   }
 
   static async getSchoolStudentCount(schoolId: string) {
-    const { count } = await supabase
+    const client = supabaseAdmin || supabase;
+    const { count } = await client
       .from('students')
       .select('*', { count: 'exact', head: true })
       .eq('preschool_id', schoolId)

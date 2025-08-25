@@ -36,7 +36,6 @@ async function checkTriggers() {
         .select('*');
       
       if (rawError) {
-        console.log('Trying to execute raw SQL query...');
         
         // Let's try to execute the query directly
         const { data: triggerData, error: triggerError } = await supabase
@@ -60,10 +59,8 @@ async function checkTriggers() {
           return;
         }
         
-        console.log('Active triggers on auth.users:', triggerData);
       }
     } else {
-      console.log('Active triggers on auth.users:', data);
     }
 
     // Also check for handle_new_user function usage
@@ -83,7 +80,6 @@ async function checkTriggers() {
     if (functionError) {
       console.error('Error querying functions:', functionError);
     } else {
-      console.log('Handle new user functions:', functionData);
     }
 
   } catch (err) {

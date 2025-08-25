@@ -15,6 +15,8 @@ import {
 } from '@/lib/services/schoolAdminDataService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 import {
   Dimensions,
   RefreshControl,
@@ -49,6 +51,8 @@ export default function SchoolAdminDashboard({
   schoolName,
   onSignOut
 }: SchoolAdminDashboardProps) {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [dashboardData, setDashboardData] = useState<SchoolAdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -135,13 +139,13 @@ export default function SchoolAdminDashboard({
   );
 
   const renderStatsCard = (title: string, value: string | number, icon: string, color: string) => (
-    <View style={styles.statsCard}>
+    <View style={[styles.statsCard, { backgroundColor: palette.surface }]}>
       <View style={[styles.statsIcon, { backgroundColor: color }]}>
         <IconSymbol name={icon as any} size={24} color="#FFFFFF" />
       </View>
       <View style={styles.statsContent}>
-        <Text style={styles.statsValue}>{value}</Text>
-        <Text style={styles.statsTitle}>{title}</Text>
+        <Text style={[styles.statsValue, { color: palette.text }]}>{value}</Text>
+        <Text style={[styles.statsTitle, { color: palette.textSecondary }]}>{title}</Text>
       </View>
     </View>
   );
@@ -788,7 +792,7 @@ export default function SchoolAdminDashboard({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
       <MobileHeader
         user={userProfile}
         schoolName={schoolName}
@@ -799,8 +803,8 @@ export default function SchoolAdminDashboard({
       />
 
       <View style={styles.headerSection}>
-        <Text style={styles.greeting}>{getGreeting()} 👋</Text>
-        <Text style={styles.subtitle}>Manage your preschool with ease</Text>
+        <Text style={[styles.greeting, { color: palette.text }]}>{getGreeting()} 👋</Text>
+        <Text style={[styles.subtitle, { color: palette.textSecondary }]}>Manage your preschool with ease</Text>
       </View>
 
       <ScrollView

@@ -10,10 +10,14 @@ export default {
     icon: "./assets/images/icon.png",
     scheme: "edudashpro",
     userInterfaceStyle: "automatic",
-    newArchEnabled: true,
+    newArchEnabled: false,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.edudashpro.app"
+      bundleIdentifier: "com.edudashpro.app",
+      // Enable Universal Links for password reset and invitations
+      associatedDomains: [
+        "applinks:app.edudashpro.org.za"
+      ]
     },
     android: {
       adaptiveIcon: {
@@ -25,7 +29,21 @@ export default {
         "INTERNET",
         "CAMERA"
       ],
-      edgeToEdgeEnabled: true
+      edgeToEdgeEnabled: true,
+      // Enable Android App Links so https://app.edudashpro.org.za/open in the app
+      intentFilters: [
+        {
+          action: "VIEW",
+          data: [
+            {
+              scheme: "https",
+              host: "app.edudashpro.org.za",
+              pathPrefix: "/"
+            }
+          ],
+          category: ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     web: {
       bundler: "metro",
@@ -61,6 +79,9 @@ export default {
     },
     experiments: {
       typedRoutes: true
+    },
+    developmentClient: {
+      silentLaunch: true
     },
     extra: {
       router: {},

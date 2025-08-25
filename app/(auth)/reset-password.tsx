@@ -14,47 +14,110 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, router } from 'expo-router';
 
-import { resetPasswordWithToken, isPasswordStrong, getPasswordRequirements } from '@/lib/utils/authUtils';
+import { isPasswordStrong, getPasswordRequirements } from '@/lib/utils/authUtils';
 import { createLogger } from '@/lib/utils/logger';
+import { supabase } from '@/lib/supabase';
 
 const log = createLogger('reset-password');
 
-interface ResetPasswordProps {
-  navigation: any;
-  route: any;
-}
-
-export default function ResetPassword({ navigation, route }: ResetPasswordProps) {
+export default function ResetPassword() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resetComplete, setResetComplete] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const [sessionEstablished, setSessionEstablished] = useState(false);
   const [errors, setErrors] = useState<{
     newPassword?: string;
     confirmPassword?: string;
     general?: string;
   }>({});
 
-  // Get token and email from route params or URL
-  const { token, email } = route.params || {};
+  // Read params via expo-router and fall back to URL hash (Supabase uses #access_token)
+  const params = useLocalSearchParams();
+  const [email, setEmail] = useState<string | undefined>(undefined);
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
+  const [refreshToken, setRefreshToken] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (!token || !email) {
-      Alert.alert(
-        'Invalid Reset Link',
-        'This password reset link is invalid or expired. Please request a new one.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('ForgotPassword'),
-          },
-        ]
-      );
+    const initializePasswordReset = async () => {
+      try {
+        const p = params || ({} as any);
+        const hash = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '';
+        const h = new URLSearchParams(hash);
+
+        const at = (p.access_token as string) || (p.token as string) || h.get('access_token') || undefined;
+        const rt = (p.refresh_token as string) || h.get('refresh_token') || undefined;
+        const em = (p.email as string) || h.get('email') || undefined;
+        const resetType = h.get('type') || p.type;
+
+        log.info('🔐 Password reset initialization:', {
+          hasAccessToken: !!at,
+          hasRefreshToken: !!rt,
+          hasEmail: !!em,
+          resetType,
+          hashLength: hash.length
+        });
+
+        setAccessToken(at);
+        setRefreshToken(rt as any);
+        setEmail(em);
+
+        // If we have tokens, try to establish the session immediately
+        if (at && rt && resetType === 'recovery') {
+          try {
+            log.info('🔄 Establishing session for password reset...');
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: at,
+              refresh_token: rt
+            });
+            
+            if (sessionError) {
+              log.error('❌ Failed to set session:', sessionError);
+              setErrors({ general: 'Invalid or expired reset link. Please request a new one.' });
+            } else {
+              log.info('✅ Session established successfully for password reset');
+              // Extract email from session if not provided
+              if (!em && sessionData.user?.email) {
+                setEmail(sessionData.user.email);
+              }
+            }
+          } catch (sessionErr) {
+            log.error('❌ Session establishment error:', sessionErr);
+            setErrors({ general: 'Failed to establish reset session. Please try again.' });
+          }
+        } else if (!at || !rt) {
+          log.warn('⚠️ Missing tokens or invalid type for password reset');
+          setErrors({ general: 'Invalid or expired reset link. Please request a new password reset.' });
+        }
+      } catch (e) {
+        log.error('❌ Failed to parse reset-password URL params:', e);
+        setErrors({ general: 'Failed to initialize password reset. Please try again.' });
+      }
+    };
+
+    initializePasswordReset();
+  }, [params]);
+
+  useEffect(() => {
+    if (!accessToken || !refreshToken) {
+      // Show a friendly message but allow navigation back
+      // Use Alert on native only
+      if (Platform.OS !== 'web') {
+        Alert.alert(
+          'Invalid Reset Link',
+          'This password reset link is invalid or expired. Please request a new one.',
+          [
+            { text: 'OK', onPress: () => router.replace('/(auth)/forgot-password') },
+          ]
+        );
+      }
     }
-  }, [token, email, navigation]);
+  }, [accessToken, refreshToken]);
 
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
@@ -82,38 +145,46 @@ export default function ResetPassword({ navigation, route }: ResetPasswordProps)
       return;
     }
 
-    if (!token || !email) {
-      Alert.alert('Error', 'Invalid reset token. Please request a new password reset.');
-      return;
-    }
-
     setLoading(true);
     try {
-      log.info('🔐 Resetting password for:', email);
+      log.info('🔐 Attempting to reset password...');
       
-      const result = await resetPasswordWithToken({
-        token,
-        newPassword,
-        email,
+      // Try direct password update - if we have a valid session from the URL hash,
+      // Supabase should handle this automatically
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
       });
       
-      if (result.success) {
-        setResetComplete(true);
-        log.info('✅ Password reset completed successfully');
+      if (error) {
+        log.error('❌ Password update failed:', error);
+        
+        // If direct update fails, show helpful error message
+        if (error.message.includes('session') || error.message.includes('unauthorized')) {
+          setErrors({ 
+            general: 'Reset link expired or invalid. Please request a new password reset link.' 
+          });
+        } else {
+          setErrors({ 
+            general: error.message || 'Failed to reset password. Please try again.' 
+          });
+        }
       } else {
-        setErrors({ general: result.error || 'Failed to reset password' });
-        log.error('❌ Failed to reset password:', result.error);
+        log.info('✅ Password reset completed successfully');
+        setResetComplete(true);
+        
+        // Clear any existing errors
+        setErrors({});
       }
     } catch (error) {
-      log.error('❌ Error in password reset:', error);
-      setErrors({ general: 'Failed to reset password. Please try again.' });
+      log.error('❌ Exception during password reset:', error);
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleBackToLogin = () => {
-    navigation.navigate('Login');
+    router.replace('/(auth)/sign-in');
   };
 
   const getPasswordStrengthIndicator = (password: string) => {
@@ -381,7 +452,7 @@ export default function ResetPassword({ navigation, route }: ResetPasswordProps)
             
             <Pressable 
               style={styles.backButton}
-              onPress={() => navigation.navigate('ForgotPassword')}
+onPress={() => router.push('/(auth)/forgot-password' as any)}
             >
               <Text style={styles.backButtonText}>← Back to Reset Request</Text>
             </Pressable>

@@ -1,75 +1,78 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 
 interface LoadingSpinnerProps {
   message?: string;
   color?: string;
-  size?: 'small' | 'large';
+  size?: 'small' | 'large' | number;
   showGradient?: boolean;
 }
 
-export class LoadingSpinner extends React.Component<LoadingSpinnerProps> {
-  render() {
-    const { 
-      message = 'Loading...', 
-      color = '#4285F4', 
-      size = 'large',
-      showGradient = false 
-    } = this.props;
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+  message = 'Loading...',
+  color,
+  size = 'small',
+  showGradient = false,
+}) => {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
 
-    if (showGradient) {
-      return (
-        <View style={styles.container}>
-          <LinearGradient
-            colors={['#4285F4', '#34A853']}
-            style={styles.gradientContainer}
-          >
-            <View style={styles.spinnerContainer}>
-              <ActivityIndicator size={size} color="white" />
-              <Text style={styles.gradientText}>{message}</Text>
-            </View>
-          </LinearGradient>
-        </View>
-      );
-    }
-
+  // Prefer minimal spinner by default
+  if (showGradient) {
     return (
-      <View style={styles.container}>
-        <View style={styles.spinnerContainer}>
-          <ActivityIndicator size={size} color={color} />
-          <Text style={[styles.text, { color }]}>{message}</Text>
-        </View>
+      <View style={styles.containerMinimal}>
+        <LinearGradient
+          colors={[palette.primary, palette.secondary]}
+          style={styles.gradientContainer}
+        >
+          <View style={styles.spinnerContainer}>
+            <ActivityIndicator size={size} color="#FFFFFF" />
+            {message ? <Text style={styles.gradientText}>{message}</Text> : null}
+          </View>
+        </LinearGradient>
       </View>
     );
   }
-}
+
+  return (
+    <View style={styles.containerMinimal}>
+      <View style={styles.spinnerContainer}>
+        <ActivityIndicator size={size} color={color || palette.primary} />
+        {message ? (
+          <Text style={[styles.text, { color: palette.textSecondary }]}>{message}</Text>
+        ) : null}
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  containerMinimal: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
   },
   gradientContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    width: '100%',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
   },
   spinnerContainer: {
     alignItems: 'center',
-    padding: 32,
+    padding: 8,
   },
   text: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: 8,
+    fontSize: 14,
     fontWeight: '500',
   },
   gradientText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: 8,
+    fontSize: 14,
     fontWeight: '500',
     color: 'white',
   },

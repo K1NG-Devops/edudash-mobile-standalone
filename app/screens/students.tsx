@@ -29,13 +29,11 @@ export default function StudentsScreen() {
 
   const load = async () => {
     if (!profile?.preschool_id) {
-      console.log('❌ No preschool_id found in profile');
       return;
     }
     
     try {
       setLoading(true);
-      console.log('🔄 Loading students for preschool:', profile.preschool_id);
       
       // Fetch classes for filter chips
       const { data: classRows, error: classError } = await supabase
@@ -46,7 +44,6 @@ export default function StudentsScreen() {
         .order('name');
       
       if (classError) {
-        console.log('⚠️ Class query error:', classError);
       }
       setClasses(classRows || []);
 
@@ -64,12 +61,6 @@ export default function StudentsScreen() {
       
       if (error) {
         console.error('❌ Students query error:', error);
-        console.log('Query details:', {
-          table: 'students',
-          filters: { preschool_id: profile.preschool_id, status, classFilter }
-        });
-      } else {
-        console.log('✅ Students loaded successfully:', data?.length || 0, 'records');
       }
       
       setItems(data || []);

@@ -1,0 +1,18 @@
+{
+  "_comment": "iOS App Links - Replace APPLE_TEAM_ID when iOS Developer account is available",
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "REPLACE_WITH_APPLE_TEAM_ID.com.edudashpro.app",
+        "paths": [
+          "/reset-password*",
+          "/invite/*",
+          "/email-verified*",
+          "/*"
+        ]
+      }
+    ]
+  }
+}
+

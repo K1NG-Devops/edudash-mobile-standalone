@@ -91,12 +91,6 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
       // Get initial session
       const { data } = await supabase.auth.getSession();
 
-      console.log('🔍 [AUTH-DEBUG] Session data:', {
-        hasSession: !!data.session,
-        hasUser: !!data.session?.user,
-        userId: data.session?.user?.id || 'none',
-        userEmail: data.session?.user?.email || 'none'
-      });
 
       this.setState({
         session: data.session,
@@ -105,37 +99,31 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
       // Only load profile if we have a session, and set loading to false after
       if (data.session?.user) {
-        console.log('🔍 [AUTH-DEBUG] User found, loading profile for ID:', data.session.user.id);
         await this.loadProfile(data.session.user.id);
       } else {
-        console.log('🔍 [AUTH-DEBUG] No user session found');
         this.setState({ loading: false });
       }
 
       // Listen for auth changes
       const { data: listener } = supabase.auth.onAuthStateChange(
         async (event, session) => {
-          console.log('🔄 Auth state changed:', event);
 
           // Prevent duplicate profile loading
           if (event === 'SIGNED_IN' && session?.user) {
             // Only load profile if the user changed
             if (this.state.user?.id !== session.user.id) {
-              console.log('🆕 New user signed in, loading profile...');
               this.setState({
                 session,
                 user: session.user,
               });
               await this.loadProfile(session.user.id);
             } else {
-              console.log('🔄 Same user, updating session only');
               this.setState({
                 session,
                 user: session.user,
               });
             }
           } else if (event === 'SIGNED_OUT') {
-            console.log('👋 User signed out');
             this.setState({
               session: null,
               user: null,
@@ -180,32 +168,17 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
   loadProfile = async (userId: string) => {
     try {
-      console.log('🔍 [DEBUG] Loading profile for userId:', userId);
-      console.log('🔍 [DEBUG] Current profile state before load:', this.state.profile?.role || 'none');
-
       // Set loading state immediately
       this.setState({ loading: true });
 
       // Clear any existing profile state to force fresh load
       this.setState({ profile: null });
 
-      // Use direct query with auth.uid() check and force fresh data
-      console.log('📡 [DEBUG] Executing fresh query: SELECT * FROM users WHERE auth_user_id =', userId);
-
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', userId)
         .single();
-
-      console.log('🔍 [DEBUG] Profile query result:', {
-        hasData: !!data,
-        dataKeys: data ? Object.keys(data) : 'none',
-        error: error?.message || 'none',
-        errorCode: error?.code || 'none',
-        errorDetails: error?.details || 'none',
-        errorHint: error?.hint || 'none'
-      });
 
       if (error) {
         console.error('❌ [DEBUG] Supabase error details:', {
@@ -217,7 +190,6 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
         // If we get a policy error, let's try a different approach
         if (error.message?.includes('policy') || error.message?.includes('recursion')) {
-          console.log('🔄 [DEBUG] Policy/recursion error detected, trying alternative approach');
           // For now, set a basic profile to prevent blocking
           this.setState({
             profile: null,
@@ -228,14 +200,6 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
       }
 
       if (!error && data) {
-        console.log('✅ [DEBUG] Profile loaded successfully:');
-        console.log('  - ID:', data.id || 'Unknown');
-        console.log('  - Name:', data.name || 'Unknown');
-        console.log('  - Role:', data.role || 'Unknown');
-        console.log('  - Preschool ID:', data.preschool_id || 'None');
-        console.log('  - Email:', data.email || 'Unknown');
-        console.log('  - Is Active:', data.is_active);
-        console.log('  - Auth User ID:', data.auth_user_id);
 
         // Create a complete profile with all fields from database
         const profileData: UserProfile = {
@@ -246,24 +210,24 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
           preschool_id: data.preschool_id,
           auth_user_id: data.auth_user_id || '',
           is_active: !!data.is_active,
-          avatar_url: data.avatar_url,
+          avatar_url: data.profile_picture_url || null,
           phone: data.phone,
-          home_address: data.home_address,
-          home_city: data.home_city,
-          home_postal_code: data.home_postal_code,
-          work_company: data.work_company,
-          work_position: data.work_position,
-          work_address: data.work_address,
-          work_phone: data.work_phone,
-          emergency_contact_1_name: data.emergency_contact_1_name,
-          emergency_contact_1_phone: data.emergency_contact_1_phone,
-          emergency_contact_1_relationship: data.emergency_contact_1_relationship,
-          emergency_contact_2_name: data.emergency_contact_2_name,
-          emergency_contact_2_phone: data.emergency_contact_2_phone,
-          emergency_contact_2_relationship: data.emergency_contact_2_relationship,
-          relationship_to_child: data.relationship_to_child,
-          pickup_authorized: data.pickup_authorized,
-          profile_completed_at: data.profile_completed_at,
+          home_address: data.street_address || null,
+          home_city: data.city || null,
+          home_postal_code: data.postal_code || null,
+          work_company: data.institution_name || null,
+          work_position: data.position_title || null,
+          work_address: data.street_address || null,
+          work_phone: data.phone || null,
+          emergency_contact_1_name: data.emergency_contact_name || null,
+          emergency_contact_1_phone: data.emergency_contact_phone || null,
+          emergency_contact_1_relationship: data.emergency_contact_relationship || null,
+          emergency_contact_2_name: null, // Not supported in current schema
+          emergency_contact_2_phone: null, // Not supported in current schema
+          emergency_contact_2_relationship: null, // Not supported in current schema
+          relationship_to_child: null, // Not supported in current schema
+          pickup_authorized: null, // Not supported in current schema
+          profile_completed_at: null, // Not supported in current schema
           profile_completion_status: (data.profile_completion_status as 'incomplete' | 'in_progress' | 'complete') || 'incomplete',
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString()
@@ -274,12 +238,9 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
           profile: profileData,
           loading: false
         }, () => {
-          console.log('✅ [DEBUG] Profile state updated. New role:', this.state.profile?.role);
-          console.log('✅ [DEBUG] Profile state updated. New preschool_id:', this.state.profile?.preschool_id);
         });
       } else {
         console.error('❌ [DEBUG] Failed to load profile - no data returned');
-        console.log('❌ [DEBUG] User ID we searched for:', userId);
         this.setState({
           profile: null,
           loading: false
@@ -350,8 +311,8 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     try {
       this.setState({ loading: true });
 
-      // Use localhost for development (mobile app)
-      const redirectTo = 'http://localhost:3000/auth/reset-password';
+      // Use correct localhost for development (Expo web)
+      const redirectTo = 'http://localhost:8081/reset-password';
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,

@@ -3,6 +3,10 @@
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
+// TODO: Re-enable subscription features once module resolution is fixed
+// import { SubscriptionProvider, useSubscription, useFeatureAccess } from '@/contexts/SubscriptionContext';
+// import { PlanStatus } from '@/components/subscription/PlanStatus';
+// import { UpgradeModal } from '@/components/subscription/UpgradeModal';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import React from 'react';
@@ -69,7 +73,7 @@ interface RecentActivity {
   description: string | null;
   activity_type: string;
   lesson_id: string;
-  sequence_order: number | null;
+  created_at: string;
 }
 
 interface TeacherDashboardState {
@@ -87,6 +91,11 @@ interface TeacherDashboardState {
     recommendations: string[];
   } | null;
   tenantName?: string | null;
+  upgradeModal: {
+    visible: boolean;
+    featureName: string;
+    featureDescription?: string;
+  };
 }
 
 export class TeacherDashboardInner extends React.Component<TeacherDashboardProps, TeacherDashboardState> {
@@ -102,6 +111,11 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
       recentActivities: [],
       totalStudents: 0,
       aiInsights: null,
+      upgradeModal: {
+        visible: false,
+        featureName: '',
+        featureDescription: undefined,
+      },
     };
   }
 
@@ -256,11 +270,11 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
           description,
           activity_type,
           lesson_id,
-          sequence_order
+          created_at
         `)
         // If activities has preschool_id, filter by it. If not present, rely on RLS via lessons linkage.
         .eq('preschool_id' as any, preschoolId as any)
-        .order('sequence_order', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(5);
 
       if (activitiesError) {
@@ -272,7 +286,7 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
           description: activity.description,
           activity_type: activity.activity_type,
           lesson_id: activity.lesson_id,
-          sequence_order: activity.sequence_order,
+          created_at: activity.created_at,
         }));
       }
 
@@ -414,6 +428,9 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
     const { profile } = this.props;
     const { loading, error, classes, lessons, homeworkAssignments, recentActivities, totalStudents, aiInsights } = this.state;
 
+    // Simple dark mode detection from system or stored preference
+    const isDark = false; // For now, default to light mode to fix the UI
+
     if (loading) {
       return (
         <View style={[styles.container, styles.centered]}>
@@ -449,7 +466,7 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
               }}
               schoolName={this.state.tenantName || undefined}
               onSignOut={async () => {
-                try { await signOut(); } catch {}
+                try { await signOut(); } catch { }
               }}
             />
           )}
@@ -527,13 +544,13 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
           {/* My Classes */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>My Classes</Text>
-            {classes.map(this.renderClassCard)}
+            {classes.map(classItem => this.renderClassCard(classItem))}
           </View>
 
           {/* Active Lessons */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Current Lessons</Text>
-            {lessons.slice(0, 3).map(this.renderLessonCard)}
+            {lessons.slice(0, 3).map(lesson => this.renderLessonCard(lesson))}
             <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => router.push('/(tabs)/lessons')}
@@ -607,7 +624,7 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
                     </Text>
                   )}
                   <Text style={styles.announcementDate}>
-                    Lesson: {activity.lesson_id} • Order: {activity.sequence_order || 'N/A'}
+                    Lesson: {activity.lesson_id} • Created: {new Date(activity.created_at).toLocaleDateString()}
                   </Text>
                 </View>
               );
@@ -631,6 +648,8 @@ export default function TeacherDashboard() {
   );
 }
 
+
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -643,15 +662,15 @@ const styles = StyleSheet.create({
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
     marginBottom: 24,
+    justifyContent: 'space-between',
   },
   metricCard: {
-    flex: 1,
-    minWidth: '45%',
+    width: '48%', // Ensures exactly 2 columns
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 12,
     borderTopWidth: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -686,14 +705,15 @@ const styles = StyleSheet.create({
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   quickActionCard: {
-    flex: 1,
-    minWidth: '45%',
+    width: '48%', // Match metrics cards
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 12,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1066,5 +1086,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginLeft: 12,
+  },
+  // Subscription-related styles
+  lockedFeatureCard: {
+    opacity: 0.6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+  },
+  lockedFeatureText: {
+    color: '#9CA3AF',
+  },
+  lockBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  premiumBadge: {
+    fontSize: 10,
+    color: '#8B5CF6',
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 4,
+    fontWeight: '600',
   },
 });

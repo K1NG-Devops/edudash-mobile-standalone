@@ -22,13 +22,11 @@ export default function TeachersScreen() {
 
   const load = async () => {
     if (!profile?.preschool_id) {
-      console.log('❌ No preschool_id found in profile');
       return;
     }
     
     try {
       setLoading(true);
-      console.log('🔄 Loading teachers for preschool:', profile.preschool_id);
       
       let query = supabase
         .from('users')
@@ -43,17 +41,6 @@ export default function TeachersScreen() {
       
       if (error) {
         console.error('❌ Teachers query error:', error);
-        console.log('Query details:', {
-          table: 'users',
-          filters: { preschool_id: profile.preschool_id, role: 'teacher', status }
-        });
-      } else {
-        console.log('✅ Teachers loaded successfully:', data?.length || 0, 'records');
-        if (data && data.length > 0) {
-          console.log('📋 Matching teachers:', data);
-        } else {
-          console.log('🔍 No teachers found for preschool_id:', profile.preschool_id);
-        }
       }
       
       const rows = (data || []).map((t: any) => ({ id: t.id, name: t.name, email: t.email, is_active: t.is_active }));

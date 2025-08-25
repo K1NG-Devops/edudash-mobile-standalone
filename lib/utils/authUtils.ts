@@ -21,9 +21,11 @@ export interface PasswordResetRequest {
  * Interface for password reset with token
  */
 export interface PasswordResetWithToken {
-  token: string;
+  token: string; // access_token from the URL hash
   newPassword: string;
   email: string;
+  accessToken?: string; // alias of token
+  refreshToken?: string; // refresh_token from the URL hash
 }
 
 /**
@@ -117,7 +119,37 @@ export async function resetPasswordWithToken(resetData: PasswordResetWithToken) 
       throw new Error('Password does not meet security requirements');
     }
 
-    // Use Supabase to update password
+    // Check if we have an active session first
+    const { data: currentSession } = await supabase.auth.getSession();
+    
+    if (!currentSession.session) {
+      // If no session, try to establish one with the tokens
+      const access = resetData.accessToken || resetData.token;
+      const refresh = resetData.refreshToken;
+
+      if (access && refresh) {
+        try {
+          log.info('🔄 Establishing session for password reset...');
+          const { error: sessErr } = await supabase.auth.setSession({
+            access_token: access,
+            refresh_token: refresh as string,
+          });
+          if (sessErr) {
+            log.error('❌ setSession failed during reset flow:', sessErr);
+            throw new Error(`Session establishment failed: ${sessErr.message}`);
+          }
+        } catch (e) {
+          log.error('❌ Exception calling setSession:', e);
+          throw new Error('Failed to establish reset session');
+        }
+      } else {
+        throw new Error('Missing access/refresh tokens for password reset');
+      }
+    } else {
+      log.info('✅ Using existing session for password reset');
+    }
+
+    // Update password for the currently-authenticated session
     const { data, error } = await supabase.auth.updateUser({
       password: resetData.newPassword
     });
@@ -215,7 +247,8 @@ export async function sendForgotPasswordEmail(email: string, customResetUrl?: st
     // Always call Supabase password reset to avoid user enumeration issues
     // Build redirect URL from env with sensible defaults
     const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://app.edudashpro.org.za';
-    const redirect = customResetUrl || `${webUrlBase}/(auth)/reset-password`;
+    // IMPORTANT: expo-router group segments like (auth) are not part of the public URL path
+    const redirect = customResetUrl || `${webUrlBase}/reset-password`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirect });
 
@@ -242,57 +275,102 @@ export async function sendForgotPasswordEmail(email: string, customResetUrl?: st
 }
 
 /**
- * Generate forgot password email template
- * Professional HTML template for password reset emails
+ * Generate enhanced EduDash Pro password reset email template
+ * Professional, mobile-first HTML template with improved branding
  */
-function generateForgotPasswordEmailTemplate(userName: string, email: string): string {
+export function generateForgotPasswordEmailTemplate(userName: string, email: string): string {
   return `
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Password Reset - EduDash Pro</title>
+        <title>🔐 Password Reset - EduDash Pro</title>
+        <style>
+            @media only screen and (max-width: 600px) {
+                .container { width: 100% !important; }
+                .content-padding { padding: 20px !important; }
+                .mobile-hide { display: none !important; }
+            }
+        </style>
     </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <!-- Header -->
-            <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">🔐 Password Reset Request</h1>
-                <p style="color: #ffffff; margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Secure your EduDash Pro account</p>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+        <div class="container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); border-radius: 12px; overflow: hidden;">
+            <!-- Modern Header with EduDash Pro Branding -->
+            <div style="background: linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 25%, #16213e 50%, #0f3460 75%, #533a71 100%); padding: 40px 20px; text-align: center; position: relative;">
+                <!-- Animated Particles Background -->
+                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.3;">
+                    <div style="position: absolute; width: 4px; height: 4px; background: #00f5ff; border-radius: 50%; top: 20%; left: 10%; animation: float 3s ease-in-out infinite;"></div>
+                    <div style="position: absolute; width: 3px; height: 3px; background: #8000ff; border-radius: 50%; top: 60%; left: 80%; animation: float 4s ease-in-out infinite;"></div>
+                    <div style="position: absolute; width: 5px; height: 5px; background: #ff0080; border-radius: 50%; top: 40%; left: 60%; animation: float 3.5s ease-in-out infinite;"></div>
+                </div>
+                
+                <!-- EduDash Pro Logo -->
+                <div style="background: linear-gradient(45deg, #00f5ff 0%, #0080ff 50%, #8000ff 100%); width: 60px; height: 60px; border-radius: 30px; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 245, 255, 0.3);">
+                    <span style="font-size: 28px;">🧠</span>
+                </div>
+                
+                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">EduDash Pro</h1>
+                <p style="color: #00f5ff; margin: 5px 0 0 0; font-size: 14px; font-weight: 600; letter-spacing: 1px;">SOCIETY 5.0 • NEURAL EDUCATION</p>
+                <div style="height: 20px; margin: 20px 0;"></div>
+                <h2 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">🔐 Password Reset Request</h2>
+                <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Secure your neural education account</p>
             </div>
             
             <!-- Content -->
-            <div style="padding: 40px 30px;">
-                <h2 style="color: #dc2626; margin: 0 0 20px 0; font-size: 24px;">Password Reset Requested</h2>
+            <div class="content-padding" style="padding: 40px 30px;">
+                <!-- Welcome Message -->
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="color: #0f3460; margin: 0 0 10px 0; font-size: 24px; font-weight: 700;">Neural Access Reset</h2>
+                    <p style="color: #533a71; font-size: 16px; margin: 0; font-weight: 500;">Secure your quantum education gateway</p>
+                </div>
                 
                 <p style="color: #374151; line-height: 1.6; margin: 0 0 25px 0; font-size: 16px;">
-                    Hello ${userName || 'there'},
+                    Hello <strong style="color: #0f3460;">${userName || 'Neural Educator'}</strong>,
                 </p>
                 
                 <p style="color: #374151; line-height: 1.6; margin: 0 0 25px 0; font-size: 16px;">
-                    We received a request to reset the password for your EduDash Pro account associated with 
-                    <strong>${email}</strong>.
+                    We received a request to reset the password for your EduDash Pro neural education account associated with:
                 </p>
                 
-                <!-- Reset Instructions Card -->
-                <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 12px; padding: 30px; margin: 30px 0; border: 2px solid #dc2626;">
-                    <h3 style="color: #b91c1c; margin: 0 0 20px 0; font-size: 20px; text-align: center;">🔑 Reset Your Password</h3>
+                <!-- Email Display -->
+                <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center; border: 2px solid #0ea5e9;">
+                    <span style="font-family: 'Courier New', monospace; font-size: 16px; color: #0c4a6e; font-weight: 600;">${email}</span>
+                </div>
+                
+                <!-- Enhanced Reset Instructions Card -->
+                <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border-radius: 16px; padding: 35px; margin: 30px 0; border: 3px solid #6366f1; position: relative; overflow: hidden;">
+                    <!-- Decorative Background Pattern -->
+                    <div style="position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(99,102,241,0.05) 0%, transparent 70%); pointer-events: none;"></div>
                     
-                    <p style="color: #7f1d1d; line-height: 1.6; margin: 0 0 25px 0; font-size: 16px; text-align: center;">
-                        Click the button below to create a new password for your account.
-                    </p>
-                    
-                    <!-- Reset Button -->
-                    <div style="text-align: center; margin: 25px 0;">
-                        <a href="#" style="display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3);">
-                            🔐 Reset Password
-                        </a>
+                    <div style="position: relative; z-index: 1;">
+                        <div style="text-align: center; margin-bottom: 25px;">
+                            <div style="background: linear-gradient(45deg, #6366f1 0%, #8b5cf6 100%); width: 60px; height: 60px; border-radius: 30px; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                                <span style="font-size: 28px;">🔑</span>
+                            </div>
+                            <h3 style="color: #4338ca; margin: 0 0 10px 0; font-size: 22px; font-weight: 700;">Neural Access Reset</h3>
+                            <p style="color: #6366f1; margin: 0; font-size: 14px; font-weight: 500; letter-spacing: 0.5px;">QUANTUM SECURITY PROTOCOL</p>
+                        </div>
+                        
+                        <p style="color: #4c1d95; line-height: 1.6; margin: 0 0 25px 0; font-size: 16px; text-align: center;">
+                            Click the quantum button below to access the neural reset portal and create your new password.
+                        </p>
+                        
+                        <!-- Enhanced Reset Button -->
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="#" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%); color: #ffffff; text-decoration: none; padding: 18px 36px; border-radius: 12px; font-weight: 700; font-size: 16px; box-shadow: 0 8px 16px rgba(99, 102, 241, 0.4); transition: all 0.3s ease; letter-spacing: 0.5px;">
+                                🚀 ACTIVATE NEURAL RESET
+                            </a>
+                        </div>
+                        
+                        <!-- Security Timeline -->
+                        <div style="background: rgba(99, 102, 241, 0.1); border-radius: 8px; padding: 20px; margin: 25px 0 0 0;">
+                            <div style="text-align: center;">
+                                <span style="color: #4338ca; font-size: 14px; font-weight: 600;">⏰ QUANTUM TIMER:</span>
+                                <span style="color: #6366f1; font-size: 14px; margin-left: 8px;">Link expires in 1 hour for maximum security</span>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <p style="color: #7f1d1d; line-height: 1.6; margin: 25px 0 0 0; font-size: 14px; text-align: center;">
-                        This link will expire in 1 hour for security.
-                    </p>
                 </div>
                 
                 <!-- Security Notice -->

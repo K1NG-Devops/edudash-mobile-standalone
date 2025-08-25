@@ -22,20 +22,17 @@ export class VideoCallService {
   ) {
     try {
       const { data: videoCall, error } = await supabase
-        .from('video_call_sessions')
+        .from('video_calls')
         .insert({
           preschool_id: preschoolId,
-          host_id: hostId,
+          teacher_id: hostId,
           title,
           description,
-          session_type: sessionType,
-          invited_participants: invitedParticipants,
-          scheduled_start_time: scheduledStartTime,
-          scheduled_end_time: scheduledEndTime,
-          meeting_room_id: options?.meetingRoomId || null,
+          scheduled_start: scheduledStartTime,
+          scheduled_end: scheduledEndTime,
+          meeting_id: options?.meetingRoomId || null,
           meeting_url: options?.meetingUrl || null,
-          dial_in_number: options?.dialInNumber || null,
-          access_code: options?.accessCode || null,
+          meeting_password: options?.accessCode || null,
           max_participants: options?.maxParticipants || 10,
         })
         .select()
@@ -54,14 +51,14 @@ export class VideoCallService {
   static async getUpcomingVideoCalls(userId: string) {
     try {
       const { data, error } = await supabase
-        .from('video_call_sessions')
+        .from('video_calls')
         .select(`
           *,
-          host:users!video_call_sessions_host_id_fkey(name, avatar_url)
+          host:users!video_calls_teacher_id_fkey(name, avatar_url)
         `)
-        .or(`host_id.eq.${userId},invited_participants.cs.{${userId}}`)
-        .gt('scheduled_end_time', new Date().toISOString())
-        .order('scheduled_start_time', { ascending: true });
+        .eq('teacher_id', userId)
+        .gt('scheduled_end', new Date().toISOString())
+        .order('scheduled_start', { ascending: true });
 
       if (error) throw error;
 
@@ -76,22 +73,21 @@ export class VideoCallService {
   static async cancelVideoCall(callId: string, userId: string) {
     try {
       const { data: call, error: fetchError } = await supabase
-        .from('video_call_sessions')
+        .from('video_calls')
         .select('*')
         .eq('id', callId)
         .single();
 
       if (fetchError) throw fetchError;
 
-      if (call.host_id !== userId) {
+      if (call.teacher_id !== userId) {
         throw new Error('Only the host can cancel the call');
       }
 
       const { error } = await supabase
-        .from('video_call_sessions')
+        .from('video_calls')
         .update({
           status: 'cancelled',
-          cancellation_reason: 'Cancelled by host.',
         })
         .eq('id', callId);
 
@@ -108,7 +104,7 @@ export class VideoCallService {
   static async joinVideoCall(callId: string, userId: string) {
     try {
       const { data: call, error: fetchError } = await supabase
-        .from('video_call_sessions')
+        .from('video_calls')
         .select('*')
         .eq('id', callId)
         .single();
@@ -119,16 +115,15 @@ export class VideoCallService {
         throw new Error('Cannot join a call that is not scheduled or in progress');
       }
 
-      if (Array.isArray(call.joined_participants) && call.joined_participants.includes(userId)) {
-        return { error: new Error('You have already joined this call') };
-      }
-
+      // For participant tracking, we should use the video_call_participants table
       const { error } = await supabase
-        .from('video_call_sessions')
-        .update({
-          joined_participants: [...(Array.isArray(call.joined_participants) ? call.joined_participants : []), userId],
-        })
-        .eq('id', callId);
+        .from('video_call_participants')
+        .insert({
+          call_id: callId,
+          user_id: userId,
+          status: 'joined',
+          joined_at: new Date().toISOString(),
+        });
 
       if (error) throw error;
 

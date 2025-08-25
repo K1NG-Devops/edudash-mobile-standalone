@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { router, usePathname } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface TabItem {
   key: string;
@@ -31,7 +32,7 @@ export default function GlobalBottomNav() {
     { key: 'teachers', label: 'Teachers', icon: 'person.2.fill', onPress: () => router.push('/screens/teachers' as any) },
     { key: 'students', label: 'Students', icon: 'graduationcap.fill', onPress: () => router.push('/screens/students' as any) },
     { key: 'messages', label: 'Messages', icon: 'message.fill', onPress: () => router.push('/(tabs)/messages' as any) },
-    { key: 'settings', label: 'Settings', icon: 'gear', onPress: () => router.push('/screens/settings' as any) },
+    { key: 'settings', label: 'Settings', icon: 'gear', onPress: () => router.push('/(tabs)/settings_new' as any) },
   ];
 
   const teacherTabs: TabItem[] = [
@@ -40,7 +41,7 @@ export default function GlobalBottomNav() {
     { key: 'students', label: 'Students', icon: 'graduationcap.fill', onPress: () => router.push('/screens/students' as any) },
     { key: 'activities', label: 'Activities', icon: 'figure.run', onPress: () => router.push('/(tabs)/activities' as any) },
     { key: 'messages', label: 'Messages', icon: 'message.fill', onPress: () => router.push('/(tabs)/messages' as any) },
-    { key: 'settings', label: 'Settings', icon: 'gear', onPress: () => router.push('/screens/settings' as any) },
+    { key: 'settings', label: 'Settings', icon: 'gear', onPress: () => router.push('/(tabs)/settings_new' as any) },
   ];
 
   const tabs: TabItem[] = normalizedRole === 'teacher' ? teacherTabs : adminTabs;
@@ -49,20 +50,22 @@ export default function GlobalBottomNav() {
   const textColor = isDark ? '#E5E7EB' : '#6B7280';
   const backgroundColor = isDark ? '#0F172A' : '#FFFFFF';
   const borderColor = isDark ? '#475569' : '#E5E7EB';
-
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
-      <View style={[styles.tabNavigationBottom, {
-        backgroundColor,
-        borderTopColor: borderColor,
-      }]}>
-        {tabs.map((tab) => (
-          <TouchableOpacity key={tab.key} style={styles.tabButton} onPress={tab.onPress}>
-            <IconSymbol name={tab.icon as any} size={16} color={iconColor} />
-            <Text style={[styles.tabLabel, { color: textColor }]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <SafeAreaView edges={['bottom','left','right']}>
+        <View style={[styles.tabNavigationBottom, {
+          backgroundColor,
+          borderTopColor: borderColor,
+        }]}
+        >
+          {tabs.map((tab) => (
+            <TouchableOpacity key={tab.key} style={styles.tabButton} onPress={tab.onPress}>
+              <IconSymbol name={tab.icon as any} size={16} color={iconColor} />
+              <Text style={[styles.tabLabel, { color: textColor }]}>{tab.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </SafeAreaView>
     </View>
   );
 }

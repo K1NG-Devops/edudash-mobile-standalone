@@ -3,18 +3,25 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { SchoolCodeManager } from '../../components/admin/SchoolCodeManager';
 import { PrincipalService } from '../../lib/services/principalService';
 import * as Clipboard from 'expo-clipboard';
-import { Alert, Share } from 'react-native';
+import { Alert } from 'react-native';
+import { Share } from 'react-native';
 
 // Mock dependencies
 jest.mock('../../lib/services/principalService');
 jest.mock('expo-clipboard');
 jest.mock('../../lib/utils/logger');
-jest.mock('react-native/Libraries/Alert/Alert', () => ({
-  alert: jest.fn(),
-}));
-jest.mock('react-native/Libraries/Share/Share', () => ({
-  share: jest.fn(),
-}));
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+  return {
+    ...RN,
+    Alert: {
+      alert: jest.fn(),
+    },
+    Share: {
+      share: jest.fn(async () => ({ action: 'sharedAction' })),
+    },
+  };
+});
 
 // Mock components
 jest.mock('../../components/ui/IconSymbol', () => ({
@@ -75,12 +82,13 @@ describe('SchoolCodeManager Component', () => {
   });
 
   it('renders the school code manager with active code', async () => {
-    const { findByText, queryByText } = render(
+    const { findAllByText, queryByText } = render(
       <SchoolCodeManager {...mockProps} />
     );
 
-    // Wait for the active code to load
-    await findByText('ABC12345');
+// Wait for the active code to load (may appear multiple times)
+    const matches = await findAllByText('ABC12345');
+    expect(matches.length).toBeGreaterThan(0);
     
     expect(queryByText('Active School Code')).toBeTruthy();
     expect(queryByText('No Active School Code')).toBeFalsy();
@@ -139,12 +147,13 @@ describe('SchoolCodeManager Component', () => {
   });
 
   it('handles copying code to clipboard', async () => {
-    const { findByText } = render(
+const { findAllByText, findByText } = render(
       <SchoolCodeManager {...mockProps} />
     );
 
-    // Wait for the active code to load
-    await findByText('ABC12345');
+// Wait for the active code to load (code appears in multiple places)
+    const matches1 = await findAllByText('ABC12345');
+    expect(matches1.length).toBeGreaterThan(0);
     
     // Find and click the copy code button
     const copyButton = await findByText('Copy Code');
@@ -156,12 +165,13 @@ describe('SchoolCodeManager Component', () => {
   });
 
   it('handles sharing code', async () => {
-    const { findByText } = render(
+const { findAllByText, findByText } = render(
       <SchoolCodeManager {...mockProps} />
     );
 
-    // Wait for the active code to load
-    await findByText('ABC12345');
+// Wait for the active code to load (may appear multiple times)
+    const matches2 = await findAllByText('ABC12345');
+    expect(matches2.length).toBeGreaterThan(0);
     
     // Find and click the share code button
     const shareButton = await findByText('Share Code');
@@ -177,12 +187,13 @@ describe('SchoolCodeManager Component', () => {
   });
 
   it('handles deactivating code', async () => {
-    const { findByText } = render(
+const { findAllByText, findByText } = render(
       <SchoolCodeManager {...mockProps} />
     );
 
-    // Wait for the active code to load
-    await findByText('ABC12345');
+// Wait for the active code to load (may appear multiple times)
+    const matches3 = await findAllByText('ABC12345');
+    expect(matches3.length).toBeGreaterThan(0);
     
     // Find and click the deactivate button
     const deactivateButton = await findByText('Deactivate Code');

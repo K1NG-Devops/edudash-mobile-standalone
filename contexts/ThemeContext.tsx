@@ -6,9 +6,21 @@ interface ThemeContextType {
   colorScheme: 'light' | 'dark';
   setColorScheme: (scheme: 'light' | 'dark') => void;
   toggle: () => void;
+  theme: {
+    isDark: boolean;
+    colors: {
+      primary: string;
+      background: string;
+      card: string;
+      text: string;
+      textSecondary: string;
+      border: string;
+    };
+  };
+  toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const useTheme = () => {
   const ctx = useContext(ThemeContext);
@@ -91,11 +103,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Update bridge each render so external callers can toggle theme cross-platform
   externalSetter = setColorScheme;
 
+  const theme = useMemo(() => ({
+    isDark: colorScheme === 'dark',
+    colors: {
+      primary: colorScheme === 'dark' ? '#3B82F6' : '#1D4ED8',
+      background: colorScheme === 'dark' ? '#111827' : '#F9FAFB',
+      card: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF',
+      text: colorScheme === 'dark' ? '#F9FAFB' : '#111827',
+      textSecondary: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280',
+      border: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+    },
+  }), [colorScheme]);
+
   const value = useMemo(() => ({
     colorScheme,
     setColorScheme,
     toggle: () => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark'),
-  }), [colorScheme]);
+    theme,
+    toggleTheme: () => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark'),
+  }), [colorScheme, theme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };

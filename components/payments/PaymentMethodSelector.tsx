@@ -1,6 +1,8 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { PaymentMethod } from '@/types/payment-types';
 import React from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 import {
   ScrollView,
   StyleSheet,
@@ -28,6 +30,8 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   onSelectMethod,
   disabled = false,
 }) => {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
   const paymentMethods: PaymentMethodOption[] = [
     {
       method: 'card',
@@ -72,9 +76,9 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Select Payment Method</Text>
-      <Text style={styles.subtitle}>Choose how you would like to pay</Text>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <Text style={[styles.title, { color: palette.text }]}>Select Payment Method</Text>
+      <Text style={[styles.subtitle, { color: palette.textSecondary }]}>Choose how you would like to pay</Text>
 
       <ScrollView
         style={styles.methodsList}
@@ -92,7 +96,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             disabled={!method.enabled || disabled}
             activeOpacity={0.7}
           >
-            <View style={styles.methodContent}>
+            <View style={[styles.methodContent, { }]}>
               <View style={[
                 styles.methodIcon,
                 { backgroundColor: `${getMethodColor(method.method)}20` }
@@ -107,12 +111,14 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
               <View style={styles.methodInfo}>
                 <Text style={[
                   styles.methodTitle,
+                  { color: palette.text },
                   (!method.enabled || disabled) && styles.disabledText
                 ]}>
                   {method.title}
                 </Text>
                 <Text style={[
                   styles.methodDescription,
+                  { color: palette.textSecondary },
                   (!method.enabled || disabled) && styles.disabledText
                 ]}>
                   {method.description}
@@ -146,9 +152,9 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       </ScrollView>
 
       {selectedMethod && (
-        <View style={styles.selectedMethodInfo}>
+        <View style={[styles.selectedMethodInfo, { backgroundColor: palette.surface }]}>
           <IconSymbol name="info.circle.fill" size={16} color="#3B82F6" />
-          <Text style={styles.selectedMethodText}>
+          <Text style={[styles.selectedMethodText, { color: palette.textSecondary }]}>
             You've selected {paymentMethods.find(m => m.method === selectedMethod)?.title}
           </Text>
         </View>

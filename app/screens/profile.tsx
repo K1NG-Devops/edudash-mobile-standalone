@@ -75,7 +75,7 @@ export default function ProfileScreen() {
         email: data.email,
         role: data.role,
         phone: data.phone || undefined,
-        avatar_url: data.avatar_url || undefined,
+        avatar_url: data.profile_picture_url || undefined,
         preschool_id: data.preschool_id || undefined,
         is_active: !!data.is_active,
         created_at: data.created_at || new Date().toISOString(),

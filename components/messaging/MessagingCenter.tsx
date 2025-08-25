@@ -1,8 +1,8 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
 import {
   ActivityIndicator,
   Alert,
@@ -133,7 +133,44 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           }
         )
         .subscribe();
-    } catch {}
+    } catch { }
+  };
+
+  // Load contacts for teachers - shows other school staff and parents
+  const loadSchoolContacts = async (userProfile: any) => {
+    try {
+      // Get all users in the same school (principals, other teachers, parents)
+      const { data: schoolUsers, error: schoolError } = await supabase
+        .from('users')
+        .select('id, name, avatar_url, role, email')
+        .eq('preschool_id', userProfile.preschool_id)
+        .neq('id', userProfile.id) // Exclude self
+        .eq('is_active', true)
+        .in('role', ['preschool_admin', 'teacher', 'parent'])
+        .order('role', { ascending: true }) // Admins first, then teachers, then parents
+        .order('name', { ascending: true });
+
+      if (schoolError) throw schoolError;
+
+      // Convert to conversation format
+      const schoolContacts: Conversation[] = (schoolUsers || []).map(user => ({
+        id: user.id,
+        participant_name: user.name || user.email || 'Unknown User',
+        participant_avatar: user.avatar_url,
+        participant_role: user.role,
+        last_message: `Start a conversation with ${user.name || 'this user'}`,
+        last_message_time: '',
+        unread_count: 0,
+        is_online: false,
+      }));
+
+      setConversations(schoolContacts);
+    } catch (error) {
+      console.error('Error loading school contacts:', error);
+      Alert.alert('Error', 'Failed to load school contacts');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadConversations = async () => {
@@ -142,17 +179,23 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     try {
       setLoading(true);
 
-      // Get parent's internal ID
-      const { data: parentProfile, error: parentError } = await supabase
+      // Get user's internal ID
+      const { data: userProfile, error: userError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, role, preschool_id')
         .eq('auth_user_id', profile.auth_user_id)
         .single();
 
-      if (parentError || !parentProfile) {
-        throw new Error('Parent profile not found');
+      if (userError || !userProfile) {
+        throw new Error('User profile not found');
       }
-      setParentUserId(parentProfile.id);
+      setParentUserId(userProfile.id);
+
+      // If user is a teacher, show other school staff and parents
+      if (userProfile.role === 'teacher' && userProfile.preschool_id) {
+        await loadSchoolContacts(userProfile);
+        return;
+      }
 
       // 1) Incoming messages to parent
       const { data: incoming, error: incomingError } = await supabase
@@ -485,7 +528,10 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
             <View style={styles.conversationDetails}>
               <Text style={[styles.participantRole, { color: colors.muted }]}>
-                {conversation.participant_role === 'teacher' ? '👩‍🏫 Teacher' : '👨‍💼 Admin'}
+                {conversation.participant_role === 'teacher' && '👩‍🏫 Teacher'}
+                {conversation.participant_role === 'preschool_admin' && '👨‍💼 Principal'}
+                {conversation.participant_role === 'parent' && '👨‍👩‍👧‍👦 Parent'}
+                {!['teacher', 'preschool_admin', 'parent'].includes(conversation.participant_role) && '👤 User'}
                 {conversation.child_name && ` • ${conversation.child_name}`}
               </Text>
             </View>
@@ -605,8 +651,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     return (
       <View style={styles.chatContainer}>
         {/* Chat Header */}
-          <View style={[styles.chatHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-            <TouchableOpacity
+        <View style={[styles.chatHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => setSelectedConversation(null)}
           >

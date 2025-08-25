@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
  * This should only be called by authenticated admins/support staff
  */
 export const sendPasswordResetAsAdmin = async (
-  email: string, 
+  email: string,
   adminUserId?: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
@@ -17,24 +17,30 @@ export const sendPasswordResetAsAdmin = async (
         .select('role')
         .eq('auth_user_id', adminUserId)
         .single();
-      
+
       if (!adminProfile || !['superadmin', 'preschool_admin'].includes(adminProfile.role)) {
         return { success: false, error: 'Unauthorized: Admin access required' };
       }
     }
-    
-    // Send the password reset email with mobile deep link
+
+    // Send the password reset email with appropriate redirect URL
+    // For production, use the web URL; for development, use localhost
+    const isProduction = process.env.NODE_ENV === 'production';
+    const baseUrl = isProduction
+      ? 'https://app.edudashpro.org.za'
+      : 'http://localhost:8081';
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'edudashpro://auth/reset-password',
+      redirectTo: `${baseUrl}/reset-password`,
     });
-    
+
     if (error) {
       console.error('❌ Failed to send password reset email:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true };
-    
+
   } catch (error: any) {
     console.error('❌ Exception in sendPasswordResetAsAdmin:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
@@ -45,7 +51,7 @@ export const sendPasswordResetAsAdmin = async (
  * Admin function to check if a user exists before sending reset
  */
 export const checkUserExistsAndSendReset = async (
-  email: string, 
+  email: string,
   adminUserId?: string
 ): Promise<{ success: boolean; error?: string; userFound?: boolean }> => {
   try {
@@ -55,34 +61,34 @@ export const checkUserExistsAndSendReset = async (
       .select('id, email, name, is_active')
       .eq('email', email.toLowerCase().trim())
       .single();
-    
+
     if (userError && userError.code !== 'PGRST116') { // PGRST116 = no rows returned
       return { success: false, error: 'Database error checking user' };
     }
-    
+
     if (!existingUser) {
-      return { 
-        success: false, 
-        error: 'User not found in system', 
-        userFound: false 
+      return {
+        success: false,
+        error: 'User not found in system',
+        userFound: false
       };
     }
-    
+
     if (!existingUser.is_active) {
-      return { 
-        success: false, 
-        error: 'User account is inactive', 
-        userFound: true 
+      return {
+        success: false,
+        error: 'User account is inactive',
+        userFound: true
       };
     }
-    
+
     // User exists and is active, send the reset email
     const resetResult = await sendPasswordResetAsAdmin(email, adminUserId);
-    return { 
-      ...resetResult, 
-      userFound: true 
+    return {
+      ...resetResult,
+      userFound: true
     };
-    
+
   } catch (error: any) {
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }

@@ -4,7 +4,9 @@ import SchoolAdminDashboard from '@/components/dashboard/SchoolAdminDashboard';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import ThemedCard from '@/components/ui/ThemedCard';
+import { Colors } from '@/constants/Colors';
 import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import type { Href } from 'expo-router';
 import { router } from 'expo-router';
@@ -64,7 +66,9 @@ interface UpcomingEvent {
   location?: string;
 }
 
-class DashboardScreen extends React.Component<Record<string, never>, DashboardState> {
+type DashboardProps = { palette: any; isDark: boolean };
+
+class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
   state: DashboardState = {
     refreshing: false,
     selectedChildId: null,
@@ -350,7 +354,7 @@ class DashboardScreen extends React.Component<Record<string, never>, DashboardSt
     }
 
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: this.props.palette.background }]} >
         {/* Mobile Header */}
         <MobileHeader
           user={{
@@ -372,8 +376,8 @@ class DashboardScreen extends React.Component<Record<string, never>, DashboardSt
         >
           {/* Header Text */}
           <View style={styles.headerTextSection}>
-            <Text style={styles.greeting}>{this.getGreeting()} 👋</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.greeting, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>{this.getGreeting()} 👋</Text>
+            <Text style={[styles.subtitle, { color: this.props.isDark ? this.props.palette.textSecondary : '#6B7280' }]}>
               Welcome to your {profile?.role || 'admin'} dashboard
             </Text>
           </View>
@@ -385,7 +389,7 @@ class DashboardScreen extends React.Component<Record<string, never>, DashboardSt
                 <Text style={styles.tenantLabel}>🏫 Managing {this.state.tenantName}</Text>
               </View>
             )}
-            <Text style={styles.adminTitle}>
+            <Text style={[styles.adminTitle, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>
               {profile?.role === 'teacher' ? '👩‍🏫 Teacher Dashboard' : '👨‍💼 Admin Dashboard'}
             </Text>
 
@@ -507,8 +511,8 @@ class DashboardScreen extends React.Component<Record<string, never>, DashboardSt
 
             {/* Recent Activity */}
             <ThemedCard>
-              <Text style={styles.adminCardTitle}>Recent Activity</Text>
-              <Text style={styles.adminCardText}>
+              <Text style={[styles.adminCardTitle, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>Recent Activity</Text>
+              <Text style={[styles.adminCardText, { color: this.props.isDark ? this.props.palette.textSecondary : '#6B7280' }]}>
                 {profile?.role === 'teacher'
                   ? 'Your recent reports, messages, and student interactions will appear here.'
                   : 'System activity and user management updates will be shown here.'
@@ -552,24 +556,32 @@ class DashboardScreen extends React.Component<Record<string, never>, DashboardSt
     // Render the teacher dashboard inline to avoid cross-stack redirects
     try {
       // Dynamically require to avoid potential circular import issues during bundling
-       
+
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const TeacherModule = require('../screens/teacher-dashboard');
-      const TeacherDashboardInner = TeacherModule?.TeacherDashboardInner || TeacherModule?.default;
-      if (TeacherDashboardInner) {
+      const TeacherModule = require('../screens/teacher-dashboard-functional');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const SubscriptionModule = require('../../contexts/SubscriptionContext');
+
+      const TeacherDashboard = TeacherModule?.TeacherDashboard || TeacherModule?.default;
+      const SubscriptionProvider = SubscriptionModule?.SubscriptionProvider;
+
+      if (TeacherDashboard && SubscriptionProvider) {
         return (
-          <View style={{ flex: 1 }}>
-            <TeacherDashboardInner profile={profile} />
-          </View>
+          <SubscriptionProvider userId={profile?.auth_user_id}>
+            <View style={{ flex: 1 }}>
+              <TeacherDashboard profile={profile} />
+            </View>
+          </SubscriptionProvider>
         );
       }
-    } catch {
+    } catch (error) {
+      console.error('Error loading teacher dashboard:', error);
       // Fallback UI if the module fails to load
     }
 
     // As a last resort, show a lightweight teacher welcome
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: this.props.palette.background }]} >
         <Text style={styles.loadingText}>Loading Teacher Dashboard…</Text>
       </View>
     );
@@ -582,7 +594,7 @@ class DashboardScreen extends React.Component<Record<string, never>, DashboardSt
           // Verify user has required data for school isolation
           if (!profile) {
             return (
-              <View style={styles.loadingContainer}>
+              <View style={[styles.loadingContainer, { backgroundColor: this.props.palette.background }]} >
                 <Text style={styles.loadingText}>Loading your dashboard...</Text>
               </View>
             );
@@ -591,7 +603,7 @@ class DashboardScreen extends React.Component<Record<string, never>, DashboardSt
           // Verify school assignment for non-superadmin users
           if (profile.role !== 'superadmin' && !profile.preschool_id) {
             return (
-              <View style={styles.errorContainer}>
+              <View style={[styles.errorContainer, { backgroundColor: this.props.palette.background }]} >
                 <Text style={styles.errorText}>
                   Account not assigned to a school. Please contact your administrator.
                 </Text>
@@ -1245,4 +1257,8 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DashboardScreen;
+export default function DashboardTabWrapper() {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
+  return <DashboardScreen palette={palette} isDark={colorScheme === 'dark'} />;
+}

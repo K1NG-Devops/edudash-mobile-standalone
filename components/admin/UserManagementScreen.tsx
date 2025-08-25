@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -11,12 +11,16 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Switch
+  Switch,
+  SectionList
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { SuperAdminDataService } from '@/lib/services/superAdminDataService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 
 interface UserManagementScreenProps {
   superAdminUserId: string;
@@ -25,6 +29,8 @@ interface UserManagementScreenProps {
 const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
   superAdminUserId
 }) => {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +49,22 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
   const [bulkMode, setBulkMode] = useState(false);
 
   const [schools, setSchools] = useState<any[]>([]);
+
+  // Sorting
+  const [sortBy, setSortBy] = useState<'name' | 'created'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  // Move useMemo hook to top level to avoid violating Rules of Hooks
+  const sectionedUsers = useMemo(() => {
+    if (sortBy !== 'name') return [];
+    const map: Record<string, any[]> = {};
+    filteredUsers.forEach(u => {
+      const letter = (u.name?.[0] || '#').toUpperCase();
+      if (!map[letter]) map[letter] = [];
+      map[letter].push(u);
+    });
+    return Object.keys(map).sort().map(k => ({ title: k, data: map[k] }));
+  }, [filteredUsers, sortBy]);
 
   useEffect(() => {
     fetchUsers();
@@ -104,6 +126,21 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
     if (schoolFilter !== 'all') {
       filtered = filtered.filter(user => user.preschool_id === schoolFilter);
     }
+
+    // Sorting
+    filtered.sort((a, b) => {
+      if (sortBy === 'name') {
+        const av = (a.name || '').toLowerCase();
+        const bv = (b.name || '').toLowerCase();
+        const cmp = av.localeCompare(bv);
+        return sortDir === 'asc' ? cmp : -cmp;
+      } else {
+        const at = new Date(a.created_at).getTime() || 0;
+        const bt = new Date(b.created_at).getTime() || 0;
+        const cmp = at - bt;
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
+    });
 
     setFilteredUsers(filtered);
   };
@@ -213,26 +250,70 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
     return isActive ? '#10B981' : '#EF4444';
   };
 
-  const renderUser = ({ item: user }: { item: any }) => (
+  const getInitials = (name?: string) => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] || '';
+    const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+    return (first + last).toUpperCase();
+  };
+
+  const renderSwipeActionsLeft = (user: any) => (
     <TouchableOpacity
-      style={[
-        styles.userCard,
-        bulkMode && selectedUsers.includes(user.id) && styles.selectedCard
-      ]}
-      onPress={() => {
-        if (bulkMode) {
-          toggleUserSelection(user.id);
-        } else {
-          setSelectedUser(user);
-          setShowUserModal(true);
-        }
-      }}
+      style={[styles.swipeAction, { backgroundColor: getStatusColor(!user.is_active) }]}
+      onPress={() => handleToggleUserStatus(user)}
+      activeOpacity={0.9}
     >
+      <Text style={styles.swipeActionText}>{user.is_active ? 'Deactivate' : 'Activate'}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderSwipeActionsRight = (user: any) => (
+    <TouchableOpacity
+      style={[styles.swipeAction, { backgroundColor: palette.primary }]}
+      onPress={() => {
+        setSelectedUser(user);
+        setShowUserModal(true);
+      }}
+      activeOpacity={0.9}
+    >
+      <Text style={styles.swipeActionText}>Details</Text>
+    </TouchableOpacity>
+  );
+
+  const renderUser = ({ item: user }: { item: any }) => (
+    <Swipeable
+      renderLeftActions={() => renderSwipeActionsLeft(user)}
+      renderRightActions={() => renderSwipeActionsRight(user)}
+      overshootFriction={8}
+    >
+      <TouchableOpacity
+        style={[
+          styles.userCard,
+          { backgroundColor: palette.surface, borderColor: palette.outline },
+          bulkMode && selectedUsers.includes(user.id) && styles.selectedCard
+        ]}
+        activeOpacity={0.85}
+        onPress={() => {
+          if (bulkMode) {
+            toggleUserSelection(user.id);
+          } else {
+            setSelectedUser(user);
+            setShowUserModal(true);
+          }
+        }}
+      >
       <View style={styles.userHeader}>
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
-          <Text style={styles.userSchool}>
+        <View style={styles.avatarContainer}>
+          <View style={[styles.avatar, { backgroundColor: getRoleColor(user.role) }]}>
+            <Text style={styles.avatarText}>{getInitials(user.name)}</Text>
+          </View>
+          <View style={[styles.presenceDot, { backgroundColor: getStatusColor(user.is_active) }]} />
+        </View>
+        <View style={[styles.userInfo, { marginLeft: 12 }]}>
+          <Text style={[styles.userName, { color: palette.text }]} numberOfLines={1}>{user.name}</Text>
+          <Text style={[styles.userEmail, { color: palette.textSecondary }]} numberOfLines={1}>{user.email}</Text>
+          <Text style={[styles.userSchool, { color: palette.textSecondary }]} numberOfLines={1}>
             {user.school_name || 'No School Assigned'}
           </Text>
         </View>
@@ -241,9 +322,11 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
           <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user.role) }]}>
             <Text style={styles.roleText}>{user.role.replace('_', ' ').toUpperCase()}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(user.is_active) }]}>
-            <Text style={styles.statusText}>{user.is_active ? 'ACTIVE' : 'INACTIVE'}</Text>
-          </View>
+          <TouchableOpacity onPress={() => handleToggleUserStatus(user)} disabled={processing === user.id}>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(user.is_active) }]}>
+              <Text style={styles.statusText}>{user.is_active ? 'ACTIVE' : 'INACTIVE'}</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -259,103 +342,128 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
           </View>
         </View>
       )}
-
-      {!bulkMode && (
-        <View style={styles.userActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleToggleUserStatus(user)}
-            disabled={processing === user.id}
-          >
-            {processing === user.id ? (
-              <LoadingSpinner size={16} color="#6B7280" />
-            ) : (
-              <IconSymbol
-                name={user.is_active ? "person.badge.minus" : "person.badge.plus"}
-                size={16}
-                color="#6B7280"
-              />
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Swipeable>
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <LoadingSpinner size="large" color="#8B5CF6" />
-        <Text style={styles.loadingText}>Loading users...</Text>
+        <LoadingSpinner size="small" color={palette.primary} message="Loading users..." />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
       {/* Header with Search and Filters */}
-      <View style={styles.header}>
-        <View style={styles.searchContainer}>
-          <IconSymbol name="magnifyingglass" size={20} color="#6B7280" />
+      <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.outline }]}>
+        <View style={[styles.searchContainer, { backgroundColor: palette.surfaceVariant }]}>
+          <IconSymbol name="magnifyingglass" size={20} color={palette.textSecondary} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: palette.text }]}
             placeholder="Search users..."
+            placeholderTextColor={palette.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>
         
         <TouchableOpacity
-          style={[styles.bulkButton, bulkMode && styles.bulkButtonActive]}
+          style={[styles.bulkButton, { borderColor: palette.outline }, bulkMode && [styles.bulkButtonActive, { backgroundColor: palette.primary, borderColor: palette.primary }]]}
           onPress={() => {
             setBulkMode(!bulkMode);
             setSelectedUsers([]);
           }}
         >
-          <IconSymbol name="checkmark.circle" size={16} color={bulkMode ? "#FFFFFF" : "#6B7280"} />
-          <Text style={[styles.bulkButtonText, bulkMode && styles.bulkButtonTextActive]}>
+          <IconSymbol name="checkmark.circle" size={16} color={bulkMode ? "#FFFFFF" : palette.textSecondary} />
+          <Text style={[styles.bulkButtonText, { color: palette.textSecondary }, bulkMode && styles.bulkButtonTextActive]}>
             Bulk
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Filters Row */}
-      <ScrollView horizontal style={styles.filtersContainer} showsHorizontalScrollIndicator={false}>
+      <ScrollView horizontal style={[styles.filtersContainer, { backgroundColor: palette.surface, borderBottomColor: palette.outline }]} showsHorizontalScrollIndicator={false}>
         <TouchableOpacity
-          style={[styles.filterChip, roleFilter === 'all' && styles.filterChipActive]}
+          style={[
+            styles.filterChip, 
+            { backgroundColor: roleFilter === 'all' ? '#DC2626' : palette.surfaceVariant, borderColor: roleFilter === 'all' ? '#DC2626' : palette.outline },
+            roleFilter === 'all' && styles.filterChipActive
+          ]}
           onPress={() => setRoleFilter('all')}
         >
-          <Text style={[styles.filterText, roleFilter === 'all' && styles.filterTextActive]}>
+          <Text style={[
+            styles.filterText, 
+            { color: roleFilter === 'all' ? '#FFFFFF' : palette.textSecondary },
+            roleFilter === 'all' && styles.filterTextActive
+          ]}>
             All Roles
           </Text>
         </TouchableOpacity>
         
-        {['superadmin', 'preschool_admin', 'teacher', 'parent'].map(role => (
+        {['superadmin', 'principal', 'teacher', 'parent'].map(role => (
           <TouchableOpacity
             key={role}
-            style={[styles.filterChip, roleFilter === role && styles.filterChipActive]}
+            style={[
+              styles.filterChip, 
+              { backgroundColor: roleFilter === role ? '#DC2626' : palette.surfaceVariant, borderColor: roleFilter === role ? '#DC2626' : palette.outline },
+              roleFilter === role && styles.filterChipActive
+            ]}
             onPress={() => setRoleFilter(role)}
           >
-            <Text style={[styles.filterText, roleFilter === role && styles.filterTextActive]}>
-              {role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            <Text style={[
+              styles.filterText, 
+              { color: roleFilter === role ? '#FFFFFF' : palette.textSecondary },
+              roleFilter === role && styles.filterTextActive
+            ]}>
+              {role === 'superadmin' ? 'Superadmin' : 
+               role === 'principal' ? 'Principal' :
+               role === 'teacher' ? 'Teacher' :
+               role === 'parent' ? 'Parent' :
+               role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
             </Text>
           </TouchableOpacity>
         ))}
         
         <TouchableOpacity
-          style={[styles.filterChip, statusFilter === 'active' && styles.filterChipActive]}
+          style={[
+            styles.filterChip, 
+            { backgroundColor: statusFilter === 'active' ? '#10B981' : palette.surfaceVariant, borderColor: statusFilter === 'active' ? '#10B981' : palette.outline },
+            statusFilter === 'active' && styles.filterChipActive
+          ]}
           onPress={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
         >
-          <Text style={[styles.filterText, statusFilter === 'active' && styles.filterTextActive]}>
+          <Text style={[
+            styles.filterText, 
+            { color: statusFilter === 'active' ? '#FFFFFF' : palette.textSecondary },
+            statusFilter === 'active' && styles.filterTextActive
+          ]}>
             Active Only
           </Text>
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Sort Row */}
+      <View style={{ backgroundColor: palette.surface, paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: palette.outline }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ color: palette.textSecondary, fontSize: 12 }}>Sort by:</Text>
+          <TouchableOpacity onPress={() => setSortBy('name')} style={[styles.filterChip, { backgroundColor: sortBy === 'name' ? palette.primary : palette.surfaceVariant }]}>
+            <Text style={[styles.filterText, { color: sortBy === 'name' ? '#FFFFFF' : palette.textSecondary }]}>Name</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setSortBy('created')} style={[styles.filterChip, { backgroundColor: sortBy === 'created' ? palette.primary : palette.surfaceVariant }]}>
+            <Text style={[styles.filterText, { color: sortBy === 'created' ? '#FFFFFF' : palette.textSecondary }]}>Created</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')} style={[styles.filterChip, { backgroundColor: palette.surfaceVariant }]}>
+            <Text style={[styles.filterText, { color: palette.textSecondary }]}>{sortDir === 'asc' ? 'Asc' : 'Desc'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Bulk Actions Bar */}
       {bulkMode && selectedUsers.length > 0 && (
-        <View style={styles.bulkActionsBar}>
-          <Text style={styles.bulkCountText}>
+        <View style={[styles.bulkActionsBar, { backgroundColor: palette.surfaceVariant, borderBottomColor: palette.outline }]}>
+          <Text style={[styles.bulkCountText, { color: palette.text }]}>
             {selectedUsers.length} selected
           </Text>
           
@@ -375,25 +483,66 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
             >
               <Text style={styles.bulkActionText}>Deactivate</Text>
             </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.bulkActionButton, { backgroundColor: palette.primary }]}
+              onPress={() => setSelectedUsers(filteredUsers.map(u => u.id))}
+            >
+              <Text style={styles.bulkActionText}>Select All</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.bulkActionButton, { backgroundColor: '#6B7280' }]}
+              onPress={() => setSelectedUsers([])}
+            >
+              <Text style={styles.bulkActionText}>Clear</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
 
       {/* Users List */}
-      <FlatList
-        data={filteredUsers}
-        renderItem={renderUser}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <IconSymbol name="person.slash" size={48} color="#9CA3AF" />
-            <Text style={styles.emptyText}>No users found</Text>
-            <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
-          </View>
-        }
-      />
+      {sortBy === 'name' ? (
+        <SectionList
+          sections={sectionedUsers}
+          keyExtractor={(item) => item.id}
+          renderItem={renderUser}
+          renderSectionHeader={({ section: { title } }) => (
+            <View style={{ backgroundColor: palette.surface, paddingHorizontal: 20, paddingVertical: 6 }}>
+              <Text style={{ color: palette.textSecondary, fontWeight: '600' }}>{title}</Text>
+            </View>
+          )}
+          stickySectionHeadersEnabled
+          contentContainerStyle={[styles.listContainer, { paddingBottom: 120 }]}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          windowSize={10}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <IconSymbol name="person.slash" size={48} color={palette.textSecondary} />
+              <Text style={[styles.emptyText, { color: palette.text }]}>No users found</Text>
+              <Text style={[styles.emptySubtext, { color: palette.textSecondary }]}>Try adjusting your filters</Text>
+            </View>
+          }
+        />
+      ) : (
+        <FlatList
+          data={filteredUsers}
+          renderItem={renderUser}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: 120 }]}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          windowSize={10}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <IconSymbol name="person.slash" size={48} color={palette.textSecondary} />
+              <Text style={[styles.emptyText, { color: palette.text }]}>No users found</Text>
+              <Text style={[styles.emptySubtext, { color: palette.textSecondary }]}>Try adjusting your filters</Text>
+            </View>
+          }
+        />
+      )}
 
       {/* User Detail Modal */}
       <Modal
@@ -402,46 +551,46 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
         presentationStyle="pageSheet"
       >
         {selectedUser && (
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContainer, { backgroundColor: palette.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: palette.outline }]}>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setShowUserModal(false)}
               >
-                <IconSymbol name="xmark" size={20} color="#6B7280" />
+                <IconSymbol name="xmark" size={20} color={palette.text} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>User Details</Text>
+              <Text style={[styles.modalTitle, { color: palette.text }]}>User Details</Text>
             </View>
 
             <ScrollView style={styles.modalContent}>
-              <View style={styles.userDetailCard}>
-                <Text style={styles.detailLabel}>Name</Text>
-                <Text style={styles.detailValue}>{selectedUser.name}</Text>
+              <View style={[styles.userDetailCard, { backgroundColor: palette.surfaceVariant }]}>
+                <Text style={[styles.detailLabel, { color: palette.textSecondary }]}>Name</Text>
+                <Text style={[styles.detailValue, { color: palette.text }]}>{selectedUser.name}</Text>
               </View>
               
-              <View style={styles.userDetailCard}>
-                <Text style={styles.detailLabel}>Email</Text>
-                <Text style={styles.detailValue}>{selectedUser.email}</Text>
+              <View style={[styles.userDetailCard, { backgroundColor: palette.surfaceVariant }]}>
+                <Text style={[styles.detailLabel, { color: palette.textSecondary }]}>Email</Text>
+                <Text style={[styles.detailValue, { color: palette.text }]}>{selectedUser.email}</Text>
               </View>
               
-              <View style={styles.userDetailCard}>
-                <Text style={styles.detailLabel}>Role</Text>
-                <Text style={styles.detailValue}>
+              <View style={[styles.userDetailCard, { backgroundColor: palette.surfaceVariant }]}>
+                <Text style={[styles.detailLabel, { color: palette.textSecondary }]}>Role</Text>
+                <Text style={[styles.detailValue, { color: palette.text }]}>
                   {selectedUser.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </Text>
               </View>
               
-              <View style={styles.userDetailCard}>
-                <Text style={styles.detailLabel}>School</Text>
-                <Text style={styles.detailValue}>
+              <View style={[styles.userDetailCard, { backgroundColor: palette.surfaceVariant }]}>
+                <Text style={[styles.detailLabel, { color: palette.textSecondary }]}>School</Text>
+                <Text style={[styles.detailValue, { color: palette.text }]}>
                   {selectedUser.school_name || 'No School Assigned'}
                 </Text>
               </View>
               
-              <View style={styles.userDetailCard}>
-                <Text style={styles.detailLabel}>Status</Text>
+              <View style={[styles.userDetailCard, { backgroundColor: palette.surfaceVariant }]}>
+                <Text style={[styles.detailLabel, { color: palette.textSecondary }]}>Status</Text>
                 <View style={styles.statusRow}>
-                  <Text style={styles.detailValue}>
+                  <Text style={[styles.detailValue, { color: palette.text }]}>
                     {selectedUser.is_active ? 'Active' : 'Inactive'}
                   </Text>
                   <Switch
@@ -452,9 +601,9 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
                 </View>
               </View>
               
-              <View style={styles.userDetailCard}>
-                <Text style={styles.detailLabel}>Created</Text>
-                <Text style={styles.detailValue}>
+              <View style={[styles.userDetailCard, { backgroundColor: palette.surfaceVariant }]}>
+                <Text style={[styles.detailLabel, { color: palette.textSecondary }]}>Created</Text>
+                <Text style={[styles.detailValue, { color: palette.text }]}>
                   {new Date(selectedUser.created_at).toLocaleDateString()}
                 </Text>
               </View>
@@ -531,9 +680,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
   filterChipActive: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#DC2626',
+    borderColor: '#DC2626',
   },
   filterText: {
     fontSize: 14,
@@ -591,6 +743,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   selectedCard: {
     borderWidth: 2,
@@ -600,10 +754,11 @@ const styles = StyleSheet.create({
   userHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   userInfo: {
     flex: 1,
+    minWidth: 0,
   },
   userName: {
     fontSize: 16,
@@ -623,6 +778,7 @@ const styles = StyleSheet.create({
   userMeta: {
     alignItems: 'flex-end',
     gap: 6,
+    marginLeft: 12,
   },
   roleBadge: {
     paddingHorizontal: 8,
@@ -663,14 +819,45 @@ const styles = StyleSheet.create({
     borderColor: '#8B5CF6',
   },
   userActions: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
   },
   actionButton: {
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#F3F4F6',
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  presenceDot: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#111827',
+  },
+  swipeAction: {
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginVertical: 6,
+    borderRadius: 12,
+  },
+  swipeActionText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   loadingContainer: {
     flex: 1,

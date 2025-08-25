@@ -13,6 +13,7 @@ import {
     View,
     ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { ClaudeAIService } from '@/lib/ai/claudeService';
 import { format } from 'date-fns';
@@ -413,16 +414,16 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
 
     if (loading) {
       return (
-        <View style={[styles.container, styles.centered]}>
+        <SafeAreaView style={[styles.container, styles.centered]} edges={['top', 'bottom', 'left', 'right']}>
           <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={styles.loadingText}>Loading dashboard...</Text>
-        </View>
+        </SafeAreaView>
       );
     }
 
     if (error) {
       return (
-        <View style={[styles.container, styles.centered]}>
+        <SafeAreaView style={[styles.container, styles.centered]} edges={['top', 'bottom', 'left', 'right']}>
           <Text style={styles.errorText}>Error: {error}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
@@ -430,12 +431,12 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
           >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
-        </View>
+        </SafeAreaView>
       );
     }
 
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <MobileHeader 
           user={{
             name: profile?.name || 'Teacher',
@@ -613,7 +614,7 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
 
           <View style={styles.bottomPadding} />
         </ScrollView>
-      </View>
+      </SafeAreaView>
     );
   }
 }

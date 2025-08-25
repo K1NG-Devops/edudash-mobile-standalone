@@ -107,7 +107,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setProfile(null);
 
       // Fetch fresh profile from database (no caching)
-      console.log('🔄 [AuthContext] Loading fresh profile for user:', userId);
       const { user, profile, error } = await getCurrentUserWithRole();
       
       if (error) {
@@ -116,10 +115,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       if (profile) {
-        console.log('✅ [AuthContext] Profile loaded:', profile.role);
         setProfile(profile as UserProfile);
       } else {
-        console.log('⚠️ [AuthContext] No profile found for user');
       }
     } catch (error) {
       console.error('❌ [AuthContext] Error in loadUserProfile:', error);

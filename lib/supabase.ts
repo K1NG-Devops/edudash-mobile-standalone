@@ -8,7 +8,9 @@ import 'react-native-url-polyfill/auto';
 
 // Debug environment variables (gated behind debug flag)
 const DEBUG_SUPABASE = process.env.EXPO_PUBLIC_DEBUG_SUPABASE === 'true';
-const log = createLogger('supabase');
+// Create a robust logger that survives Jest auto-mocks (which return undefined)
+const _loggerCandidate = (typeof createLogger === 'function' ? (createLogger as any)('supabase') : null);
+const log = (_loggerCandidate && typeof (_loggerCandidate as any).error === 'function') ? _loggerCandidate : (console as any);
 if (DEBUG_SUPABASE) {
   log.debug('🔧 Supabase Config Debug:');
   log.debug('- EXPO_PUBLIC_SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Found' : '❌ Missing');
@@ -16,16 +18,20 @@ if (DEBUG_SUPABASE) {
   log.debug('- EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY:', process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ? '✅ Found' : '❌ Missing');
 }
 
-// Use production database for authentication
-const USE_LOCAL_DB = false;
+// Use local database settings when running tests to avoid env requirements
+const IS_TEST = process.env.JEST_WORKER_ID !== undefined || process.env.NODE_ENV === 'test';
+// Default to local DB in tests; otherwise production unless explicitly overridden
+const USE_LOCAL_DB = IS_TEST ? true : false;
 
-// Log current configuration for debugging
-log.info('🔧 Supabase Configuration:', {
-  USE_LOCAL_DB,
-  url: USE_LOCAL_DB ? 'LOCAL' : 'PRODUCTION',
-  hasEnvUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
-  hasEnvKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
-});
+// Log current configuration for debugging (only when debug flag is enabled)
+if (DEBUG_SUPABASE && (log as any)?.info) {
+  (log as any).info('🔧 Supabase Configuration:', {
+    USE_LOCAL_DB,
+    url: USE_LOCAL_DB ? 'LOCAL' : 'PRODUCTION',
+    hasEnvUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
+    hasEnvKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+  });
+}
 
 // Sanitize Supabase URL to avoid common mistakes (e.g., trailing slash, www.)
 const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || (USE_LOCAL_DB ? 'http://127.0.0.1:54321' : '');
@@ -103,7 +109,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
     storageKey: 'supabase_auth_client',
   },
 });
@@ -118,8 +124,8 @@ const ENABLE_ADMIN_CLIENT = (process.env.EXPO_PUBLIC_ENABLE_ADMIN_CLIENT === 'tr
 // Prefer a non-public env var if available; DO NOT use EXPO_PUBLIC_* in production.
 const supabaseServiceRoleKey = ENABLE_ADMIN_CLIENT
   ? (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || (USE_LOCAL_DB
-      ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
-      : undefined))
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+    : undefined))
   : undefined;
 
 export const supabaseAdmin = (ENABLE_ADMIN_CLIENT && supabaseServiceRoleKey)
@@ -187,7 +193,7 @@ export const safeSignOut = async () => {
       } else {
         await SecureStore.deleteItemAsync('supabase_auth_client');
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 };
 

@@ -30,6 +30,14 @@ ios/
 # android/
 .kotlin/
 
+# Android build cache files
+android/caches/
+android/daemon/
+android/native/
+android/wrapper/dists/
+android/.tmp/
+android/android/
+
 # Metro
 .metro-health-check*
 
@@ -170,3 +178,4 @@ build-fixes.md
 
 # Project scripts and documentation (development only)
 project-scripts/
+.vercel

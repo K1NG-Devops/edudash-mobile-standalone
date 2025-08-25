@@ -35,6 +35,35 @@ jest.mock('expo-linear-gradient', () => ({
   LinearGradient: 'LinearGradient',
 }));
 
+// Ensure React Native Share & Alert APIs are present for tests (without mocking entire module)
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const RN = require('react-native');
+  const LibShare = require('react-native/Libraries/Share/Share');
+  const LibAlert = require('react-native/Libraries/Alert/Alert');
+  // Ensure library mocks exist
+  if (!LibShare.share) {
+    LibShare.share = jest.fn(async () => ({ action: 'sharedAction' }));
+  }
+  if (!LibAlert.alert) {
+    LibAlert.alert = jest.fn();
+  }
+  // Point RN exports to library mocks so component and tests share the same objects
+  RN.Share = LibShare;
+  RN.Alert = LibAlert;
+} catch (_) { /* ignore */ }
+
+// Provide window.confirm stub for jsdom (override unconditionally)
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  window.confirm = jest.fn(() => true);
+}
+
+// Mock expo-clipboard
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn(async () => true),
+}));
+
 // Mock Haptics
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
@@ -72,4 +101,5 @@ global.console = {
   warn: jest.fn(),
   debug: jest.fn(),
   info: jest.fn(),
+  error: jest.fn(),
 };

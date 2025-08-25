@@ -2,8 +2,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,7 +23,22 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const { signIn } = useAuth();
+  const params = useLocalSearchParams();
+
+  // Check for password reset success parameter
+  useEffect(() => {
+    if (params.passwordReset === 'success') {
+      setShowSuccessMessage(true);
+      // Auto-hide success message after 5 seconds
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [params.passwordReset]);
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
@@ -67,7 +82,7 @@ export default function SignIn() {
 
           if (authId) {
             const profileData = await waitForProfile(authId);
-            
+
             // Check if user needs to reset their password
             if (profileData?.passwordResetRequired) {
               Alert.alert(
@@ -82,7 +97,7 @@ export default function SignIn() {
               );
               return;
             }
-            
+
             if (profileData?.role === 'superadmin') {
               router.replace('/screens/super-admin-dashboard');
               return;
@@ -122,6 +137,27 @@ export default function SignIn() {
 
             <View style={styles.content}>
               <Text style={styles.subtitle}>Sign in to your EduDash Pro account</Text>
+
+              {/* Success Message Banner */}
+              {showSuccessMessage && (
+                <View style={styles.successBanner}>
+                  <View style={styles.successContent}>
+                    <IconSymbol name="checkmark.circle.fill" size={24} color="#10b981" />
+                    <View style={styles.successTextContainer}>
+                      <Text style={styles.successTitle}>Password Updated! 🎉</Text>
+                      <Text style={styles.successMessage}>
+                        Your password has been successfully updated. You can now sign in with your new password.
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.dismissButton}
+                    onPress={() => setShowSuccessMessage(false)}
+                  >
+                    <IconSymbol name="xmark" size={18} color="#6b7280" />
+                  </TouchableOpacity>
+                </View>
+              )}
 
               <View style={styles.inputContainer}>
                 <IconSymbol name="envelope.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
@@ -283,5 +319,46 @@ const styles = StyleSheet.create({
   boldLink: {
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  successBanner: {
+    backgroundColor: '#ecfdf5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+    shadowColor: '#10b981',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  successContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  successTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  successTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#047857',
+    marginBottom: 4,
+  },
+  successMessage: {
+    fontSize: 14,
+    color: '#065f46',
+    lineHeight: 20,
+  },
+  dismissButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 8,
   },
 });

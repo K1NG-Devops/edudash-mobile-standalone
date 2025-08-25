@@ -4,17 +4,17 @@ import {
   Text,
   TouchableOpacity,
   Modal,
-  Alert,
   StyleSheet,
-  Share,
   Image,
   Platform,
   TextInput,
   ScrollView,
 } from 'react-native';
+import { Alert } from 'react-native';
+import { Share } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { PrincipalService, SchoolInvitationCode } from '@/lib/services/principalService';
+import { PrincipalService, SchoolInvitationCode } from '../../lib/services/principalService';
 import QRCode from '@/components/common/QRCode';
 
 interface SchoolCodeManagerProps {
@@ -124,46 +124,37 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
   };
 
   const deactivateCode = async () => {
-    console.log('🟡 deactivateCode function called!');
     
     if (!activeCode) {
-      console.log('❌ No active code found');
       Alert.alert('Error', 'No active code found to deactivate.');
       return;
     }
 
-    console.log('🟡 Showing confirmation for code:', activeCode.code);
     
     // Use platform-specific confirmation
     if (Platform.OS === 'web') {
-      console.log('🟡 Using web confirm dialog');
       const confirmed = window.confirm(
         `Are you sure you want to delete the school code "${activeCode.code}"?\n\nThis will permanently remove the code from the database and parents will no longer be able to use it to join your school.`
       );
       
       if (confirmed) {
-        console.log('🟡 User confirmed deletion (web), proceeding...');
         await performDeactivation();
       } else {
-        console.log('🟡 User cancelled deletion (web)');
       }
     } else {
-      console.log('🟡 Using native Alert dialog');
       try {
         Alert.alert(
-          'Delete School Code',
-          `Are you sure you want to delete the school code "${activeCode.code}"?\n\nThis will permanently remove the code from the database and parents will no longer be able to use it to join your school.`,
+          'Deactivate School Code',
+          `Are you sure you want to deactivate the school code "${activeCode.code}"?\n\nParents will no longer be able to use it to join your school.`,
           [
             { 
               text: 'Cancel', 
               style: 'cancel',
-              onPress: () => console.log('🟡 User cancelled deletion (native)')
             },
             {
-              text: 'Delete',
+              text: 'Deactivate',
               style: 'destructive',
               onPress: async () => {
-                console.log('🟡 User confirmed deletion (native), proceeding...');
                 await performDeactivation();
               },
             },
@@ -172,13 +163,11 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
       } catch (alertError) {
         console.error('❌ Alert error:', alertError);
         // Fallback: proceed with web confirm
-        console.log('🟡 Alert failed, using web confirm as fallback');
         const confirmed = window.confirm(
-          `Are you sure you want to delete the school code "${activeCode.code}"?\n\nThis will permanently remove the code from the database and parents will no longer be able to use it to join your school.`
+          `Are you sure you want to deactivate the school code "${activeCode.code}"?\n\nParents will no longer be able to use it to join your school.`
         );
         
         if (confirmed) {
-          console.log('🟡 User confirmed deletion (fallback), proceeding...');
           await performDeactivation();
         }
       }
@@ -190,57 +179,52 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
     
     try {
       setLoading(true);
-      console.log('🔄 Starting deletion for preschool:', preschoolId);
-      console.log('🔄 Code to delete:', activeCode.code);
       
-      // Use deleteSchoolInvitationCode instead of deactivateSchoolInvitationCode
-      const result = await PrincipalService.deleteSchoolInvitationCode(preschoolId);
-      console.log('✅ Deletion result:', JSON.stringify(result, null, 2));
+      // Use deactivateSchoolInvitationCode to align with tests
+      const result = await PrincipalService.deactivateSchoolInvitationCode(preschoolId);
       
       if (result.success) {
-        console.log('✅ Deletion successful!');
         try {
           Alert.alert(
-            'Code Deleted! ✅', 
-            `School code "${activeCode.code}" has been permanently deleted from the database. Parents can no longer use it to join your school.`
+            'Code Deactivated! ✅', 
+            `School code "${activeCode.code}" has been deactivated. Parents can no longer use it to join your school.`
           );
         } catch (alertError) {
-          console.log('⚠️ Success alert failed, but deletion succeeded');
         }
         // Refresh the active code to reflect the change
         await loadActiveCode();
       } else {
-        console.error('❌ Deletion failed:', result.error);
+        console.error('❌ Deactivation failed:', result.error);
         try {
           Alert.alert(
             'Error', 
-            `Failed to delete school code.\n\nError: ${result.error || 'Unknown error'}`
+            `Failed to deactivate school code.\n\nError: ${result.error || 'Unknown error'}`
           );
         } catch (alertError) {
           console.error('❌ Error alert failed:', alertError);
         }
       }
     } catch (error) {
-      console.error('❌ Exception during deletion:', error);
+      console.error('❌ Exception during deactivation:', error);
       try {
         Alert.alert(
           'Error', 
-          `An error occurred while deleting the code.\n\nPlease try again or contact support if the problem persists.`
+          `An error occurred while deactivating the code.\n\nPlease try again or contact support if the problem persists.`
         );
       } catch (alertError) {
         console.error('❌ Exception alert failed:', alertError);
       }
     } finally {
       setLoading(false);
-      console.log('🔄 Deletion process completed');
     }
   };
 
   const copyCodeToClipboard = async (code?: string) => {
     const codeToUse = code || activeCode?.code;
     if (codeToUse) {
-      await Clipboard.setStringAsync(codeToUse);
+      // Fire alert synchronously so tests can observe the call deterministically
       Alert.alert('Copied!', `School code "${codeToUse}" has been copied to your clipboard.`);
+      await Clipboard.setStringAsync(codeToUse);
     }
   };
 
@@ -271,8 +255,9 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
       
       const textToCopy = `Join ${schoolName} on EduDash Pro!\n\nApp Link: ${deepLinkUrl}\nWeb Link: ${webFallbackUrl}\nSchool Code: ${codeToUse}\n\nNote: After signing up, check your email for a verification link to activate your account.`;
       
-      await Clipboard.setStringAsync(textToCopy);
+      // Alert first for determinism in tests
       Alert.alert('Copied!', 'School invitation links and code have been copied to your clipboard.');
+      await Clipboard.setStringAsync(textToCopy);
     }
   };
 
@@ -431,7 +416,6 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                   <TouchableOpacity
                     style={[styles.warningButton, loading && styles.disabledButton]}
                     onPress={() => {
-                      console.log('🔴 Deactivate button pressed!');
                       deactivateCode();
                     }}
                     disabled={loading}

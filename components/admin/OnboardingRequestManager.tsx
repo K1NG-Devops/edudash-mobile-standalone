@@ -14,6 +14,8 @@ import {
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 import {
   approveOnboardingRequest,
   getAllOnboardingRequests,
@@ -45,6 +47,8 @@ interface OnboardingRequestManagerProps {
 const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   superAdminUserId
 }) => {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
   const [requests, setRequests] = useState<OnboardingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
@@ -66,13 +70,9 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
   const fetchRequests = async () => {
     try {
-      console.log('🔄 [OnboardingManager] fetchRequests: Starting to fetch requests...');
       setLoading(true);
       const data = await getAllOnboardingRequests();
-      console.log('📊 [OnboardingManager] fetchRequests: Received data:', data);
-      console.log('📊 [OnboardingManager] fetchRequests: Data length:', data?.length || 0);
       setRequests(data as OnboardingRequest[]);
-      console.log('✅ [OnboardingManager] fetchRequests: State updated with', data?.length || 0, 'requests');
       
       // Check school creation status for approved requests
       await checkSchoolCreationStatus(data as OnboardingRequest[]);
@@ -81,13 +81,11 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       Alert.alert('Error', 'Failed to load onboarding requests: ' + (error as any)?.message);
     } finally {
       setLoading(false);
-      console.log('🏁 [OnboardingManager] fetchRequests: Finished (loading=false)');
     }
   };
 
   const checkSchoolCreationStatus = async (requests: OnboardingRequest[]) => {
     try {
-      // Removed debug statement: console.log('🔍 [OnboardingManager] Checking school creation status for approved requests...');
       const approvedRequests = requests.filter(r => r.status === 'approved');
       const statusMap: Record<string, boolean> = {};
 
@@ -115,11 +113,9 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
           if (!error && school) {
             // School exists and is properly set up
             statusMap[request.id] = school.setup_completed && school.onboarding_status === 'completed';
-            // Removed debug statement: console.log(`✅ [OnboardingManager] School found for ${request.admin_email}: ${school.name} (Setup: ${school.setup_completed})`);
           } else {
             // School not found or error
             statusMap[request.id] = false;
-            // Removed debug statement: console.log(`❌ [OnboardingManager] No school found for ${request.admin_email}`);
           }
         } catch (schoolError) {
           // Removed debug statement: console.error(`❌ [OnboardingManager] Error checking school for ${request.admin_email}:`, schoolError);
@@ -128,14 +124,12 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       }
 
       setSchoolCreationStatus(statusMap);
-      // Removed debug statement: console.log('📊 [OnboardingManager] School creation status updated:', statusMap);
     } catch (error) {
       // Removed debug statement: console.error('❌ [OnboardingManager] Error checking school creation status:', error);
     }
   };
 
   const handleApprove = async (request: OnboardingRequest) => {
-    // Removed debug statement: console.log('🔥 [OnboardingManager] handleApprove called with request:', request);
 
     // TODO: Test Alert on mobile device - currently commented out for web testing
     /*
@@ -161,7 +155,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       : true;
 
     if (!confirmed) {
-      // Removed debug statement: console.log('❌ [OnboardingManager] User cancelled approval');
       return;
     }
 
@@ -170,27 +163,18 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
   const performApproval = async (request: OnboardingRequest) => {
     try {
-      console.log('🔥 [OnboardingManager] performApproval: Starting approval for request:', request.id);
       setProcessing(request.id);
       
       // Log current user authentication state
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      console.log('🔑 [OnboardingManager] Current user auth state:', {
-        userId: user?.id,
-        email: user?.email,
-        authError: authError?.message
-      });
       
       if (!user) {
         throw new Error('Not authenticated. Please sign in again.');
       }
       
-      console.log('📞 [OnboardingManager] Calling approveOnboardingRequest with requestId:', request.id);
       const result = await approveOnboardingRequest(request.id) as any;
-      console.log('📊 [OnboardingManager] Approval result:', result);
 
       if (result?.success) {
-        console.log('✅ [OnboardingManager] Approval successful, updating UI');
         // Optimistically update UI to prevent stale state from showing
         setRequests(currentRequests =>
           currentRequests.map(r =>
@@ -210,7 +194,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
           }
         }
         
-        console.log('🔄 [OnboardingManager] Re-fetching requests after approval');
         // Small delay to avoid read-after-write replication lag
         await new Promise(res => setTimeout(res, 400));
         // Re-fetch to synchronize with the backend, even though UI is updated
@@ -218,11 +201,9 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         
         // Trigger dashboard refresh if callback is provided
         if (typeof (global as any).refreshSuperAdminDashboard === 'function') {
-          console.log('📊 [OnboardingManager] Triggering dashboard refresh after approval');
           (global as any).refreshSuperAdminDashboard();
         }
         
-        console.log('✅ [OnboardingManager] Approval process completed successfully');
       } else {
         console.error('❌ [OnboardingManager] Approval failed:', result?.error);
         if (typeof window !== 'undefined') {
@@ -240,7 +221,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   };
 
   const handleReject = async (request: OnboardingRequest) => {
-    // Removed debug statement: console.log('❌ [OnboardingManager] Rejecting request for:', request.preschool_name);
 
     // Use window.confirm for web compatibility
     const confirmed = typeof window !== 'undefined'
@@ -248,17 +228,14 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       : true;
 
     if (!confirmed) {
-      // Removed debug statement: console.log('❌ [OnboardingManager] User cancelled rejection');
       return;
     }
 
     try {
-      // Removed debug statement: console.log('❌ [OnboardingManager] Starting rejection process...');
       setProcessing(request.id);
 
       await rejectOnboardingRequest(request.id, superAdminUserId);
 
-      // Removed debug statement: console.log('✅ [OnboardingManager] Request rejected successfully');
 
       if (typeof window !== 'undefined') {
         window.alert(`Request for "${request.preschool_name}" has been rejected.`);
@@ -273,13 +250,11 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       // Removed debug statement: console.error('💥 [OnboardingManager] Exception during rejection:', error);
       Alert.alert('Error', error.message || 'Failed to reject request');
     } finally {
-      // Removed debug statement: console.log('🏁 [OnboardingManager] Rejection process finished');
       setProcessing(null);
     }
   };
 
   const handleResendInstructions = async (request: OnboardingRequest) => {
-    // Removed debug statement: console.log('📧 [OnboardingManager] Resending instructions for:', request.preschool_name);
 
     // Use window.confirm for web compatibility
     const confirmed = typeof window !== 'undefined'
@@ -287,16 +262,13 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       : true;
 
     if (!confirmed) {
-      // Removed debug statement: console.log('❌ [OnboardingManager] User cancelled resend');
       return;
     }
 
     try {
-      // Removed debug statement: console.log('📧 [OnboardingManager] Starting resend process...');
       setProcessing(request.id);
 
       // First, find the actual school that was created from this onboarding request
-      // Removed debug statement: console.log('🔍 [OnboardingManager] Looking for school with admin email:', request.admin_email);
 
       // Use admin client to bypass RLS restrictions - this is required for preschools table access
       const adminClient = supabaseAdmin || (window as any).supabaseClients?.supabaseAdmin;
@@ -337,7 +309,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         return;
       }
 
-      // Removed debug statement: console.log('✅ [OnboardingManager] Found school ID:', schoolData.id);
 
       // Now resend instructions using the actual school ID
       const resendResult = await SuperAdminDataService.resendWelcomeInstructions(
@@ -345,13 +316,11 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         'Admin requested resend via dashboard'
       );
 
-      // Removed debug statement: console.log('📧 [OnboardingManager] Resend result:', resendResult);
 
       if (resendResult?.success) {
         if (typeof window !== 'undefined') {
           window.alert(`Instructions resent successfully!\n\nEmail sent to: ${resendResult.admin_email}\n${resendResult.password_updated ? 'New password generated.' : 'Please contact support if issues persist.'}`);
         }
-        // Removed debug statement: console.log('🎉 [OnboardingManager] Instructions resent successfully!');
         
         // Refresh data from server to get updated school creation status
         await fetchRequests();
@@ -367,20 +336,17 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         window.alert(error.message || 'Failed to resend instructions');
       }
     } finally {
-      // Removed debug statement: console.log('🏁 [OnboardingManager] Resend process finished');
       setProcessing(null);
     }
   };
 
   const handleCompleteSetup = async (request: OnboardingRequest) => {
-    // Removed debug statement: console.log('🔧 [OnboardingManager] Completing setup for approved request:', request.preschool_name);
 
     const confirmed = typeof window !== 'undefined'
       ? window.confirm(`Complete the setup for "${request.preschool_name}"?\n\nThis will create the missing school and admin account.`)
       : true;
 
     if (!confirmed) {
-      // Removed debug statement: console.log('❌ [OnboardingManager] User cancelled setup completion');
       return;
     }
 
@@ -389,7 +355,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   };
 
   const handleUpdateProfile = async (request: OnboardingRequest) => {
-    // Removed debug statement: console.log('👤 [OnboardingManager] Opening profile update for completed school:', request.preschool_name);
 
     if (typeof window !== 'undefined') {
       window.alert(`Profile update functionality will redirect to the school admin's profile management page.\n\nSchool: ${request.preschool_name}\nAdmin: ${request.admin_name}\n\nThis feature will be implemented to allow updating school information, admin details, and other profile settings.`);
@@ -406,7 +371,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   };
 
   const handleDeleteSchool = async (request: OnboardingRequest) => {
-    // Removed debug statement: console.log('🗑️ [OnboardingManager] Deleting approved school for:', request.preschool_name);
 
     // Use window.confirm for web compatibility
     const confirmed = typeof window !== 'undefined'
@@ -414,16 +378,13 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       : true;
 
     if (!confirmed) {
-      // Removed debug statement: console.log('❌ [OnboardingManager] User cancelled school deletion');
       return;
     }
 
     try {
-      // Removed debug statement: console.log('🗑️ [OnboardingManager] Starting school deletion process...');
       setProcessing(request.id);
 
       // Prefer server-side deletion to ensure Auth users and tenant data are removed
-      // Removed debug statement: console.log('🗑️ [OnboardingManager] Deleting school via Edge Function...');
       // Find school by admin email (server will delete by ID once sent)
       const { data: schoolData, error: schoolError } = await supabase
         .from('preschools')
@@ -445,15 +406,12 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         return;
       }
 
-      // Removed debug statement: console.log('✅ [OnboardingManager] Complete school deletion successful');
       Alert.alert(
         '✅ School Deleted',
         `School "${request.preschool_name}" and all associated data has been permanently deleted.\n\nThis included:\n- School record\n- Admin users\n- Onboarding request`
       );
 
-      // Removed debug statement: console.log('🔄 [OnboardingManager] Refreshing requests list...');
       await fetchRequests(); // Refresh list
-      // Removed debug statement: console.log('✅ [OnboardingManager] Requests list refreshed');
 
     } catch (error: any) {
       // Removed debug statement: console.error('💥 [OnboardingManager] Exception during school deletion:', error);
@@ -462,13 +420,11 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         `Critical error during school deletion: ${error.message}\n\nPlease check the database manually and contact support if needed.`
       );
     } finally {
-      // Removed debug statement: console.log('🏁 [OnboardingManager] School deletion process finished');
       setProcessing(null);
     }
   };
 
   const handleDeleteRequest = async (request: OnboardingRequest) => {
-    // Removed debug statement: console.log('🗑️ [OnboardingManager] Deleting request for:', request.preschool_name);
 
     // Use window.confirm for web compatibility
     const confirmed = typeof window !== 'undefined'
@@ -476,12 +432,10 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       : true;
 
     if (!confirmed) {
-      // Removed debug statement: console.log('❌ [OnboardingManager] User cancelled deletion');
       return;
     }
 
     try {
-      // Removed debug statement: console.log('🗑️ [OnboardingManager] Starting deletion process...');
       setProcessing(request.id);
 
       // Prefer server-side deletion to bypass RLS safely
@@ -494,7 +448,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         return;
       }
 
-      // Removed debug statement: console.log('✅ [OnboardingManager] Request deleted successfully');
 
       Alert.alert('Deleted', `Request for "${request.preschool_name}" has been permanently deleted.`);
       
@@ -505,7 +458,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
       // Removed debug statement: console.error('💥 [OnboardingManager] Exception during deletion:', error);
       Alert.alert('Error', error.message || 'Failed to delete request');
     } finally {
-      // Removed debug statement: console.log('🏁 [OnboardingManager] Deletion process finished');
       setProcessing(null);
     }
   };
@@ -564,14 +516,14 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
 
   const renderRequest = ({ item }: { item: OnboardingRequest }) => (
     <TouchableOpacity
-      style={styles.requestCard}
+      style={[styles.requestCard, { backgroundColor: palette.surface }]}
       onPress={() => setSelectedRequest(item)}
     >
       <View style={styles.requestHeader}>
         <View>
-          <Text style={styles.schoolName}>{item.preschool_name}</Text>
-          <Text style={styles.adminName}>Admin: {item.admin_name}</Text>
-          <Text style={styles.requestEmail}>{item.admin_email}</Text>
+          <Text style={[styles.schoolName, { color: palette.text }]}>{item.preschool_name}</Text>
+          <Text style={[styles.adminName, { color: palette.textSecondary }]}>Admin: {item.admin_name}</Text>
+          <Text style={[styles.requestEmail, { color: palette.textSecondary }]}>{item.admin_email}</Text>
         </View>
 
         <View style={styles.statusContainer}>
@@ -583,7 +535,7 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
             />
             <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
           </View>
-          <Text style={styles.requestDate}>
+          <Text style={[styles.requestDate, { color: palette.textSecondary }]}>
             {new Date(item.created_at).toLocaleDateString()}
           </Text>
         </View>
@@ -595,7 +547,6 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
             <TouchableOpacity
               style={[styles.actionButton, styles.approveButton]}
               onPress={() => {
-                // Removed debug statement: console.log('🔴 [OnboardingManager] Approve button clicked for:', item.preschool_name);
                 handleApprove(item);
               }}
               disabled={processing === item.id}
@@ -726,17 +677,16 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <LoadingSpinner size="large" color="#8B5CF6" />
-        <Text style={styles.loadingText}>Loading onboarding requests...</Text>
+        <LoadingSpinner size="small" color={palette.primary} message="Loading onboarding requests..." />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: palette.background }] }>
+      <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.outline }] }>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>🏫 School Onboarding Requests</Text>
+          <Text style={[styles.title, { color: palette.text }]}>🏫 School Onboarding Requests</Text>
           <TouchableOpacity
             style={styles.createButton}
             onPress={() => setShowCreateModal(true)}
@@ -753,16 +703,16 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         renderItem={renderRequest}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[styles.listContainer, { paddingBottom: 120 }]}
         refreshing={loading}
         onRefresh={fetchRequests}
         extraData={requests}
         removeClippedSubviews={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <IconSymbol name="document" size={48} color="#9CA3AF" />
-            <Text style={styles.emptyText}>No onboarding requests found</Text>
-            <Text style={styles.emptySubtext}>New school requests will appear here</Text>
+            <IconSymbol name="document" size={48} color={palette.textSecondary} />
+            <Text style={[styles.emptyText, { color: palette.text }]}>No onboarding requests found</Text>
+            <Text style={[styles.emptySubtext, { color: palette.textSecondary }]}>New school requests will appear here</Text>
           </View>
         }
       />
@@ -773,68 +723,70 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <View style={[styles.modalContainer, { backgroundColor: palette.surface }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: palette.outline }]}>
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setShowCreateModal(false)}
             >
-              <IconSymbol name="x" size={24} color="#374151" />
+              <IconSymbol name="x" size={24} color={palette.text} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Create New School</Text>
+            <Text style={[styles.modalTitle, { color: palette.text }]}>Create New School</Text>
           </View>
 
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.formGroup}>
-              <Text style={styles.label}>School Name *</Text>
+              <Text style={[styles.label, { color: palette.text } ]}>School Name *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: palette.outline, backgroundColor: palette.surface, color: palette.text }]}
                 value={schoolName}
                 onChangeText={setSchoolName}
                 placeholder="Enter school name"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={palette.textSecondary}
               />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Admin Name *</Text>
+              <Text style={[styles.label, { color: palette.text } ]}>Admin Name *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: palette.outline, backgroundColor: palette.surface, color: palette.text }]}
                 value={adminName}
                 onChangeText={setAdminName}
                 placeholder="Enter admin full name"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={palette.textSecondary}
               />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Admin Email *</Text>
+              <Text style={[styles.label, { color: palette.text } ]}>Admin Email *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: palette.outline, backgroundColor: palette.surface, color: palette.text }]}
                 value={adminEmail}
                 onChangeText={setAdminEmail}
                 placeholder="Enter admin email"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={palette.textSecondary}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Subscription Plan</Text>
+              <Text style={[styles.label, { color: palette.text }]}>Subscription Plan</Text>
               <View style={styles.planSelector}>
                 {['trial', 'basic', 'premium'].map((plan) => (
                   <TouchableOpacity
                     key={plan}
                     style={[
                       styles.planOption,
-                      subscriptionPlan === plan && styles.planOptionSelected
+                      { borderColor: palette.outline },
+                      subscriptionPlan === plan && [styles.planOptionSelected, { backgroundColor: palette.surfaceVariant, borderColor: palette.primary }]
                     ]}
                     onPress={() => setSubscriptionPlan(plan)}
                   >
                     <Text style={[
                       styles.planText,
-                      subscriptionPlan === plan && styles.planTextSelected
+                      { color: palette.textSecondary },
+                      subscriptionPlan === plan && [styles.planTextSelected, { color: palette.primary }]
                     ]}>
                       {plan.charAt(0).toUpperCase() + plan.slice(1)}
                     </Text>
@@ -866,15 +818,15 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         presentationStyle="pageSheet"
       >
         {selectedRequest && (
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContainer, { backgroundColor: palette.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: palette.outline }]}>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setSelectedRequest(null)}
               >
-                <IconSymbol name="x" size={24} color="#374151" />
+                <IconSymbol name="x" size={24} color={palette.text} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Request Details</Text>
+              <Text style={[styles.modalTitle, { color: palette.text }]}>Request Details</Text>
             </View>
 
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>

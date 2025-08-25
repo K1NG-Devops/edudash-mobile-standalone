@@ -4,7 +4,24 @@ import { StorageUtil } from '../lib/utils/storage';
 import { EmailService } from '../lib/services/emailService';
 
 // Mock dependencies
-jest.mock('../lib/supabase');
+jest.mock('../lib/supabase', () => {
+  const fromMock = jest.fn(() => ({
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    gt: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn(),
+    single: jest.fn(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    in: jest.fn().mockReturnThis(),
+    is: jest.fn().mockReturnThis(),
+  }));
+  return {
+    supabase: { from: fromMock },
+  };
+});
 jest.mock('../lib/utils/storage');
 jest.mock('../lib/services/emailService');
 jest.mock('../lib/utils/logger');
@@ -369,8 +386,8 @@ describe('PrincipalService', () => {
             error: null
           }),
           insert: jest.fn().mockResolvedValue({ error: null })
-        };
-      } as any);
+        } as any;
+      });
 
       mockEmailService.sendTeacherInvitation.mockResolvedValue({
         success: false,

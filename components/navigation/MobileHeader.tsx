@@ -3,16 +3,16 @@ import { getRoleColors } from '@/constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
-    SafeAreaView,
     StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 , AppState , Appearance, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MobileSidebar } from './MobileSidebar';
 import { NotificationService } from '@/lib/services/notificationService';
-import { setGlobalColorScheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface MobileHeaderProps {
   user: {
@@ -34,17 +34,22 @@ interface MobileHeaderState {
   internalUnreadCount: number;
 }
 
-export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeaderState> {
-  state: MobileHeaderState = {
-    colorScheme: 'light',
-    sidebarVisible: false,
-    internalUnreadCount: 0,
-  };
+export const MobileHeader: React.FC<MobileHeaderProps> = ({
+  user,
+  schoolName,
+  onNotificationsPress,
+  onNavigate,
+  onSignOut,
+  notificationCount,
+}) => {
+  const { colorScheme, toggle: toggleGlobalTheme } = useTheme();
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [internalUnreadCount, setInternalUnreadCount] = useState(0);
 
-  private getRoleTitle = (role: string): string => {
+  const getRoleTitle = (role: string): string => {
     // If we have a school name, prioritize showing it for school roles
-    if (this.props.schoolName && (role === 'preschool_admin' || role === 'principal' || role === 'teacher')) {
-      return this.props.schoolName;
+    if (schoolName && (role === 'preschool_admin' || role === 'principal' || role === 'teacher')) {
+      return schoolName;
     }
     
     switch (role) {
@@ -57,142 +62,97 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
       case 'teacher':
         return 'Teacher';
       case 'parent':
-        return this.props.schoolName || 'Parent Dashboard';
+        return schoolName || 'Parent Dashboard';
       default:
         return 'EduDash Pro';
     }
   };
 
-  private getGreeting = (): string => {
+  const getGreeting = (): string => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
   };
 
-  private toggleSidebar = () => {
-    this.setState({ sidebarVisible: !this.state.sidebarVisible });
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible);
   };
 
-  private closeSidebar = () => {
-    this.setState({ sidebarVisible: false });
+  const closeSidebar = () => {
+    setSidebarVisible(false);
   };
 
-  private handleNavigate = (route: string) => {
-    this.closeSidebar();
-    if (this.props.onNavigate) {
-      this.props.onNavigate(route);
+  const handleNavigate = (route: string) => {
+    closeSidebar();
+    if (onNavigate) {
+      onNavigate(route);
     }
   };
 
-  private handleSignOut = () => {
-    this.closeSidebar();
-    if (this.props.onSignOut) {
-      this.props.onSignOut();
+  const handleSignOut = () => {
+    closeSidebar();
+    if (onSignOut) {
+      onSignOut();
     }
   };
 
-  private _unreadTimer: any = null;
-  private _appStateSub: any = null;
-
-  private toggleTheme = () => {
-    const next = this.state.colorScheme === 'light' ? 'dark' : 'light';
-    this.setState({ colorScheme: next });
+  const fetchUnreadCount = async () => {
     try {
-      // Update global theme across platforms
-      setGlobalColorScheme(next);
-      // Also notify web listeners that rely on window events
-      // @ts-ignore
-      const evt = new CustomEvent('theme-toggle', { detail: next });
-      // @ts-ignore
-      if (typeof window !== 'undefined' && window.dispatchEvent) {
-        // @ts-ignore
-        window.dispatchEvent(evt);
-      }
-    } catch {}
-  };
-
-  private fetchUnreadCount = async () => {
-    try {
-      const userId = (this.props.user as any)?.id;
+      const userId = user?.id;
       if (!userId) return;
       const count = await NotificationService.getUnreadCount(userId);
-      this.setState({ internalUnreadCount: count || 0 });
+      setInternalUnreadCount(count || 0);
     } catch {
       // silently ignore in UI
     }
   };
 
-  componentDidMount(): void {
-    // Initialize theme from persisted value or system preference
-    try {
-      let scheme: 'light' | 'dark' | null = null;
-      // @ts-ignore
-      if (typeof window !== 'undefined' && window.localStorage) {
-        // @ts-ignore
-        const stored = window.localStorage.getItem('ui_color_scheme');
-        if (stored === 'light' || stored === 'dark') scheme = stored;
-      }
-      if (!scheme) {
-        const sys = Appearance?.getColorScheme?.() as 'light' | 'dark' | null;
-        if (sys) scheme = sys;
-      }
-      if (scheme) this.setState({ colorScheme: scheme });
-    } catch {}
-
-    // Initial fetch if we can resolve a user id
-    this.fetchUnreadCount();
-    // Poll periodically to keep badge fresh
-    this._unreadTimer = setInterval(this.fetchUnreadCount, 15000);
-
-    // Refresh when app becomes active
-    try {
-      this._appStateSub = AppState.addEventListener('change', this._onAppStateChange as any);
-    } catch {}
-    // Refresh on window focus (web) and listen for theme changes
-    try {
-      // @ts-ignore
-      if (typeof window !== 'undefined' && window.addEventListener) {
-        // @ts-ignore
-        window.addEventListener('focus', this.fetchUnreadCount);
-        // Keep header in sync if theme changes elsewhere
-        // @ts-ignore
-        window.addEventListener('theme-toggle', (e: any) => {
-          const val = e?.detail;
-          if (val === 'light' || val === 'dark') this.setState({ colorScheme: val });
-        });
-      }
-    } catch {}
-  }
-
-  componentWillUnmount(): void {
-    if (this._unreadTimer) clearInterval(this._unreadTimer);
-    try { this._appStateSub?.remove?.(); } catch {}
-    try {
-      // @ts-ignore
-      if (typeof window !== 'undefined' && window.removeEventListener) {
-        // @ts-ignore
-        window.removeEventListener('focus', this.fetchUnreadCount);
-      }
-    } catch {}
-  }
-
-  private _onAppStateChange = (state: string) => {
+  const onAppStateChange = (state: string) => {
     if (state === 'active') {
-      this.fetchUnreadCount();
+      fetchUnreadCount();
     }
   };
 
-  render() {
-    const { user, onNotificationsPress, notificationCount } = this.props;
-    const badgeCount = typeof notificationCount === 'number' ? notificationCount : this.state.internalUnreadCount;
-    const { sidebarVisible } = this.state;
-    const roleColors = getRoleColors(user?.role || 'default', this.state.colorScheme);
-    const firstName = user?.name?.split(' ')[0] || 'User';
+  useEffect(() => {
+    // Initial fetch if we can resolve a user id
+    fetchUnreadCount();
+    // Poll periodically to keep badge fresh
+    const unreadTimer = setInterval(fetchUnreadCount, 15000);
+
+    // Refresh when app becomes active
+    let appStateSub: any = null;
+    try {
+      appStateSub = AppState.addEventListener('change', onAppStateChange);
+    } catch {}
+    
+    // Refresh on window focus (web)
+    const handleFocus = () => fetchUnreadCount();
+    try {
+      if (typeof window !== 'undefined' && window.addEventListener) {
+        window.addEventListener('focus', handleFocus);
+      }
+    } catch {}
+
+    // Cleanup
+    return () => {
+      clearInterval(unreadTimer);
+      try { appStateSub?.remove?.(); } catch {}
+      try {
+        if (typeof window !== 'undefined' && window.removeEventListener) {
+          window.removeEventListener('focus', handleFocus);
+        }
+      } catch {}
+    };
+  }, [user?.id]);
+
+  const badgeCount = typeof notificationCount === 'number' ? notificationCount : internalUnreadCount;
+  const roleColors = getRoleColors(user?.role || 'default', colorScheme);
+  const firstName = user?.name?.split(' ')[0] || 'User';
 
     return (
       <>
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: roleColors.gradient[0] }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: roleColors.gradient[0] }]} edges={['top', 'left', 'right']}>
           <StatusBar 
             barStyle="light-content"
             backgroundColor={roleColors.gradient[0]}
@@ -212,7 +172,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
               <View style={styles.leftSection}>
                 <TouchableOpacity
                   style={styles.avatarButton}
-                  onPress={this.toggleSidebar}
+                  onPress={toggleSidebar}
                   activeOpacity={0.8}
                 >
                   <View style={styles.avatarContainer}>
@@ -229,7 +189,7 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                     <Text style={styles.brandName}>EduDash Pro</Text>
                   ) : (
                     <Text style={styles.schoolName}>
-                      {this.props.schoolName || 'EduDash Pro'}
+                      {schoolName || 'EduDash Pro'}
                     </Text>
                   )}
                   
@@ -257,11 +217,11 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                 {/* Theme Toggle Button */}
                 <TouchableOpacity
                   style={styles.modernActionButton}
-                  onPress={this.toggleTheme}
+                  onPress={toggleGlobalTheme}
                   activeOpacity={0.7}
                 >
                   <IconSymbol 
-                    name={this.state.colorScheme === 'light' ? 'moon.fill' : 'sun.max.fill'} 
+                    name={colorScheme === 'light' ? 'moon.fill' : 'sun.max.fill'} 
                     size={18} 
                     color="#FFFFFF" 
                   />
@@ -292,15 +252,14 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
         {/* Mobile Sidebar */}
         <MobileSidebar
           isVisible={sidebarVisible}
-          onClose={this.closeSidebar}
+          onClose={closeSidebar}
           userProfile={user}
-          onSignOut={this.handleSignOut}
-          onNavigate={this.handleNavigate}
+          onSignOut={handleSignOut}
+          onNavigate={handleNavigate}
         />
       </>
     );
-  }
-}
+};
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -309,8 +268,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 8,
     paddingVertical: 16,
-    paddingTop: 32,
-    minHeight: 105,
+    minHeight: 85,
   },
 headerContent: {
     flexDirection: 'row',

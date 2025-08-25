@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { router } from 'expo-router';
@@ -14,6 +12,7 @@ import {
     View,
     ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { claudeService } from '@/lib/ai/claudeService';
 import { format } from 'date-fns';
@@ -172,16 +171,16 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
 
       // Load recent activities for children
       const { data: activitiesData, error: activitiesError } = await supabase
-        .from('learning_activities')
+        .from('activities')
         .select(`
           id,
           title,
           description,
           activity_type,
-          completed_at,
           activity_progress(
             student_id,
             score,
+            completed_at,
             students(
               full_name
             )
@@ -189,7 +188,7 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
         `)
         .in('activity_progress.student_id', childIds)
         .not('activity_progress.completed_at', 'is', null)
-        .order('completed_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(10);
 
       if (activitiesError) throw activitiesError;
@@ -213,13 +212,12 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
 
       // Load assignments for children
       const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('assignments')
+        .from('homework_assignments')
         .select(`
           id,
           title,
           description,
-          due_date,
-          subject,
+          due_date_offset_days,
           assignment_submissions(
             student_id,
             status,
@@ -230,7 +228,7 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
           )
         `)
         .in('assignment_submissions.student_id', childIds)
-        .order('due_date', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(10);
 
       if (assignmentsError) throw assignmentsError;
@@ -241,7 +239,8 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
         .map(assignment => {
           const submission = assignment.assignment_submissions[0];
           const now = new Date();
-          const dueDate = new Date(assignment.due_date);
+          const createdDate = new Date(assignment.created_at || new Date());
+          const dueDate = new Date(createdDate.getTime() + (assignment.due_date_offset_days * 24 * 60 * 60 * 1000));
           
           let status: Assignment['status'] = submission.status as Assignment['status'];
           if (status === 'pending' && dueDate < now) {
@@ -251,12 +250,12 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
           return {
             id: assignment.id,
             title: assignment.title,
-            description: assignment.description,
-            due_date: assignment.due_date,
+            description: assignment.description || '',
+            due_date: dueDate.toISOString(),
             status,
             child_id: submission.student_id,
             child_name: submission.students?.full_name || 'Unknown',
-            subject: assignment.subject,
+            subject: 'General', // homework_assignments doesn't have subject field
             completion_date: submission.submitted_at,
           };
         });
@@ -595,16 +594,16 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
 
     if (loading) {
       return (
-        <View style={[styles.container, styles.centered]}>
+        <SafeAreaView style={[styles.container, styles.centered]} edges={['top', 'bottom', 'left', 'right']}>
           <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={styles.loadingText}>Loading dashboard...</Text>
-        </View>
+        </SafeAreaView>
       );
     }
 
     if (error) {
       return (
-        <View style={[styles.container, styles.centered]}>
+        <SafeAreaView style={[styles.container, styles.centered]} edges={['top', 'bottom', 'left', 'right']}>
           <Text style={styles.errorText}>Error: {error}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
@@ -612,12 +611,12 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
           >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
-        </View>
+        </SafeAreaView>
       );
     }
 
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <MobileHeader 
           user={{
             name: profile?.name || 'Parent',
@@ -739,7 +738,7 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
 
           <View style={styles.bottomPadding} />
         </ScrollView>
-      </View>
+      </SafeAreaView>
     );
   }
 }

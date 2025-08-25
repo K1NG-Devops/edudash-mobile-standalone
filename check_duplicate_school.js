@@ -11,7 +11,6 @@ const duplicateEmail = 'maybel@littlecherobeums.org.za';
 
 async function checkDuplicateSchool() {
   try {
-    console.log('🔍 [Check] Checking duplicate school record...');
 
     // Check if school exists
     const { data: school, error: schoolError } = await supabaseAdmin
@@ -26,19 +25,9 @@ async function checkDuplicateSchool() {
     }
 
     if (!school) {
-      console.log('ℹ️ [Check] No school found with this email');
       return;
     }
 
-    console.log('🏫 [Check] Found school record:');
-    console.log(`   - ID: ${school.id}`);
-    console.log(`   - Name: ${school.name}`);
-    console.log(`   - Email: ${school.email}`);
-    console.log(`   - Onboarding Status: ${school.onboarding_status}`);
-    console.log(`   - Subscription Status: ${school.subscription_status}`);
-    console.log(`   - Setup Completed: ${school.setup_completed}`);
-    console.log(`   - Created: ${school.created_at}`);
-    console.log(`   - Updated: ${school.updated_at}`);
 
     // Check if there's an associated user
     const { data: users, error: userError } = await supabaseAdmin
@@ -49,17 +38,7 @@ async function checkDuplicateSchool() {
     if (userError) {
       console.error('❌ [Check] Error fetching users:', userError);
     } else {
-      console.log(`\n👥 [Check] Found ${users.length} user(s) associated with this school:`);
       users.forEach((user, index) => {
-        console.log(`   User ${index + 1}:`);
-        console.log(`   - ID: ${user.id}`);
-        console.log(`   - Name: ${user.name}`);
-        console.log(`   - Email: ${user.email}`);
-        console.log(`   - Role: ${user.role}`);
-        console.log(`   - Active: ${user.is_active}`);
-        console.log(`   - Auth User ID: ${user.auth_user_id}`);
-        console.log(`   - Profile Status: ${user.profile_completion_status}`);
-        console.log('   ---');
       });
     }
 
@@ -70,27 +49,17 @@ async function checkDuplicateSchool() {
           try {
             const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(user.auth_user_id);
             if (authError) {
-              console.log(`⚠️ [Check] Auth user ${user.auth_user_id} not found or error: ${authError.message}`);
             } else {
-              console.log(`✅ [Check] Auth user ${user.auth_user_id} exists`);
             }
           } catch (authEx) {
-            console.log(`⚠️ [Check] Auth user check failed: ${authEx.message}`);
           }
         }
       }
     }
 
-    console.log('\n📋 [Check] Analysis:');
     if (school.onboarding_status === 'completed' && school.setup_completed && users.length > 0) {
-      console.log('✅ School appears to be fully set up');
-      console.log('💡 Recommendation: This school should not be recreated');
     } else if (school.onboarding_status !== 'completed' || !school.setup_completed) {
-      console.log('⚠️ School setup is incomplete');
-      console.log('💡 Recommendation: Complete the existing setup or clean up and restart');
     } else if (users.length === 0) {
-      console.log('⚠️ School exists but has no users');
-      console.log('💡 Recommendation: Create the missing admin user or clean up and restart');
     }
 
   } catch (error) {
@@ -100,7 +69,6 @@ async function checkDuplicateSchool() {
 
 async function cleanupIncompleteSchool() {
   try {
-    console.log('🧹 [Cleanup] Starting cleanup of incomplete school...');
 
     // Get school record
     const { data: school, error: schoolError } = await supabaseAdmin
@@ -110,11 +78,9 @@ async function cleanupIncompleteSchool() {
       .single();
 
     if (schoolError || !school) {
-      console.log('ℹ️ [Cleanup] No school found to cleanup');
       return;
     }
 
-    console.log(`🏫 [Cleanup] Found school: ${school.name} (${school.id})`);
 
     // Get associated users
     const { data: users, error: userError } = await supabaseAdmin
@@ -123,7 +89,6 @@ async function cleanupIncompleteSchool() {
       .eq('preschool_id', school.id);
 
     if (!userError && users && users.length > 0) {
-      console.log(`👥 [Cleanup] Deleting ${users.length} associated user(s)...`);
       
       // Delete auth users first (if they exist)
       for (const user of users) {
@@ -131,12 +96,9 @@ async function cleanupIncompleteSchool() {
           try {
             const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(user.auth_user_id);
             if (authDeleteError) {
-              console.log(`⚠️ [Cleanup] Could not delete auth user ${user.auth_user_id}: ${authDeleteError.message}`);
             } else {
-              console.log(`✅ [Cleanup] Deleted auth user ${user.auth_user_id}`);
             }
           } catch (authEx) {
-            console.log(`⚠️ [Cleanup] Auth user deletion failed: ${authEx.message}`);
           }
         }
       }
@@ -150,7 +112,6 @@ async function cleanupIncompleteSchool() {
       if (userDeleteError) {
         console.error('❌ [Cleanup] Error deleting user profiles:', userDeleteError);
       } else {
-        console.log('✅ [Cleanup] Deleted user profiles');
       }
     }
 
@@ -163,9 +124,6 @@ async function cleanupIncompleteSchool() {
     if (schoolDeleteError) {
       console.error('❌ [Cleanup] Error deleting school:', schoolDeleteError);
     } else {
-      console.log('✅ [Cleanup] Deleted school record');
-      console.log('🎉 [Cleanup] Cleanup completed successfully!');
-      console.log('💡 [Cleanup] You can now retry the school creation process');
     }
 
   } catch (error) {
@@ -175,7 +133,6 @@ async function cleanupIncompleteSchool() {
 
 async function completeExistingSetup() {
   try {
-    console.log('🔧 [Complete] Attempting to complete existing school setup...');
 
     // Get school record
     const { data: school, error: schoolError } = await supabaseAdmin
@@ -185,11 +142,9 @@ async function completeExistingSetup() {
       .single();
 
     if (schoolError || !school) {
-      console.log('ℹ️ [Complete] No school found');
       return;
     }
 
-    console.log(`🏫 [Complete] Found school: ${school.name} (${school.id})`);
 
     // Check for existing users
     const { data: users, error: userError } = await supabaseAdmin
@@ -203,13 +158,11 @@ async function completeExistingSetup() {
     }
 
     if (users && users.length > 0) {
-      console.log(`👥 [Complete] Found ${users.length} existing user(s)`);
       
       // Check if any user has principal/admin role
       const adminUser = users.find(u => ['principal', 'admin', 'preschool_admin'].includes(u.role));
       
       if (adminUser) {
-        console.log(`✅ [Complete] Found admin user: ${adminUser.name} (${adminUser.role})`);
         
         // Update school to completed status
         const { error: updateError } = await supabaseAdmin
@@ -224,8 +177,6 @@ async function completeExistingSetup() {
         if (updateError) {
           console.error('❌ [Complete] Error updating school status:', updateError);
         } else {
-          console.log('✅ [Complete] Updated school to completed status');
-          console.log('🎉 [Complete] School setup completion successful!');
           
           // Generate and log a new temporary password for the admin
           const newPassword = `EduDash${Math.random().toString(36).slice(-8)}!`;
@@ -239,10 +190,6 @@ async function completeExistingSetup() {
               if (passwordError) {
                 console.error('⚠️ [Complete] Could not update password:', passwordError);
               } else {
-                console.log('🔑 [Complete] Updated admin password');
-                console.log(`📧 Admin Email: ${adminUser.email}`);
-                console.log(`🔐 New Password: ${newPassword}`);
-                console.log('💡 Please save these credentials and change the password after first login');
               }
             } catch (pwEx) {
               console.error('⚠️ [Complete] Password update failed:', pwEx.message);
@@ -255,7 +202,6 @@ async function completeExistingSetup() {
     }
 
     // No admin user found, create one
-    console.log('👤 [Complete] No admin user found, creating one...');
     
     const adminName = 'School Administrator';
     const adminEmail = school.email;
@@ -278,7 +224,6 @@ async function completeExistingSetup() {
       return;
     }
 
-    console.log('✅ [Complete] Created auth user');
 
     // Create user profile (manual fallback)
     const { error: userInsertError } = await supabaseAdmin
@@ -298,7 +243,6 @@ async function completeExistingSetup() {
       return;
     }
 
-    console.log('✅ [Complete] Created user profile');
 
     // Update school status
     const { error: updateError } = await supabaseAdmin
@@ -313,11 +257,6 @@ async function completeExistingSetup() {
     if (updateError) {
       console.error('❌ [Complete] Error updating school status:', updateError);
     } else {
-      console.log('✅ [Complete] Updated school to completed status');
-      console.log('🎉 [Complete] School setup completion successful!');
-      console.log(`📧 Admin Email: ${adminEmail}`);
-      console.log(`🔐 Temp Password: ${tempPassword}`);
-      console.log('💡 Please save these credentials and change the password after first login');
     }
 
   } catch (error) {
@@ -340,12 +279,6 @@ async function main() {
       await completeExistingSetup();
       break;
     default:
-      console.log('📋 [Usage] Available commands:');
-      console.log('  node check_duplicate_school.js check   - Check current status');
-      console.log('  node check_duplicate_school.js cleanup - Clean up incomplete school');
-      console.log('  node check_duplicate_school.js complete - Complete existing setup');
-      console.log('');
-      console.log('🔍 Running check by default...');
       await checkDuplicateSchool();
   }
 }

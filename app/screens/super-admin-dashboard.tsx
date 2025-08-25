@@ -9,8 +9,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Platform
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
 import OnboardingRequestManager from '@/components/admin/OnboardingRequestManager';
@@ -20,6 +22,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { NotificationService } from '@/lib/services/notificationService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 import {
   SuperAdminDashboardData,
   SuperAdminDataService
@@ -30,7 +34,11 @@ const { width: screenWidth } = Dimensions.get('window');
 type TabType = 'overview' | 'schools' | 'onboarding' | 'users' | 'activity' | 'system' | 'analytics' | 'billing' | 'ai-usage' | 'moderation' | 'reports' | 'announcements';
 
 const SuperAdminDashboardScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  const TAB_HEIGHT = 64; // approx. height of our local bottom nav
   const { user, signOut } = useAuth();
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
   const params = useLocalSearchParams();
   const [dashboardData, setDashboardData] = useState<SuperAdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +46,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<TabType>('overview');
   const [notificationCount, setNotificationCount] = useState(0);
+  const [navHeight, setNavHeight] = useState(0);
 
   // Fetch notification count
   const fetchNotificationCount = async () => {
@@ -55,14 +64,12 @@ const SuperAdminDashboardScreen: React.FC = () => {
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     if (!user?.id) {
-      // Removed debug statement: console.log('🔍 [SuperAdmin] No user ID available');
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
-      // Removed debug statement: console.log('🔍 [SuperAdmin] Fetching dashboard data for user:', user.id);
 
       // Fetch dashboard data and notification count in parallel
       const [data] = await Promise.all([
@@ -109,23 +116,19 @@ const SuperAdminDashboardScreen: React.FC = () => {
     React.useCallback(() => {
       // Register the global callback function for immediate refresh after onboarding approval
       (global as any).refreshSuperAdminDashboard = () => {
-        console.log('📊 [SuperAdminDashboard] Global refresh callback triggered');
         // Add small delay to ensure database consistency after approvals
         setTimeout(() => {
-          console.log('📊 [SuperAdminDashboard] Executing delayed refresh after approval');
           fetchDashboardData();
         }, 1000);
       };
 
       // Set up periodic refresh every 30 seconds while screen is focused
       const refreshInterval = setInterval(() => {
-        console.log('⏰ [SuperAdminDashboard] Periodic refresh triggered');
         fetchDashboardData();
       }, 30000); // 30 seconds
 
       // Cleanup function when screen loses focus
       return () => {
-        console.log('🧹 [SuperAdminDashboard] Cleaning up - removing global callback and clearing interval');
         clearInterval(refreshInterval);
         delete (global as any).refreshSuperAdminDashboard;
       };
@@ -187,35 +190,35 @@ const SuperAdminDashboardScreen: React.FC = () => {
 
     return (
       <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: palette.surface }]}>
           <IconSymbol name="building.2" size={24} color="#3B82F6" />
-          <Text style={styles.statValue}>{platform_stats.total_schools}</Text>
-          <Text style={styles.statLabel}>Schools</Text>
+          <Text style={[styles.statValue, { color: palette.text }]}>{platform_stats.total_schools}</Text>
+          <Text style={[styles.statLabel, { color: palette.textSecondary }]}>Schools</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: palette.surface }]}>
           <IconSymbol name="person.3" size={24} color="#10B981" />
-          <Text style={styles.statValue}>{platform_stats.total_users}</Text>
-          <Text style={styles.statLabel}>Total Users</Text>
+          <Text style={[styles.statValue, { color: palette.text }]}>{platform_stats.total_users}</Text>
+          <Text style={[styles.statLabel, { color: palette.textSecondary }]}>Total Users</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: palette.surface }]}>
           <IconSymbol name="graduationcap" size={24} color="#DC2626" />
-          <Text style={styles.statValue}>{platform_stats.total_students}</Text>
-          <Text style={styles.statLabel}>Students</Text>
+          <Text style={[styles.statValue, { color: palette.text }]}>{platform_stats.total_students}</Text>
+          <Text style={[styles.statLabel, { color: palette.textSecondary }]}>Students</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: palette.surface }]}>
           <IconSymbol name="person.badge.plus" size={24} color="#059669" />
-          <Text style={styles.statValue}>{platform_stats.total_teachers}</Text>
-          <Text style={styles.statLabel}>Teachers</Text>
+          <Text style={[styles.statValue, { color: palette.text }]}>{platform_stats.total_teachers}</Text>
+          <Text style={[styles.statLabel, { color: palette.textSecondary }]}>Teachers</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: palette.surface }]}>
           <IconSymbol name="person.2" size={24} color="#DC2626" />
-          <Text style={styles.statValue}>{platform_stats.total_parents}</Text>
-          <Text style={styles.statLabel}>Parents</Text>
+          <Text style={[styles.statValue, { color: palette.text }]}>{platform_stats.total_parents}</Text>
+          <Text style={[styles.statLabel, { color: palette.textSecondary }]}>Parents</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: palette.surface }]}>
           <IconSymbol name="cpu" size={24} color="#6366F1" />
-          <Text style={styles.statValue}>{platform_stats.ai_usage_count.toLocaleString()}</Text>
-          <Text style={styles.statLabel}>AI Requests</Text>
+          <Text style={[styles.statValue, { color: palette.text }]}>{platform_stats.ai_usage_count.toLocaleString()}</Text>
+          <Text style={[styles.statLabel, { color: palette.textSecondary }]}>AI Requests</Text>
         </View>
       </View>
     );
@@ -228,9 +231,9 @@ const SuperAdminDashboardScreen: React.FC = () => {
     const { system_health } = dashboardData;
 
     return (
-      <View style={styles.healthCard}>
+      <View style={[styles.healthCard, { backgroundColor: palette.surface }]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>🖥️ System Health</Text>
+          <Text style={[styles.cardTitle, { color: palette.text }]}>🖥️ System Health</Text>
           <View style={[styles.healthStatus, {
             backgroundColor: system_health.database_status === 'healthy' ? '#10B981' : '#EF4444'
           }]}>
@@ -242,20 +245,20 @@ const SuperAdminDashboardScreen: React.FC = () => {
 
         <View style={styles.healthMetrics}>
           <View style={styles.healthMetric}>
-            <Text style={styles.healthMetricLabel}>API Response</Text>
-            <Text style={styles.healthMetricValue}>{system_health.api_response_time}ms</Text>
+            <Text style={[styles.healthMetricLabel, { color: palette.textSecondary }]}>API Response</Text>
+            <Text style={[styles.healthMetricValue, { color: palette.text }]}>{system_health.api_response_time}ms</Text>
           </View>
           <View style={styles.healthMetric}>
-            <Text style={styles.healthMetricLabel}>Uptime</Text>
-            <Text style={styles.healthMetricValue}>{system_health.uptime_percentage}%</Text>
+            <Text style={[styles.healthMetricLabel, { color: palette.textSecondary }]}>Uptime</Text>
+            <Text style={[styles.healthMetricValue, { color: palette.text }]}>{system_health.uptime_percentage}%</Text>
           </View>
           <View style={styles.healthMetric}>
-            <Text style={styles.healthMetricLabel}>Storage</Text>
-            <Text style={styles.healthMetricValue}>{system_health.storage_usage_percentage}%</Text>
+            <Text style={[styles.healthMetricLabel, { color: palette.textSecondary }]}>Storage</Text>
+            <Text style={[styles.healthMetricValue, { color: palette.text }]}>{system_health.storage_usage_percentage}%</Text>
           </View>
           <View style={styles.healthMetric}>
-            <Text style={styles.healthMetricLabel}>Connections</Text>
-            <Text style={styles.healthMetricValue}>{system_health.active_connections}</Text>
+            <Text style={[styles.healthMetricLabel, { color: palette.textSecondary }]}>Connections</Text>
+            <Text style={[styles.healthMetricValue, { color: palette.text }]}>{system_health.active_connections}</Text>
           </View>
         </View>
       </View>
@@ -268,63 +271,71 @@ const SuperAdminDashboardScreen: React.FC = () => {
       <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
       <View style={styles.quickActionsGrid}>
         <TouchableOpacity
-          style={styles.quickActionCard}
+          style={[styles.quickActionCard, { backgroundColor: palette.surface }]}
           onPress={() => setSelectedTab('onboarding')}
         >
           <IconSymbol name="plus.app" size={24} color="#3B82F6" />
-          <Text style={styles.quickActionLabel}>Manage Onboarding</Text>
+          <Text style={[styles.quickActionLabel, { color: palette.text }]}>Manage Onboarding</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.quickActionCard}
+          style={[styles.quickActionCard, { backgroundColor: palette.surface }]}
           onPress={() => setSelectedTab('activity')}
         >
           <IconSymbol name="chart.bar.doc.horizontal" size={24} color="#10B981" />
-          <Text style={styles.quickActionLabel}>Platform Reports</Text>
+          <Text style={[styles.quickActionLabel, { color: palette.text }]}>Platform Reports</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.quickActionCard}
+          style={[styles.quickActionCard, { backgroundColor: palette.surface }]}
           onPress={() => setSelectedTab('system')}
         >
           <IconSymbol name="gear.badge" size={24} color="#F59E0B" />
-          <Text style={styles.quickActionLabel}>System Settings</Text>
+          <Text style={[styles.quickActionLabel, { color: palette.text }]}>System Settings</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.quickActionCard}
+          style={[styles.quickActionCard, { backgroundColor: palette.surface }]}
           onPress={() => setSelectedTab('users')}
         >
           <IconSymbol name="person.badge.shield.checkmark" size={24} color="#DC2626" />
-          <Text style={styles.quickActionLabel}>User Management</Text>
+          <Text style={[styles.quickActionLabel, { color: palette.text }]}>User Management</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  // Tab navigation (bottom bar)
-  const renderTabNavigation = () => (
-    <View style={styles.tabNavigationBottom}>
-      {[
-        { key: 'overview', label: 'Overview', icon: 'chart.bar' },
-        { key: 'schools', label: 'Schools', icon: 'building.2' },
-        { key: 'onboarding', label: 'Onboard', icon: 'person.badge.plus' },
-        { key: 'users', label: 'Users', icon: 'person.3' },
-        { key: 'system', label: 'System', icon: 'gear' }
-      ].map((tab) => (
-        <TouchableOpacity
-          key={tab.key}
-          style={[styles.tabButton, selectedTab === tab.key && styles.tabButtonActive]}
-          onPress={() => setSelectedTab(tab.key as TabType)}
-        >
-          <IconSymbol
-            name={tab.icon as any}
-            size={16}
-            color={selectedTab === tab.key ? '#DC2626' : '#6B7280'}
-          />
-          <Text style={[styles.tabLabel, selectedTab === tab.key && styles.tabLabelActive]}>
-            {tab.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+// Tab navigation (bottom bar)
+const renderTabNavigation = () => (
+    <SafeAreaView edges={['bottom','left','right']} style={styles.tabNavWrapper}>
+      <View
+        style={[styles.tabNavigationBottom, { backgroundColor: palette.surface, borderTopColor: palette.outline }]}
+        onLayout={(e) => {
+          const h = e?.nativeEvent?.layout?.height || 0;
+          if (h && Math.abs(h - navHeight) > 1) setNavHeight(h);
+        }}
+      >
+        {[
+          { key: 'overview', label: 'Overview', icon: 'chart.bar' },
+          { key: 'schools', label: 'Schools', icon: 'building.2' },
+          { key: 'onboarding', label: 'Onboard', icon: 'person.badge.plus' },
+          { key: 'users', label: 'Users', icon: 'person.3' },
+          { key: 'system', label: 'System', icon: 'gear' }
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tabButton, selectedTab === tab.key && styles.tabButtonActive]}
+            onPress={() => setSelectedTab(tab.key as TabType)}
+          >
+            <IconSymbol
+              name={tab.icon as any}
+              size={16}
+              color={selectedTab === tab.key ? '#DC2626' : palette.textSecondary}
+            />
+            <Text style={[styles.tabLabel, { color: selectedTab === tab.key ? '#DC2626' : palette.textSecondary }, selectedTab === tab.key && styles.tabLabelActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </SafeAreaView>
   );
 
   if (!user) {
@@ -332,8 +343,8 @@ const SuperAdminDashboardScreen: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.errorContainer}>
           <IconSymbol name="person.slash" size={48} color="#EF4444" />
-          <Text style={styles.errorTitle}>Authentication Required</Text>
-          <Text style={styles.errorMessage}>Please sign in to access the Super Admin dashboard</Text>
+          <Text style={[styles.errorTitle, { color: palette.text }]}>Authentication Required</Text>
+          <Text style={[styles.errorMessage, { color: palette.textSecondary }]}>Please sign in to access the Super Admin dashboard</Text>
         </View>
       </View>
     );
@@ -387,8 +398,8 @@ const SuperAdminDashboardScreen: React.FC = () => {
         />
         <View style={styles.errorContainer}>
           <IconSymbol name="exclamationmark.triangle.fill" size={48} color="#EF4444" />
-          <Text style={styles.errorTitle}>Access Denied</Text>
-          <Text style={styles.errorMessage}>{error}</Text>
+          <Text style={[styles.errorTitle, { color: palette.text }]}>Access Denied</Text>
+          <Text style={[styles.errorMessage, { color: palette.textSecondary }]}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchDashboardData}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
@@ -400,7 +411,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
 
 
   return (
-    <View style={styles.container}>
+<SafeAreaView edges={['bottom','left','right']} style={[styles.container, { backgroundColor: palette.background }]}>
       {/* Header */}
       <MobileHeader
         user={{
@@ -416,220 +427,223 @@ const SuperAdminDashboardScreen: React.FC = () => {
       />
 
       {/* Content */}
-      {selectedTab === 'onboarding' ? (
-        <OnboardingRequestManager superAdminUserId={user.id} />
-      ) : selectedTab === 'users' ? (
-        <UserManagementScreen superAdminUserId={user.id} />
-      ) : (
-        <ScrollView
-          style={styles.scrollView}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+      {(() => {
+        if (selectedTab === 'onboarding') {
+          return <OnboardingRequestManager superAdminUserId={user.id} />;
+        }
+        if (selectedTab === 'users') {
+          return <UserManagementScreen superAdminUserId={user.id} />;
+        }
+        return (
+          <ScrollView
+            style={styles.scrollView}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(navHeight + 32, insets.bottom + TAB_HEIGHT + 32) }]}
+          >
+            {/* Header Text */}
+            <View style={styles.headerTextSection}>
+              <Text style={[styles.greeting, { color: palette.text }]}>🔱 Super Admin Dashboard</Text>
+              <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
+                Manage the entire EduDash Pro platform
+              </Text>
+            </View>
 
-          {/* Header Text */}
-          <View style={styles.headerTextSection}>
-            <Text style={styles.greeting}>🔱 Super Admin Dashboard</Text>
-            <Text style={styles.subtitle}>
-              Manage the entire EduDash Pro platform
-            </Text>
-          </View>
+            {/* Platform Overview Section */}
+            <View style={styles.platformOverviewSection}>
+              <Text style={[styles.platformOverviewTitle, { color: palette.text }]}>📊 Platform Overview</Text>
+              <Text style={[styles.platformOverviewSubtitle, { color: palette.textSecondary }]}>
+                Real-time insights into your EduDash Pro platform performance
+              </Text>
+            </View>
 
-          {/* Platform Overview Section */}
-          <View style={styles.platformOverviewSection}>
-            <Text style={styles.platformOverviewTitle}>📊 Platform Overview</Text>
-            <Text style={styles.platformOverviewSubtitle}>
-              Real-time insights into your EduDash Pro platform performance
-            </Text>
-          </View>
+            {/* Alerts Section */}
+            {dashboardData && dashboardData.alerts.length > 0 && (
+              <View style={styles.alertsSection}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>⚠️ Platform Alerts</Text>
+                {dashboardData.alerts.map((alert) => (
+                  <View key={alert.id} style={[styles.alertCard, { borderLeftColor: getSeverityColor(alert.priority), backgroundColor: colorScheme === 'dark' ? palette.surfaceVariant : '#FEF2F2' }]}>
+                    <Text style={[styles.alertMessage, { color: palette.text }]}>{alert.message}</Text>
+                    <Text style={[styles.alertTime, { color: palette.textSecondary }]}>{new Date(alert.timestamp).toLocaleString()}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
-          {/* Alerts Section */}
-          {dashboardData && dashboardData.alerts.length > 0 && (
-            <View style={styles.alertsSection}>
-              <Text style={styles.sectionTitle}>⚠️ Platform Alerts</Text>
-              {dashboardData.alerts.map((alert) => (
-                <View key={alert.id} style={[styles.alertCard, { borderLeftColor: getSeverityColor(alert.priority) }]}>
-                  <Text style={styles.alertMessage}>{alert.message}</Text>
-                  <Text style={styles.alertTime}>{new Date(alert.timestamp).toLocaleString()}</Text>
+            {/* Tab Content */}
+
+            {selectedTab === 'overview' && (
+              <>
+                {renderStatsCards()}
+                {renderSystemHealth()}
+                {renderQuickActions()}
+
+                {/* Pending Approvals */}
+                {dashboardData && (
+                  <View style={styles.approvalsSection}>
+                    <Text style={[styles.sectionTitle, { color: palette.text }]}>📋 Pending Approvals</Text>
+                    <View style={styles.approvalsGrid}>
+                      <View style={styles.approvalCard}>
+                        <Text style={styles.approvalCount}>{dashboardData.pending_approvals.schools}</Text>
+                        <Text style={styles.approvalLabel}>Schools</Text>
+                      </View>
+                      <View style={styles.approvalCard}>
+                        <Text style={styles.approvalCount}>{dashboardData.pending_approvals.users}</Text>
+                        <Text style={styles.approvalLabel}>Users</Text>
+                      </View>
+                      <View style={styles.approvalCard}>
+                        <Text style={styles.approvalCount}>{dashboardData.pending_approvals.content_reports}</Text>
+                        <Text style={styles.approvalLabel}>Reports</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
+
+            {selectedTab === 'schools' && dashboardData && (
+              <View style={styles.schoolsList}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>🏫 Recent Schools</Text>
+                {dashboardData.recent_schools.map((school) => (
+                  <View key={school.id} style={[styles.schoolCard, { backgroundColor: palette.surface }]}>
+                    <View style={styles.schoolInfo}>
+                      <Text style={[styles.schoolName, { color: palette.text }]}>{school.name}</Text>
+                      <Text style={[styles.schoolDetails, { color: palette.textSecondary }]}>
+                        {school.user_count} users • {school.student_count} students
+                      </Text>
+                      <Text style={styles.schoolDetails}>
+                        Last active: {new Date(school.last_activity).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <View style={styles.schoolActions}>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(school.subscription_status) }]}>
+                        <Text style={styles.statusText}>{school.subscription_status}</Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {selectedTab === 'users' && dashboardData && (
+              <View style={styles.usersList}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>👥 Recent Users</Text>
+                {dashboardData.recent_users.slice(0, 10).map((user) => (
+                  <View key={user.id} style={[styles.userCard, { backgroundColor: palette.surface }]}>
+                    <View style={styles.userInfo}>
+                      <Text style={[styles.userName, { color: palette.text }]}>{user.name}</Text>
+                      <Text style={[styles.userDetails, { color: palette.textSecondary }]}>
+                        {user.role} • {user.school_name || 'No School'}
+                      </Text>
+                      <Text style={styles.userDetails}>
+                        Last login: {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                      </Text>
+                    </View>
+                    <View style={styles.userActions}>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(user.account_status) }]}>
+                        <Text style={styles.statusText}>{user.account_status}</Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {selectedTab === 'system' && (
+              <View style={styles.systemSection}>
+                {renderSystemHealth()}
+                {renderQuickActions()}
+              </View>
+            )}
+
+            {selectedTab === 'analytics' && (
+              <View style={styles.analyticsSection}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>📈 Platform Analytics</Text>
+                <View style={[styles.comingSoonCard, { backgroundColor: palette.surface }]}>
+                  <IconSymbol name="chart.line.uptrend.xyaxis" size={48} color="#DC2626" />
+                  <Text style={[styles.comingSoonTitle, { color: palette.text }]}>Analytics Dashboard</Text>
+                  <Text style={[styles.comingSoonText, { color: palette.textSecondary }]}>
+                    Advanced analytics and insights coming soon. Track growth metrics, user engagement, and platform performance.
+                  </Text>
                 </View>
-              ))}
-            </View>
-          )}
+              </View>
+            )}
 
-          {/* Tab Content */}
-
-          {selectedTab === 'overview' && (
-            <>
-              {renderStatsCards()}
-              {renderSystemHealth()}
-              {renderQuickActions()}
-
-              {/* Pending Approvals */}
-              {dashboardData && (
-                <View style={styles.approvalsSection}>
-                  <Text style={styles.sectionTitle}>📋 Pending Approvals</Text>
-                  <View style={styles.approvalsGrid}>
-                    <View style={styles.approvalCard}>
-                      <Text style={styles.approvalCount}>{dashboardData.pending_approvals.schools}</Text>
-                      <Text style={styles.approvalLabel}>Schools</Text>
-                    </View>
-                    <View style={styles.approvalCard}>
-                      <Text style={styles.approvalCount}>{dashboardData.pending_approvals.users}</Text>
-                      <Text style={styles.approvalLabel}>Users</Text>
-                    </View>
-                    <View style={styles.approvalCard}>
-                      <Text style={styles.approvalCount}>{dashboardData.pending_approvals.content_reports}</Text>
-                      <Text style={styles.approvalLabel}>Reports</Text>
-                    </View>
-                  </View>
+            {selectedTab === 'billing' && (
+              <View style={styles.billingSection}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>💳 Billing & Subscriptions</Text>
+                <View style={[styles.comingSoonCard, { backgroundColor: palette.surface }]}>
+                  <IconSymbol name="creditcard.fill" size={48} color="#DC2626" />
+                  <Text style={[styles.comingSoonTitle, { color: palette.text }]}>Revenue Management</Text>
+                  <Text style={[styles.comingSoonText, { color: palette.textSecondary }]}>
+                    Comprehensive billing dashboard coming soon. Monitor subscriptions, revenue, and payment analytics.
+                  </Text>
                 </View>
-              )}
-            </>
-          )}
+              </View>
+            )}
 
-          {selectedTab === 'schools' && dashboardData && (
-            <View style={styles.schoolsList}>
-              <Text style={styles.sectionTitle}>🏫 Recent Schools</Text>
-              {dashboardData.recent_schools.map((school) => (
-                <View key={school.id} style={styles.schoolCard}>
-                  <View style={styles.schoolInfo}>
-                    <Text style={styles.schoolName}>{school.name}</Text>
-                    <Text style={styles.schoolDetails}>
-                      {school.user_count} users • {school.student_count} students
-                    </Text>
-                    <Text style={styles.schoolDetails}>
-                      Last active: {new Date(school.last_activity).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <View style={styles.schoolActions}>
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(school.subscription_status) }]}>
-                      <Text style={styles.statusText}>{school.subscription_status}</Text>
-                    </View>
-                  </View>
+            {selectedTab === 'ai-usage' && (
+              <View style={styles.aiUsageSection}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>🧠 AI Usage Monitoring</Text>
+                <View style={[styles.comingSoonCard, { backgroundColor: palette.surface }]}>
+                  <IconSymbol name="brain.head.profile" size={48} color="#DC2626" />
+                  <Text style={[styles.comingSoonTitle, { color: palette.text }]}>AI Cost Tracking</Text>
+                  <Text style={[styles.comingSoonText, { color: palette.textSecondary }]}>
+                    Monitor AI usage, costs, and set limits across all schools. Advanced AI analytics coming soon.
+                  </Text>
                 </View>
-              ))}
-            </View>
-          )}
+              </View>
+            )}
 
-          {selectedTab === 'users' && dashboardData && (
-            <View style={styles.usersList}>
-              <Text style={styles.sectionTitle}>👥 Recent Users</Text>
-              {dashboardData.recent_users.slice(0, 10).map((user) => (
-                <View key={user.id} style={styles.userCard}>
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{user.name}</Text>
-                    <Text style={styles.userDetails}>
-                      {user.role} • {user.school_name || 'No School'}
-                    </Text>
-                    <Text style={styles.userDetails}>
-                      Last login: {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
-                    </Text>
-                  </View>
-                  <View style={styles.userActions}>
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(user.account_status) }]}>
-                      <Text style={styles.statusText}>{user.account_status}</Text>
-                    </View>
-                  </View>
+            {selectedTab === 'moderation' && (
+              <View style={styles.moderationSection}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>🚩 Content Moderation</Text>
+                <View style={[styles.comingSoonCard, { backgroundColor: palette.surface }]}>
+                  <IconSymbol name="flag.fill" size={48} color="#DC2626" />
+                  <Text style={[styles.comingSoonTitle, { color: palette.text }]}>Content Review</Text>
+                  <Text style={[styles.comingSoonText, { color: palette.textSecondary }]}>
+                    Review flagged content, manage reports, and maintain platform safety standards.
+                  </Text>
                 </View>
-              ))}
-            </View>
-          )}
-
-          {selectedTab === 'system' && (
-            <View style={styles.systemSection}>
-              {renderSystemHealth()}
-              {renderQuickActions()}
-            </View>
-          )}
-
-          {selectedTab === 'analytics' && (
-            <View style={styles.analyticsSection}>
-              <Text style={styles.sectionTitle}>📈 Platform Analytics</Text>
-              <View style={styles.comingSoonCard}>
-                <IconSymbol name="chart.line.uptrend.xyaxis" size={48} color="#DC2626" />
-                <Text style={styles.comingSoonTitle}>Analytics Dashboard</Text>
-                <Text style={styles.comingSoonText}>
-                  Advanced analytics and insights coming soon. Track growth metrics, user engagement, and platform performance.
-                </Text>
               </View>
-            </View>
-          )}
+            )}
 
-          {selectedTab === 'billing' && (
-            <View style={styles.billingSection}>
-              <Text style={styles.sectionTitle}>💳 Billing & Subscriptions</Text>
-              <View style={styles.comingSoonCard}>
-                <IconSymbol name="creditcard.fill" size={48} color="#DC2626" />
-                <Text style={styles.comingSoonTitle}>Revenue Management</Text>
-                <Text style={styles.comingSoonText}>
-                  Comprehensive billing dashboard coming soon. Monitor subscriptions, revenue, and payment analytics.
-                </Text>
+            {selectedTab === 'reports' && (
+              <View style={styles.reportsSection}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>📊 Platform Reports</Text>
+                <View style={[styles.comingSoonCard, { backgroundColor: palette.surface }]}>
+                  <IconSymbol name="doc.text.fill" size={48} color="#DC2626" />
+                  <Text style={[styles.comingSoonTitle, { color: palette.text }]}>Export & Compliance</Text>
+                  <Text style={[styles.comingSoonText, { color: palette.textSecondary }]}>
+                    Generate comprehensive reports for compliance, auditing, and business intelligence.
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {selectedTab === 'ai-usage' && (
-            <View style={styles.aiUsageSection}>
-              <Text style={styles.sectionTitle}>🧠 AI Usage Monitoring</Text>
-              <View style={styles.comingSoonCard}>
-                <IconSymbol name="brain.head.profile" size={48} color="#DC2626" />
-                <Text style={styles.comingSoonTitle}>AI Cost Tracking</Text>
-                <Text style={styles.comingSoonText}>
-                  Monitor AI usage, costs, and set limits across all schools. Advanced AI analytics coming soon.
-                </Text>
+            {selectedTab === 'announcements' && (
+              <View style={styles.announcementsSection}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>📢 Platform Announcements</Text>
+                <View style={[styles.comingSoonCard, { backgroundColor: palette.surface }]}>
+                  <IconSymbol name="megaphone.fill" size={48} color="#DC2626" />
+                  <Text style={[styles.comingSoonTitle, { color: palette.text }]}>Broadcast System</Text>
+                  <Text style={[styles.comingSoonText, { color: palette.textSecondary }]}>
+                    Send announcements to all schools, manage communications, and track engagement.
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {selectedTab === 'moderation' && (
-            <View style={styles.moderationSection}>
-              <Text style={styles.sectionTitle}>🚩 Content Moderation</Text>
-              <View style={styles.comingSoonCard}>
-                <IconSymbol name="flag.fill" size={48} color="#DC2626" />
-                <Text style={styles.comingSoonTitle}>Content Review</Text>
-                <Text style={styles.comingSoonText}>
-                  Review flagged content, manage reports, and maintain platform safety standards.
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {selectedTab === 'reports' && (
-            <View style={styles.reportsSection}>
-              <Text style={styles.sectionTitle}>📊 Platform Reports</Text>
-              <View style={styles.comingSoonCard}>
-                <IconSymbol name="doc.text.fill" size={48} color="#DC2626" />
-                <Text style={styles.comingSoonTitle}>Export & Compliance</Text>
-                <Text style={styles.comingSoonText}>
-                  Generate comprehensive reports for compliance, auditing, and business intelligence.
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {selectedTab === 'announcements' && (
-            <View style={styles.announcementsSection}>
-              <Text style={styles.sectionTitle}>📢 Platform Announcements</Text>
-              <View style={styles.comingSoonCard}>
-                <IconSymbol name="megaphone.fill" size={48} color="#DC2626" />
-                <Text style={styles.comingSoonTitle}>Broadcast System</Text>
-                <Text style={styles.comingSoonText}>
-                  Send announcements to all schools, manage communications, and track engagement.
-                </Text>
-              </View>
-            </View>
-          )}
-
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
-      )}
+            <View style={styles.bottomSpacing} />
+          </ScrollView>
+        );
+      })()}
 
       {/* Bottom Tab Navigation */}
       {renderTabNavigation()}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -679,18 +693,26 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Bottom Tab Navigation
-  tabNavigationBottom: {
+// Bottom Tab Navigation
+  tabNavWrapper: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  tabNavigationBottom: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 8,
     paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 6,
+    zIndex: 20,
   },
   tabButton: {
     flex: 1,
@@ -1028,7 +1050,7 @@ const styles = StyleSheet.create({
   },
 
   bottomSpacing: {
-    height: 20,
+    height: 32,
   },
 
   // New Tab Sections

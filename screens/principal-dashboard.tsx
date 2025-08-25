@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import { SchoolCodeManager } from '@/components/admin/SchoolCodeManager';
 import { TeacherManagement } from '@/components/admin/TeacherManagement';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
@@ -20,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -176,12 +175,12 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]} edges={['bottom', 'left', 'right']}>
       <MobileHeader
         user={{
           name: profile?.name || 'Principal',
           role: profile?.role || 'preschool_admin',
-          avatar: profile?.avatar_url,
+          avatar: profile?.avatar_url || undefined,
         }}
         schoolName={schoolName || undefined}
         onNotificationsPress={() => handleNavigate('notifications')}
@@ -372,7 +371,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
           />
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

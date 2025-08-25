@@ -1,6 +1,6 @@
 {
   "name": "edudash-pro",
-  "main": "expo-router/entry",
+  "main": "node_modules/expo-router/entry",
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
@@ -39,7 +39,8 @@
     "test:principal": "jest __tests__/principal-dashboard.test.ts",
     "test:components": "jest __tests__/components/",
     "test:integration": "jest __tests__/integration/",
-    "test:all": "npm run test:principal && npm run test:components && npm run test:integration"
+    "test:all": "npm run test:principal && npm run test:components && npm run test:integration",
+    "setup:email-templates": "node scripts/setup-email-templates.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.58.0",
@@ -78,17 +79,17 @@
     "expo-system-ui": "~5.0.11",
     "expo-updates": "~0.28.17",
     "expo-web-browser": "~14.2.0",
+    "lucide-react-native": "^0.541.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-google-mobile-ads": "^14.9.0",
     "react-native-heroicons": "^4.0.0",
-    "react-native-qrcode-svg": "^6.3.3",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
-    "react-native-svg": "15.11.2",
+    "react-native-svg": "^15.11.2",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5"

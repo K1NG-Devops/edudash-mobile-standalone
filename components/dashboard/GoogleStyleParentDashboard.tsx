@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,8 @@ import { router } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { StudentDataService, EnhancedStudent, ParentDashboardData } from '@/lib/services/studentDataService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 
 interface GoogleStyleParentDashboardProps {
   userId: string;
@@ -38,6 +40,314 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
   onSignOut
 }) => {
   const [dashboardData, setDashboardData] = useState<ParentDashboardData | null>(null);
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 100,
+    },
+    headerSection: {
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 16,
+      backgroundColor: palette.surface,
+    },
+    greeting: {
+      fontSize: 28,
+      fontWeight: '400',
+      color: palette.text,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: palette.textSecondary,
+      lineHeight: 24,
+      fontWeight: '400',
+    },
+    childCardContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    childCard: {
+      borderRadius: 12,
+      padding: 24,
+      elevation: 3,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    childCardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 20,
+    },
+    childInfo: {
+      flex: 1,
+    },
+    childName: {
+      fontSize: 22,
+      fontWeight: '500',
+      color: '#FFFFFF',
+      marginBottom: 6,
+    },
+    childDetails: {
+      fontSize: 14,
+      color: 'rgba(255, 255, 255, 0.87)',
+      marginBottom: 4,
+    },
+    childAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    childInitial: {
+      fontSize: 20,
+      fontWeight: '500',
+      color: '#FFFFFF',
+    },
+    childCardFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    moodSection: {
+      flex: 1,
+    },
+    moodLabel: {
+      fontSize: 12,
+      color: 'rgba(255, 255, 255, 0.7)',
+      marginBottom: 4,
+    },
+    starsContainer: {
+      flexDirection: 'row',
+      gap: 2,
+    },
+    viewMoreButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      gap: 4,
+    },
+    viewMoreText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    quickActionsContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: palette.text,
+      marginBottom: 16,
+      paddingHorizontal: 8,
+    },
+    quickActionsGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    quickActionCard: {
+      flex: 1,
+      backgroundColor: palette.surface,
+      borderRadius: 12,
+      padding: 16,
+      alignItems: 'center',
+      elevation: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      minHeight: 88,
+      justifyContent: 'center',
+    },
+    quickActionIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    quickActionLabel: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      fontWeight: '400',
+      textAlign: 'center',
+    },
+    metricsContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    metricsGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    metricCard: {
+      flex: 1,
+      backgroundColor: palette.surface,
+      borderRadius: 12,
+      padding: 16,
+      alignItems: 'center',
+      elevation: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      minHeight: 88,
+      justifyContent: 'center',
+    },
+    metricIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    metricValue: {
+      fontSize: 18,
+      fontWeight: '500',
+      color: palette.text,
+      marginBottom: 2,
+    },
+    metricLabel: {
+      fontSize: 11,
+      color: palette.textSecondary,
+      textAlign: 'center',
+      fontWeight: '400',
+    },
+    activityContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    activityList: {
+      backgroundColor: palette.surface,
+      borderRadius: 12,
+      elevation: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+    },
+    activityItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.outline,
+    },
+    activityIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    activityContent: {
+      flex: 1,
+    },
+    activityTitle: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: palette.text,
+      marginBottom: 2,
+    },
+    activityTime: {
+      fontSize: 12,
+      color: palette.textSecondary,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: palette.background,
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: 14,
+      color: palette.textSecondary,
+      fontWeight: '400',
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: palette.background,
+      paddingHorizontal: 24,
+    },
+    errorText: {
+      fontSize: 14,
+      color: '#EA4335',
+      textAlign: 'center',
+      marginBottom: 24,
+      lineHeight: 20,
+    },
+    retryButton: {
+      backgroundColor: '#4285F4',
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 24,
+      elevation: 2,
+    },
+    retryButtonText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '500',
+      letterSpacing: 0.25,
+    },
+    emptyStateContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: palette.background,
+      paddingHorizontal: 24,
+    },
+    emptyStateIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: palette.surfaceVariant,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    emptyStateTitle: {
+      fontSize: 20,
+      fontWeight: '400',
+      color: palette.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    emptyStateText: {
+      fontSize: 14,
+      color: palette.textSecondary,
+      textAlign: 'center',
+      lineHeight: 20,
+      fontWeight: '400',
+    },
+  }), [colorScheme]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [selectedChild, setSelectedChild] = useState<EnhancedStudent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,7 +418,6 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
   };
 
   const handleQuickAction = (action: string) => {
-    // Removed debug statement: console.log('Quick action pressed:', action);
     // Add navigation logic here
   };
 
@@ -325,7 +634,9 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+export default GoogleStyleParentDashboard;
+
+/*
   container: {
     flex: 1,
     backgroundColor: '#FAFAFA', // Google's background color
@@ -629,6 +940,4 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '400',
   },
-});
-
-export default GoogleStyleParentDashboard;
+*/
