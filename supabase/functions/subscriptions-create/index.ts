@@ -2,17 +2,63 @@
 // Creates a platform subscription and returns a provider redirect URL
 // Minimal scaffold – replace stubbed payment URL with real provider integration
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { serve } from 'https://deno.land/std@0.223.0/http/server.ts';
-import { md5 } from 'https://deno.land/x/checksum@1.4.0/md5.ts';
 
-// Standard CORS headers for browser requests
-const corsHeaders: HeadersInit = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Vary': 'Origin'
-};
+function isOriginAllowed(origin: string, allowedList: string[]): boolean {
+  // Exact match
+  if (allowedList.includes(origin)) return true;
+
+  try {
+    const url = new URL(origin);
+    const host = url.host; // e.g., foo.vercel.app
+    const protocol = url.protocol; // e.g., https:
+
+    for (const entry of allowedList) {
+      // Support entries like https://*.vercel.app or http://localhost:8081
+      if (entry.includes('*')) {
+        // Split into protocol and host pattern
+        const [entryProtocol, entryHost] = entry.split('://');
+        if (entryProtocol && entryHost) {
+          if (entryProtocol + ':' !== protocol) continue;
+          // Only support prefix wildcard: *.domain.tld
+          if (entryHost.startsWith('*.')) {
+            const suffix = entryHost.slice(2); // remove *.
+            if (host === suffix || host.endsWith('.' + suffix)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    // If origin is not a valid URL, fall back to exact comparison only
+  }
+  return false;
+}
+
+function buildCorsHeaders(origin: string | null): Record<string, string> {
+  const allowed = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const allowOrigin = origin && isOriginAllowed(origin, allowed)
+    ? origin
+    : (allowed.length === 0 ? '*' : '');
+
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
+  };
+
+  if (allowOrigin) {
+    headers['Access-Control-Allow-Origin'] = allowOrigin;
+  }
+
+  return headers;
+}
 
 type BillingInterval = 'monthly' | 'annual';
 
@@ -59,7 +105,7 @@ function getPayfastBaseUrl(): string {
   return env === 'production' ? 'https://www.payfast.co.za/eng/process' : 'https://sandbox.payfast.co.za/eng/process';
 }
 
-function generatePayFastSignature(params: Record<string, string>, passphrase?: string): string {
+function generatePayFastSignature(params: Record<string, string>, passphrase: string | undefined, md5: (input: string) => string): string {
   // Remove empty fields and signature
   const filtered = Object.keys(params)
     .filter((k) => k !== 'signature' && params[k] !== '' && params[k] !== undefined && params[k] !== null)
@@ -80,9 +126,12 @@ function generatePayFastSignature(params: Record<string, string>, passphrase?: s
 }
 
 serve(async (req: Request) => {
+  const origin = req.headers.get('Origin');
+  const corsHeaders = buildCorsHeaders(origin);
+
   // Preflight CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
@@ -94,6 +143,7 @@ serve(async (req: Request) => {
     const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
     const authHeader = req.headers.get('Authorization') ?? '';
 
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseAnon, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -232,7 +282,9 @@ serve(async (req: Request) => {
           cycles: '0',
         };
 
-        const signature = generatePayFastSignature(payload, passphrase);
+        const md5mod = await import('https://deno.land/x/checksum@1.4.0/md5.ts');
+        const md5Fn = (md5mod as any).md5 ?? (md5mod as any).default;
+        const signature = generatePayFastSignature(payload, passphrase, md5Fn);
         const params = new URLSearchParams();
         Object.entries(payload).forEach(([k, v]) => params.append(k, v));
         params.append('signature', signature);

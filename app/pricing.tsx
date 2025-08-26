@@ -9,6 +9,7 @@ import {
   Dimensions,
   Platform,
   Modal,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -191,57 +192,45 @@ export default function PricingPage() {
 const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
     setSelectedPlan(plan.id);
 
-    // Principal flow: logged-in principal goes straight to payment (no role/invite prompts)
-    if (isLoggedIn && isPrincipal) {
-      try {
-        const result = await createSubscription({
-          plan_id: plan.id,
-          billing_interval: 'monthly',
-          payment_provider: 'payfast',
-        });
-        // createSubscription will redirect if payment_url/approval_url exists.
-        // If not, fallback to success screen for dev environments.
-        if (result.success && !result.payment_url && !result.approval_url) {
-          const amount = plan.price.replace(/[^0-9.]/g, '') || '0';
-          router.push({ pathname: '/payment/success/page', params: { plan_name: plan.name, amount } } as any);
-        }
-      } catch (e) {
-        // As a safeguard, route to settings manage page
-        router.push('/(tabs)/settings_new');
-      }
-      return;
-    }
-
-    // If the user is logged in (non-principal), go directly to checkout
+    // If user is logged in, go directly to subscription creation
+    // No invitation code prompts for existing users
     if (isLoggedIn) {
-      const currentRole = (profile?.role === 'preschool_admin' ? 'principal' : profile?.role) as 'parent' | 'teacher' | 'principal' | undefined;
-      if (currentRole) {
-        setSelectedRole(currentRole);
-        const shouldPrompt = SmartRoutingService.shouldPromptForInvitationCode(plan.id, currentRole);
-        if (shouldPrompt && currentRole !== 'principal') {
-          setShowInvitationPrompt(true);
-          return;
-        }
-      }
       try {
         const result = await createSubscription({
           plan_id: plan.id,
           billing_interval: 'monthly',
           payment_provider: 'payfast',
         });
-        // If no redirect provided (e.g., dev env), go to success page as fallback
-        if (result.success && !result.payment_url && !result.approval_url) {
-          const amount = plan.price.replace(/[^0-9.]/g, '') || '0';
-          router.push({ pathname: '/payment/success/page', params: { plan_name: plan.name, amount } } as any);
+        
+        // Handle success
+        if (result.success) {
+          // If no payment URL (dev environment), go to success page
+          if (!result.payment_url && !result.approval_url) {
+            const amount = plan.price.replace(/[^0-9.]/g, '') || '0';
+            router.push({ pathname: '/payment/success/page', params: { plan_name: plan.name, amount } } as any);
+          }
+          // Otherwise, the payment redirect is handled by createSubscription
+        } else {
+          // Show error to user
+          console.error('Subscription creation failed:', result.error);
+          Alert.alert(
+            'Subscription Error', 
+            result.error || 'Failed to create subscription. Please try again.',
+            [{ text: 'OK' }]
+          );
         }
       } catch (e) {
-        // Fallback to settings if something unexpected occurs
-        router.push('/(tabs)/settings_new');
+        console.error('Subscription error:', e);
+        Alert.alert(
+          'Error', 
+          'An unexpected error occurred. Please try again.',
+          [{ text: 'OK' }]
+        );
       }
       return;
     }
 
-    // Logged out: ask for role selection
+    // Only show role modal for non-authenticated users
     setShowRoleModal(true);
   };
 
@@ -254,7 +243,7 @@ const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
 
     setShowRoleModal(false);
     
-    // Check if user might have an invitation code
+    // Only check for invitation codes for non-logged-in users
     const shouldPromptForCode = SmartRoutingService.shouldPromptForInvitationCode(plan.id, role);
     
     if (shouldPromptForCode) {
@@ -278,28 +267,10 @@ const handleInvitationCodeDecision = async (hasCode: boolean) => {
     const plan = pricingPlans.find(p => p.id === selectedPlan);
     if (!plan || !selectedRole) return;
     
-    // If logged in, avoid account creation prompts
+    // This function should only be called for non-logged-in users
+    // Logged-in users should never see the invitation prompt
     if (isLoggedIn) {
-      if (hasCode) {
-        // Allow redeeming invitation codes even when logged in
-        router.push('/(auth)/join-with-code');
-      } else {
-        // Go directly to checkout (PayFast)
-        try {
-          const result = await createSubscription({
-            plan_id: plan.id,
-            billing_interval: 'monthly',
-            payment_provider: 'payfast',
-          });
-          if (result.success && !result.payment_url && !result.approval_url) {
-            const amount = plan.price.replace(/[^0-9.]/g, '') || '0';
-            router.push({ pathname: '/payment/success/page', params: { plan_name: plan.name, amount } } as any);
-          }
-        } catch (e) {
-          // Fallback to settings if something unexpected occurs
-          router.push('/(tabs)/settings_new');
-        }
-      }
+      console.error('Invitation code decision called for logged-in user - this should not happen');
       return;
     }
 
