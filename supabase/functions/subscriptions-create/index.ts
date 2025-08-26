@@ -282,8 +282,9 @@ serve(async (req: Request) => {
           cycles: '0',
         };
 
-        const md5mod = await import('https://deno.land/x/checksum@1.4.0/md5.ts');
-        const md5Fn = (md5mod as any).md5 ?? (md5mod as any).default;
+        // Use Deno std hash md5 to avoid ESM interop issues
+        const md5lib = await import('https://deno.land/std@0.223.0/hash/md5.ts');
+        const md5Fn = (input: string) => new (md5lib as any).Md5().update(input).toString();
         const signature = generatePayFastSignature(payload, passphrase, md5Fn);
         const params = new URLSearchParams();
         Object.entries(payload).forEach(([k, v]) => params.append(k, v));

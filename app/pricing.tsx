@@ -10,6 +10,7 @@ import {
   Platform,
   Modal,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -34,6 +35,7 @@ export default function PricingPage() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'parent' | 'teacher' | 'principal' | null>(null);
   const [showInvitationPrompt, setShowInvitationPrompt] = useState(false);
+  const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
   
   const floatingAnimation = useRef(new Animated.Value(0)).current;
 
@@ -191,6 +193,7 @@ export default function PricingPage() {
 
 const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
     setSelectedPlan(plan.id);
+    setProcessingPlanId(plan.id);
 
     // If user is logged in, go directly to subscription creation
     // No invitation code prompts for existing users
@@ -226,12 +229,15 @@ const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
           'An unexpected error occurred. Please try again.',
           [{ text: 'OK' }]
         );
+      } finally {
+        setProcessingPlanId(null);
       }
       return;
     }
 
     // Only show role modal for non-authenticated users
     setShowRoleModal(true);
+    setProcessingPlanId(null);
   };
 
   const handleRoleSelection = (role: 'parent' | 'teacher' | 'principal') => {
@@ -448,11 +454,26 @@ const handleInvitationCodeDecision = async (hasCode: boolean) => {
                     </View>
                     
                     <TouchableOpacity 
-                      style={styles.selectPlanButton}
+                      style={[
+                        styles.selectPlanButton,
+                        Platform.OS === 'web' ? ({ cursor: (processingPlanId === plan.id ? 'not-allowed' : 'pointer') } as any) : null,
+                        processingPlanId === plan.id ? styles.selectPlanButtonDisabled : null,
+                      ]}
                       onPress={() => handleSelectPlan(plan)}
                       activeOpacity={0.8}
+                      disabled={processingPlanId === plan.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select ${plan.name} plan`}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <Text style={styles.selectPlanText}>SELECT PLAN</Text>
+                      {processingPlanId === plan.id ? (
+                        <View style={styles.processingRow}>
+                          <ActivityIndicator size="small" color="#000" />
+                          <Text style={[styles.selectPlanText, { marginLeft: 8 }]}>PROCESSING…</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.selectPlanText}>SELECT PLAN</Text>
+                      )}
                     </TouchableOpacity>
                   </LinearGradient>
                 </View>
@@ -808,6 +829,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 20,
     marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  selectPlanButtonDisabled: {
+    opacity: 0.6,
+  },
+  processingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectPlanText: {
     fontSize: 16,
