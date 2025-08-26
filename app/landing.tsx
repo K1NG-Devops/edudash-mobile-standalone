@@ -10,7 +10,6 @@ import {
   ImageBackground,
   Platform,
   Modal,
-  FlatList,
   ColorValue
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +20,6 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem, getRoleColors } from '@/constants/DesignSystem';
 import { PricingComponent } from '@/components/pricing/PricingComponent';
 import { AdBanner, SponsoredContent, RevenueBanner } from '@/components/advertising/AdComponents';
-import { advertisingService } from '@/lib/services/advertisingService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -55,7 +53,6 @@ interface FeatureModalProps {
 // Society 5.0 Futuristic Marketing Page for EduDash Pro
 export default function FuturisticMarketingPage() {
   const [scrollY] = useState(new Animated.Value(0));
-  const [isLoaded, setIsLoaded] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [showQA, setShowQA] = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -64,8 +61,6 @@ export default function FuturisticMarketingPage() {
   const pulseAnimation = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    setIsLoaded(true);
-    
     // Start floating animation
     Animated.loop(
       Animated.sequence([
@@ -465,8 +460,6 @@ const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ activeTestimo
   );
 };
 
-// Futuristic Pricing Section
-const PricingSection = () => {
   const pricingPlans = [
     {
       name: "Neural Starter",
@@ -578,8 +571,6 @@ const PricingSection = () => {
       </LinearGradient>
     </View>
   );
-};
-
 // Interactive Q&A Section
 const QASection: React.FC<QASectionProps> = ({ showQA, setShowQA }) => {
   const [selectedQuestion, setSelectedQuestion] = useState<number | null>(null);
@@ -646,8 +637,6 @@ const QASection: React.FC<QASectionProps> = ({ showQA, setShowQA }) => {
   );
 };
 
-// Ad Integration Section
-const AdSection = () => {
   return (
     <View style={styles.adContainer}>
       <LinearGradient colors={['#533a71', '#1a0a2e']} style={styles.adGradient}>
@@ -684,8 +673,6 @@ const AdSection = () => {
       </LinearGradient>
     </View>
   );
-};
-
 // Feature Modal
 const FeatureModal: React.FC<FeatureModalProps> = ({ selectedFeature, setSelectedFeature }) => {
   if (!selectedFeature) return null;
@@ -730,7 +717,6 @@ const FeatureModal: React.FC<FeatureModalProps> = ({ selectedFeature, setSelecte
 
 // Role-Based Benefits Section
 const RoleBasedBenefitsSection = () => {
-  const [selectedRole, setSelectedRole] = useState<'parent' | 'teacher' | 'principal' | null>(null);
 
   const roles = [
     {

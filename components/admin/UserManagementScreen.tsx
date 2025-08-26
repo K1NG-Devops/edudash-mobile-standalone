@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  FlatList,
   Modal,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
   Switch,
   SectionList
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Swipeable } from 'react-native-gesture-handler';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -526,14 +526,13 @@ const UserManagementScreen: React.FC<UserManagementScreenProps> = ({
           }
         />
       ) : (
-        <FlatList
+        <FlashList
           data={filteredUsers}
           renderItem={renderUser}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.listContainer, { paddingBottom: 120 }]}
           showsVerticalScrollIndicator={false}
-          initialNumToRender={12}
-          windowSize={10}
+          estimatedItemSize={96}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <IconSymbol name="person.slash" size={48} color={palette.textSecondary} />

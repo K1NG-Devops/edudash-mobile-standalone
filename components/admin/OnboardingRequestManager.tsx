@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useEffect, useState } from 'react';
 import {
-  Alert, FlatList,
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -697,7 +698,7 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         </View>
       </View>
 
-      <FlatList
+      <FlashList
         key={`requests-${requests.length}`}
         data={requests}
         renderItem={renderRequest}
@@ -707,7 +708,7 @@ const OnboardingRequestManager: React.FC<OnboardingRequestManagerProps> = ({
         refreshing={loading}
         onRefresh={fetchRequests}
         extraData={requests}
-        removeClippedSubviews={false}
+        estimatedItemSize={180}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <IconSymbol name="document" size={48} color={palette.textSecondary} />
