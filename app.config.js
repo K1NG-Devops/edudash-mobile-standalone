@@ -81,7 +81,9 @@ export default {
       typedRoutes: true
     },
     developmentClient: {
-      silentLaunch: true
+      silentLaunch: true,
+      // Disable development overlay in production builds
+      launcher: process.env.NODE_ENV === 'production' ? 'disable' : 'auto'
     },
     extra: {
       router: {},

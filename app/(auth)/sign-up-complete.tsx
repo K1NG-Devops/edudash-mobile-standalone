@@ -154,23 +154,43 @@ export default function SignUpComplete() {
     }
   };
 
-  const handleStartTrial = () => {
-    Alert.alert(
-      'Start Free Trial',
-      `Start your 14-day free trial of ${planDetails?.name}. You won't be charged until the trial ends.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Start Trial',
-          onPress: () => {
-            router.replace('/welcome-success');
+  const handleStartTrial = async () => {
+    setLoading(true);
+    
+    try {
+      // In a real implementation, you would:
+      // 1. Create a subscription record with trial status
+      // 2. Set up trial expiration date
+      // 3. Initialize user permissions
+      
+      // For now, we'll simulate the trial setup process
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      Alert.alert(
+        'Trial Started!',
+        `Your 14-day free trial of ${planDetails?.name} has started successfully. Enjoy all premium features!`,
+        [
+          {
+            text: 'Get Started',
+            onPress: () => {
+              router.replace('/welcome-success');
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+    } catch (error) {
+      console.error('Trial setup error:', error);
+      Alert.alert(
+        'Error',
+        'There was an issue starting your trial. Please try again.',
+        [
+          {
+            text: 'OK',
+            onPress: () => setLoading(false)
+          }
+        ]
+      );
+    }
   };
 
   if (!planDetails) {

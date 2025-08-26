@@ -40,7 +40,8 @@
     "test:components": "jest __tests__/components/",
     "test:integration": "jest __tests__/integration/",
     "test:all": "npm run test:principal && npm run test:components && npm run test:integration",
-    "setup:email-templates": "node scripts/setup-email-templates.js"
+    "setup:email-templates": "node scripts/setup-email-templates.js",
+    "verify-env": "node scripts/verify-env.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.58.0",
