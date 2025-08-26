@@ -106,13 +106,14 @@ export default function SignUpComplete() {
   }, [plan]);
 
   const handleContinueToPayment = async () => {
-    if (!planDetails) return;
+    if (!planDetails || loading) return; // Prevent multiple clicks
     
     setLoading(true);
     
     try {
       if (planDetails.id === 'free-tier') {
         // Free tier - go to welcome page first, then dashboard
+        setLoading(false);
         Alert.alert(
           'Welcome to EduDash Pro!',
           'Your free account has been created successfully.',
@@ -126,35 +127,33 @@ export default function SignUpComplete() {
       } else {
         // Paid plans - initiate payment flow
         // For now, we'll simulate a successful payment
-        setTimeout(() => {
-          Alert.alert(
-            'Success!',
-            'Your account has been created successfully. Welcome to EduDash Pro!',
-            [
-              {
-                text: 'Get Started',
-                onPress: () => router.replace('/(tabs)/dashboard')
-              }
-            ]
-          );
-        }, 2000);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setLoading(false);
+        
+        Alert.alert(
+          'Success!',
+          'Your account has been created successfully. Welcome to EduDash Pro!',
+          [
+            {
+              text: 'Get Started',
+              onPress: () => router.replace('/(tabs)/dashboard')
+            }
+          ]
+        );
       }
     } catch (error) {
       console.error('Payment flow error:', error);
+      setLoading(false);
       Alert.alert(
         'Error',
-        'There was an issue processing your request. Please try again.',
-        [
-          {
-            text: 'OK',
-            onPress: () => setLoading(false)
-          }
-        ]
+        'There was an issue processing your request. Please try again.'
       );
     }
   };
 
   const handleStartTrial = async () => {
+    if (loading) return; // Prevent multiple clicks
+    
     setLoading(true);
     
     try {
@@ -165,6 +164,8 @@ export default function SignUpComplete() {
       
       // For now, we'll simulate the trial setup process
       await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setLoading(false);
       
       Alert.alert(
         'Trial Started!',
@@ -180,15 +181,10 @@ export default function SignUpComplete() {
       );
     } catch (error) {
       console.error('Trial setup error:', error);
+      setLoading(false);
       Alert.alert(
         'Error',
-        'There was an issue starting your trial. Please try again.',
-        [
-          {
-            text: 'OK',
-            onPress: () => setLoading(false)
-          }
-        ]
+        'There was an issue starting your trial. Please try again.'
       );
     }
   };
@@ -279,10 +275,17 @@ export default function SignUpComplete() {
                     <TouchableOpacity 
                       style={styles.primaryButton}
                       onPress={handleStartTrial}
+                      disabled={loading}
                     >
                       <LinearGradient colors={DesignSystem.gradients.primary} style={styles.buttonGradient}>
-                        <IconSymbol name="gift" size={20} color="#000000" />
-                        <Text style={styles.primaryButtonText}>Start 14-Day Free Trial</Text>
+                        {loading ? (
+                          <ActivityIndicator size="small" color="#000000" />
+                        ) : (
+                          <>
+                            <IconSymbol name="gift" size={20} color="#000000" />
+                            <Text style={styles.primaryButtonText}>Start 14-Day Free Trial</Text>
+                          </>
+                        )}
                       </LinearGradient>
                     </TouchableOpacity>
                   ) : null}
