@@ -13,9 +13,9 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { PlanStatus } from '../../components/subscription/PlanStatus';
-import { UpgradeModal } from '../../components/subscription/UpgradeModal';
-import { SubscriptionProvider, useFeatureAccess, useSubscription } from '../../contexts/SubscriptionContext';
+import PlanStatus from '@/components/subscription/PlanStatus';
+import UpgradeModal from '@/components/subscription/UpgradeModal';
+import { SubscriptionProvider, useFeatureAccess, useSubscription } from '@/contexts/SubscriptionContext';
 
 interface TeacherDashboardProps {
     profile: any;
