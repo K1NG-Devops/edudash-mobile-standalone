@@ -221,7 +221,7 @@ export class SchoolAdminDataService {
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('preschool_id', schoolId)
-        .eq('role', 'teacher')
+        .or('role.eq.teacher,role.eq.Teacher,role.ilike.%teacher%')
         .eq('is_active', true);
 
       // Get parent count
@@ -348,7 +348,7 @@ export class SchoolAdminDataService {
         .from('users')
         .select('*')
         .eq('preschool_id', schoolId)
-        .eq('role', 'teacher')
+        .or('role.eq.teacher,role.eq.Teacher,role.ilike.%teacher%')
         .eq('is_active', true);
 
       if (error || !teachers) {

@@ -102,9 +102,8 @@ export function useSubscription(): UseSubscriptionReturn {
     try {
       setError(null);
       
-      const origin = (typeof window !== 'undefined')
-        ? window.location.origin
-        : (process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '');
+      const originEnv = process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+      const origin = originEnv || ((typeof window !== 'undefined') ? window.location.origin : '');
 
       const requestBody = {
         plan_id: params.plan_id,
@@ -120,8 +119,8 @@ export function useSubscription(): UseSubscriptionReturn {
         }
       };
 
-      // Use absolute URL on native, relative on web
-      const baseUrl = (typeof window !== 'undefined') ? '' : (process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '');
+      // Always prefer explicit API base if provided, even on web (Expo dev server won't host Next API routes)
+      const baseUrl = process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '';
       const response = await fetch(`${baseUrl}/api/subscriptions/create`, {
         method: 'POST',
         headers: {

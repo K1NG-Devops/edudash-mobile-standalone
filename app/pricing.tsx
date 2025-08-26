@@ -27,7 +27,8 @@ export default function PricingPage() {
   const { user, profile } = useAuth();
   const { createSubscription } = useSubscription();
   const isLoggedIn = !!user;
-  const isPrincipal = !!(profile?.role === 'preschool_admin' || profile?.role === 'principal');
+  const roleStr = (profile?.role ?? undefined) as string | undefined;
+  const isPrincipal = !!(roleStr === 'preschool_admin' || roleStr === 'principal');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'parent' | 'teacher' | 'principal' | null>(null);
@@ -211,7 +212,7 @@ const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
       return;
     }
 
-    // If the user is logged in (non-principal), prefer their current role and route to manage/upgrade
+    // If the user is logged in (non-principal), go directly to checkout
     if (isLoggedIn) {
       const currentRole = (profile?.role === 'preschool_admin' ? 'principal' : profile?.role) as 'parent' | 'teacher' | 'principal' | undefined;
       if (currentRole) {
@@ -222,7 +223,21 @@ const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
           return;
         }
       }
-      router.push('/(tabs)/settings_new');
+      try {
+        const result = await createSubscription({
+          plan_id: plan.id,
+          billing_interval: 'monthly',
+          payment_provider: 'payfast',
+        });
+        // If no redirect provided (e.g., dev env), go to success page as fallback
+        if (result.success && !result.payment_url && !result.approval_url) {
+          const amount = plan.price.replace(/[^0-9.]/g, '') || '0';
+          router.push({ pathname: '/payment/success/page', params: { plan_name: plan.name, amount } } as any);
+        }
+      } catch (e) {
+        // Fallback to settings if something unexpected occurs
+        router.push('/(tabs)/settings_new');
+      }
       return;
     }
 
@@ -258,7 +273,7 @@ const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
     }
   };
 
-const handleInvitationCodeDecision = (hasCode: boolean) => {
+const handleInvitationCodeDecision = async (hasCode: boolean) => {
     setShowInvitationPrompt(false);
     const plan = pricingPlans.find(p => p.id === selectedPlan);
     if (!plan || !selectedRole) return;
@@ -269,8 +284,21 @@ const handleInvitationCodeDecision = (hasCode: boolean) => {
         // Allow redeeming invitation codes even when logged in
         router.push('/(auth)/join-with-code');
       } else {
-        // Continue to manage subscription/upgrade flow
-        router.push('/(tabs)/settings_new');
+        // Go directly to checkout (PayFast)
+        try {
+          const result = await createSubscription({
+            plan_id: plan.id,
+            billing_interval: 'monthly',
+            payment_provider: 'payfast',
+          });
+          if (result.success && !result.payment_url && !result.approval_url) {
+            const amount = plan.price.replace(/[^0-9.]/g, '') || '0';
+            router.push({ pathname: '/payment/success/page', params: { plan_name: plan.name, amount } } as any);
+          }
+        } catch (e) {
+          // Fallback to settings if something unexpected occurs
+          router.push('/(tabs)/settings_new');
+        }
       }
       return;
     }
