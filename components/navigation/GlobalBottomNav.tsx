@@ -42,10 +42,22 @@ export default function GlobalBottomNav() {
     { key: 'students', label: 'Students', icon: 'graduationcap.fill', onPress: () => router.push('/screens/students' as any) },
     { key: 'activities', label: 'Activities', icon: 'figure.run', onPress: () => router.push('/(tabs)/activities' as any) },
     { key: 'messages', label: 'Messages', icon: 'message.fill', onPress: () => router.push('/(tabs)/messages' as any) },
+    { key: 'manage', label: 'Manage', icon: 'creditcard.fill', onPress: () => router.push('/pricing' as any) },
+  ];
+
+  const parentTabs: TabItem[] = [
+    { key: 'overview', label: 'Overview', icon: 'rectangle.3.group', onPress: () => router.push('/(tabs)/dashboard' as any) },
+    { key: 'activities', label: 'Activities', icon: 'figure.run', onPress: () => router.push('/(tabs)/activities' as any) },
+    { key: 'messages', label: 'Messages', icon: 'message.fill', onPress: () => router.push('/(tabs)/messages' as any) },
+    { key: 'manage', label: 'Manage', icon: 'creditcard.fill', onPress: () => router.push('/pricing' as any) },
     { key: 'settings', label: 'Settings', icon: 'gear', onPress: () => router.push('/(tabs)/settings_new' as any) },
   ];
 
-  const tabs: TabItem[] = normalizedRole === 'teacher' ? teacherTabs : adminTabs;
+  const tabs: TabItem[] = normalizedRole === 'teacher' 
+    ? teacherTabs 
+    : normalizedRole === 'parent'
+      ? parentTabs
+      : adminTabs;
 
   // Determine active tab based on pathname
   const getActiveTab = (pathname: string) => {
@@ -55,6 +67,7 @@ export default function GlobalBottomNav() {
     if (pathname.includes('/settings')) return 'settings';
     if (pathname.includes('/teachers')) return 'teachers';
     if (pathname.includes('/students')) return 'students';
+    if (pathname.includes('/pricing') || pathname.includes('/account/billing')) return 'manage';
     return '';
   };
 

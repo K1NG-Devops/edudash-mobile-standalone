@@ -1,4 +1,4 @@
-import GoogleStyleParentDashboard from '@/components/dashboard/GoogleStyleParentDashboard';
+import EnhancedSubscriptionParentDashboard from '@/components/dashboard/EnhancedSubscriptionParentDashboard';
 import SchoolAdminDashboard from '@/components/dashboard/SchoolAdminDashboard';
 // SuperAdminDashboard now located at app/screens/super-admin-dashboard.tsx
 import { MobileHeader } from '@/components/navigation/MobileHeader';
@@ -109,6 +109,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
           .from('preschools')
           .select('name, id')
           .eq('id', userProfile.preschool_id)
+          .limit(1)
           .single();
 
         if (!tenantError && tenant) {
@@ -133,6 +134,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
         .from('users')
         .select('id, name, preschool_id')
         .eq('auth_user_id', parentUserId)
+        .limit(1)
         .single();
 
       if (parentError || !parentProfile) {
@@ -155,6 +157,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
           .from('preschools')
           .select('name, id')
           .eq('id', parentProfile.preschool_id)
+          .limit(1)
           .single();
 
         if (!tenantError && tenant) {
@@ -330,9 +333,9 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
       this.fetchTenantInfo(profile);
     }
 
-    // Use the new ParentDashboard component with real data
+    // Use the subscription-aware parent dashboard with upgrade prompts
     return (
-      <GoogleStyleParentDashboard
+      <EnhancedSubscriptionParentDashboard
         userId={profile?.auth_user_id || ''}
         userProfile={{
           name: profile?.name || 'Parent',

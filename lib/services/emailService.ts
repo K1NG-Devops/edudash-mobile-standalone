@@ -41,7 +41,7 @@ export class EmailService {
       // Build deep links (native scheme and web fallback)
       const appScheme = 'edudashpro://join-with-code?code=' + encodeURIComponent(data.invitationCode);
       const shortScheme = 'edudashpro://invite/' + encodeURIComponent(data.invitationCode);
-      const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://app.edudashpro.org.za';
+      const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.org.za';
       const webUrl = `${webUrlBase}/join-with-code?code=${encodeURIComponent(data.invitationCode)}`;
 
       const emailOptions: EmailOptions = {
@@ -217,7 +217,7 @@ export class EmailService {
   private static generateTeacherInvitationHTML(data: TeacherInvitationEmailData): string {
     const appScheme = 'edudashpro://join-with-code?code=' + encodeURIComponent(data.invitationCode);
     const shortScheme = 'edudashpro://invite/' + encodeURIComponent(data.invitationCode);
-    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://app.edudashpro.org.za';
+    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.org.za';
     const webUrl = `${webUrlBase}/join-with-code?code=${encodeURIComponent(data.invitationCode)}`;
     return `
 <!DOCTYPE html>
@@ -310,7 +310,7 @@ export class EmailService {
   private static generateTeacherInvitationText(data: TeacherInvitationEmailData): string {
     const appScheme = 'edudashpro://join-with-code?code=' + encodeURIComponent(data.invitationCode);
     const shortScheme = 'edudashpro://invite/' + encodeURIComponent(data.invitationCode);
-    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://app.edudashpro.org.za';
+    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.org.za';
     const webUrl = `${webUrlBase}/join-with-code?code=${encodeURIComponent(data.invitationCode)}`;
     return `
 Welcome to EduDash Pro!

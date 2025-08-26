@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
+    "start:log": "bash ./scripts/start-with-logs.sh",
     "start:fresh": "node clear-cache.js && expo start",
     "clear-cache": "node clear-cache.js",
     "reset-project": "node ./scripts/reset-project.js",
@@ -41,7 +42,8 @@
     "test:integration": "jest __tests__/integration/",
     "test:all": "npm run test:principal && npm run test:components && npm run test:integration",
     "setup:email-templates": "node scripts/setup-email-templates.js",
-    "verify-env": "node scripts/verify-env.js"
+    "verify-env": "node scripts/verify-env.js",
+    "seed:plans": "ALLOW_SERVICE_SEED=true node scripts/seed-subscription-plans.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.58.0",

@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  ColorValue,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -22,7 +23,7 @@ interface PlanDetails {
   price: string;
   period: string;
   features: string[];
-  color: string[];
+  color: readonly [ColorValue, ColorValue, ...ColorValue[]];
 }
 
 export default function SignUpComplete() {
@@ -159,7 +160,7 @@ export default function SignUpComplete() {
           return;
         }
         // No external URL required
-        router.replace('/payment/success');
+        router.replace('/payment/success/page');
       } else {
         Alert.alert('Payment Error', result.error || 'Failed to initiate payment');
       }

@@ -17,6 +17,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import { router } from 'expo-router';
+import PlanStatus from '@/components/subscription/PlanStatus';
+import UpgradeModal from '@/components/subscription/UpgradeModal';
+import { SubscriptionProvider, useSubscription } from '@/contexts/SubscriptionContext';
 import {
   Dimensions,
   RefreshControl,
@@ -59,6 +63,8 @@ export default function SchoolAdminDashboard({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
+
+  const [upgradeModal, setUpgradeModal] = useState<{ visible: boolean; featureName?: string; description?: string }>({ visible: false });
 
   useEffect(() => {
     loadDashboardData();
@@ -161,6 +167,12 @@ export default function SchoolAdminDashboard({
           <Text style={styles.overviewTitleLite}>📊 School Overview</Text>
           <Text style={styles.overviewSubtitleLite}>Real-time insights into your school</Text>
         </View>
+
+        {/* Free-tier Upgrade CTA (Overview) */}
+        <UpgradeCTA
+          title="Upgrade your school"
+          description="Unlock premium analytics, priority support, and more for your school."
+        />
 
         {/* Stats Grid - Responsive Layout */}
         <View style={styles.statsGridContainer}>
@@ -457,6 +469,12 @@ export default function SchoolAdminDashboard({
           </View>
         </View>
 
+        {/* Upgrade CTA for Teachers (free tier) */}
+        <UpgradeCTA
+          title="Unlock Teacher Premium"
+          description="Unlimited AI lesson generation, homework grading, and advanced analytics for your staff."
+        />
+
         {/* Enhanced Teachers Grid */}
         <View style={styles.teachersGrid}>
           {dashboardData.teachers.map((teacher, index) => (
@@ -577,6 +595,12 @@ export default function SchoolAdminDashboard({
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Upgrade CTA for Parents (free tier) */}
+        <UpgradeCTA
+          title="Unlock Parent Premium"
+          description="Enhance parent engagement with premium analytics and notifications."
+        />
 
         {/* Enhanced Parents Grid */}
         <View style={styles.parentsGrid}>
@@ -791,7 +815,42 @@ export default function SchoolAdminDashboard({
     }
   };
 
+  // Local component to render plan status inside SubscriptionProvider context
+  const PlanStatusContainer = () => {
+    const { subscription, aiUsage, loading } = useSubscription();
+    return (
+      <PlanStatus
+        subscription={subscription}
+        aiUsage={aiUsage}
+        loading={loading}
+        compact={true}
+        onUpgrade={() => setUpgradeModal({ visible: true, featureName: 'Upgrade to Premium', description: 'Unlock advanced school analytics, priority support, and more.' })}
+      />
+    );
+  };
+
+  // Local CTA shown when on free tier
+  const UpgradeCTA: React.FC<{ title: string; description: string }> = ({ title, description }) => {
+    const { subscription } = useSubscription();
+    if (!subscription || subscription.tier !== 'free') return null;
+    return (
+      <View style={styles.upgradeCtaCard}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.upgradeCtaTitle}>{title}</Text>
+          <Text style={styles.upgradeCtaText}>{description}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.upgradeCtaButton}
+          onPress={() => setUpgradeModal({ visible: true, featureName: 'Upgrade to Premium', description })}
+        >
+          <Text style={styles.upgradeCtaButtonText}>Upgrade</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
+    <SubscriptionProvider userId={userId}>
     <View style={[styles.container, { backgroundColor: palette.background }]}>
       <MobileHeader
         user={userProfile}
@@ -814,6 +873,9 @@ export default function SchoolAdminDashboard({
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Subscription Status */}
+        <PlanStatusContainer />
+
         {renderContent()}
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -825,7 +887,16 @@ export default function SchoolAdminDashboard({
         {renderBottomTabButton('teachers', 'Teachers', 'person.badge.plus')}
         {renderBottomTabButton('parents', 'Parents', 'person.2.fill')}
         {renderBottomTabButton('classes', 'Classes', 'building.2')}
-        {renderBottomTabButton('finances', 'Finances', 'creditcard.fill')}
+        {renderBottomTabButton('finances', 'Finances', 'chart.pie.fill')}
+        {/* Manage Subscription direct link */}
+        <TouchableOpacity
+          style={styles.bottomTabButton}
+          activeOpacity={0.7}
+          onPress={() => { try { router.push('/pricing' as any); } catch {} }}
+        >
+          <IconSymbol name="creditcard.fill" size={24} color="#9CA3AF" />
+          <Text style={styles.bottomTabButtonText}>Manage</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Teacher Management Modal */}
@@ -841,7 +912,20 @@ export default function SchoolAdminDashboard({
           }}
         />
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        visible={upgradeModal.visible}
+        featureName={upgradeModal.featureName || 'Upgrade to Premium'}
+        featureDescription={upgradeModal.description || 'Unlock advanced school analytics, priority support, and more.'}
+        onClose={() => setUpgradeModal({ visible: false })}
+        onUpgrade={() => {
+          try { router.push('/pricing' as any); } catch {}
+          setUpgradeModal({ visible: false });
+        }}
+      />
     </View>
+    </SubscriptionProvider>
   );
 }
 
@@ -2357,5 +2441,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  // Upgrade CTA styles
+  upgradeCtaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  upgradeCtaTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#9A3412',
+    marginBottom: 4,
+  },
+  upgradeCtaText: {
+    fontSize: 12,
+    color: '#9A3412',
+  },
+  upgradeCtaButton: {
+    backgroundColor: '#F97316',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  upgradeCtaButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });

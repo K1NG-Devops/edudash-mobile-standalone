@@ -223,3 +223,4 @@ The subscription system is **production-ready** for:
 
 **Revenue Impact**: Teachers on free tier will hit the 5 AI request limit within their first month of active usage, creating natural conversion opportunities to the R99/month Premium plan.
 
+

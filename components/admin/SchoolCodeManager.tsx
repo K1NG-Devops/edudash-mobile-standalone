@@ -233,8 +233,8 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
     if (codeToUse) {
       try {
         // Create deep link URL that will open the app directly to signup with the code
-        const deepLinkUrl = `edudashpro://invite/${codeToUse}`;
-        const webFallbackUrl = `https://edudashpro.app/invite/${codeToUse}`;
+const deepLinkUrl = `edudashpro://invite/${codeToUse}`;
+        const webFallbackUrl = `https://www.edudashpro.org.za/invite/${codeToUse}`;
         
       await Share.share({
           message: `🎓 Join ${schoolName} on EduDash Pro!\n\n📱 If you have the app installed, tap this link:\n${deepLinkUrl}\n\n🌐 Or use our web portal:\n${webFallbackUrl}\n\n📋 Manual setup:\n1. Download EduDash Pro from your app store\n2. Tap \"Join School\"\n3. Enter school code: ${codeToUse}\n4. Create your account and check your email to verify it (required)\n\nWelcome to our school community! 🏫✨`,
@@ -250,8 +250,8 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
   const copyCodeWithLink = async (code?: string) => {
     const codeToUse = code || activeCode?.code;
     if (codeToUse) {
-      const deepLinkUrl = `edudashpro://invite/${codeToUse}`;
-      const webFallbackUrl = `https://edudashpro.app/invite/${codeToUse}`;
+const deepLinkUrl = `edudashpro://invite/${codeToUse}`;
+      const webFallbackUrl = `https://www.edudashpro.org.za/invite/${codeToUse}`;
       
       const textToCopy = `Join ${schoolName} on EduDash Pro!\n\nApp Link: ${deepLinkUrl}\nWeb Link: ${webFallbackUrl}\nSchool Code: ${codeToUse}\n\nNote: After signing up, check your email for a verification link to activate your account.`;
       
@@ -620,7 +620,7 @@ export const SchoolCodeManager: React.FC<SchoolCodeManagerProps> = ({
                 color="#111827"
               />
             )}
-            <Text style={styles.qrHint}>If the app is not installed, visit https://edudashpro.app/invite/{activeCode?.code}</Text>
+<Text style={styles.qrHint}>If the app is not installed, visit https://www.edudashpro.org.za/invite/{activeCode?.code}</Text>
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
               <TouchableOpacity
                 style={styles.secondaryButton}

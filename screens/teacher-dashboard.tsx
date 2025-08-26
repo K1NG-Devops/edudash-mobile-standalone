@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
 import { router } from 'expo-router';
 import React from 'react';
 import {
@@ -437,13 +438,27 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
 
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
-        <MobileHeader 
-          user={{
-            name: profile?.name || 'Teacher',
-            role: profile?.role || 'teacher',
-            avatar: profile?.avatar_url,
-          }}
-        />
+        <AuthConsumer>
+          {({ signOut }) => (
+            <MobileHeader 
+              user={{
+                name: profile?.name || 'Teacher',
+                role: profile?.role || 'teacher',
+                avatar: profile?.avatar_url,
+              }}
+              onNavigate={(route: string) => {
+                if (route.startsWith('/')) {
+                  router.push(route as any);
+                } else {
+                  router.push(`/screens/${route}` as any);
+                }
+              }}
+              onSignOut={async () => {
+                try { await signOut(); } catch {}
+              }}
+            />
+          )}
+        </AuthConsumer>
         
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* AI Insights */}

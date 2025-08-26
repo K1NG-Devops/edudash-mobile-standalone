@@ -17,10 +17,18 @@ async function testSubscriptionSystem() {
     const plans = await SubscriptionService.getSubscriptionPlans();
     
     plans.forEach(plan => {
+      log.info('Plan', {
+        id: plan.id,
+        name: plan.name,
+        tier: plan.tier,
+        price_monthly: plan.price_monthly,
+        currency: plan.currency,
+      });
     });
 
     // Test 2: Get analytics (should work even with no subscriptions)
     const analytics = await SubscriptionService.getSubscriptionAnalytics();
+    log.info('Analytics', {
       totalSubscriptions: analytics?.total_subscribers || 0,
       activeSubscriptions: analytics?.active_subscriptions || 0,
       monthlyRevenue: `R${analytics?.monthly_recurring_revenue || 0}`
@@ -29,7 +37,9 @@ async function testSubscriptionSystem() {
     // Test 3: Test plan lookup
     const freePlan = await SubscriptionService.getPlanByTier('free');
     if (freePlan) {
+      log.info('Free plan lookup OK', { id: freePlan.id, tier: freePlan.tier });
     } else {
+      log.warn('Free plan not found');
     }
 
     

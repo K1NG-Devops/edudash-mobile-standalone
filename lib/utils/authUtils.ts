@@ -246,7 +246,7 @@ export async function sendForgotPasswordEmail(email: string, customResetUrl?: st
 
     // Always call Supabase password reset to avoid user enumeration issues
     // Build redirect URL from env with sensible defaults
-    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://app.edudashpro.org.za';
+const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.org.za';
     // IMPORTANT: expo-router group segments like (auth) are not part of the public URL path
     const redirect = customResetUrl || `${webUrlBase}/reset-password`;
 

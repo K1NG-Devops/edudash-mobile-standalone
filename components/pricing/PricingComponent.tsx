@@ -5,17 +5,20 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Modal,
   ScrollView,
   Animated,
   Alert,
   ActivityIndicator,
+  Pressable,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import WebSafeModal from '@/components/ui/WebSafeModal';
 import { DesignSystem, getRoleColors, trackRevenue, formatCurrency } from '@/constants/DesignSystem';
 import { useSubscription } from '@/lib/hooks/useSubscription';
+import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 
 const { width } = Dimensions.get('window');
@@ -32,7 +35,7 @@ interface PricingPlan {
   color: readonly [ColorValue, ColorValue, ...ColorValue[]];
   popular: boolean;
   targetRoles: ('parent' | 'teacher' | 'principal')[];
-  value: 'free' | 'basic' | 'premium' | 'enterprise';
+  value: 'free' | 'starter' | 'basic' | 'premium' | 'enterprise';
   trialInfo?: string | null;
   realWorldBenefits: {
     parent: string[];
@@ -76,6 +79,7 @@ export const PricingComponent = ({
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [effectivePremiumPrice, setEffectivePremiumPrice] = useState<number | null>(null);
   
   const floatingAnimation = useRef(new Animated.Value(0)).current;
 
@@ -97,7 +101,23 @@ export const PricingComponent = ({
     ).start();
   }, []);
 
-  const pricingPlans: PricingPlan[] = [
+  // Load effective pricing for Quantum Pro (promo-aware)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await SubscriptionService.getEffectivePricing('quantum-pro', billingInterval);
+        if (!cancelled && res && res.price) {
+          setEffectivePremiumPrice(res.price);
+        }
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [billingInterval]);
+
+  const [basePlans] = useState<PricingPlan[]>([
     {
       id: 'free-tier',
       name: "Free Tier",
@@ -173,7 +193,7 @@ export const PricingComponent = ({
     {
       id: 'quantum-pro',
       name: "Quantum Pro",
-      price: "R299",
+      price: "R149",
       period: "/month",
       description: "Advanced AI features for growing schools",
       features: [
@@ -254,7 +274,38 @@ export const PricingComponent = ({
         ],
       },
     }
-  ];
+  ]);
+
+  // Compute displayed plans with DB pricing and promo-aware price for Quantum Pro
+  const computedPricingPlans: PricingPlan[] = React.useMemo(() => {
+    const getDbPrice = (tier: 'free' | 'starter' | 'premium' | 'enterprise'): number | null => {
+      const p = plans.find(pl => pl.tier === tier);
+      if (!p) return null;
+      return billingInterval === 'monthly' ? p.price_monthly : p.price_annual;
+    };
+
+    const toPriceStr = (n: number | null | undefined, fallback: string): string => {
+      if (typeof n === 'number' && !Number.isNaN(n)) return `R${n.toFixed(2)}`;
+      return fallback;
+    };
+
+    const period = billingInterval === 'monthly' ? '/month' : '/year';
+
+    return basePlans.map(bp => {
+      let price = bp.price;
+      if (bp.id === 'free-tier') {
+        price = toPriceStr(getDbPrice('free'), 'R0');
+      } else if (bp.id === 'neural-starter') {
+        price = toPriceStr(getDbPrice('starter'), 'R49.00');
+      } else if (bp.id === 'quantum-pro') {
+        const premium = typeof effectivePremiumPrice === 'number' ? effectivePremiumPrice : getDbPrice('premium');
+        price = toPriceStr(premium ?? null, 'R149.99');
+      } else if (bp.id === 'singularity') {
+        price = toPriceStr(getDbPrice('enterprise'), 'R999.00');
+      }
+      return { ...bp, price, period };
+    });
+  }, [basePlans, plans, billingInterval, effectivePremiumPrice]);
 
   const roles: Role[] = [
     {
@@ -365,8 +416,8 @@ export const PricingComponent = ({
           payment_provider: 'payfast' // Default provider, though not used for free
         });
 
-        if (result.success) {
-          router.push('/payment/success?plan_name=Free Tier&amount=0');
+      if (result.success) {
+          router.push({ pathname: '/payment/success/page', params: { plan_name: 'Free Tier', amount: '0' } } as const);
         } else {
           Alert.alert('Error', result.error || 'Failed to activate free tier');
         }
@@ -392,6 +443,10 @@ export const PricingComponent = ({
         if (typeof window !== 'undefined') {
           window.location.href = result.payment_url;
         }
+      } else if (result.success) {
+        // Fallback: navigate to success screen when no payment URL is provided (e.g., dev environments)
+        const amount = plan.price.replace(/[^0-9.]/g, '') || '0';
+        router.push({ pathname: '/payment/success/page', params: { plan_name: plan.name, amount } } as const);
       } else {
         Alert.alert('Payment Error', result.error || 'Failed to initiate payment');
       }
@@ -406,7 +461,7 @@ export const PricingComponent = ({
 
   const handleRoleSelection = async (role: 'parent' | 'teacher' | 'principal') => {
     setSelectedRole(role);
-    const plan = pricingPlans.find(p => p.id === selectedPlan);
+    const plan = computedPricingPlans.find(p => p.id === selectedPlan);
     if (!plan) return;
 
     setShowRoleModal(false);
@@ -423,13 +478,13 @@ export const PricingComponent = ({
   };
 
   const getPlanForRole = (roleId: string) => {
-    return pricingPlans.filter(plan => 
+    return computedPricingPlans.filter(plan => 
       plan.targetRoles.includes(roleId as any) || plan.value === 'enterprise'
     );
   };
 
   const RoleSelectionModal = () => (
-    <Modal
+    <WebSafeModal
       visible={showRoleModal}
       transparent
       animationType="fade"
@@ -437,16 +492,13 @@ export const PricingComponent = ({
       statusBarTranslucent
       hardwareAccelerated
     >
-      <TouchableOpacity 
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={() => setShowRoleModal(false)}
-      >
-        <TouchableOpacity 
-          style={styles.roleModalContent}
-          activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
-        >
+      <View style={styles.modalOverlay}>
+        {/* Disable click-away to close on web to prevent accidental dismiss during scroll */}
+        {Platform.OS !== 'web' && (
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowRoleModal(false)} />
+        )}
+
+        <View style={styles.roleModalContent}>
           <LinearGradient colors={DesignSystem.gradients.hero} style={styles.roleModalGradient}>
             <TouchableOpacity 
               style={styles.modalCloseButton}
@@ -461,34 +513,47 @@ export const PricingComponent = ({
               Help us customize your EduDash Pro experience
             </Text>
 
-            <View style={styles.rolesGrid}>
-              {roles.map((role) => (
-                <TouchableOpacity
-                  key={role.id}
-                  style={styles.roleCard}
-                  onPress={() => handleRoleSelection(role.id)}
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    colors={[`${role.primary}20`, `${role.secondary}10`]}
-                    style={styles.roleCardGradient}
+            <ScrollView 
+              style={[
+                styles.scrollArea,
+                Platform.OS === 'web'
+                  ? ({ maxHeight: '70vh', overscrollBehavior: 'contain', touchAction: 'pan-y' } as any)
+                  : { maxHeight: '80%' }
+              ]} 
+              contentContainerStyle={{ paddingBottom: 12 }} 
+              showsVerticalScrollIndicator={false} 
+              keyboardShouldPersistTaps="handled" 
+              nestedScrollEnabled
+            >
+              <View style={styles.rolesGrid}>
+                {roles.map((role) => (
+                  <TouchableOpacity
+                    key={role.id}
+                    style={styles.roleCard}
+                    onPress={() => handleRoleSelection(role.id)}
+                    activeOpacity={0.8}
                   >
-                    <Text style={styles.roleIcon}>{role.icon}</Text>
-                    <Text style={styles.roleTitle}>{role.title}</Text>
-                    <Text style={styles.roleSubtitle}>{role.subtitle}</Text>
-                    <Text style={styles.roleDescription}>{role.description}</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    <LinearGradient
+                      colors={[`${role.primary}20`, `${role.secondary}10`]}
+                      style={styles.roleCardGradient}
+                    >
+                      <Text style={styles.roleIcon}>{role.icon}</Text>
+                      <Text style={styles.roleTitle}>{role.title}</Text>
+                      <Text style={styles.roleSubtitle}>{role.subtitle}</Text>
+                      <Text style={styles.roleDescription}>{role.description}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
           </LinearGradient>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
+        </View>
+      </View>
+    </WebSafeModal>
   );
 
   const AuthRequiredModal = () => (
-    <Modal
+    <WebSafeModal
       visible={showAuthModal}
       transparent
       animationType="fade"
@@ -535,11 +600,11 @@ export const PricingComponent = ({
           </LinearGradient>
         </View>
       </View>
-    </Modal>
+    </WebSafeModal>
   );
 
   const SubscriptionActiveModal = () => (
-    <Modal
+    <WebSafeModal
       visible={showSubscriptionModal}
       transparent
       animationType="fade"
@@ -565,7 +630,7 @@ export const PricingComponent = ({
                 style={[styles.alertButton, styles.alertButtonPrimary]}
                 onPress={() => {
                   setShowSubscriptionModal(false);
-                  router.push('/(dashboard)/account/subscription');
+                  router.push('/pricing');
                 }}
               >
                 <Text style={styles.alertButtonTextPrimary}>Manage</Text>
@@ -574,7 +639,7 @@ export const PricingComponent = ({
           </LinearGradient>
         </View>
       </View>
-    </Modal>
+    </WebSafeModal>
   );
 
   const RoleBasedView = () => {
@@ -641,7 +706,7 @@ export const PricingComponent = ({
 
   const OverviewPlans = () => (
     <View style={styles.pricingGrid}>
-      {pricingPlans.map((plan) => (
+      {computedPricingPlans.map((plan) => (
         <View 
           key={plan.id}
           style={styles.pricingCard}
@@ -1058,18 +1123,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     marginTop: 45, // Add top margin to avoid overlap with popular badge
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    ...(Platform.OS !== 'web' ? {
+      textShadowColor: 'rgba(0,0,0,0.8)',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 2,
+    } : {}),
   },
   planPrice: {
     fontSize: 32,
     fontWeight: '900',
     color: '#ffffff',
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    ...(Platform.OS !== 'web' ? {
+      textShadowColor: 'rgba(0,0,0,0.8)',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 2,
+    } : {}),
   },
   planPeriod: {
     fontSize: 16,
@@ -1139,9 +1208,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textAlign: 'center',
     marginBottom: DesignSystem.spacing.sm,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 1,
+    ...(Platform.OS !== 'web' ? {
+      textShadowColor: 'rgba(0,0,0,0.6)',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 1,
+    } : {}),
   },
   roleBenefit: {
     fontSize: 14,
@@ -1169,9 +1240,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textAlign: 'center',
     letterSpacing: 1,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    ...(Platform.OS !== 'web' ? {
+      textShadowColor: 'rgba(0,0,0,0.6)',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 2,
+    } : {}),
   },
 
   // Comparison Table
@@ -1259,6 +1332,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     zIndex: 1000,
     elevation: 1000, // For Android
+    position: 'relative',
   },
   roleModalContent: {
     width: '100%',
@@ -1272,6 +1346,9 @@ const styles = StyleSheet.create({
   roleModalGradient: {
     padding: 30,
     position: 'relative',
+  },
+  scrollArea: {
+    width: '100%',
   },
   modalCloseButton: {
     position: 'absolute',
@@ -1313,18 +1390,23 @@ const styles = StyleSheet.create({
   roleTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#ffffff',
     marginBottom: 4,
+    ...(Platform.OS !== 'web' ? {
+      textShadowColor: 'rgba(0,0,0,0.4)',
+      textShadowOffset: { width: 0.5, height: 0.5 },
+      textShadowRadius: 1,
+    } : {}),
   },
   roleSubtitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: 'rgba(255,255,255,0.9)',
     marginBottom: 8,
   },
   roleDescription: {
     fontSize: 14,
-    color: '#374151',
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
     lineHeight: 18,
   },

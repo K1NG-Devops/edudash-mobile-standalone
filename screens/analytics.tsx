@@ -55,29 +55,15 @@ export default function AnalyticsScreen() {
     try {
       setLoading(true);
 
-      // Mock analytics data - in real app, fetch from Supabase
-      const mockData: AnalyticsData = {
-        enrollment: {
-          total: 156,
-          thisMonth: 12,
-          trend: 'up',
-        },
-        attendance: {
-          rate: 92.5,
-          trend: 'up',
-        },
-        revenue: {
-          monthly: 85400,
-          yearly: 980000,
-          trend: 'up',
-        },
-        satisfaction: {
-          score: 4.7,
-          responses: 89,
-        },
+      // No mock analytics: keep zeros unless real data is fetched
+      const data: AnalyticsData = {
+        enrollment: { total: 0, thisMonth: 0, trend: 'stable' },
+        attendance: { rate: 0, trend: 'stable' },
+        revenue: { monthly: 0, yearly: 0, trend: 'stable' },
+        satisfaction: { score: 0, responses: 0 },
       };
 
-      setAnalytics(mockData);
+      setAnalytics(data);
     } catch (error) {
       // Removed debug statement: console.error('Error loading analytics:', error);
       Alert.alert('Error', 'Failed to load analytics data');
@@ -247,17 +233,17 @@ export default function AnalyticsScreen() {
               <View style={styles.revenueItem}>
                 <View style={[styles.revenueColor, { backgroundColor: '#3B82F6' }]} />
                 <Text style={styles.revenueLabel}>Monthly Fees</Text>
-                <Text style={styles.revenueValue}>65%</Text>
+                <Text style={styles.revenueValue}>0%</Text>
               </View>
               <View style={styles.revenueItem}>
                 <View style={[styles.revenueColor, { backgroundColor: '#10B981' }]} />
                 <Text style={styles.revenueLabel}>Registration</Text>
-                <Text style={styles.revenueValue}>20%</Text>
+                <Text style={styles.revenueValue}>0%</Text>
               </View>
               <View style={styles.revenueItem}>
                 <View style={[styles.revenueColor, { backgroundColor: '#F59E0B' }]} />
                 <Text style={styles.revenueLabel}>Activities</Text>
-                <Text style={styles.revenueValue}>15%</Text>
+                <Text style={styles.revenueValue}>0%</Text>
               </View>
             </View>
           </View>
@@ -268,19 +254,19 @@ export default function AnalyticsScreen() {
           <Text style={styles.sectionTitle}>⚡ Quick Stats</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>23</Text>
+              <Text style={styles.statValue}>0</Text>
               <Text style={styles.statLabel}>New Students</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>8</Text>
+              <Text style={styles.statValue}>0</Text>
               <Text style={styles.statLabel}>Active Teachers</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>94%</Text>
+              <Text style={styles.statValue}>0%</Text>
               <Text style={styles.statLabel}>Payment Rate</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>4.8</Text>
+              <Text style={styles.statValue}>0.0</Text>
               <Text style={styles.statLabel}>App Rating</Text>
             </View>
           </View>

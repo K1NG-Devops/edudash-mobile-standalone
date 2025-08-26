@@ -15,6 +15,14 @@ export default function JoinWithCodeScreen() {
   const [loading, setLoading] = useState(false);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
 
+  // Small helper to prevent infinite spinners in case of network hangs
+  const withTimeout = async <T,>(promise: Promise<T>, ms = 25000): Promise<T> => {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Network timeout. Please try again.')), ms))
+    ]) as T;
+  };
+
   // Cross-platform alert helper (Alert on native, window.alert on web)
   const notify = (title: string, message: string) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -55,6 +63,12 @@ export default function JoinWithCodeScreen() {
       return;
     }
 
+    // Quick offline check on web to fail fast
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).onLine === false) {
+      notify('Offline', 'You appear to be offline. Please reconnect to the internet and try again.');
+      return;
+    }
+
     setLoading(true);
     try {
       const emailLower = email.trim().toLowerCase();
@@ -65,9 +79,12 @@ export default function JoinWithCodeScreen() {
       }
 
       // Redeem invitation code. Server will create/confirm the auth user and profile
-      const { data, error } = await supabase.functions.invoke('redeem-invitation', {
-        body: { code: code.trim(), name: name.trim(), email: emailLower, password },
-      });
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke('redeem-invitation', {
+          body: { code: code.trim(), name: name.trim(), email: emailLower, password },
+        }),
+        25000
+      ) as any;
 
       if (error) {
         // Try to decode JSON error message from Edge Function
@@ -86,18 +103,39 @@ export default function JoinWithCodeScreen() {
       }
 
       const role = data.role as string;
+
+      // Try to sign in automatically now that the account is provisioned
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: emailLower,
+        password,
+      });
+
+      if (signInErr) {
+        // Fall back to manual sign-in if policy requires it
+        notify('Account Ready', 'Your account has been created. Please sign in to continue.');
+        router.replace('/(auth)/sign-in' as Href);
+        return;
+      }
+
+      // Signed in successfully — route based on role
       if (role === 'teacher') {
-        notify('Welcome', 'Your teacher account is ready. Please sign in.');
-        router.replace('/' as Href);
+        router.replace('/(tabs)/dashboard' as Href);
       } else if (role === 'parent') {
-        notify('Welcome', 'Your parent account is ready. Let’s add your child next.');
-        router.replace('/screens/add-child' as Href);
+        try {
+          router.replace('/screens/add-child' as Href);
+        } catch {
+          router.replace('/(tabs)/dashboard' as Href);
+        }
       } else {
-        notify('Welcome', 'Your account is ready. Please sign in.');
-        router.replace('/' as Href);
+        router.replace('/(tabs)/dashboard' as Href);
       }
     } catch (e: any) {
-      notify('Error', e?.message || 'Unexpected error occurred.');
+      const msg = (e?.message || '').toString();
+      if (msg.toLowerCase().includes('timeout')) {
+        notify('Network issue', 'The request is taking too long. Please check your connection and try again.');
+      } else {
+        notify('Error', msg || 'Unexpected error occurred.');
+      }
     } finally {
       setLoading(false);
     }

@@ -2094,6 +2094,80 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_subscriptions: {
+        Row: {
+          amount: number
+          billing_interval: string
+          canceled_at: string | null
+          created_at: string
+          currency: string
+          current_period_end: string
+          current_period_start: string
+          ended_at: string | null
+          id: string
+          metadata: Json
+          payment_provider: string
+          plan_id: string
+          provider_customer_id: string | null
+          provider_subscription_id: string | null
+          status: string
+          trial_end: string | null
+          trial_start: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          billing_interval: string
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string
+          current_period_end: string
+          current_period_start: string
+          ended_at?: string | null
+          id?: string
+          metadata?: Json
+          payment_provider: string
+          plan_id: string
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          status?: string
+          trial_end?: string | null
+          trial_start?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          billing_interval?: string
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string
+          current_period_end?: string
+          current_period_start?: string
+          ended_at?: string | null
+          id?: string
+          metadata?: Json
+          payment_provider?: string
+          plan_id?: string
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          status?: string
+          trial_end?: string | null
+          trial_start?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       preschool_onboarding_requests: {
         Row: {
           address: string | null
@@ -2561,6 +2635,7 @@ export type Database = {
         Row: {
           ai_quota_monthly: number | null
           created_at: string | null
+          currency: string | null
           features: Json | null
           id: string
           is_active: boolean | null
@@ -2569,10 +2644,13 @@ export type Database = {
           name: string
           price_annual: number | null
           price_monthly: number | null
+          tier: string | null
+          updated_at: string | null
         }
         Insert: {
           ai_quota_monthly?: number | null
           created_at?: string | null
+          currency?: string | null
           features?: Json | null
           id?: string
           is_active?: boolean | null
@@ -2581,10 +2659,13 @@ export type Database = {
           name: string
           price_annual?: number | null
           price_monthly?: number | null
+          tier?: string | null
+          updated_at?: string | null
         }
         Update: {
           ai_quota_monthly?: number | null
           created_at?: string | null
+          currency?: string | null
           features?: Json | null
           id?: string
           is_active?: boolean | null
@@ -2593,6 +2674,8 @@ export type Database = {
           name?: string
           price_annual?: number | null
           price_monthly?: number | null
+          tier?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -3266,6 +3349,18 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_all_schools_for_superadmin: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_all_users_for_superadmin: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_platform_stats_for_superadmin: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_subscription_analytics: {
         Args: { end_date?: string; start_date?: string }
         Returns: {
@@ -3313,6 +3408,10 @@ export type Database = {
           work_phone: string
           work_position: string
         }[]
+      }
+      is_superadmin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       superadmin_approve_onboarding: {
         Args: { request_id: string }

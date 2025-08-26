@@ -16,7 +16,7 @@ export default {
       bundleIdentifier: "com.edudashpro.app",
       // Enable Universal Links for password reset and invitations
       associatedDomains: [
-        "applinks:app.edudashpro.org.za"
+        "applinks:www.edudashpro.org.za"
       ]
     },
     android: {
@@ -30,14 +30,14 @@ export default {
         "CAMERA"
       ],
       edgeToEdgeEnabled: true,
-      // Enable Android App Links so https://app.edudashpro.org.za/open in the app
+      // Enable Android App Links so https://www.edudashpro.org.za/open in the app
       intentFilters: [
         {
           action: "VIEW",
           data: [
             {
               scheme: "https",
-              host: "app.edudashpro.org.za",
+              host: "www.edudashpro.org.za",
               pathPrefix: "/"
             }
           ],

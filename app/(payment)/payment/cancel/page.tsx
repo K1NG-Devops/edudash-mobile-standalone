@@ -37,7 +37,7 @@ export default function PaymentCancelPage() {
 
   const handleContactSupport = () => {
     // Navigate to support or open email
-    router.push('/(support)/contact');
+    router.push('/support/contact');
   };
 
   const handleGoHome = () => {

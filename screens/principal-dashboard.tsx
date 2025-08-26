@@ -5,6 +5,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { PrincipalService } from '@/lib/services/principalService';
 import { LinearGradient } from 'expo-linear-gradient';
+import { DashboardSubscriptionCard } from '@/components/dashboard/DashboardSubscriptionCard';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -201,6 +202,11 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         <View style={[styles.welcomeSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
           <Text style={[styles.welcomeTitle, { color: isDark ? '#F8FAFC' : '#1F2937' }]}>📊 School Overview</Text>
           <Text style={[styles.welcomeSubtitle, { color: isDark ? '#94A3B8' : '#6B7280' }]}>Manage {schoolName}</Text>
+        </View>
+
+        {/* Subscription / Plan */}
+        <View style={[styles.actionsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
+          <DashboardSubscriptionCard userId={profile?.id || ''} />
         </View>
 
         {/* School Statistics */}

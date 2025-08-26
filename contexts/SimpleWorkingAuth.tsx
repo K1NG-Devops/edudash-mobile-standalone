@@ -1,4 +1,4 @@
-import { supabase, safeSignOut } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
 import React from 'react';
@@ -91,6 +91,12 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
       // Get initial session
       const { data } = await supabase.auth.getSession();
 
+      console.log('🔍 [AUTH-DEBUG] Session data:', {
+        hasSession: !!data.session,
+        hasUser: !!data.session?.user,
+        userId: data.session?.user?.id || 'none',
+        userEmail: data.session?.user?.email || 'none'
+      });
 
       this.setState({
         session: data.session,
@@ -99,31 +105,40 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
       // Only load profile if we have a session, and set loading to false after
       if (data.session?.user) {
+        console.log('🔍 [AUTH-DEBUG] User found; ensuring profile and loading it for ID:', data.session.user.id);
+        await this.ensureUserProfile(data.session.user);
         await this.loadProfile(data.session.user.id);
       } else {
+        console.log('🔍 [AUTH-DEBUG] No user session found');
         this.setState({ loading: false });
       }
 
       // Listen for auth changes
       const { data: listener } = supabase.auth.onAuthStateChange(
         async (event, session) => {
+          console.log('🔄 Auth state changed:', event);
 
           // Prevent duplicate profile loading
           if (event === 'SIGNED_IN' && session?.user) {
             // Only load profile if the user changed
             if (this.state.user?.id !== session.user.id) {
+              console.log('🆕 New user signed in; ensuring profile and loading it...');
               this.setState({
                 session,
                 user: session.user,
               });
+              await this.ensureUserProfile(session.user);
               await this.loadProfile(session.user.id);
             } else {
+              console.log('🔄 Same user, updating session only and ensuring profile');
               this.setState({
                 session,
                 user: session.user,
               });
+              await this.ensureUserProfile(session.user);
             }
           } else if (event === 'SIGNED_OUT') {
+            console.log('👋 User signed out');
             this.setState({
               session: null,
               user: null,
@@ -168,19 +183,35 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
   loadProfile = async (userId: string) => {
     try {
+      console.log('🔍 [DEBUG] Loading profile for userId:', userId);
+      console.log('🔍 [DEBUG] Current profile state before load:', this.state.profile?.role || 'none');
+
       // Set loading state immediately
       this.setState({ loading: true });
 
-      // Clear any existing profile state to force fresh load
-      this.setState({ profile: null });
+      // Try direct query with auth_user_id using maybeSingle (safer approach)
+      console.log('📡 [DEBUG] Executing query: SELECT * FROM users WHERE auth_user_id =', userId);
 
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid errors for no matches
 
-      if (error) {
+      console.log('🔍 [DEBUG] Profile query result:', {
+        hasData: !!data,
+        dataKeys: data ? Object.keys(data) : 'none',
+        error: error?.message || 'none',
+        errorCode: error?.code || 'none',
+        errorDetails: error?.details || 'none',
+        errorHint: error?.hint || 'none'
+      });
+
+      if (!error && data) {
+        console.log('✅ [DEBUG] Profile loaded successfully via direct query');
+        this.handleProfileData(data);
+        return;
+      } else if (error) {
         console.error('❌ [DEBUG] Supabase error details:', {
           message: error.message,
           code: error.code,
@@ -190,7 +221,7 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
         // If we get a policy error, let's try a different approach
         if (error.message?.includes('policy') || error.message?.includes('recursion')) {
-          // For now, set a basic profile to prevent blocking
+          console.log('🔄 [DEBUG] Policy/recursion error detected, setting null profile');
           this.setState({
             profile: null,
             loading: false
@@ -199,59 +230,128 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
         }
       }
 
-      if (!error && data) {
-
-        // Create a complete profile with all fields from database
-        const profileData: UserProfile = {
-          id: data.id,
-          email: data.email,
-          name: data.name,
-          role: data.role as 'superadmin' | 'preschool_admin' | 'teacher' | 'parent',
-          preschool_id: data.preschool_id,
-          auth_user_id: data.auth_user_id || '',
-          is_active: !!data.is_active,
-          avatar_url: data.profile_picture_url || null,
-          phone: data.phone,
-          home_address: data.street_address || null,
-          home_city: data.city || null,
-          home_postal_code: data.postal_code || null,
-          work_company: data.institution_name || null,
-          work_position: data.position_title || null,
-          work_address: data.street_address || null,
-          work_phone: data.phone || null,
-          emergency_contact_1_name: data.emergency_contact_name || null,
-          emergency_contact_1_phone: data.emergency_contact_phone || null,
-          emergency_contact_1_relationship: data.emergency_contact_relationship || null,
-          emergency_contact_2_name: null, // Not supported in current schema
-          emergency_contact_2_phone: null, // Not supported in current schema
-          emergency_contact_2_relationship: null, // Not supported in current schema
-          relationship_to_child: null, // Not supported in current schema
-          pickup_authorized: null, // Not supported in current schema
-          profile_completed_at: null, // Not supported in current schema
-          profile_completion_status: (data.profile_completion_status as 'incomplete' | 'in_progress' | 'complete') || 'incomplete',
-          created_at: data.created_at || new Date().toISOString(),
-          updated_at: data.updated_at || new Date().toISOString()
-        };
-
-        // Update profile state
-        this.setState({
-          profile: profileData,
-          loading: false
-        }, () => {
-        });
-      } else {
-        console.error('❌ [DEBUG] Failed to load profile - no data returned');
-        this.setState({
-          profile: null,
-          loading: false
-        });
+      // If no data found, log detailed information for debugging
+      if (!data) {
+        console.log('⚠️ [DEBUG] No profile found for auth_user_id:', userId);
+        console.log('⚠️ [DEBUG] This could mean:');
+        console.log('  1. User profile not created yet');
+        console.log('  2. auth_user_id mismatch in database');
+        console.log('  3. User deleted or inactive');
+        console.log('⚠️ [DEBUG] Setting profile to null - dashboard will default to parent role');
       }
+
+      // Set profile to null if no data found
+      this.setState({
+        profile: null,
+        loading: false
+      });
+
     } catch (error) {
       console.error('❌ [DEBUG] Exception in loadProfile:', error);
       this.setState({
         profile: null,
         loading: false
       });
+    }
+  };
+
+  // Helper method to handle profile data consistently
+  handleProfileData = (data: any) => {
+    console.log('✅ [DEBUG] Profile loaded successfully:');
+    console.log('  - ID:', data.id || 'Unknown');
+    console.log('  - Name:', data.name || 'Unknown');
+    console.log('  - Role:', data.role || 'Unknown');
+    console.log('  - Preschool ID:', data.preschool_id || 'None');
+    console.log('  - Email:', data.email || 'Unknown');
+    console.log('  - Is Active:', data.is_active);
+    console.log('  - Auth User ID:', data.auth_user_id);
+
+    // Create a complete profile with all fields from database
+    const profileData: UserProfile = {
+      id: data.id,
+      email: data.email,
+      name: data.name,
+      role: data.role as 'superadmin' | 'preschool_admin' | 'teacher' | 'parent',
+      preschool_id: data.preschool_id,
+      auth_user_id: data.auth_user_id,
+      is_active: data.is_active,
+      avatar_url: data.avatar_url,
+      phone: data.phone,
+      home_address: data.home_address,
+      home_city: data.home_city,
+      home_postal_code: data.home_postal_code,
+      work_company: data.work_company,
+      work_position: data.work_position,
+      work_address: data.work_address,
+      work_phone: data.work_phone,
+      emergency_contact_1_name: data.emergency_contact_1_name,
+      emergency_contact_1_phone: data.emergency_contact_1_phone,
+      emergency_contact_1_relationship: data.emergency_contact_1_relationship,
+      emergency_contact_2_name: data.emergency_contact_2_name,
+      emergency_contact_2_phone: data.emergency_contact_2_phone,
+      emergency_contact_2_relationship: data.emergency_contact_2_relationship,
+      relationship_to_child: data.relationship_to_child,
+      pickup_authorized: data.pickup_authorized,
+      profile_completed_at: data.profile_completed_at,
+      profile_completion_status: (data.profile_completion_status as 'incomplete' | 'in_progress' | 'complete') || 'incomplete',
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+
+    // Update profile state
+    this.setState({
+      profile: profileData,
+      loading: false
+    }, () => {
+      console.log('✅ [DEBUG] Profile state updated. New role:', this.state.profile?.role);
+      console.log('✅ [DEBUG] Profile state updated. New preschool_id:', this.state.profile?.preschool_id);
+    });
+  };
+
+  // Ensure a minimal user profile exists for the current auth user (idempotent)
+  ensureUserProfile = async (authUser: User) => {
+    try {
+      // Check if profile exists
+      const { data: existing, error: selectError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', authUser.id)
+        .maybeSingle();
+
+      if (selectError) {
+        console.warn('⚠️ ensureUserProfile: select error', selectError.message);
+      }
+
+      if (existing && existing.id) {
+        // Profile exists; do nothing to avoid overwriting invite-provisioned data
+        return;
+      }
+
+      const md = (authUser as any).user_metadata || {};
+      const first = md.first_name || (md.name ? String(md.name).split(' ')[0] : undefined) || (authUser.email ? String(authUser.email).split('@')[0] : 'User');
+      const last = md.last_name || (md.name ? String(md.name).split(' ').slice(1).join(' ') : undefined) || '';
+      const displayName = [first, last].filter(Boolean).join(' ').trim();
+      const role = md.role || 'parent';
+
+      const insertPayload: any = {
+        auth_user_id: authUser.id,
+        email: authUser.email,
+        name: displayName,
+        role,
+        is_active: true,
+      };
+
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert(insertPayload);
+
+      if (insertError) {
+        console.warn('⚠️ ensureUserProfile: insert error', insertError.message);
+      } else {
+        console.log('✅ ensureUserProfile: profile created');
+      }
+    } catch (e: any) {
+      console.warn('⚠️ ensureUserProfile: unexpected error', e?.message || e);
     }
   };
 
@@ -299,7 +399,7 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
   signOut = async () => {
     try {
       this.setState({ loading: true });
-      await safeSignOut();
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
@@ -311,8 +411,8 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     try {
       this.setState({ loading: true });
 
-      // Use correct localhost for development (Expo web)
-      const redirectTo = 'http://localhost:8081/reset-password';
+      // Use localhost for development (mobile app)
+      const redirectTo = 'http://localhost:3000/auth/reset-password';
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,

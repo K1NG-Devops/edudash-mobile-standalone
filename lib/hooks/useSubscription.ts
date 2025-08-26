@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
+import { Platform, Linking } from 'react-native';
 import type { 
   PlatformSubscription, 
   SubscriptionPlan, 
@@ -101,13 +102,17 @@ export function useSubscription(): UseSubscriptionReturn {
     try {
       setError(null);
       
+      const origin = (typeof window !== 'undefined')
+        ? window.location.origin
+        : (process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '');
+
       const requestBody = {
         plan_id: params.plan_id,
         billing_interval: params.billing_interval,
         payment_provider: params.payment_provider,
-        return_url: `${window.location.origin}/payment/success`,
-        cancel_url: `${window.location.origin}/payment/cancel`,
-        notify_url: `${window.location.origin}/api/webhooks/${params.payment_provider}`,
+        return_url: `${origin}/payment/success`,
+        cancel_url: `${origin}/payment/cancel`,
+        notify_url: `${origin}/api/webhooks/${params.payment_provider}`,
         user_details: {
           first_name: params.user_details?.first_name || user.user_metadata?.first_name || user.user_metadata?.name?.split(' ')[0] || 'User',
           last_name: params.user_details?.last_name || user.user_metadata?.last_name || user.user_metadata?.name?.split(' ').slice(1).join(' ') || 'Name',
@@ -115,7 +120,9 @@ export function useSubscription(): UseSubscriptionReturn {
         }
       };
 
-      const response = await fetch('/api/subscriptions/create', {
+      // Use absolute URL on native, relative on web
+      const baseUrl = (typeof window !== 'undefined') ? '' : (process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '');
+      const response = await fetch(`${baseUrl}/api/subscriptions/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,6 +136,17 @@ export function useSubscription(): UseSubscriptionReturn {
       if (data.success) {
         // Refresh subscription data
         await fetchSubscription();
+
+        // If a redirect URL is provided, handle it per-platform
+        const redirectUrl = data.payment_url || data.approval_url;
+        if (redirectUrl) {
+          if (typeof window !== 'undefined') {
+            try { (window as any).location.href = redirectUrl; } catch {}
+          } else {
+            try { await Linking.openURL(redirectUrl); } catch {}
+          }
+        }
+
         return {
           success: true,
           subscription_id: data.subscription_id,

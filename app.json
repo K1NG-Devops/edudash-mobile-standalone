@@ -55,10 +55,6 @@
       }
     },
     "owner": "your-expo-username"
-  },
-  "react-native-google-mobile-ads": {
-    "android_app_id": "ca-app-pub-2808416461095370~5255516826",
-    "ios_app_id": "ca-app-pub-3940256099942544~1458002511"
   }
 }
 

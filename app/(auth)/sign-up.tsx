@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
 
 export default function SignUp() {
     const params = useLocalSearchParams();
@@ -13,6 +14,7 @@ export default function SignUp() {
 
     const isSchoolFlow = presetType === 'school' || presetRole === 'principal' || presetRole === 'admin';
 
+    // School registration fields
     const [schoolName, setSchoolName] = useState('');
     const [adminName, setAdminName] = useState('');
     const [adminEmail, setAdminEmail] = useState('');
@@ -21,7 +23,14 @@ export default function SignUp() {
     const [numStudents, setNumStudents] = useState('');
     const [numTeachers, setNumTeachers] = useState('');
     const [message, setMessage] = useState('');
+
+    // Individual sign-up fields
+    const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
     const [submitting, setSubmitting] = useState(false);
+    const { signUp, signIn } = useAuth();
 
     const handleSubmit = async () => {
         if (isSchoolFlow) {
@@ -51,16 +60,48 @@ export default function SignUp() {
             return;
         }
 
-        // Handle generic account creation with proper routing based on params
-        const plan = params?.plan as string;
-        const role = params?.role as string;
-        
-        if (plan && role) {
-            // User came from pricing page with plan selection
-            router.push(`/(auth)/sign-up-complete?plan=${plan}&role=${role}`);
-        } else {
-            // Basic registration, route to dashboard
-            router.push('/(tabs)/dashboard');
+        // Individual user sign-up and subscription flow
+        if (!fullName.trim() || !email.trim() || !password.trim()) {
+            Alert.alert('Missing info', 'Please enter your name, email and password.');
+            return;
+        }
+
+        const plan = params?.plan as string | undefined;
+        const role = (params?.role as string | undefined) || presetRole || 'parent';
+
+        try {
+            setSubmitting(true);
+            // 1) Create auth account
+            const res = await signUp(email.trim().toLowerCase(), password, { name: fullName.trim(), role });
+            if (res?.error) {
+                Alert.alert('Sign up failed', res.error);
+                setSubmitting(false);
+                return;
+            }
+
+            // 2) Try to sign the user in (in case email confirmation is not enforced)
+            const signInRes = await signIn(email.trim().toLowerCase(), password);
+            if (signInRes?.error) {
+                // If sign in failed, likely email confirmation required
+                Alert.alert(
+                    'Confirm your email',
+                    'We sent you a confirmation link. Please confirm your email, then sign in to continue.'
+                );
+                router.replace('/(auth)/sign-in');
+                setSubmitting(false);
+                return;
+            }
+
+            // 3) Route to subscription completion if plan selected, else dashboard
+            if (plan && role) {
+                router.replace(`/(auth)/sign-up-complete?plan=${plan}&role=${role}`);
+            } else {
+                router.replace('/(tabs)/dashboard');
+            }
+        } catch (e: any) {
+            Alert.alert('Error', e?.message || 'Unexpected error occurred.');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -78,7 +119,7 @@ export default function SignUp() {
                         </View>
 
                         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                            {isSchoolFlow && (
+                            {isSchoolFlow ? (
                                 <>
                                     <Text style={styles.subtitle}>Submit your school for Super Admin approval</Text>
                                     <View style={styles.inputContainer}>
@@ -116,9 +157,25 @@ export default function SignUp() {
                                         <TextInput style={styles.input} placeholder="Message (optional)" placeholderTextColor="#FFFFFF80" value={message} onChangeText={setMessage} />
                                     </View>
                                 </>
+                            ) : (
+                                <>
+                                    <Text style={styles.subtitle}>Create your EduDash Pro account</Text>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="person.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Full Name" placeholderTextColor="#FFFFFF80" value={fullName} onChangeText={setFullName} />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="envelope.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#FFFFFF80" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="lock.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#FFFFFF80" value={password} onChangeText={setPassword} secureTextEntry />
+                                    </View>
+                                </>
                             )}
 
-                            	<TouchableOpacity style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={submitting} activeOpacity={0.8}>
+                            <TouchableOpacity style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={submitting} activeOpacity={0.8}>
                                 <Text style={styles.buttonText}>{isSchoolFlow ? 'Submit for Approval' : 'Create Account'}</Text>
                             </TouchableOpacity>
 

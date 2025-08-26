@@ -64,11 +64,11 @@ export default function PaymentSuccessPage() {
 
   const handleContinue = () => {
     // Navigate to the main app or dashboard
-    router.replace('/(dashboard)');
+    router.replace('/dashboard');
   };
 
   const handleViewSubscription = () => {
-    router.push('/(dashboard)/account/subscription');
+    router.push('/(tabs)/settings_new');
   };
 
   return (

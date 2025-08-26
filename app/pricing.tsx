@@ -17,11 +17,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem, getRoleColors } from '@/constants/DesignSystem';
 import { SmartRoutingService } from '@/lib/services/smartRoutingService';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { useSubscription } from '@/lib/hooks/useSubscription';
 
 const { width, height } = Dimensions.get('window');
 
 // Standalone Pricing Page - No Authentication Required
 export default function PricingPage() {
+  const { user, profile } = useAuth();
+  const { createSubscription } = useSubscription();
+  const isLoggedIn = !!user;
+  const isPrincipal = !!(profile?.role === 'preschool_admin' || profile?.role === 'principal');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'parent' | 'teacher' | 'principal' | null>(null);
@@ -47,7 +53,7 @@ export default function PricingPage() {
     ).start();
   }, []);
 
-  const pricingPlans = [
+  const basePricingPlans = [
     {
       id: 'free-tier',
       name: "Free Tier",
@@ -134,6 +140,11 @@ export default function PricingPage() {
     }
   ];
 
+  // Role-aware plan filtering: principals see only Pro and Enterprise
+  const pricingPlans = isPrincipal
+    ? basePricingPlans.filter(p => p.id === 'quantum-pro' || p.id === 'singularity')
+    : basePricingPlans;
+
   const roles = [
     {
       id: 'parent',
@@ -176,8 +187,46 @@ export default function PricingPage() {
     }
   ];
 
-  const handleSelectPlan = (plan: typeof pricingPlans[0]) => {
+const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
     setSelectedPlan(plan.id);
+
+    // Principal flow: logged-in principal goes straight to payment (no role/invite prompts)
+    if (isLoggedIn && isPrincipal) {
+      try {
+        const result = await createSubscription({
+          plan_id: plan.id,
+          billing_interval: 'monthly',
+          payment_provider: 'payfast',
+        });
+        // createSubscription will redirect if payment_url/approval_url exists.
+        // If not, fallback to success screen for dev environments.
+        if (result.success && !result.payment_url && !result.approval_url) {
+          const amount = plan.price.replace(/[^0-9.]/g, '') || '0';
+          router.push({ pathname: '/payment/success/page', params: { plan_name: plan.name, amount } } as any);
+        }
+      } catch (e) {
+        // As a safeguard, route to settings manage page
+        router.push('/(tabs)/settings_new');
+      }
+      return;
+    }
+
+    // If the user is logged in (non-principal), prefer their current role and route to manage/upgrade
+    if (isLoggedIn) {
+      const currentRole = (profile?.role === 'preschool_admin' ? 'principal' : profile?.role) as 'parent' | 'teacher' | 'principal' | undefined;
+      if (currentRole) {
+        setSelectedRole(currentRole);
+        const shouldPrompt = SmartRoutingService.shouldPromptForInvitationCode(plan.id, currentRole);
+        if (shouldPrompt && currentRole !== 'principal') {
+          setShowInvitationPrompt(true);
+          return;
+        }
+      }
+      router.push('/(tabs)/settings_new');
+      return;
+    }
+
+    // Logged out: ask for role selection
     setShowRoleModal(true);
   };
 
@@ -209,11 +258,23 @@ export default function PricingPage() {
     }
   };
 
-  const handleInvitationCodeDecision = (hasCode: boolean) => {
+const handleInvitationCodeDecision = (hasCode: boolean) => {
     setShowInvitationPrompt(false);
     const plan = pricingPlans.find(p => p.id === selectedPlan);
     if (!plan || !selectedRole) return;
     
+    // If logged in, avoid account creation prompts
+    if (isLoggedIn) {
+      if (hasCode) {
+        // Allow redeeming invitation codes even when logged in
+        router.push('/(auth)/join-with-code');
+      } else {
+        // Continue to manage subscription/upgrade flow
+        router.push('/(tabs)/settings_new');
+      }
+      return;
+    }
+
     // Use smart routing service with invitation code decision
     SmartRoutingService.executeRouting(plan.id, selectedRole, hasCode);
   };
@@ -453,9 +514,11 @@ export default function PricingPage() {
         </View>
       </ScrollView>
 
-      <RoleModal />
+      {/* Only render RoleModal and Invitation prompt for non-principal flows */}
+      {!isPrincipal && <RoleModal />}
       
       {/* Invitation Code Prompt Modal */}
+      {!isPrincipal && (
       <Modal
         visible={showInvitationPrompt}
         transparent
@@ -501,8 +564,10 @@ export default function PricingPage() {
                     style={styles.invitationChoiceGradient}
                   >
                     <IconSymbol name="person.badge.plus" size={24} color="#000000" />
-                    <Text style={styles.invitationChoiceTitle}>No, create new account</Text>
-                    <Text style={styles.invitationChoiceSubtitle}>Individual/family account</Text>
+<Text style={styles.invitationChoiceTitle}>{isLoggedIn ? 'No, continue without code' : 'No, create new account'}</Text>
+                    <Text style={styles.invitationChoiceSubtitle}>
+                      {isLoggedIn ? 'Proceed to manage/upgrade in settings' : 'Individual/family account'}
+                    </Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -510,6 +575,7 @@ export default function PricingPage() {
           </View>
         </View>
       </Modal>
+      )}
     </View>
   );
 }

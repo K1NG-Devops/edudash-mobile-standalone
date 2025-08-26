@@ -3,6 +3,8 @@
  * Designed for accessibility, readability, and visual appeal
  */
 
+import { ColorValue } from 'react-native';
+
 // Primary brand colors
 const primaryBlue = '#6366F1'; // Indigo-500
 const primaryPurple = '#8B5CF6'; // Violet-500
@@ -90,7 +92,7 @@ export const Colors = {
 };
 
 // Helper function to get role-specific colors
-export const getRoleColors = (role: string, theme: 'light' | 'dark' = 'light') => {
+export const getRoleColors = (role: string, theme: 'light' | 'dark' = 'light'): { primary: string; gradient: readonly [ColorValue, ColorValue, ...ColorValue[]]; background: string } => {
   const colors = Colors[theme];
 
   switch (role) {
@@ -98,8 +100,8 @@ export const getRoleColors = (role: string, theme: 'light' | 'dark' = 'light') =
       return {
         primary: colors.superadmin,
         gradient: theme === 'light'
-          ? ['#DC2626', '#B91C1C']
-          : ['#F87171', '#EF4444'],
+          ? (['#DC2626', '#B91C1C'] as const)
+          : (['#F87171', '#EF4444'] as const),
         background: theme === 'light'
           ? 'rgba(220, 38, 38, 0.1)'
           : 'rgba(248, 113, 113, 0.1)',
@@ -110,8 +112,8 @@ export const getRoleColors = (role: string, theme: 'light' | 'dark' = 'light') =
       return {
         primary: '#10B981',
         gradient: theme === 'light'
-          ? ['#10B981', '#059669']
-          : ['#34D399', '#10B981'],
+          ? (['#10B981', '#059669'] as const)
+          : (['#34D399', '#10B981'] as const),
         background: theme === 'light'
           ? 'rgba(16, 185, 129, 0.10)'
           : 'rgba(52, 211, 153, 0.10)',
@@ -120,8 +122,8 @@ export const getRoleColors = (role: string, theme: 'light' | 'dark' = 'light') =
       return {
         primary: colors.teacher,
         gradient: theme === 'light'
-          ? ['#7C3AED', '#6D28D9']
-          : ['#A78BFA', '#8B5CF6'],
+          ? (['#7C3AED', '#6D28D9'] as const)
+          : (['#A78BFA', '#8B5CF6'] as const),
         background: theme === 'light'
           ? 'rgba(124, 58, 237, 0.1)'
           : 'rgba(167, 139, 250, 0.1)',
@@ -130,8 +132,8 @@ export const getRoleColors = (role: string, theme: 'light' | 'dark' = 'light') =
       return {
         primary: colors.parent,
         gradient: theme === 'light'
-          ? ['#2563EB', '#1D4ED8']
-          : ['#60A5FA', '#3B82F6'],
+          ? (['#2563EB', '#1D4ED8'] as const)
+          : (['#60A5FA', '#3B82F6'] as const),
         background: theme === 'light'
           ? 'rgba(37, 99, 235, 0.1)'
           : 'rgba(96, 165, 250, 0.1)',
@@ -140,8 +142,8 @@ export const getRoleColors = (role: string, theme: 'light' | 'dark' = 'light') =
       return {
         primary: colors.primary,
         gradient: theme === 'light'
-          ? ['#6366F1', '#4F46E5']
-          : ['#818CF8', '#6366F1'],
+          ? (['#6366F1', '#4F46E5'] as const)
+          : (['#818CF8', '#6366F1'] as const),
         background: theme === 'light'
           ? 'rgba(99, 102, 241, 0.1)'
           : 'rgba(129, 140, 248, 0.1)',

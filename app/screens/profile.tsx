@@ -60,6 +60,7 @@ export default function ProfileScreen() {
           )
         `)
         .eq('auth_user_id', user.id)
+        .limit(1)
         .single();
 
       if (error) {

@@ -23,6 +23,7 @@ export const testPasswordResetFlow = async () => {
         const refreshToken = hashParams.get('refresh_token');
         const tokenType = hashParams.get('type');
 
+        console.log('Password reset tokens', {
             hasAccessToken: !!accessToken,
             hasRefreshToken: !!refreshToken,
             tokenType,
@@ -35,13 +36,16 @@ export const testPasswordResetFlow = async () => {
             const { supabase } = (window as any).supabaseClients;
 
             const { data, error } = await supabase.auth.getSession();
+            console.log('Supabase session check', {
                 hasSession: !!data?.session,
                 userId: data?.session?.user?.id,
                 error: error?.message
             });
         } else {
+            console.warn('Supabase client not available on window');
         }
     } else {
+        console.warn('No recovery token found in hash. Hash:', hash);
     }
 };
 

@@ -132,10 +132,10 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
       'Choose an action',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'View Payment History', onPress: () => router.push('/(dashboard)/account/billing') },
+        { text: 'View Payment History', onPress: () => router.push('/(tabs)/settings_new') },
         { text: 'Change Plan', onPress: () => router.push('/pricing') },
         ...(subscription.status === 'active' ? [
-          { text: 'Cancel Subscription', style: 'destructive', onPress: () => setShowCancelModal(true) }
+          { text: 'Cancel Subscription', style: 'destructive' as 'destructive', onPress: () => setShowCancelModal(true) }
         ] : []),
       ]
     );
@@ -301,7 +301,7 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
               {!embedded && (
                 <TouchableOpacity
                   style={styles.viewHistoryButton}
-                  onPress={() => router.push('/(dashboard)/account/billing')}
+                  onPress={() => router.push('/(tabs)/settings_new')}
                 >
                   <Text style={styles.viewHistoryButtonText}>View Billing History</Text>
                   <IconSymbol name="arrow.right" size={14} color="#00f5ff" />

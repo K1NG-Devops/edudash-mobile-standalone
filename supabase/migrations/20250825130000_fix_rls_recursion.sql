@@ -27,3 +27,4 @@ USING (
 -- Verify the fix
 SELECT 'RLS recursion fixed successfully' as status;
 
+

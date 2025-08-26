@@ -3,8 +3,7 @@
 
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
-// Note: Avoid using metro-config's exclusionList for cross-env compatibility.
-// We'll build a single RegExp manually for blockList.
+const exclusionList = require('metro-config/src/defaults/exclusionList');
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
@@ -14,29 +13,46 @@ config.resolver.alias = {
   '@': path.resolve(__dirname, './'),
 };
 
-// Helper to escape regex special chars
-function escapeRegExp(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Exclude only specific project directories by absolute path.
-// Avoid broad patterns that could unintentionally match files in node_modules.
-const blockListDirs = [
-  '.git',
-  '.expo',
-  '.cache',
-  '.cursor',
-  'android/build',
-  'ios/build',
-  'web/dist',
-  'web/build',
-  'archive',
-  'docs',
-  // 'scripts', // uncomment if you need to exclude your root scripts dir
-];
-
-const blockListRegexParts = blockListDirs.map((rel) => `${escapeRegExp(path.resolve(__dirname, rel))}/.*`);
-config.resolver.blockList = new RegExp(blockListRegexParts.join('|'));
+// Exclusions (use Metro's exclusionList to create a single RegExp)
+config.resolver.blockList = exclusionList([
+  /(^|\/)\.git\//,
+  /(^|\/)\.expo\//,
+  /(^|\/)\.cache\//,
+  /(^|\/)\.cursor\//,
+  /(^|\/)android\/build\//,
+  /(^|\/)ios\/build\//,
+  /(^|\/)web\/dist\//,
+  /(^|\/)web\/build\//,
+  /(^|\/)archive\//,
+  /(^|\/)docs\//,
+  /(^|\/)examples\//,
+  /(^|\/)node_modules\/.*\/examples\//,
+  /(^|\/)\.vscode\//,
+  /(^|\/)\.idea\//,
+  /(^|\/)backup\//,
+  /(^|\/)backups\//,
+  /(^|\/)temp\//,
+  /(^|\/)tmp\//,
+  /.*\.bak$/,
+  /.*\.backup$/,
+  /.*\.old$/,
+  /scripts\/.*\.js$/,
+  /.*_test\.js$/,
+  /.*\.test\.js$/,
+  /check_.*\.js$/,
+  /fix_.*\.js$/,
+  /test_.*\.js$/,
+  /create_.*\.js$/,
+  /complete_.*\.js$/,
+  /quick_.*\.js$/,
+  /verify_.*\.js$/,
+  /simple_.*\.js$/,
+  /inspect_.*\.js$/,
+  /.*\.sql$/,
+  /database-migrations\/.*$/,
+  /logs\/.*$/,
+  /supabase\/logs\/.*$/,
+]);
 
 // Ensure extensions include ts/tsx/jsx (dedup)
 config.resolver.sourceExts = Array.from(new Set([
@@ -45,5 +61,11 @@ config.resolver.sourceExts = Array.from(new Set([
   'tsx',
   'jsx',
 ]));
+
+// Platform-specific resolver to handle native-only modules on web
+config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
+
+// Platform-specific platform overrides
+config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 
 module.exports = config;

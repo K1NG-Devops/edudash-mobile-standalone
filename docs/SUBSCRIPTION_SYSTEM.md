@@ -36,7 +36,7 @@ EduDash Pro now includes a complete SaaS subscription system with multi-tier pri
 - **14-day free trial**
 - **Target**: Small preschools, growing families
 
-#### ⚡ Quantum Pro - R299/month
+#### ⚡ Quantum Pro - R299/month (Promo R149.99 for first 100 subscribers)
 - Unlimited AI Lessons
 - Up to 50 students per school
 - 5 Advanced AI Tutors

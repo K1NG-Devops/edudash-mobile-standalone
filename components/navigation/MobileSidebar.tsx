@@ -17,6 +17,7 @@ import {
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import { router } from 'expo-router';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -441,38 +442,50 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
 
           <SafeAreaInsetsContext.Consumer>
             {(insets) => (
-              <>
+              <View style={styles.menuWrapper}>
                 <ScrollView
                   style={styles.menuScrollView}
                   showsVerticalScrollIndicator={false}
-                  contentContainerStyle={[styles.menuContainer, { paddingBottom: (insets?.bottom || 0) + 140 }]}
+                  contentContainerStyle={[styles.menuContainer, { paddingBottom: 16 }]}
                 >
                   {menuItems.map(renderMenuItem)}
                 </ScrollView>
 
-                {/* Sign Out Button (sticky, respects safe area) */}
-                <TouchableOpacity
-                  style={[styles.signOutButton, { bottom: (insets?.bottom || 0) + 16 }]}
-                  onPress={onSignOut}
-                  activeOpacity={0.7}
-                >
-                  <LinearGradient
-                    colors={isDark ? ['#374151', '#4B5563'] : ['#FEE2E2', '#FECACA']}
-                    style={styles.signOutGradient}
+                {/* Sticky Sign Out Footer (non-overlapping) */}
+                <View style={[styles.signOutContainer, { paddingBottom: (insets?.bottom || 0) + 8, backgroundColor: isDark ? '#111827' : '#FFFFFF', borderTopColor: isDark ? '#374151' : '#E5E7EB' }]}> 
+                  <TouchableOpacity
+                    onPress={async () => {
+                      try {
+                        if (onSignOut) {
+                          await onSignOut();
+                        } else {
+                          // Fallback route if signOut not provided
+                          router.replace('/');
+                        }
+                      } finally {
+                        onClose?.();
+                      }
+                    }}
+                    activeOpacity={0.7}
                   >
-                    <View style={[styles.menuIcon, { backgroundColor: '#EF444420' }]}>
-                      <IconSymbol name="rectangle.portrait.and.arrow.right" size={24} color="#DC2626" />
-                    </View>
-                    <View style={styles.menuContent}>
-                      <Text style={[styles.menuTitle, { color: '#DC2626', fontWeight: '700' }]}>Sign Out</Text>
-                      <Text style={[styles.menuSubtitle, { color: '#991B1B' }]}>Exit your account</Text>
-                    </View>
-                    <View style={styles.signOutArrow}>
-                      <IconSymbol name="chevron.right" size={16} color="#DC2626" />
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </>
+                    <LinearGradient
+                      colors={isDark ? ['#374151', '#4B5563'] : ['#FEE2E2', '#FECACA']}
+                      style={styles.signOutGradient}
+                    >
+                      <View style={[styles.menuIcon, { backgroundColor: '#EF444420' }]}>
+                        <IconSymbol name="rectangle.portrait.and.arrow.right" size={24} color="#DC2626" />
+                      </View>
+                      <View style={styles.menuContent}>
+                        <Text style={[styles.menuTitle, { color: '#DC2626', fontWeight: '700' }]}>Sign Out</Text>
+                        <Text style={[styles.menuSubtitle, { color: '#991B1B' }]}>Exit your account</Text>
+                      </View>
+                      <View style={styles.signOutArrow}>
+                        <IconSymbol name="chevron.right" size={16} color="#DC2626" />
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
           </SafeAreaInsetsContext.Consumer>
         </Animated.View>
@@ -497,7 +510,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: Math.min(320, screenWidth * 0.78), // Cap at 320px or 78% of screen width
+    width: Math.min(280, screenWidth * 0.72), // Narrower: cap at 280px or 72% of screen width
     height: screenHeight,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
@@ -555,13 +568,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.8)',
   },
+  menuWrapper: {
+    flex: 1,
+  },
   menuScrollView: {
     flex: 1,
   },
   menuContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 140, // More space so the sticky Sign Out is not hidden
   },
   menuItem: {
     flexDirection: 'row',
@@ -620,14 +635,9 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     marginLeft: 60,
   },
-  signOutButton: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 16,
-    overflow: 'hidden',
-    zIndex: 10,
-    elevation: 30,
+  signOutContainer: {
+    borderTopWidth: 1,
+    paddingHorizontal: 0,
   },
   signOutGradient: {
     flexDirection: 'row',

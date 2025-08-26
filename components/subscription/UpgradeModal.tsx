@@ -1,5 +1,7 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useSubscription as useSubscriptionContext } from '@/contexts/SubscriptionContext';
+import { useSubscription as useSubscriptionHook } from '@/lib/hooks/useSubscription';
+import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { useTheme } from '@/contexts/ThemeContext';
 import React from 'react';
 import {
@@ -11,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { router } from 'expo-router';
 import { shadow } from '@/lib/ui/shadow';
 
 interface UpgradeModalProps {
@@ -29,8 +32,23 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
     onUpgrade,
 }) => {
     const { theme } = useTheme();
-    const { subscription, aiUsage } = useSubscription();
+    const { subscription, aiUsage } = useSubscriptionContext();
+    const { plans, createSubscription } = useSubscriptionHook();
     const isDark = theme.isDark;
+
+    const [premiumPrice, setPremiumPrice] = React.useState<number | null>(null);
+    React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await SubscriptionService.getEffectivePricing('quantum-pro', 'monthly');
+                if (!cancelled && res && typeof res.price === 'number') {
+                    setPremiumPrice(res.price);
+                }
+            } catch {}
+        })();
+        return () => { cancelled = true; };
+    }, []);
 
     const colors = {
         background: isDark ? '#0B1220' : '#F9FAFB',
@@ -43,18 +61,36 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
         warning: '#F59E0B',
     };
 
-    const handleUpgrade = () => {
+    const handleUpgrade = async () => {
         if (onUpgrade) {
             onUpgrade();
-        } else {
-            // Default upgrade action - show coming soon alert
-            Alert.alert(
-                'Upgrade Coming Soon',
-                'Subscription upgrades will be available soon. Thank you for your interest!',
-                [{ text: 'OK', style: 'default' }]
-            );
+            onClose();
+            return;
         }
-        onClose();
+
+        try {
+            // Prefer creating a subscription directly for the Premium tier
+            const premiumPlan = plans.find(p => p.tier === 'premium');
+            const planId = premiumPlan?.id || 'quantum-pro'; // slug fallback supported by service
+
+            const result = await createSubscription({
+                plan_id: planId,
+                billing_interval: 'monthly',
+                payment_provider: 'payfast',
+            });
+
+            // createSubscription will redirect if a payment_url/approval_url is returned (web)
+            if (!result.success) {
+                // Fallback: open pricing/manage screen so the user can pick another plan
+                router.push('/pricing' as any);
+            }
+        } catch (err) {
+            // Final fallback if anything unexpected happens
+            Alert.alert('Upgrade', 'Redirecting to pricing…');
+            try { router.push('/pricing' as any); } catch {}
+        } finally {
+            onClose();
+        }
     };
 
     const premiumFeatures = [
@@ -87,7 +123,11 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                    <ScrollView 
+                        style={styles.content}
+                        contentContainerStyle={{ paddingBottom: 16 }}
+                        showsVerticalScrollIndicator={false}
+                    >
                         {/* Feature Info */}
                         <View style={styles.featureSection}>
                             <Text style={[styles.featureTitle, { color: colors.text }]}>
@@ -139,7 +179,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                                 <View style={styles.premiumHeader}>
                                     <IconSymbol name="star.fill" size={24} color={colors.premium} />
                                     <Text style={[styles.premiumTitle, { color: colors.premium }]}>Premium Plan</Text>
-                                    <Text style={[styles.premiumPrice, { color: colors.text }]}>R99/month</Text>
+                                    <Text style={[styles.premiumPrice, { color: colors.text }]}>R{(premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed ? (premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed(2) : (premiumPrice ?? 149.99)}/month</Text>
                                 </View>
 
                                 <View style={styles.featuresList}>
@@ -176,7 +216,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                                         <Text style={styles.recommendedText}>RECOMMENDED</Text>
                                     </View>
                                     <Text style={[styles.pricingTitle, { color: colors.premium }]}>Premium</Text>
-                                    <Text style={[styles.pricingPrice, { color: colors.text }]}>R99</Text>
+                                    <Text style={[styles.pricingPrice, { color: colors.text }]}>R{(premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed ? (premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed(2) : (premiumPrice ?? 149.99)}</Text>
                                     <Text style={[styles.pricingPeriod, { color: colors.textSecondary }]}>per month</Text>
                                     <View style={styles.pricingFeatures}>
                                         <Text style={[styles.pricingFeature, { color: colors.text }]}>• Unlimited AI requests</Text>
@@ -219,8 +259,9 @@ const styles = StyleSheet.create({
     },
     modal: {
         width: '90%',
-        maxHeight: '85%',
+        maxHeight: '90%',
         borderRadius: 16,
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',
@@ -240,7 +281,8 @@ const styles = StyleSheet.create({
     },
     content: {
         paddingHorizontal: 20,
-        maxHeight: 400,
+        flexGrow: 1,
+        minHeight: 0,
     },
     featureSection: {
         alignItems: 'center',
@@ -414,4 +456,5 @@ const styles = StyleSheet.create({
 });
 
 export default UpgradeModal;
+
 

@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the webhook for debugging (remove sensitive data in production)
+    console.log('PayPal webhook received', {
       id: event.id,
       event_type: event.event_type,
       resource_type: event.resource_type,

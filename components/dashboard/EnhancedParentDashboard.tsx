@@ -285,6 +285,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         .from('preschools')
         .select('name')
         .eq('id', profile.preschool_id)
+        .limit(1)
         .single();
 
       if (!error && tenant) {
@@ -321,6 +322,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         .from('users')
         .select('id, preschool_id, name, email')
         .eq('auth_user_id', profile.auth_user_id)
+        .limit(1)
         .single();
 
       if (parentError || !parentProfile) {

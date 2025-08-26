@@ -306,6 +306,12 @@ const { data: { session } } = await supabase.auth.getSession();
         <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
           <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Account</Text>
 
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => router.push('/pricing')}>
+            <IconSymbol name="creditcard.fill" size={20} color={colorScheme === 'dark' ? '#93C5FD' : '#0EA5E9'} />
+            <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Manage Subscription / Upgrade</Text>
+            <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
+          </TouchableOpacity>
+          
           <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => handleNavigate('/screens/profile')}>
             <IconSymbol name="person.circle" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>View Profile</Text>

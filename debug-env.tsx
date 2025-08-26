@@ -27,7 +27,7 @@ export default function DebugEnvScreen() {
         <Text style={styles.sectionTitle}>Expected Values:</Text>
         <Text style={styles.expected}>• EXPO_PUBLIC_SUPABASE_URL should be: https://lvvvjywrmpcqrpvuptdi.supabase.co</Text>
         <Text style={styles.expected}>• EXPO_PUBLIC_SUPABASE_ANON_KEY should be: [PRESENT]</Text>
-        <Text style={styles.expected}>• EXPO_PUBLIC_WEB_URL should be: https://app.edudashpro.org.za</Text>
+        <Text style={styles.expected}>• EXPO_PUBLIC_WEB_URL should be: https://www.edudashpro.org.za</Text>
       </View>
     </ScrollView>
   );

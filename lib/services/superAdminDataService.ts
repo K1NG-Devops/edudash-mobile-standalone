@@ -6,6 +6,7 @@
 
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { createLogger } from '@/lib/utils/logger';
+import { validateUUID } from '@/lib/utils/uuid';
 import { Database } from '@/types/database';
 const log = createLogger('superadmin');
 
@@ -135,7 +136,7 @@ export class SuperAdminDataService {
       };
 
     } catch (error) {
-      log.error('Error fetching dashboard data:', error);
+      console.error('❌ [SuperAdmin] Error fetching dashboard data:', error);
       throw error;
     }
   }
@@ -145,20 +146,32 @@ export class SuperAdminDataService {
    */
   static async verifySuperAdminPermissions(userId: string): Promise<boolean> {
     try {
+      if (!userId) {
+        console.error('❌ [SuperAdmin] No user ID provided for permission check');
+        return false;
+      }
+
+      // Validate UUID to prevent database errors
+      const validUserId = validateUUID(userId);
+      if (!validUserId) {
+        console.error('❌ [SuperAdmin] Invalid user ID format:', userId);
+        return false;
+      }
+
       const { data: user, error } = await supabase
         .from('users')
         .select('role, is_active')
-        .eq('auth_user_id', userId)
+        .eq('auth_user_id', validUserId)
         .single();
 
       if (error || !user) {
-        log.error('User not found:', error);
+        console.error('❌ [SuperAdmin] User not found:', error);
         return false;
       }
 
       return user.role === 'superadmin' && !!user.is_active;
     } catch (error) {
-      log.error('Permission verification failed:', error);
+      console.error('❌ [SuperAdmin] Permission verification failed:', error);
       return false;
     }
   }
@@ -168,35 +181,12 @@ export class SuperAdminDataService {
    */
   static async getPlatformStats(): Promise<PlatformStats> {
     try {
-      log.info('📊 [SuperAdmin] Getting platform stats (via edge function)...');
-
-      // Use the new superadmin database function instead of edge functions
-      const { data, error } = await supabase.rpc('get_platform_stats_for_superadmin');
-
-      if (error) {
-        log.warn('⚠️ [SuperAdmin] Database function failed, falling back to direct queries:', error.message);
-      }
-
-      if (data) {
-        return {
-          total_schools: data.total_schools || 0,
-          total_users: data.total_users || 0,
-          total_students: data.total_students || 0,
-          total_teachers: data.total_teachers || 0,
-          total_parents: data.total_parents || 0,
-          active_subscriptions: 0, // TODO: Add to function
-          monthly_revenue: 0,
-          growth_rate: 0,
-          ai_usage_count: data.ai_requests_today || 0,
-          storage_usage_gb: 0
-        };
-      }
-
-      // Fallback (non-privileged): best-effort using anon client
+      // Get school count
       const { count: schoolCount } = await supabase
         .from('preschools')
         .select('*', { count: 'exact', head: true });
 
+      // Get user counts by role
       const { data: userStats } = await supabase
         .from('users')
         .select('role')
@@ -208,10 +198,35 @@ export class SuperAdminDataService {
         return acc;
       }, {}) || {};
 
+      // Get student count
       const { count: studentCount } = await supabase
         .from('students')
         .select('*', { count: 'exact', head: true })
         .eq('is_active', true);
+
+      // Calculate subscription stats (real values available)
+      const { data: subscriptions } = await supabase
+        .from('preschools')
+        .select('subscription_status, subscription_plan');
+
+      const activeSubscriptions = subscriptions?.filter(s => s.subscription_status === 'active').length || 0;
+
+      // Best-effort counts for optional fields (fallback to 0 if table not present)
+      let aiUsageCount = 0;
+      try {
+        const { count: aiCount, error: aiError } = await supabase
+          .from('ai_usage_logs' as any)
+          .select('*', { count: 'exact', head: true });
+        if (!aiError && aiCount !== null && aiCount !== undefined) {
+          aiUsageCount = aiCount;
+        } else {
+          // Table likely doesn't exist, use fallback
+          aiUsageCount = 0;
+        }
+      } catch (_) {
+        // Table doesn't exist or other error
+        aiUsageCount = 0;
+      }
 
       return {
         total_schools: schoolCount || 0,
@@ -219,14 +234,15 @@ export class SuperAdminDataService {
         total_students: studentCount || 0,
         total_teachers: userCounts.teacher || 0,
         total_parents: userCounts.parent || 0,
-        active_subscriptions: 0,
+        active_subscriptions: activeSubscriptions,
+        // The following metrics require external systems; return 0 until integrated
         monthly_revenue: 0,
         growth_rate: 0,
-        ai_usage_count: 0,
+        ai_usage_count: aiUsageCount,
         storage_usage_gb: 0
       };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching platform stats:', error);
+      console.error('❌ [SuperAdmin] Error fetching platform stats:', error);
       return {
         total_schools: 0,
         total_users: 0,
@@ -247,45 +263,18 @@ export class SuperAdminDataService {
    */
   static async getRecentSchools(): Promise<SchoolOverview[]> {
     try {
-      log.info('📊 [SuperAdmin] Getting schools data (via edge function)...');
-
-      // Use the new superadmin database function
-      const { data: functionData, error: functionError } = await supabase.rpc('get_all_schools_for_superadmin');
-
-      if (functionData) {
-        log.info('✅ [SuperAdmin] Schools fetched via database function');
-        return functionData.map((school: any) => ({
-          ...school,
-          user_count: 0, // TODO: Add to function
-          student_count: 0, // TODO: Add to function
-          teacher_count: 0, // TODO: Add to function
-          parent_count: 0, // TODO: Add to function
-          last_activity: new Date().toISOString(),
-          monthly_fee: 0,
-          ai_usage: 0,
-          storage_usage: 0
-        }));
-      }
-
-      if (functionError) {
-        log.warn('⚠️ [SuperAdmin] Edge function failed, using fallback method:', functionError.message);
-      }
-
-      // Fallback: Use admin client if available, otherwise regular client with limited access
-      const client = supabaseAdmin || supabase;
-
-      const { data: schools, error } = await client
+      const { data: schools, error } = await supabase
         .from('preschools')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
 
       if (error || !schools) {
-        log.error('❌ [SuperAdmin] Error fetching schools:', error);
+        console.error('❌ [SuperAdmin] Error fetching schools:', error);
         return [];
       }
 
-      // Enhance each school with user counts
+      // Enhance each school with user counts (pure DB-derived)
       const enhancedSchools = await Promise.all(
         schools.map(async (school) => {
           const [userCount, studentCount] = await Promise.all([
@@ -297,7 +286,7 @@ export class SuperAdminDataService {
           let teachers = 0;
           let parents = 0;
           try {
-            const { data: roleCounts } = await client
+            const { data: roleCounts } = await supabase
               .from('users')
               .select('role')
               .eq('preschool_id', school.id)
@@ -327,7 +316,7 @@ export class SuperAdminDataService {
 
       return enhancedSchools;
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching recent schools:', error);
+      console.error('❌ [SuperAdmin] Error fetching recent schools:', error);
       return [];
     }
   }
@@ -337,37 +326,15 @@ export class SuperAdminDataService {
    */
   static async getRecentUsers(): Promise<UserOverview[]> {
     try {
-      log.info('📊 [SuperAdmin] Getting users data (via edge function)...');
-
-      // Use the new superadmin database function
-      const { data: functionData, error: functionError } = await supabase.rpc('get_all_users_for_superadmin');
-
-      if (functionData) {
-        log.info('✅ [SuperAdmin] Users fetched via database function');
-        return functionData.map((user: any) => ({
-          ...user,
-          school_name: null, // TODO: Join with school data
-          last_login: null, // TODO: Add to function
-          is_suspended: !user.is_active
-        }));
-      }
-
-      if (functionError) {
-        log.warn('⚠️ [SuperAdmin] Edge function failed, using fallback method:', functionError.message);
-      }
-
-      // Fallback: Use admin client if available, otherwise regular client with limited access
-      const client = supabaseAdmin || supabase;
-
       // Get users first
-      const { data: users, error } = await client
+      const { data: users, error } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
 
       if (error || !users) {
-        log.error('❌ [SuperAdmin] Error fetching users:', error);
+        console.error('❌ [SuperAdmin] Error fetching users:', error);
         return [];
       }
 
@@ -377,7 +344,7 @@ export class SuperAdminDataService {
 
       if (schoolIds.length > 0) {
         try {
-          const { data: schools } = await client
+          const { data: schools } = await supabase
             .from('preschools')
             .select('id, name')
             .in('id', schoolIds as string[]);
@@ -389,13 +356,13 @@ export class SuperAdminDataService {
             }, {} as Record<string, string>);
           }
         } catch (schoolError) {
-          log.warn('⚠️ [SuperAdmin] Could not fetch school names:', schoolError);
+          console.warn('⚠️ [SuperAdmin] Could not fetch school names:', schoolError);
         }
       }
 
       const enhancedUsers: UserOverview[] = users.map((user: any) => ({
         ...user,
-        school_name: user.preschool_id ? schoolsMap[user.preschool_id] || 'No School Assigned' : 'No School Assigned',
+        school_name: user.preschool_id ? schoolsMap[user.preschool_id] || null : null,
         // These fields require external sources; provide DB-derived only
         last_login: null,
         is_suspended: !user.is_active,
@@ -406,7 +373,7 @@ export class SuperAdminDataService {
 
       return enhancedUsers;
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching recent users:', error);
+      console.error('❌ [SuperAdmin] Error fetching recent users:', error);
       return [];
     }
   }
@@ -417,10 +384,9 @@ export class SuperAdminDataService {
   static async getPlatformActivity(): Promise<PlatformActivity[]> {
     try {
       const activities: PlatformActivity[] = [];
-      const client = supabaseAdmin || supabase;
 
       // Get recent preschool registrations
-      const { data: recentSchools } = await client
+      const { data: recentSchools } = await supabase
         .from('preschools')
         .select('id, name, created_at, subscription_plan')
         .order('created_at', { ascending: false })
@@ -441,7 +407,7 @@ export class SuperAdminDataService {
       }
 
       // Get recent user registrations
-      const { data: recentUsers } = await client
+      const { data: recentUsers } = await supabase
         .from('users')
         .select('id, name, role, created_at, preschool_id')
         .order('created_at', { ascending: false })
@@ -454,7 +420,7 @@ export class SuperAdminDataService {
 
         if (userSchoolIds.length > 0) {
           try {
-            const { data: userSchools } = await client
+            const { data: userSchools } = await supabase
               .from('preschools')
               .select('id, name')
               .in('id', userSchoolIds as string[]);
@@ -466,7 +432,7 @@ export class SuperAdminDataService {
               }, {} as Record<string, string>);
             }
           } catch (schoolError) {
-            log.warn('⚠️ [SuperAdmin] Could not fetch school names for activity:', schoolError);
+            console.warn('⚠️ [SuperAdmin] Could not fetch school names for activity:', schoolError);
           }
         }
 
@@ -492,7 +458,7 @@ export class SuperAdminDataService {
         .slice(0, 20);
 
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching platform activity:', error);
+      console.error('❌ [SuperAdmin] Error fetching platform activity:', error);
       return [];
     }
   }
@@ -517,13 +483,13 @@ export class SuperAdminDataService {
         apiResponseTime = Date.now() - startTime;
 
         if (dbError) {
-          log.error('❌ [SuperAdmin] Database health check failed:', dbError);
+          console.error('❌ [SuperAdmin] Database health check failed:', dbError);
           databaseStatus = 'error';
         } else {
           databaseStatus = apiResponseTime > 2000 ? 'warning' : 'healthy';
         }
       } catch (error) {
-        log.error('❌ [SuperAdmin] Database health check failed:', error);
+        console.error('❌ [SuperAdmin] Database health check failed:', error);
         databaseStatus = 'error';
         apiResponseTime = Date.now() - startTime;
       }
@@ -533,29 +499,8 @@ export class SuperAdminDataService {
         // Try to get active connections via RPC function
         const { data: connections, error: rpcError } = await supabase
           .rpc('get_active_connections' as any);
-        if (!rpcError && connections !== undefined && connections !== null) {
-          // Normalize various possible shapes into a numeric count
-          let normalized = 0;
-          const c: any = connections as any;
-
-          if (typeof c === 'number') {
-            normalized = c;
-          } else if (Array.isArray(c)) {
-            // If RPC returns rows, use length
-            normalized = c.length;
-          } else if (typeof c === 'object') {
-            // Common patterns: { count: number } or an object map
-            if (typeof c.count === 'number') {
-              normalized = c.count;
-            } else {
-              normalized = Object.keys(c).length;
-            }
-          } else if (typeof c === 'string') {
-            const parsed = Number(c);
-            normalized = Number.isNaN(parsed) ? 0 : parsed;
-          }
-
-          activeConnections = Math.max(0, Number(normalized) || 0);
+        if (!rpcError && connections) {
+          activeConnections = connections;
         } else {
           throw new Error('RPC function not available');
         }
@@ -587,7 +532,7 @@ export class SuperAdminDataService {
         // Rough estimate: each record ~1KB, storage limit assumed 10GB
         storageUsagePercentage = Math.min(Math.round((totalRecords * 1024) / (10 * 1024 * 1024 * 1024) * 100), 100);
       } catch (error) {
-        log.warn('⚠️ [SuperAdmin] Storage calculation failed:', error);
+        console.warn('⚠️ [SuperAdmin] Storage calculation failed:', error);
       }
 
       // Skip error rate calculation if system_logs table is not part of generated types
@@ -608,7 +553,7 @@ export class SuperAdminDataService {
         last_backup: new Date().toISOString() // Would come from backup system
       };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error calculating system health:', error);
+      console.error('❌ [SuperAdmin] Error calculating system health:', error);
       return {
         database_status: 'error',
         api_response_time: 0,
@@ -627,17 +572,14 @@ export class SuperAdminDataService {
    */
   static async getPendingApprovals() {
     try {
-      // Use admin client to bypass RLS for counting pending requests
-      const client = supabaseAdmin || supabase;
-
       // Get pending onboarding requests (schools)
-      const { count: pendingSchools } = await client
+      const { count: pendingSchools } = await supabase
         .from('preschool_onboarding_requests')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
 
       // Get inactive users that might need approval
-      const { count: pendingUsers } = await client
+      const { count: pendingUsers } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('is_active', false)
@@ -652,7 +594,7 @@ export class SuperAdminDataService {
         content_reports: contentReports
       };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching pending approvals:', error);
+      console.error('❌ [SuperAdmin] Error fetching pending approvals:', error);
       return {
         schools: 0,
         users: 0,
@@ -675,8 +617,7 @@ export class SuperAdminDataService {
       // Optional: skip support tickets if table not available in types
 
       // Get suspended schools as security alerts
-      const client = supabaseAdmin || supabase;
-      const { data: suspendedSchools } = await client
+      const { data: suspendedSchools } = await supabase
         .from('preschools')
         .select('id, name, updated_at')
         .eq('subscription_status', 'suspended')
@@ -701,7 +642,7 @@ export class SuperAdminDataService {
         .slice(0, 10);
 
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching system alerts:', error);
+      console.error('❌ [SuperAdmin] Error fetching system alerts:', error);
       return [];
     }
   }
@@ -711,8 +652,7 @@ export class SuperAdminDataService {
    */
 
   static async getSchoolUserCount(schoolId: string) {
-    const client = supabaseAdmin || supabase;
-    const { count } = await client
+    const { count } = await supabase
       .from('users')
       .select('*', { count: 'exact', head: true })
       .eq('preschool_id', schoolId)
@@ -722,8 +662,7 @@ export class SuperAdminDataService {
   }
 
   static async getSchoolStudentCount(schoolId: string) {
-    const client = supabaseAdmin || supabase;
-    const { count } = await client
+    const { count } = await supabase
       .from('students')
       .select('*', { count: 'exact', head: true })
       .eq('preschool_id', schoolId)
@@ -752,7 +691,7 @@ export class SuperAdminDataService {
 
       return { success: true };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error suspending school:', error);
+      console.error('❌ [SuperAdmin] Error suspending school:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -772,7 +711,7 @@ export class SuperAdminDataService {
 
       return { success: true };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error suspending user:', error);
+      console.error('❌ [SuperAdmin] Error suspending user:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -785,11 +724,11 @@ export class SuperAdminDataService {
     subscription_plan?: string;
   }) {
     try {
-      log.info('🏫 [SuperAdmin] Creating school:', schoolData);
+      console.log('🏫 [SuperAdmin] Creating school:', schoolData);
 
       // Check if admin client is available before proceeding
       if (!supabaseAdmin) {
-        log.error('❌ [SuperAdmin] Service role client (supabaseAdmin) is not available');
+        console.error('❌ [SuperAdmin] Service role client (supabaseAdmin) is not available');
         return {
           success: false,
           error: 'Service role client unavailable. Please ensure EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY is properly configured.'
@@ -797,16 +736,16 @@ export class SuperAdminDataService {
       }
 
       // Debug: Log admin client status
-      log.info('🔧 [SuperAdmin] Admin client available, testing connection...');
+      console.log('🔧 [SuperAdmin] Admin client available, testing connection...');
       try {
         const { data: testData, error: testError } = await supabaseAdmin
           .from('users')
           .select('id')
           .limit(1)
-          .maybeSingle();
-        log.info('🔧 [SuperAdmin] Admin client test result:', { testData, testError });
+          .single();
+        console.log('🔧 [SuperAdmin] Admin client test result:', { testData, testError });
       } catch (testEx) {
-        log.info('🔧 [SuperAdmin] Admin client test exception:', testEx);
+        console.log('🔧 [SuperAdmin] Admin client test exception:', testEx);
       }
 
       // First, create the school record using admin client
@@ -825,11 +764,11 @@ export class SuperAdminDataService {
         .single();
 
       if (schoolError) {
-        log.error('❌ [SuperAdmin] Error creating school record:', schoolError);
+        console.error('❌ [SuperAdmin] Error creating school record:', schoolError);
 
         // Handle duplicate email case
         if (schoolError.code === '23505' && schoolError.message.includes('preschools_email_key')) {
-          log.info('🔍 [SuperAdmin] School with this email already exists, checking if setup is complete...');
+          console.log('🔍 [SuperAdmin] School with this email already exists, checking if setup is complete...');
 
           // Check if existing school is complete
           const { data: existingSchool, error: fetchError } = await supabaseAdmin
@@ -865,7 +804,7 @@ export class SuperAdminDataService {
         throw schoolError;
       }
 
-      log.info('✅ [SuperAdmin] School record created:', schoolRecord.id);
+      console.log('✅ [SuperAdmin] School record created:', schoolRecord.id);
 
       // Create a temporary password that meets all Supabase requirements:
       // - lowercase letters, uppercase letters, digits, symbols
@@ -896,7 +835,7 @@ export class SuperAdminDataService {
       const tempPassword = generateSecurePassword();
 
       // Create auth user with minimal metadata to avoid trigger conflicts
-      log.info('🔐 [SuperAdmin] Creating auth user with minimal metadata...');
+      console.log('🔐 [SuperAdmin] Creating auth user with minimal metadata...');
 
       // Prefer service-role client when available (local/dev). In production mobile apps, server functions should be used.
       const adminClient = supabaseAdmin ?? null;
@@ -914,8 +853,8 @@ export class SuperAdminDataService {
         : { data: null as any, error: new Error('Service role client unavailable') as any };
 
       if (authError) {
-        log.error('❌ [SuperAdmin] Error creating auth user:', authError);
-        log.error('❌ [SuperAdmin] Auth error details:', authError.message);
+        console.error('❌ [SuperAdmin] Error creating auth user:', authError);
+        console.error('❌ [SuperAdmin] Auth error details:', authError.message);
 
         // Rollback school creation using admin client
         await supabaseAdmin.from('preschools').delete().eq('id', schoolRecord.id);
@@ -928,7 +867,7 @@ export class SuperAdminDataService {
         };
       }
 
-      log.info('✅ [SuperAdmin] Auth user created:', authUser.user?.id);
+      console.log('✅ [SuperAdmin] Auth user created:', authUser.user?.id);
 
       // Wait a moment for trigger to complete, then check if user profile was created
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -941,7 +880,7 @@ export class SuperAdminDataService {
         .single();
 
       if (checkError || !existingProfile) {
-        log.info('🔧 [SuperAdmin] Trigger did not create user profile, creating manually...');
+        console.log('🔧 [SuperAdmin] Trigger did not create user profile, creating manually...');
 
         // Manually create the user profile record since trigger failed using admin client
         const { error: userInsertError } = await supabaseAdmin
@@ -958,14 +897,14 @@ export class SuperAdminDataService {
           });
 
         if (userInsertError) {
-          log.error('❌ [SuperAdmin] Error creating user profile manually:', userInsertError);
-          log.warn('⚠️ [SuperAdmin] User profile creation failed, but auth user exists.');
+          console.error('❌ [SuperAdmin] Error creating user profile manually:', userInsertError);
+          console.warn('⚠️ [SuperAdmin] User profile creation failed, but auth user exists.');
           // Don't fail the entire process - at minimum the auth user exists
         } else {
-          log.info('✅ [SuperAdmin] User profile created manually');
+          console.log('✅ [SuperAdmin] User profile created manually');
         }
       } else {
-        log.info('✅ [SuperAdmin] User profile created by trigger, updating with preschool info...');
+        console.log('✅ [SuperAdmin] User profile created by trigger, updating with preschool info...');
 
         // Update the profile with the preschool information using admin client
         const { error: updateError } = await supabaseAdmin
@@ -979,13 +918,13 @@ export class SuperAdminDataService {
           .eq('auth_user_id', authUser.user!.id);
 
         if (updateError) {
-          log.warn('⚠️ [SuperAdmin] Could not update user profile with preschool info:', updateError);
+          console.warn('⚠️ [SuperAdmin] Could not update user profile with preschool info:', updateError);
         } else {
-          log.info('✅ [SuperAdmin] User profile updated with preschool info');
+          console.log('✅ [SuperAdmin] User profile updated with preschool info');
         }
       }
 
-      log.info('✅ [SuperAdmin] School and admin created successfully');
+      console.log('✅ [SuperAdmin] School and admin created successfully');
 
       // Send welcome email with login credentials and onboarding guide
       try {
@@ -996,14 +935,14 @@ export class SuperAdminDataService {
           tempPassword: tempPassword,
           schoolId: schoolRecord.id
         });
-        log.info('📧 [SuperAdmin] Welcome email sent successfully');
+        console.log('📧 [SuperAdmin] Welcome email sent successfully');
       } catch (emailError) {
-        log.error('❌ [SuperAdmin] Failed to send welcome email:', emailError);
+        console.error('❌ [SuperAdmin] Failed to send welcome email:', emailError);
         // Don't fail the entire process if email fails
       }
 
       // Log the temporary password for admin reference
-      log.info(`🔑 [SuperAdmin] Temporary password for ${schoolData.email}: ${tempPassword}`);
+      console.log(`🔑 [SuperAdmin] Temporary password for ${schoolData.email}: ${tempPassword}`);
 
       return {
         success: true,
@@ -1012,7 +951,7 @@ export class SuperAdminDataService {
         temp_password: tempPassword
       };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error creating school:', error);
+      console.error('❌ [SuperAdmin] Error creating school:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -1029,6 +968,11 @@ export class SuperAdminDataService {
     schoolId: string;
   }) {
     const { schoolName, adminName, adminEmail, tempPassword, schoolId } = emailData;
+const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.org.za';
+    const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME || '';
+    const loginHref = appScheme
+      ? `${appScheme}://login`
+      : `${webBaseUrl.replace(/\/$/, '')}/login`;
 
     // Create comprehensive welcome email template
     const emailHTML = `
@@ -1081,7 +1025,7 @@ export class SuperAdminDataService {
                       
                       <!-- Login Button -->
                       <div style="text-align: center;">
-                          <a href="https://app.edudashpro.org.za/login" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                          <a href="${loginHref}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
                               🚀 Login to Your Dashboard
                           </a>
                       </div>
@@ -1229,44 +1173,30 @@ export class SuperAdminDataService {
    */
   static async resendWelcomeInstructions(schoolId: string, reason?: string) {
     try {
-      log.info('📧 [SuperAdmin] Resending welcome instructions for school:', schoolId);
-
-      // Use admin client to bypass RLS restrictions for preschools table access
-      const client = supabaseAdmin || supabase;
-      if (!supabaseAdmin) {
-        log.warn('⚠️ [SuperAdmin] Admin client not available, using regular client (may fail due to RLS)');
-      }
+      console.log('📧 [SuperAdmin] Resending welcome instructions for school:', schoolId);
 
       // Get school and admin details from database
-      const { data: school, error: schoolError } = await client
+      const { data: school, error: schoolError } = await supabase
         .from('preschools')
         .select('*')
         .eq('id', schoolId)
-        .maybeSingle();
+        .single();
 
       if (schoolError || !school) {
-        log.error('❌ [SuperAdmin] School lookup failed:', { schoolId, schoolError });
         throw new Error(`School not found: ${schoolError?.message || 'Invalid school ID'}`);
       }
 
-      log.info('✅ [SuperAdmin] Found school:', { id: school.id, name: school.name });
-
       // Get the principal/admin user for this school
-      const { data: admins, error: adminError } = await client
+      const { data: admin, error: adminError } = await supabase
         .from('users')
         .select('*')
         .eq('preschool_id', schoolId)
         .in('role', ['principal', 'admin', 'preschool_admin'])
         .eq('is_active', true)
-        .limit(10);
+        .single();
 
-      if (adminError) {
-        throw new Error(`Failed to query school admins: ${adminError.message}`);
-      }
-
-      const admin = (admins || []).find((u: any) => u.role === 'principal') || (admins || [])[0] || null;
-      if (!admin) {
-        throw new Error('School admin not found: No active principal or admin for this school');
+      if (adminError || !admin) {
+        throw new Error(`School admin not found: ${adminError?.message || 'No active principal found'}`);
       }
 
       // Check if school has been approved (more flexible status checking)
@@ -1296,11 +1226,11 @@ export class SuperAdminDataService {
         : { error: new Error('Service role client unavailable') as any };
 
       if (passwordError) {
-        log.warn('⚠️ [SuperAdmin] Could not update password in Supabase Auth:', passwordError.message);
+        console.warn('⚠️ [SuperAdmin] Could not update password in Supabase Auth:', passwordError.message);
         // Generate a fallback password for the email when auth update fails
         finalPassword = `Temp${Math.random().toString(36).slice(-6)}${Date.now().toString().slice(-4)}!`;
         passwordUpdated = false;
-        log.info('📧 [SuperAdmin] Using fallback password for email due to auth update failure');
+        console.log('📧 [SuperAdmin] Using fallback password for email due to auth update failure');
       }
 
       // Send the welcome email with credentials
@@ -1329,7 +1259,7 @@ export class SuperAdminDataService {
         severity: 'low'
       });
 
-      log.info('✅ [SuperAdmin] Welcome instructions resent successfully');
+      console.log('✅ [SuperAdmin] Welcome instructions resent successfully');
 
       return {
         success: true,
@@ -1338,7 +1268,7 @@ export class SuperAdminDataService {
         password_updated: !passwordError
       };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error resending welcome instructions:', error);
+      console.error('❌ [SuperAdmin] Error resending welcome instructions:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -1588,7 +1518,7 @@ export class SuperAdminDataService {
         activity_by_role: this.groupByRole(activeUsers || [])
       };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching user analytics:', error);
+      console.error('❌ [SuperAdmin] Error fetching user analytics:', error);
       return null;
     }
   }
@@ -1634,7 +1564,7 @@ export class SuperAdminDataService {
         payment_history: payments || []
       };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching revenue analytics:', error);
+      console.error('❌ [SuperAdmin] Error fetching revenue analytics:', error);
       return null;
     }
   }
@@ -1667,7 +1597,7 @@ export class SuperAdminDataService {
         platform_engagement: this.calculateEngagementScore(enrollments || [])
       };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching platform usage:', error);
+      console.error('❌ [SuperAdmin] Error fetching platform usage:', error);
       return null;
     }
   }
@@ -1698,7 +1628,7 @@ export class SuperAdminDataService {
 
       return { success: true };
     } catch (error) {
-      log.error(`❌ [SuperAdmin] Error toggling user status:`, error);
+      console.error(`❌ [SuperAdmin] Error toggling user status:`, error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -1726,7 +1656,7 @@ export class SuperAdminDataService {
 
       return { success: true };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error updating subscription:', error);
+      console.error('❌ [SuperAdmin] Error updating subscription:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
@@ -1736,7 +1666,7 @@ export class SuperAdminDataService {
   static async getSchoolInsights(schoolId: string) {
     try {
       const [school, users, students, messages, lessons] = await Promise.all([
-        supabase.from('preschools').select('*').eq('id', schoolId).maybeSingle(),
+        supabase.from('preschools').select('*').eq('id', schoolId).single(),
         supabase.from('users').select('*').eq('preschool_id', schoolId),
         supabase.from('students').select('*').eq('preschool_id', schoolId),
         supabase.from('messages').select('*').eq('preschool_id', schoolId).limit(100),
@@ -1751,7 +1681,7 @@ export class SuperAdminDataService {
         content_creation: this.analyzeContent(lessons.data || [])
       };
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error fetching school insights:', error);
+      console.error('❌ [SuperAdmin] Error fetching school insights:', error);
       return null;
     }
   }
@@ -1767,9 +1697,9 @@ export class SuperAdminDataService {
   }) {
     try {
       // Optional: log to a generic activity table if available, otherwise no-op
-      log.info('[SuperAdmin] Action:', action.action, action.severity);
+      console.log('[SuperAdmin] Action:', action.action, action.severity);
     } catch (error) {
-      log.error('❌ [SuperAdmin] Error logging system action:', error);
+      console.error('❌ [SuperAdmin] Error logging system action:', error);
     }
   }
 
@@ -1842,5 +1772,28 @@ export class SuperAdminDataService {
       return acc;
     }, {});
     return { total_lessons: lessons.length, by_category: categories };
+  }
+
+
+
+
+
+
+
+  /**
+   * Calculate monthly fee based on plan and student count
+   */
+  static calculateMonthlyFee(plan: string | null, studentCount: number): number {
+    const baseFees = {
+      'trial': 0,
+      'basic': 500,
+      'premium': 1000,
+      'enterprise': 2000
+    };
+    
+    const baseRate = baseFees[plan as keyof typeof baseFees] || 0;
+    const perStudentRate = 50; // R50 per student
+    
+    return baseRate + (studentCount * perStudentRate);
   }
 }

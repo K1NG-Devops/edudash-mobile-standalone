@@ -1,10 +1,9 @@
-import { MobileHeader } from '@/components/navigation/MobileHeader';
+import { StandardizedNavigation } from '@/components/navigation/StandardizedNavigation';
 import AdPlacement from '@/components/ui/AdPlacement';
-import { useBottomTabHeight } from '@/hooks/useBottomTabHeight';
 import { router } from 'expo-router';
-import type { Href } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TabLayoutProps {
   children: React.ReactNode;
@@ -13,37 +12,54 @@ interface TabLayoutProps {
     role: string;
     avatar?: string;
   };
+  schoolName?: string;
+  title?: string;
+  showBackButton?: boolean;
+  onBackPress?: () => void;
   onSignOut?: () => void;
   notificationCount?: number;
 }
 
-export function TabLayout({ children, user, onSignOut, notificationCount }: TabLayoutProps) {
-  const bottomTabHeight = useBottomTabHeight();
-  const handleNavigate = (route: string | Href) => {
-    router.push(route as Href);
+export function TabLayout({ 
+  children, 
+  user, 
+  schoolName,
+  title,
+  showBackButton = false,
+  onBackPress,
+  onSignOut, 
+  notificationCount = 0 
+}: TabLayoutProps) {
+  const insets = useSafeAreaInsets();
+  
+  const handleNavigate = (route: string) => {
+    router.push(route as any);
   };
 
-  const handleNotificationsPress = () => {
-    router.push('/notifications' as Href);
-  };
-
-  const handleSearchPress = () => {
-    router.push('/search' as Href);
+  const handleBackPress = () => {
+    if (onBackPress) {
+      onBackPress();
+    } else {
+      router.back();
+    }
   };
 
   return (
     <View style={styles.container}>
       {user && (
-        <MobileHeader
+        <StandardizedNavigation
           user={user}
+          schoolName={schoolName}
+          title={title}
+          showBackButton={showBackButton}
+          onBackPress={handleBackPress}
           onNavigate={handleNavigate}
           onSignOut={onSignOut}
-          onNotificationsPress={handleNotificationsPress}
           notificationCount={notificationCount}
         />
       )}
       <AdPlacement>
-        <View style={[styles.content, { paddingBottom: bottomTabHeight }]}>
+        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           {children}
         </View>
       </AdPlacement>

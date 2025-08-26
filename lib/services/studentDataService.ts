@@ -283,17 +283,16 @@ export class StudentDataService {
    * Calculate attendance rate (placeholder - would integrate with actual attendance system)
    */
   static async calculateAttendanceRate(studentId: string): Promise<number> {
-    // For now, return a mock value
-    // In real implementation, would query attendance records
-    return Math.floor(Math.random() * 30) + 70; // 70-100%
+    // Until attendance tracking is implemented, return 0 (no mock values)
+    return 0;
   }
 
   /**
    * Get completed activities count
    */
   static async getCompletedActivitiesCount(studentId: string): Promise<number> {
-    // Placeholder - would query actual activity completion records
-    return Math.floor(Math.random() * 25) + 5; // 5-30 activities
+    // Until activity tracking is implemented, return 0 (no mock values)
+    return 0;
   }
 
   /**
@@ -323,38 +322,16 @@ export class StudentDataService {
    * Get recent achievements for student
    */
   static async getRecentAchievements(studentId: string): Promise<string[]> {
-    // Placeholder - would integrate with achievement system
-    const achievements = [
-      'Completed first math puzzle',
-      'Perfect attendance this week',
-      'Helped classmate with art project',
-      'Learned new vocabulary words'
-    ];
-    
-    // Return 0-3 random achievements
-    const count = Math.floor(Math.random() * 4);
-    return achievements.slice(0, count);
+    // No mock achievements
+    return [];
   }
 
   /**
    * Get detailed achievements with metadata
    */
   static async getDetailedAchievements(studentId: string) {
-    // Placeholder for detailed achievements
-    return [
-      {
-        title: 'Math Star',
-        description: 'Completed 5 math activities this week',
-        date: new Date().toISOString(),
-        category: 'academics'
-      },
-      {
-        title: 'Great Helper',
-        description: 'Helped clean up classroom',
-        date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-        category: 'social'
-      }
-    ];
+    // No mock detailed achievements
+    return [] as any[];
   }
 
   /**
@@ -406,89 +383,23 @@ export class StudentDataService {
    * Generate mock mood data (would be real mood tracking in production)
    */
   static generateMockMoodData() {
-    const data = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      data.push({
-        date: date.toISOString().split('T')[0],
-        rating: Math.floor(Math.random() * 3) + 3 // 3-5 stars (generally positive)
-      });
-    }
-    return data;
+    // Remove mock mood data
+    return [] as { date: string; rating: number }[];
   }
 
   /**
    * Get recent updates for students
    */
   static async getRecentUpdates(studentIds: string[]) {
-    // Placeholder for recent updates
-    // In real implementation, would aggregate from homework, messages, activities, etc.
-    const updates = [
-      {
-        id: '1',
-        type: 'homework' as const,
-        title: 'Math worksheet completed',
-        description: 'Great work on addition problems!',
-        timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-        student_id: studentIds[0] || '',
-        icon: 'doc.text.fill'
-      },
-      {
-        id: '2',
-        type: 'activity' as const,
-        title: 'Art project showcase',
-        description: 'Beautiful painting displayed in classroom',
-        timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-        student_id: studentIds[0] || '',
-        icon: 'paintbrush.fill'
-      },
-      {
-        id: '3',
-        type: 'message' as const,
-        title: 'Teacher note',
-        description: 'Had a wonderful day learning about shapes',
-        timestamp: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-        student_id: studentIds[0] || '',
-        icon: 'message.fill'
-      }
-    ];
-
-    return updates.filter(update => studentIds.includes(update.student_id));
+    // No mock updates until real aggregation is implemented
+    return [] as any[];
   }
 
   /**
    * Get upcoming events for students
    */
   static async getUpcomingEvents(studentIds: string[]) {
-    // Placeholder for upcoming events
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 7);
-
-    return [
-      {
-        id: '1',
-        title: 'Science experiment day',
-        description: 'Learning about plants and growth',
-        date: tomorrow.toISOString().split('T')[0],
-        time: '10:00 AM',
-        type: 'activity' as const,
-        location: 'Classroom A',
-        student_id: studentIds[0]
-      },
-      {
-        id: '2',
-        title: 'Parent-teacher meeting',
-        description: 'Discuss progress and development',
-        date: nextWeek.toISOString().split('T')[0],
-        time: '3:00 PM',
-        type: 'meeting' as const,
-        location: 'Main office',
-        student_id: studentIds[0]
-      }
-    ];
+    // No mock events until real events source is implemented
+    return [] as any[];
   }
 }

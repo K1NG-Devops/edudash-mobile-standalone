@@ -150,32 +150,36 @@ serve(async (req) => {
       }
     }
 
-    // Ensure profile exists/updated
-    const { data: profile } = await admin
+    // Ensure profile exists/updated (idempotent, no downgrade of role)
+    const { data: existingProfile } = await admin
       .from('users')
-      .select('id')
+      .select('id, role, name, preschool_id')
       .eq('auth_user_id', authUserId!)
       .maybeSingle();
 
-    if (!profile) {
-      const { error: insertErr } = await admin.from('users').insert({
-        auth_user_id: authUserId!,
-        email,
-        name,
-        role,
-        preschool_id,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as any);
-      if (insertErr) return json({ error: `Failed to create profile: ${insertErr.message}` }, 500);
-    } else {
-      const { error: updErr } = await admin
-        .from('users')
-        .update({ name, role, preschool_id, updated_at: new Date().toISOString() } as any)
-        .eq('auth_user_id', authUserId!);
-      if (updErr) return json({ error: `Failed to update profile: ${updErr.message}` }, 500);
-    }
+    const roleRank: Record<string, number> = { parent: 1, teacher: 2, preschool_admin: 3, superadmin: 4 };
+    const normalizeRole = (r: string | null | undefined) => (r || '').toLowerCase();
+    const currentRole = normalizeRole(existingProfile?.role);
+    const inviteRole = normalizeRole(role);
+    const finalRole = (!currentRole || (roleRank[inviteRole] || 0) > (roleRank[currentRole] || 0)) ? inviteRole : currentRole;
+
+    const nowIso = new Date().toISOString();
+    const upsertPayload: any = {
+      auth_user_id: authUserId!,
+      email,
+      name: name || existingProfile?.name || email.split('@')[0],
+      role: finalRole || 'parent',
+      preschool_id, // Assign/inherit school from invitation
+      is_active: true,
+      updated_at: nowIso,
+      created_at: existingProfile ? undefined : nowIso,
+    };
+
+    // Use upsert for idempotency and to avoid race conditions
+    const { error: upsertErr } = await admin
+      .from('users')
+      .upsert(upsertPayload, { onConflict: 'auth_user_id' } as any);
+    if (upsertErr) return json({ error: `Failed to upsert profile: ${upsertErr.message}` }, 500);
 
     // Do NOT link parent->child here. Parent first joins the school; child registration happens later.
 
@@ -198,7 +202,9 @@ serve(async (req) => {
 
       try {
         // New table: update usage counters and deactivate when max_uses reached
-        const nextUses = (invite?.current_uses ?? 0) + 1;
+        const alreadyUsedByThisUser = String(invite?.used_by || '') === String(authUserId);
+        const increment = alreadyUsedByThisUser ? 0 : 1;
+        const nextUses = (invite?.current_uses ?? 0) + increment;
         const hasMax = typeof invite?.max_uses === 'number' && invite.max_uses > 0;
         const stillActive = hasMax ? nextUses < invite.max_uses : true;
         await admin

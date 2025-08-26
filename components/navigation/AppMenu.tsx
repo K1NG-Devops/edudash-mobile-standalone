@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors, getRoleColors } from '@/constants/Colors';
+import { router } from 'expo-router';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -64,6 +65,14 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
         route: '/notifications',
         badge: 3,
         color: '#8B5CF6',
+      },
+      {
+        id: 'pricing',
+        title: 'Pricing & Plans',
+        subtitle: 'Upgrade or manage subscription',
+        icon: 'creditcard.fill',
+        route: '/pricing',
+        color: '#0EA5E9',
       },
     ];
 
@@ -310,8 +319,15 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
     if (item.action) {
       item.action();
     } else if (item.route) {
-      // Navigate to route
-
+      try {
+        if (item.route.startsWith('/')) {
+          router.push(item.route as any);
+        } else {
+          router.push(`/${item.route}` as any);
+        }
+      } catch (e) {
+        // no-op
+      }
     }
     this.props.onClose();
   };

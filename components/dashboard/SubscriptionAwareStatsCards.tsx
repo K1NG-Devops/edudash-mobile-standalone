@@ -16,6 +16,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { UsageTrackingService, UsageStats } from '@/lib/services/usageTrackingService';
+import { ColorValue } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -36,10 +37,10 @@ interface StatCardData {
   value: string;
   subtitle: string;
   icon: string;
-  gradient: string[];
+  gradient: readonly [ColorValue, ColorValue, ...ColorValue[]];
   usageInfo?: {
     used: number;
-    limit: number | null;
+    limit: number;
     feature: string;
   };
   isPremium?: boolean;
@@ -110,7 +111,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
         value: childData.completed_activities.toString(),
         subtitle: 'Completed',
         icon: 'figure.run',
-        gradient: ['#10B981', '#059669']
+        gradient: ['#10B981', '#059669'] as const
       });
 
       baseCards.push({
@@ -119,7 +120,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
         value: childData.pending_homework.toString(),
         subtitle: 'Pending',
         icon: 'doc.text',
-        gradient: ['#F59E0B', '#D97706']
+        gradient: ['#F59E0B', '#D97706'] as const
       });
 
       baseCards.push({
@@ -128,7 +129,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
         value: `${childData.attendance_percentage}%`,
         subtitle: 'This Month',
         icon: 'checkmark.circle',
-        gradient: ['#3B82F6', '#2563EB']
+        gradient: ['#3B82F6', '#2563EB'] as const
       });
     }
 
@@ -143,7 +144,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
           ? `of ${usageStats.quotas.ai_lessons_per_day} today`
           : 'Unlimited',
         icon: 'brain.head.profile',
-        gradient: ['#8B5CF6', '#7C3AED'],
+        gradient: ['#8B5CF6', '#7C3AED'] as const,
         usageInfo: usageStats.quotas.ai_lessons_per_day ? {
           used: usageStats.ai_lessons_used_today,
           limit: usageStats.quotas.ai_lessons_per_day,
@@ -161,7 +162,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
           ? `of ${usageStats.quotas.homework_grading_per_day} today`
           : 'Unlimited',
         icon: 'doc.text.below.ecg',
-        gradient: ['#06B6D4', '#0891B2'],
+        gradient: ['#06B6D4', '#0891B2'] as const,
         usageInfo: usageStats.quotas.homework_grading_per_day ? {
           used: usageStats.homework_graded_today,
           limit: usageStats.quotas.homework_grading_per_day,
@@ -180,7 +181,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
             ? `of ${usageStats.quotas.ai_tutoring_sessions_per_day} today`
             : 'Unlimited',
           icon: 'person.2.badge.gearshape',
-          gradient: ['#EC4899', '#DB2777'],
+        gradient: ['#EC4899', '#DB2777'] as const,
           usageInfo: usageStats.quotas.ai_tutoring_sessions_per_day ? {
             used: usageStats.ai_tutoring_sessions_today,
             limit: usageStats.quotas.ai_tutoring_sessions_per_day,
@@ -199,7 +200,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
           value: '🔒',
           subtitle: 'Premium Only',
           icon: 'chart.bar.xaxis',
-          gradient: ['#6B7280', '#4B5563'],
+          gradient: ['#6B7280', '#4B5563'] as const,
           isPremium: true,
           isLocked: true
         });
@@ -210,7 +211,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
           value: usageStats.premium_features_accessed_today.toString(),
           subtitle: 'Reports Viewed',
           icon: 'chart.bar.xaxis',
-          gradient: ['#7C3AED', '#6D28D9'],
+          gradient: ['#7C3AED', '#6D28D9'] as const,
           isPremium: true
         });
       }
@@ -408,13 +409,13 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
   return (
     <View style={styles.container}>
       {/* Usage warnings banner */}
-      {usageStats?.usage_warnings.length > 0 && !compact && (
+      {usageStats?.usage_warnings?.length > 0 && !compact && (
         <View style={[styles.warningsBanner, { backgroundColor: palette.surface }]}>
           <IconSymbol name="exclamationmark.triangle.fill" size={16} color="#F59E0B" />
           <Text style={[styles.warningsText, { color: palette.text }]}>
-            {usageStats.usage_warnings[0].message}
+            {usageStats?.usage_warnings?.[0]?.message}
           </Text>
-          {usageStats.upgrade_recommended && (
+          {usageStats?.upgrade_recommended && (
             <TouchableOpacity 
               style={styles.upgradeButton}
               onPress={() => onUpgradePress ? onUpgradePress() : router.push('/pricing')}

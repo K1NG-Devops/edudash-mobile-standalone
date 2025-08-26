@@ -1,17 +1,7 @@
 import { supabase } from '../supabase';
-import type { Database } from '../../types/database';
 import { createLogger } from '@/lib/utils/logger';
 
 const log = createLogger('subscription');
-
-// Database types
-type SubscriptionPlanDB = Database['public']['Tables']['subscription_plans']['Row'];
-type PlatformSubscriptionDB = Database['public']['Tables']['platform_subscriptions']['Row'];
-type SubscriptionPaymentDB = Database['public']['Tables']['subscription_payments']['Row'];
-type SubscriptionEventDB = Database['public']['Tables']['subscription_events']['Row'];
-
-type CreateSubscriptionData = Database['public']['Tables']['platform_subscriptions']['Insert'];
-type CreatePaymentData = Database['public']['Tables']['subscription_payments']['Insert'];
 
 // =====================================================
 // TYPES & INTERFACES
@@ -227,9 +217,131 @@ export class SubscriptionService {
     ? 'https://www.payfast.co.za/eng/process'
     : 'https://sandbox.payfast.co.za/eng/process';
 
+  // Promotional pricing rules
+  // Note: These are applied dynamically at subscription creation time and do not
+  // mutate DB plan definitions. DB remains the source of truth for non-promo pricing.
+  private static promoRules: Record<string, {
+    limit: number;            // Maximum number of subscribers eligible
+    monthly: number;          // Promotional monthly price
+    annualMultiplier?: number; // Optional multiplier for annual discount (e.g., 0.83 for ~17% off)
+    enabled: boolean;
+  }> = {
+    'quantum-pro': {
+      limit: 100,
+      monthly: 149.99,
+      annualMultiplier: 0.83,
+      enabled: true,
+    },
+  };
+
   // =====================================================
   // SUBSCRIPTION PLANS MANAGEMENT
   // =====================================================
+
+  /**
+   * Map a DB row to the app's SubscriptionPlan shape
+   * DB schema (subscription_plans): id(uuid), name(text), price_monthly(numeric), price_annual(numeric),
+   * features(jsonb), ai_quota_monthly(int), max_students(int), max_teachers(int), is_active(bool), created_at(ts)
+   */
+  private static mapDBPlanToSubscriptionPlan(db: any): SubscriptionPlan {
+    const name: string = db.name || '';
+    const lower = name.toLowerCase();
+
+    // Prefer DB tier if present; otherwise derive from name
+    let derivedTier: PlanTier = 'free';
+    if (lower.includes('neural')) derivedTier = 'starter';
+    else if (lower.includes('quantum')) derivedTier = 'premium';
+    else if (lower.includes('singularity') || lower.includes('enterprise')) derivedTier = 'enterprise';
+
+    const tier: PlanTier = (db.tier as PlanTier) || derivedTier;
+
+    const price_monthly = typeof db.price_monthly === 'string' ? parseFloat(db.price_monthly) : (db.price_monthly ?? 0);
+    const price_annual = typeof db.price_annual === 'string' ? parseFloat(db.price_annual) : (db.price_annual ?? 0);
+
+    // Derive limits from existing columns
+    const ai_quota_monthly: number | null = db.ai_quota_monthly ?? null;
+    const ai_lessons_per_day: number | null = ai_quota_monthly != null ? Math.max(0, Math.floor(ai_quota_monthly / 30)) : null;
+
+    const limits = {
+      students: db.max_students ?? null,
+      ai_lessons_per_day,
+      ai_tutors: null as number | null,
+      schools: tier === 'enterprise' ? null : 1,
+      storage_gb: null as number | null,
+    };
+
+    return {
+      // Use DB UUID as the plan id to maintain FK integrity
+      id: String(db.id),
+      name,
+      tier,
+      price_monthly,
+      price_annual,
+      currency: db.currency || 'ZAR',
+      features: Array.isArray(db.features) ? db.features : (db.features ? db.features : []),
+      limits,
+      // Trial defaults: match product expectations but allow override later if added to schema
+      trial_days: tier === 'starter' || tier === 'premium' ? 14 : tier === 'enterprise' ? 30 : 0,
+      is_active: !!db.is_active,
+      created_at: db.created_at || new Date().toISOString(),
+      updated_at: db.updated_at || db.created_at || new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Resolve effective pricing for a plan, applying promotional rules when eligible.
+   * This does not mutate the plan; it returns the effective price to charge.
+   */
+  static async getEffectivePricing(
+    planIdentifier: string,
+    billingInterval: BillingInterval
+  ): Promise<{ price: number; currency: string; isPromo: boolean; plan: SubscriptionPlan | null }> {
+    const plan = await this.getSubscriptionPlan(planIdentifier);
+    if (!plan) return { price: 0, currency: 'ZAR', isPromo: false, plan: null };
+
+    // Detect promo eligibility for Quantum Pro
+    const nameLower = (plan.name || '').toLowerCase();
+    const idLower = String(planIdentifier || '').toLowerCase();
+    const isQuantum = plan.tier === 'premium' && (nameLower.includes('quantum') || idLower === 'quantum-pro');
+
+    let isPromo = false;
+    let price = billingInterval === 'monthly' ? plan.price_monthly : plan.price_annual;
+
+    if (isQuantum && this.promoRules['quantum-pro']?.enabled) {
+      try {
+        // Attempt to count current subscribers for this specific plan ID (DB UUID required)
+        let promoAvailable = true;
+
+        // Only check counts if the plan ID looks like a UUID; otherwise assume promo available (dev fallback)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(plan.id)) {
+          const { count } = await supabase
+            .from('platform_subscriptions')
+            .select('id', { count: 'exact', head: true })
+            .eq('plan_id', plan.id)
+            .in('status', ['trial', 'active', 'past_due']);
+
+          const { limit } = this.promoRules['quantum-pro'];
+          promoAvailable = (count || 0) < limit;
+        }
+
+        if (promoAvailable) {
+          isPromo = true;
+          if (billingInterval === 'monthly') {
+            price = this.promoRules['quantum-pro'].monthly;
+          } else {
+            const multiplier = this.promoRules['quantum-pro'].annualMultiplier ?? 1;
+            price = Math.round(this.promoRules['quantum-pro'].monthly * 12 * multiplier * 100) / 100;
+          }
+        }
+      } catch (err) {
+        // On any error, fall back to non-promo price rather than blocking purchase
+        log.error('Error evaluating promo eligibility:', err);
+      }
+    }
+
+    return { price, currency: plan.currency, isPromo, plan };
+  }
 
   /**
    * Get all available subscription plans
@@ -243,7 +355,8 @@ export class SubscriptionService {
         .order('price_monthly', { ascending: true });
 
       if (error) throw error;
-    return (plans || []) as SubscriptionPlan[];
+
+      return (plans || []).map(this.mapDBPlanToSubscriptionPlan.bind(this));
     } catch (error) {
       log.error('Error fetching subscription plans:', error);
       return [];
@@ -251,19 +364,135 @@ export class SubscriptionService {
   }
 
   /**
-   * Get subscription plan by ID or tier
+   * Get subscription plan by ID (slug/UUID), tier, or name, mapping DB rows to app shape.
    */
   static async getSubscriptionPlan(identifier: string): Promise<SubscriptionPlan | null> {
     try {
-      const { data: plan, error } = await supabase
-        .from('subscription_plans')
-        .select('*')
-        .or(`id.eq.${identifier},tier.eq.${identifier}`)
-        .eq('is_active', true)
-        .single();
+      if (!identifier) return null;
+      const idLower = String(identifier).toLowerCase();
 
-      if (error) throw error;
-      return plan as SubscriptionPlan;
+      // Recognize common slugs and tiers
+      const slugToName: Record<string, string> = {
+        'free-tier': 'Free Tier',
+        'neural-starter': 'Neural Starter',
+        'quantum-pro': 'Quantum Pro',
+        'singularity': 'Singularity',
+        free: 'Free Tier',
+        starter: 'Neural Starter',
+        premium: 'Quantum Pro',
+        enterprise: 'Singularity',
+      };
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+      let planRow: any | null = null;
+
+      if (uuidRegex.test(identifier)) {
+        // Lookup by UUID id
+        const { data, error } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .eq('id', identifier)
+          .eq('is_active', true)
+          .single();
+        if (error) {
+          log.info('Plan lookup by UUID failed, will attempt name/slug mapping:', error.message || error);
+        }
+        planRow = data ?? null;
+      }
+
+      if (!planRow) {
+        // Try to resolve to a known display name via slug/tier
+        const targetName = slugToName[idLower] || identifier;
+        const { data, error } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .eq('name', targetName)
+          .eq('is_active', true)
+          .maybeSingle();
+        if (!error && data) {
+          planRow = data;
+        }
+      }
+
+      if (planRow) {
+        return this.mapDBPlanToSubscriptionPlan(planRow);
+      }
+
+      // Fallback mapping for dev/local when DB is empty or unmatched
+      const now = new Date().toISOString();
+      const map: Record<string, SubscriptionPlan> = {
+        'free-tier': {
+          id: 'free-tier',
+          name: 'Free Tier',
+          tier: 'free',
+          price_monthly: 0,
+          price_annual: 0,
+          currency: 'ZAR',
+          features: ['basic_lessons', 'class_management', 'student_enrollment'],
+          limits: { students: 3, ai_lessons_per_day: 0, ai_tutors: 0, schools: 1, storage_gb: 1 },
+          trial_days: 0,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        },
+        'neural-starter': {
+          id: 'neural-starter',
+          name: 'Neural Starter',
+          tier: 'starter',
+          price_monthly: 49,
+          price_annual: Math.round(49 * 12 * 0.83),
+          currency: 'ZAR',
+          features: ['ai_lesson_generator', 'class_management', 'basic_lessons', 'student_enrollment'],
+          limits: { students: 15, ai_lessons_per_day: 5, ai_tutors: 2, schools: 1, storage_gb: 5 },
+          trial_days: 14,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        },
+        'quantum-pro': {
+          id: 'quantum-pro',
+          name: 'Quantum Pro',
+          tier: 'premium',
+          price_monthly: 149,
+          price_annual: Math.round(149 * 12 * 0.83),
+          currency: 'ZAR',
+          features: ['ai_lesson_generator', 'homework_grader', 'stem_activities', 'progress_analysis', 'class_management', 'basic_lessons', 'student_enrollment'],
+          limits: { students: 50, ai_lessons_per_day: null, ai_tutors: 5, schools: 1, storage_gb: 50 },
+          trial_days: 14,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        },
+        'singularity': {
+          id: 'singularity',
+          name: 'Enterprise',
+          tier: 'enterprise',
+          price_monthly: 999,
+          price_annual: Math.round(999 * 12 * 0.83),
+          currency: 'ZAR',
+          features: ['ai_lesson_generator', 'homework_grader', 'stem_activities', 'progress_analysis', 'class_management', 'basic_lessons', 'student_enrollment'],
+          limits: { students: null, ai_lessons_per_day: null, ai_tutors: null, schools: null, storage_gb: null },
+          trial_days: 30,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        },
+      };
+
+      if (map[idLower]) return map[idLower];
+
+      // Try tier to slug fallback
+      const tierMap: Record<string, string> = {
+        free: 'free-tier',
+        starter: 'neural-starter',
+        premium: 'quantum-pro',
+        enterprise: 'singularity',
+      };
+      const mapped = tierMap[idLower];
+      if (mapped && map[mapped]) return map[mapped];
+
+      return null;
     } catch (error) {
       log.error('Error fetching subscription plan:', error);
       return null;
@@ -271,19 +500,20 @@ export class SubscriptionService {
   }
 
   /**
-   * Get subscription plan by tier specifically
+   * Get subscription plan by tier specifically (maps tier to display name)
    */
   static async getPlanByTier(tier: PlanTier): Promise<SubscriptionPlan | null> {
     try {
-      const { data: plan, error } = await supabase
+      const { data: planRow } = await supabase
         .from('subscription_plans')
         .select('*')
         .eq('tier', tier)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      return plan as SubscriptionPlan;
+      if (planRow) return this.mapDBPlanToSubscriptionPlan(planRow);
+      // Fallback: attempt lookup by name mapping if tier column not present/populated
+      return await this.getSubscriptionPlan(tier);
     } catch (error) {
       log.error('Error fetching subscription plan by tier:', error);
       return null;
@@ -363,7 +593,7 @@ export class SubscriptionService {
       const plan = await this.getSubscriptionPlan(request.plan_id);
       if (!plan) return null;
 
-      const amount = request.billing_interval === 'monthly' ? plan.price_monthly : plan.price_annual;
+      const { price: effectivePrice, isPromo } = await this.getEffectivePricing(request.plan_id, request.billing_interval);
       const frequency = request.billing_interval === 'monthly' ? '3' : '6'; // 3 = Monthly, 6 = Annual
       
       // Calculate billing date (start after trial period or immediately)
@@ -384,12 +614,12 @@ export class SubscriptionService {
         name_last: request.user_details.last_name,
         email_address: request.user_details.email,
         m_payment_id: paymentId,
-        amount: plan.trial_days > 0 ? '0.00' : amount.toFixed(2), // Free during trial
-        item_name: `EduDash Pro ${plan.name}`,
+        amount: plan.trial_days > 0 ? '0.00' : effectivePrice.toFixed(2), // Free during trial
+        item_name: `EduDash Pro ${plan.name}${isPromo ? ' (Promo)' : ''}`,
         item_description: `${plan.name} subscription - ${request.billing_interval} billing`,
         subscription_type: '1', // Regular subscription
         billing_date: billingDate.toISOString().split('T')[0], // YYYY-MM-DD format
-        recurring_amount: amount.toFixed(2),
+        recurring_amount: effectivePrice.toFixed(2),
         frequency: frequency,
         cycles: '0' // Until cancelled
       };
@@ -860,12 +1090,15 @@ export class SubscriptionService {
         periodEnd.setFullYear(periodEnd.getFullYear() + 1);
       }
 
+      // Determine effective recurring amount (handles promotional pricing)
+      const { price: effectivePrice, isPromo } = await this.getEffectivePricing(plan.id, request.billing_interval);
+
       const subscriptionData = {
         user_id: request.user_id,
         plan_id: plan.id,
         status: plan.trial_days > 0 ? 'trial' as SubscriptionStatus : 'active' as SubscriptionStatus,
         billing_interval: request.billing_interval,
-        amount: request.billing_interval === 'monthly' ? plan.price_monthly : plan.price_annual,
+        amount: effectivePrice,
         currency: plan.currency,
         trial_start: plan.trial_days > 0 ? now.toISOString() : null,
         trial_end: trialEnd?.toISOString() || null,
@@ -873,7 +1106,11 @@ export class SubscriptionService {
         current_period_end: periodEnd.toISOString(),
         payment_provider: request.payment_provider,
         provider_customer_id: request.provider_customer_id || null,
-        metadata: request.metadata || {},
+        metadata: {
+          ...(request.metadata || {}),
+          is_promo_price: isPromo,
+          effective_price: effectivePrice,
+        },
         created_at: now.toISOString(),
         updated_at: now.toISOString()
       };

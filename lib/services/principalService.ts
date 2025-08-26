@@ -132,14 +132,14 @@ export class PrincipalService {
         log.warn('Error fetching new enrollments:', enrollmentsError);
       }
 
-      // Calculate attendance rate (mock for now - would need attendance table)
-      const attendanceRate = 85 + Math.random() * 15; // Mock data: 85-100%
+      // Attendance rate: until an attendance table is available, report 0 (no mock values)
+      const attendanceRate = 0;
 
       // Calculate monthly revenue based on actual data
       const monthlyRevenue = await this.getMonthlyRevenue(preschoolId, totalStudents || 0);
 
-      // Pending payments - calculate as percentage of students (more realistic)
-      const pendingPayments = Math.max(1, Math.floor((totalStudents || 0) * 0.15)); // ~15% of students might have pending payments
+      // Pending payments: without a billing ledger, do not guess
+      const pendingPayments = 0;
 
       const stats: PrincipalStats = {
         totalStudents: totalStudents || 0,
@@ -257,92 +257,50 @@ export class PrincipalService {
         return { data: null, error: 'No preschool ID provided' };
       }
 
-      // Build query
-      const query: any = supabase
+      const { data: results, error } = await supabase
         .from('school_invitation_codes')
         .select('*')
         .eq('preschool_id', preschoolId)
         .eq('is_active', true)
         .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-      // Prefer maybeSingle for compatibility with tests/mocks; fallback to array
-      if (typeof query.maybeSingle === 'function') {
-        const { data, error } = await query.maybeSingle();
-        if (error) {
-          log.error('Database error getting active school invitation code:', error);
-          return { data: null, error };
-        }
-        if (!data) {
-          return { data: null, error: null };
-        }
-        const validatedCode: SchoolInvitationCode = {
-          id: (data as any).id,
-          code: (data as any).code,
-          preschool_id: (data as any).preschool_id,
-          created_by: (data as any).created_by || (data as any).invited_by,
-          created_at: ((data as any).created_at || new Date().toISOString()) as string,
-          expires_at: ((data as any).expires_at || new Date(Date.now() + 86400000).toISOString()) as string,
-          is_active: Boolean((data as any).is_active ?? false),
-          usage_count: ((data as any).current_uses ?? 0) as number,
-          max_usage: ((data as any).max_uses ?? undefined) as number | undefined,
-          description: (data as any).description || '',
-        };
-        return { data: validatedCode, error: null };
-      } else {
-        const { data: results, error } = await query;
-        if (error) {
-          log.error('Database error getting active school invitation code:', error);
-          return { data: null, error };
-        }
+      if (error) {
+        log.error('Database error getting active school invitation code:', error);
+        return { data: null, error };
+      }
 
-        // If no results, return null
-        if (!results || results.length === 0) {
-          return { data: null, error: null };
-        }
+      // If no results, return null
+      if (!results || results.length === 0) {
+        return { data: null, error: null };
+      }
 
-        // If multiple results, log warning and deactivate older ones
-        if (results.length > 1) {
-          log.warn(`Found ${results.length} active invitation codes for preschool ${preschoolId}. Deactivating older ones.`);
-          
-          // Keep the most recent one, deactivate the rest
-          const mostRecent = results[0];
-          const olderCodes = results.slice(1);
-          
-          // Deactivate older codes in the background (don't wait)
-          for (const oldCode of olderCodes) {
-            supabase
-              .from('school_invitation_codes')
-              .update({ is_active: false })
-              .eq('id', oldCode.id)
-              .then(({ error: deactivateError }) => {
-                if (deactivateError) {
-                  log.warn(`Failed to deactivate duplicate code ${oldCode.id}:`, deactivateError);
-                } else {
-                  log.info(`Deactivated duplicate invitation code ${oldCode.code}`);
-                }
-              });
-          }
-          
-          // Use the most recent code
-          const data = mostRecent;
-          const validatedCode: SchoolInvitationCode = {
-            id: data.id,
-            code: data.code,
-            preschool_id: data.preschool_id,
-            created_by: (data as any).created_by || (data as any).invited_by,
-            created_at: (data.created_at || new Date().toISOString()) as string,
-            expires_at: (data.expires_at || new Date(Date.now() + 86400000).toISOString()) as string,
-            is_active: Boolean(data.is_active ?? false),
-            usage_count: (data.current_uses ?? 0) as number,
-            max_usage: (data.max_uses ?? undefined) as number | undefined,
-            description: (data as any).description || '',
-          };
-          return { data: validatedCode, error: null };
+      // If multiple results, log warning and deactivate older ones
+      if (results.length > 1) {
+        log.warn(`Found ${results.length} active invitation codes for preschool ${preschoolId}. Deactivating older ones.`);
+        
+        // Keep the most recent one, deactivate the rest
+        const mostRecent = results[0];
+        const olderCodes = results.slice(1);
+        
+        // Deactivate older codes in the background (don't wait)
+        for (const oldCode of olderCodes) {
+          supabase
+            .from('school_invitation_codes')
+            .update({ is_active: false })
+            .eq('id', oldCode.id)
+            .then(({ error: deactivateError }) => {
+              if (deactivateError) {
+                log.warn(`Failed to deactivate duplicate code ${oldCode.id}:`, deactivateError);
+              } else {
+                log.info(`Deactivated duplicate invitation code ${oldCode.code}`);
+              }
+            });
         }
-
-        // Single result - normal case
-        const data = results[0];
+        
+        // Use the most recent code
+        const data = mostRecent;
         const validatedCode: SchoolInvitationCode = {
           id: data.id,
           code: data.code,
@@ -357,6 +315,22 @@ export class PrincipalService {
         };
         return { data: validatedCode, error: null };
       }
+
+      // Single result - normal case
+      const data = results[0];
+      const validatedCode: SchoolInvitationCode = {
+        id: data.id,
+        code: data.code,
+        preschool_id: data.preschool_id,
+        created_by: (data as any).created_by || (data as any).invited_by,
+        created_at: (data.created_at || new Date().toISOString()) as string,
+        expires_at: (data.expires_at || new Date(Date.now() + 86400000).toISOString()) as string,
+        is_active: Boolean(data.is_active ?? false),
+        usage_count: (data.current_uses ?? 0) as number,
+        max_usage: (data.max_uses ?? undefined) as number | undefined,
+        description: (data as any).description || '',
+      };
+      return { data: validatedCode, error: null };
     } catch (error) {
       log.error('Error getting active school invitation code:', error);
       return { data: null, error };

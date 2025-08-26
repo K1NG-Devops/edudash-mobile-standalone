@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the webhook for debugging (remove in production)
+    console.log('PayFast webhook received', {
       m_payment_id: notification.m_payment_id,
       pf_payment_id: notification.pf_payment_id,
       payment_status: notification.payment_status,

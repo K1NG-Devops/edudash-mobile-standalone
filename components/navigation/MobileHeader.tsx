@@ -227,6 +227,17 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   />
                 </TouchableOpacity>
 
+                {/* Manage Subscription Button */}
+                {onNavigate && (
+                  <TouchableOpacity
+                    style={styles.modernActionButton}
+                    onPress={() => onNavigate('/pricing')}
+                    activeOpacity={0.7}
+                  >
+                    <IconSymbol name="creditcard.fill" size={18} color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
+
                 {/* Notifications Button */}
                 {onNotificationsPress && (
                   <TouchableOpacity

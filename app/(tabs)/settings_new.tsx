@@ -146,15 +146,22 @@ export default function SettingsNewScreen() {
         {/* Account Section */}
         <View style={[styles.section, { backgroundColor: palette.surface }]}>
           <Text style={[styles.sectionTitle, { color: palette.text }]}>Account</Text>
+
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: palette.surface }]}
+            onPress={() => router.push('/pricing')}
+          >
+            <IconSymbol name="creditcard.fill" size={20} color={palette.primary} />
+            <Text style={[styles.actionButtonText, { color: palette.text }]}>Manage Subscription / Upgrade</Text>
+            <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
+          </TouchableOpacity>
           
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: palette.surface }]}
             onPress={handleSignOut}
           >
             <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color={palette.error} />
-            <Text style={[styles.actionButtonText, { color: palette.error }]}>
-              Sign Out
-            </Text>
+            <Text style={[styles.actionButtonText, { color: palette.error }]}>Sign Out</Text>
             <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
           </TouchableOpacity>
         </View>

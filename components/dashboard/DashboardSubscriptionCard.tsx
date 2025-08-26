@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  ColorValue,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -87,7 +88,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       return {
         status: 'Free',
         color: '#6B7280',
-        bgColor: ['#F3F4F6', '#E5E7EB'],
+        bgColor: ['#F3F4F6', '#E5E7EB'] as const,
         icon: 'star.circle'
       };
     }
@@ -97,28 +98,28 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
         return {
           status: 'Active',
           color: '#10B981',
-          bgColor: ['#D1FAE5', '#A7F3D0'],
+          bgColor: ['#D1FAE5', '#A7F3D0'] as const,
           icon: 'checkmark.circle.fill'
         };
       case 'trial':
         return {
           status: 'Trial',
           color: '#F59E0B',
-          bgColor: ['#FEF3C7', '#FDE68A'],
+          bgColor: ['#FEF3C7', '#FDE68A'] as const,
           icon: 'clock.fill'
         };
       case 'past_due':
         return {
           status: 'Past Due',
           color: '#EF4444',
-          bgColor: ['#FEE2E2', '#FECACA'],
+          bgColor: ['#FEE2E2', '#FECACA'] as const,
           icon: 'exclamationmark.triangle.fill'
         };
       default:
         return {
           status: 'Inactive',
           color: '#6B7280',
-          bgColor: ['#F3F4F6', '#E5E7EB'],
+          bgColor: ['#F3F4F6', '#E5E7EB'] as const,
           icon: 'xmark.circle.fill'
         };
     }
@@ -140,7 +141,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       'Choose an option',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'View Billing', onPress: () => router.push('/(dashboard)/account/billing') },
+        { text: 'View Billing', onPress: () => router.push('/(tabs)/settings_new') },
         { text: 'Change Plan', onPress: () => router.push('/pricing') },
       ]
     );

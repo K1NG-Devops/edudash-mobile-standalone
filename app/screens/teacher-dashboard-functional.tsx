@@ -394,6 +394,13 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                         onSignOut={async () => {
                             try { await signOut(); } catch { }
                         }}
+                        onNavigate={(route: string) => {
+                            if (route.startsWith('/')) {
+                                router.push(route as any);
+                            } else {
+                                router.push(`/screens/${route}` as any);
+                            }
+                        }}
                     />
                 )}
             </AuthConsumer>
