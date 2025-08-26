@@ -98,7 +98,7 @@ export const SafeBannerAd = ({
   const handleSafeAdClick = () => {
     // Track child-safe ad interaction
     trackRevenue({
-      type: 'child-safe-ad',
+      type: 'ad-click',
       value: 0.5, // Lower revenue but child-safe
       source: 'safe-banner',
       userId: 'current-user',

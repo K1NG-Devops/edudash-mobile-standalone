@@ -218,7 +218,7 @@ export class TeacherDataService {
             last_name: studentDetails.last_name,
             full_name: `${studentDetails.first_name} ${studentDetails.last_name}`,
             age: student.age,
-            date_of_birth: studentDetails.date_of_birth,
+            date_of_birth: studentDetails.date_of_birth || '',
             class_name: classData.name,
             parent_name: parentRecord?.name || 'Unknown Parent',
             parent_email: parentRecord?.email || '',

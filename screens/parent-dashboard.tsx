@@ -149,7 +149,7 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
       if (childrenError) throw childrenError;
 
       // Format children data
-      const children: Child[] = (childrenData || []).map(child => {
+      const children: Child[] = ((childrenData || []) as any[]).map((child: any) => {
         const enrollment = child.student_enrollments?.[0];
         const classInfo = enrollment?.classes;
         const attendanceRecord = child.attendance_records?.[0];
@@ -194,9 +194,9 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
       if (activitiesError) throw activitiesError;
 
       // Format activities data
-      const recentActivities: Activity[] = (activitiesData || [])
-        .filter(activity => activity.activity_progress?.[0])
-        .map(activity => {
+      const recentActivities: Activity[] = ((activitiesData || []) as any[])
+        .filter((activity: any) => activity.activity_progress?.[0])
+        .map((activity: any) => {
           const progress = activity.activity_progress[0];
           return {
             id: activity.id,
@@ -205,7 +205,7 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
             child_id: progress.student_id,
             child_name: progress.students?.full_name || 'Unknown',
             score: progress.score || 0,
-            completed_at: activity.completed_at,
+            completed_at: progress.completed_at,
             activity_type: activity.activity_type,
           };
         });
@@ -234,13 +234,13 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
       if (assignmentsError) throw assignmentsError;
 
       // Format assignments data
-      const assignments: Assignment[] = (assignmentsData || [])
-        .filter(assignment => assignment.assignment_submissions?.[0])
-        .map(assignment => {
+      const assignments: Assignment[] = ((assignmentsData || []) as any[])
+        .filter((assignment: any) => assignment.assignment_submissions?.[0])
+        .map((assignment: any) => {
           const submission = assignment.assignment_submissions[0];
           const now = new Date();
-          const createdDate = new Date(assignment.created_at || new Date());
-          const dueDate = new Date(createdDate.getTime() + (assignment.due_date_offset_days * 24 * 60 * 60 * 1000));
+          const createdDate = assignment.created_at ? new Date(assignment.created_at) : new Date();
+          const dueDate = new Date(createdDate.getTime() + ((assignment.due_date_offset_days || 0) * 24 * 60 * 60 * 1000));
           
           let status: Assignment['status'] = submission.status as Assignment['status'];
           if (status === 'pending' && dueDate < now) {
@@ -280,7 +280,7 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
 
       if (eventsError) throw eventsError;
 
-      const events: SchoolEvent[] = eventsData || [];
+      const events: SchoolEvent[] = ((eventsData || []) as any[]);
 
       // Load messages for the parent
       const { data: messagesData, error: messagesError } = await supabase
@@ -304,12 +304,12 @@ export default class ParentDashboard extends React.Component<ParentDashboardProp
       if (messagesError) throw messagesError;
 
       // Format messages data
-      const messages: Message[] = (messagesData || []).map(message => ({
+      const messages: Message[] = ((messagesData || []) as any[]).map((message: any) => ({
         id: message.id,
         sender_name: message.sender?.full_name || 'Unknown',
         sender_role: message.sender?.role || 'unknown',
         subject: message.subject,
-        preview: message.preview,
+        preview: message.preview || '',
         sent_at: message.sent_at,
         is_read: message.is_read,
         priority: message.priority,

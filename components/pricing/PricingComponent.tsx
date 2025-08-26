@@ -70,7 +70,7 @@ export const PricingComponent = ({
   showComparison?: boolean;
 }) => {
   const { user, session } = useAuth();
-  const { subscription, createSubscription, loading: subscriptionLoading, error: subscriptionError } = useSubscription();
+  const { subscription, createSubscription, loading: subscriptionLoading, error: subscriptionError, plans } = useSubscription();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'parent' | 'teacher' | 'principal' | null>(defaultSelectedRole);

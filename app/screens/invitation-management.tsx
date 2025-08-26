@@ -33,8 +33,8 @@ interface InvitationCode {
   id: string;
   code: string;
   invitation_type: string | null;
-  invited_email: string;
-  expires_at: string;
+  invited_email: string | null;
+  expires_at: string | null;
   max_uses: number | null;
   current_uses: number | null;
   created_at: string | null;
@@ -209,7 +209,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
   };
 
   const renderInvitationCard = ({ item }: { item: InvitationCode }) => {
-    const isExpired = new Date(item.expires_at) < new Date();
+    const isExpired = item.expires_at ? new Date(item.expires_at) < new Date() : false;
     const isExhausted = (item.current_uses || 0) >= (item.max_uses || 1);
     const isActive = item.is_active && !isExpired && !isExhausted;
 
@@ -226,7 +226,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
           <View style={styles.invitationActions}>
             <TouchableOpacity
               style={styles.shareButton}
-              onPress={() => shareInvitationCode(item.code, item.invited_email, item.invitation_type || 'user')}
+              onPress={() => shareInvitationCode(item.code, item.invited_email || '', item.invitation_type || 'user')}
             >
               <IconSymbol name="square.and.arrow.up" size={16} color="#3B82F6" />
             </TouchableOpacity>
@@ -260,7 +260,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
             Uses: {item.current_uses || 0} / {item.max_uses || 1}
           </Text>
           <Text style={styles.expiryText}>
-            Expires: {new Date(item.expires_at).toLocaleDateString()}
+            Expires: {item.expires_at ? new Date(item.expires_at).toLocaleDateString() : '—'}
           </Text>
         </View>
 

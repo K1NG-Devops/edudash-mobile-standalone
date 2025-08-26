@@ -415,7 +415,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                         compact={true}
                         onUpgrade={() => setUpgradeModal({
                             visible: true,
-                            featureName: 'Upgrade to Premium',
+                            featureName: 'Upgrade to Quantum Pro',
                             description: 'Unlock unlimited AI features and advanced tools for your classroom.'
                         })}
                     />

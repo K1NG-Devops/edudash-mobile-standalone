@@ -3,7 +3,7 @@ import { AuthProvider } from '@/contexts/SimpleWorkingAuth';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import * as Notifications from 'expo-notifications';
 import { Stack, usePathname, ErrorBoundaryProps } from 'expo-router';
-import { useEffect, ErrorBoundary } from 'react';
+import { useEffect } from 'react';
 import { Platform, View, StyleSheet, Text } from 'react-native';
 import GlobalBottomNav from '@/components/navigation/GlobalBottomNav';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

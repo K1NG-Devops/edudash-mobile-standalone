@@ -33,7 +33,8 @@
     "node_modules",
     "supabase/functions/**",
     "archive/**",
-    "legacy/_excluded/**"
+    "legacy/_excluded/**",
+    "app/api/**"
   ],
   "extends": "expo/tsconfig.base"
 }

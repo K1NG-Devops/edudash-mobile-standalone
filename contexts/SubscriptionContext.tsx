@@ -136,7 +136,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
                 .from('users')
                 .select('subscription_tier, subscription_status, role')
                 .eq('auth_user_id', userId)
-                .single();
+                .maybeSingle();
 
             if (userError && userError.code !== 'PGRST116') {
                 // If columns don't exist yet, continue with default values

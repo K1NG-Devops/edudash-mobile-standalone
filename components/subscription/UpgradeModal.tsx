@@ -174,12 +174,12 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
 
                         {/* Premium Benefits */}
                         <View style={styles.benefitsSection}>
-                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Unlock with Premium</Text>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Unlock with Quantum Pro</Text>
                             <View style={[styles.premiumCard, { backgroundColor: `${colors.premium}10`, borderColor: colors.premium }]}>
                                 <View style={styles.premiumHeader}>
                                     <IconSymbol name="star.fill" size={24} color={colors.premium} />
-                                    <Text style={[styles.premiumTitle, { color: colors.premium }]}>Premium Plan</Text>
-                                    <Text style={[styles.premiumPrice, { color: colors.text }]}>R{(premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed ? (premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed(2) : (premiumPrice ?? 149.99)}/month</Text>
+                                    <Text style={[styles.premiumTitle, { color: colors.premium }]}>Quantum Pro</Text>
+<Text style={[styles.premiumPrice, { color: colors.text }]}>R{Number(premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed(2)}/month</Text>
                                 </View>
 
                                 <View style={styles.featuresList}>
@@ -216,7 +216,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                                         <Text style={styles.recommendedText}>RECOMMENDED</Text>
                                     </View>
                                     <Text style={[styles.pricingTitle, { color: colors.premium }]}>Premium</Text>
-                                    <Text style={[styles.pricingPrice, { color: colors.text }]}>R{(premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed ? (premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed(2) : (premiumPrice ?? 149.99)}</Text>
+<Text style={[styles.pricingPrice, { color: colors.text }]}>R{Number(premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed(2)}</Text>
                                     <Text style={[styles.pricingPeriod, { color: colors.textSecondary }]}>per month</Text>
                                     <View style={styles.pricingFeatures}>
                                         <Text style={[styles.pricingFeature, { color: colors.text }]}>• Unlimited AI requests</Text>
@@ -236,7 +236,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                             style={[styles.upgradeButton, { backgroundColor: colors.premium }]}
                             onPress={handleUpgrade}
                         >
-                            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                            <Text style={styles.upgradeButtonText}>Upgrade to Quantum Pro</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
                             <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>

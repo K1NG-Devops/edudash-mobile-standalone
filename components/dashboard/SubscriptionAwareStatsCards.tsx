@@ -409,7 +409,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
   return (
     <View style={styles.container}>
       {/* Usage warnings banner */}
-      {usageStats?.usage_warnings?.length > 0 && !compact && (
+      {((usageStats?.usage_warnings?.length ?? 0) > 0) && !compact && (
         <View style={[styles.warningsBanner, { backgroundColor: palette.surface }]}>
           <IconSymbol name="exclamationmark.triangle.fill" size={16} color="#F59E0B" />
           <Text style={[styles.warningsText, { color: palette.text }]}>

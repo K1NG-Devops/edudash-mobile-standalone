@@ -102,16 +102,30 @@ export function useSubscription(): UseSubscriptionReturn {
     try {
       setError(null);
       
-      const originEnv = process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '';
-      const origin = originEnv || ((typeof window !== 'undefined') ? window.location.origin : '');
+      // Resolve app base (used for user-facing return/cancel pages)
+      const appBaseEnv = process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+      const appBase = appBaseEnv || ((typeof window !== 'undefined') ? window.location.origin : '');
+
+      // Resolve API backend base (server that handles subscriptions)
+      // If EXPO_PUBLIC_API_BASE is provided, we call that server (recommended for static hosting)
+      // Otherwise, fall back to the same domain's /api (only valid if server routes are deployed there)
+      const apiBase = process.env.EXPO_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_BASE || '';
+
+      const webhookBase = process.env.EXPO_PUBLIC_WEBHOOK_BASE || apiBase || appBase;
+
+      // Resolve function names for Supabase Edge Functions
+      const fnCreate = process.env.EXPO_PUBLIC_SUBSCRIPTIONS_CREATE_FN || 'subscriptions-create';
+      const fnPayfast = process.env.EXPO_PUBLIC_WEBHOOK_PAYFAST_FN || 'webhooks-payfast';
+      const fnPaypal = process.env.EXPO_PUBLIC_WEBHOOK_PAYPAL_FN || 'webhooks-paypal';
+      const providerFn = params.payment_provider === 'payfast' ? fnPayfast : (params.payment_provider === 'paypal' ? fnPaypal : `webhooks-${params.payment_provider}`);
 
       const requestBody = {
         plan_id: params.plan_id,
         billing_interval: params.billing_interval,
         payment_provider: params.payment_provider,
-        return_url: `${origin}/payment/success`,
-        cancel_url: `${origin}/payment/cancel`,
-        notify_url: `${origin}/api/webhooks/${params.payment_provider}`,
+        return_url: `${appBase}/payment/success`,
+        cancel_url: `${appBase}/payment/cancel`,
+        notify_url: `${(webhookBase || '').replace(/\/$/, '')}/${providerFn}`,
         user_details: {
           first_name: params.user_details?.first_name || user.user_metadata?.first_name || user.user_metadata?.name?.split(' ')[0] || 'User',
           last_name: params.user_details?.last_name || user.user_metadata?.last_name || user.user_metadata?.name?.split(' ').slice(1).join(' ') || 'Name',
@@ -119,9 +133,11 @@ export function useSubscription(): UseSubscriptionReturn {
         }
       };
 
-      // Always prefer explicit API base if provided, even on web (Expo dev server won't host Next API routes)
-      const baseUrl = process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '';
-      const response = await fetch(`${baseUrl}/api/subscriptions/create`, {
+      // Pick the correct create-subscription endpoint depending on whether an external API base is provided
+      // For Supabase Edge Functions, apiBase should be ...supabase.co/functions/v1 and fnCreate is the function name
+      const sanitizedApiBase = (apiBase || '').replace(/\/$/, '');
+      const createPath = apiBase ? `${sanitizedApiBase}/${fnCreate}` : `${appBase}/api/subscriptions/create`;
+      const response = await fetch(createPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

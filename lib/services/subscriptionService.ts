@@ -41,18 +41,20 @@ export interface PlatformSubscription {
   billing_interval: BillingInterval;
   amount: number;
   currency: string;
-  trial_start?: string;
-  trial_end?: string;
+  trial_start?: string | null;
+  trial_end?: string | null;
   current_period_start: string;
   current_period_end: string;
-  canceled_at?: string;
-  ended_at?: string;
+  canceled_at?: string | null;
+  ended_at?: string | null;
   payment_provider: PaymentProvider;
-  provider_subscription_id?: string;
-  provider_customer_id?: string;
-  metadata?: Record<string, any>;
+  provider_subscription_id?: string | null;
+  provider_customer_id?: string | null;
+  metadata?: Record<string, any> | null;
   created_at: string;
   updated_at: string;
+  // Optional joined plan info when selected with plan:subscription_plans(*)
+  plan?: { name?: string | null; tier?: PlanTier | null } | null;
 }
 
 export interface PayPalSubscriptionResponse {
@@ -203,19 +205,39 @@ export interface PayFastSubscriptionData {
 // =====================================================
 
 export class SubscriptionService {
-  private static paypalClientId = process.env.EXPO_PUBLIC_PAYPAL_CLIENT_ID;
-  private static paypalClientSecret = process.env.EXPO_PUBLIC_PAYPAL_CLIENT_SECRET;
-  private static paypalBaseUrl = process.env.EXPO_PUBLIC_PAYPAL_ENV === 'production' 
-    ? 'https://api-m.paypal.com' 
-    : 'https://api-m.sandbox.paypal.com';
-  
-  // PayFast configuration
-  private static payfastMerchantId = process.env.EXPO_PUBLIC_PAYFAST_MERCHANT_ID;
-  private static payfastMerchantKey = process.env.EXPO_PUBLIC_PAYFAST_MERCHANT_KEY;
-  private static payfastPassphrase = process.env.EXPO_PUBLIC_PAYFAST_PASSPHRASE;
-  private static payfastBaseUrl = process.env.EXPO_PUBLIC_PAYFAST_ENV === 'production'
-    ? 'https://www.payfast.co.za/eng/process'
-    : 'https://sandbox.payfast.co.za/eng/process';
+  // Server-only credentials helpers. Do NOT expose secrets in client bundles.
+  private static getPayPalCreds() {
+    return {
+      clientId: process.env.PAYPAL_CLIENT_ID,
+      clientSecret: process.env.PAYPAL_CLIENT_SECRET,
+    } as { clientId?: string; clientSecret?: string };
+  }
+
+  private static getPaypalBaseUrl() {
+    return (process.env.EXPO_PUBLIC_PAYPAL_ENV === 'production')
+      ? 'https://api-m.paypal.com'
+      : 'https://api-m.sandbox.paypal.com';
+  }
+
+  private static getPayfastConfig() {
+    return {
+      merchantId: process.env.PAYFAST_MERCHANT_ID,
+      merchantKey: process.env.PAYFAST_MERCHANT_KEY,
+      passphrase: process.env.PAYFAST_PASSPHRASE,
+    } as { merchantId?: string; merchantKey?: string; passphrase?: string };
+  }
+
+  private static getPayfastBaseUrl() {
+    return (process.env.EXPO_PUBLIC_PAYFAST_ENV === 'production')
+      ? 'https://www.payfast.co.za/eng/process'
+      : 'https://sandbox.payfast.co.za/eng/process';
+  }
+
+  private static getPayfastValidateUrl() {
+    return (process.env.EXPO_PUBLIC_PAYFAST_ENV === 'production')
+      ? 'https://www.payfast.co.za/eng/query/validate'
+      : 'https://sandbox.payfast.co.za/eng/query/validate';
+  }
 
   // Promotional pricing rules
   // Note: These are applied dynamically at subscription creation time and do not
@@ -535,7 +557,7 @@ export class SubscriptionService {
         .single();
 
       if (error) throw error;
-      return upsertedPlan;
+      return this.mapDBPlanToSubscriptionPlan(upsertedPlan);
     } catch (error) {
       log.error('Error upserting subscription plan:', error);
       return null;
@@ -604,9 +626,15 @@ export class SubscriptionService {
 
       const paymentId = `edudash-${request.user_id}-${Date.now()}`;
       
+      const { merchantId, merchantKey, passphrase } = this.getPayfastConfig();
+      if (!merchantId || !merchantKey) {
+        log.error('Missing PayFast credentials (PAYFAST_MERCHANT_ID/KEY)');
+        return null;
+      }
+
       const subscriptionData: PayFastSubscriptionData = {
-        merchant_id: this.payfastMerchantId!,
-        merchant_key: this.payfastMerchantKey!,
+        merchant_id: merchantId,
+        merchant_key: merchantKey,
         return_url: request.return_url,
         cancel_url: request.cancel_url,
         notify_url: request.notify_url,
@@ -625,12 +653,12 @@ export class SubscriptionService {
       };
 
       // Add passphrase if available
-      if (this.payfastPassphrase) {
-        subscriptionData.passphrase = this.payfastPassphrase;
+      if (passphrase) {
+        subscriptionData.passphrase = passphrase;
       }
 
       // Generate signature
-      subscriptionData.signature = this.generatePayFastSignature(subscriptionData as any, this.payfastPassphrase);
+      subscriptionData.signature = this.generatePayFastSignature(subscriptionData as any, passphrase);
 
       // Create the payment URL with parameters
       const params = new URLSearchParams();
@@ -640,7 +668,7 @@ export class SubscriptionService {
         }
       });
 
-      const paymentUrl = `${this.payfastBaseUrl}?${params.toString()}`;
+      const paymentUrl = `${this.getPayfastBaseUrl()}?${params.toString()}`;
 
       return {
         payment_url: paymentUrl,
@@ -657,11 +685,13 @@ export class SubscriptionService {
    */
   static async validatePayFastITN(notification: PayFastNotification): Promise<boolean> {
     try {
+      const { passphrase, merchantId } = this.getPayfastConfig();
+
       // Validate signature
-      const dataToValidate = { ...notification };
+      const dataToValidate: any = { ...notification };
       delete dataToValidate.signature;
       
-      const calculatedSignature = this.generatePayFastSignature(dataToValidate as any, this.payfastPassphrase);
+      const calculatedSignature = this.generatePayFastSignature(dataToValidate as any, passphrase);
       
       if (calculatedSignature !== notification.signature) {
         log.error('PayFast signature validation failed');
@@ -669,7 +699,7 @@ export class SubscriptionService {
       }
 
       // Validate merchant ID
-      if (notification.merchant_id !== this.payfastMerchantId) {
+      if (merchantId && notification.merchant_id !== merchantId) {
         log.error('PayFast merchant ID validation failed');
         return false;
       }
@@ -682,9 +712,7 @@ export class SubscriptionService {
         }
       });
 
-      const validationUrl = process.env.EXPO_PUBLIC_PAYFAST_ENV === 'production'
-        ? 'https://www.payfast.co.za/eng/query/validate'
-        : 'https://sandbox.payfast.co.za/eng/query/validate';
+      const validationUrl = this.getPayfastValidateUrl();
 
       const response = await fetch(validationUrl, {
         method: 'POST',
@@ -749,7 +777,7 @@ export class SubscriptionService {
         .eq('metadata->payment_id', notification.m_payment_id);
 
       // Log the successful payment
-      const { error: logError } = await supabase
+      const { error: logError } = await (supabase as any)
         .from('subscription_payments')
         .insert({
           subscription_id: notification.m_payment_id,
@@ -798,7 +826,7 @@ export class SubscriptionService {
   private static async handlePayFastPaymentPending(notification: PayFastNotification): Promise<boolean> {
     try {
       // Log the pending payment but don't change subscription status yet
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('subscription_payments')
         .insert({
           subscription_id: notification.m_payment_id,
@@ -828,9 +856,14 @@ export class SubscriptionService {
    */
   private static async getPayPalAccessToken(): Promise<string | null> {
     try {
-      const auth = Buffer.from(`${this.paypalClientId}:${this.paypalClientSecret}`).toString('base64');
+      const { clientId, clientSecret } = this.getPayPalCreds();
+      if (!clientId || !clientSecret) {
+        log.error('Missing PayPal credentials (PAYPAL_CLIENT_ID/SECRET)');
+        return null;
+      }
+      const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
       
-      const response = await fetch(`${this.paypalBaseUrl}/v1/oauth2/token`, {
+      const response = await fetch(`${this.getPaypalBaseUrl()}/v1/oauth2/token`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
@@ -916,7 +949,7 @@ export class SubscriptionService {
         }
       };
 
-      const response = await fetch(`${this.paypalBaseUrl}/v1/billing/plans`, {
+      const response = await fetch(`${this.getPaypalBaseUrl()}/v1/billing/plans`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -977,7 +1010,7 @@ export class SubscriptionService {
         }
       };
 
-      const response = await fetch(`${this.paypalBaseUrl}/v1/billing/subscriptions`, {
+      const response = await fetch(`${this.getPaypalBaseUrl()}/v1/billing/subscriptions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1017,7 +1050,7 @@ export class SubscriptionService {
       const accessToken = await this.getPayPalAccessToken();
       if (!accessToken) return null;
 
-      const response = await fetch(`${this.paypalBaseUrl}/v1/billing/subscriptions/${subscriptionId}`, {
+      const response = await fetch(`${this.getPaypalBaseUrl()}/v1/billing/subscriptions/${subscriptionId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -1046,7 +1079,7 @@ export class SubscriptionService {
       const accessToken = await this.getPayPalAccessToken();
       if (!accessToken) return false;
 
-      const response = await fetch(`${this.paypalBaseUrl}/v1/billing/subscriptions/${subscriptionId}/cancel`, {
+      const response = await fetch(`${this.getPaypalBaseUrl()}/v1/billing/subscriptions/${subscriptionId}/cancel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1122,7 +1155,7 @@ export class SubscriptionService {
         .single();
 
       if (error) throw error;
-      return subscription;
+      return subscription as unknown as PlatformSubscription;
     } catch (error) {
       log.error('Error creating subscription:', error);
       return null;
@@ -1144,10 +1177,10 @@ export class SubscriptionService {
         .in('status', ['trial', 'active', 'past_due'])
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
-      return subscription;
+      if (error) throw error;
+      return (subscription as unknown as PlatformSubscription) || null;
     } catch (error) {
       log.error('Error fetching user subscription:', error);
       return null;
@@ -1367,7 +1400,7 @@ export class SubscriptionService {
       .eq('status', 'past_due');
 
     // Log the successful payment
-    const { error: logError } = await supabase
+    const { error: logError } = await (supabase as any)
       .from('subscription_payments')
       .insert({
         subscription_id: subscriptionId,
@@ -1447,7 +1480,7 @@ export class SubscriptionService {
       });
 
       // Get recent transactions
-      const { data: recentTransactions } = await supabase
+      const { data: recentTransactions } = await (supabase as any)
         .from('subscription_payments')
         .select(`
           id,
@@ -1462,7 +1495,7 @@ export class SubscriptionService {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      const formattedTransactions = (recentTransactions || []).map(t => ({
+      const formattedTransactions = ((recentTransactions as any[]) || []).map((t: any) => ({
         id: t.id,
         user_email: t.subscription?.user?.email || 'Unknown',
         plan_name: t.subscription?.plan?.name || 'Unknown',
@@ -1510,7 +1543,7 @@ export class SubscriptionService {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
         
-        const { data: payments } = await supabase
+      const { data: payments } = await (supabase as any)
           .from('subscription_payments')
           .select('amount')
           .gte('processed_at', date.toISOString())
@@ -1523,7 +1556,7 @@ export class SubscriptionService {
           .gte('created_at', date.toISOString())
           .lt('created_at', nextMonth.toISOString());
 
-        const revenue = (payments || []).reduce((sum, p) => sum + p.amount, 0);
+      const revenue = Array.isArray(payments) ? (payments as any[]).reduce((sum, p: any) => sum + (p.amount ?? 0), 0) : 0;
         const subscribers = (subscriptions || []).length;
 
         trends.push({

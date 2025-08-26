@@ -824,7 +824,7 @@ export default function SchoolAdminDashboard({
         aiUsage={aiUsage}
         loading={loading}
         compact={true}
-        onUpgrade={() => setUpgradeModal({ visible: true, featureName: 'Upgrade to Premium', description: 'Unlock advanced school analytics, priority support, and more.' })}
+        onUpgrade={() => setUpgradeModal({ visible: true, featureName: 'Upgrade to Quantum Pro', description: 'Unlock advanced school analytics, priority support, and more.' })}
       />
     );
   };
@@ -841,7 +841,7 @@ export default function SchoolAdminDashboard({
         </View>
         <TouchableOpacity
           style={styles.upgradeCtaButton}
-          onPress={() => setUpgradeModal({ visible: true, featureName: 'Upgrade to Premium', description })}
+          onPress={() => setUpgradeModal({ visible: true, featureName: 'Upgrade to Quantum Pro', description })}
         >
           <Text style={styles.upgradeCtaButtonText}>Upgrade</Text>
         </TouchableOpacity>

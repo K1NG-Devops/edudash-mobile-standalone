@@ -147,7 +147,7 @@ export class UsageTrackingService {
         created_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('usage_logs')
         .insert(entry);
 
@@ -187,13 +187,13 @@ export class UsageTrackingService {
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
 
-      const { data: todayUsage } = await supabase
+      const { data: todayUsage } = await (supabase as any)
         .from('usage_logs')
         .select('feature_type, usage_count')
         .eq('user_id', userId)
         .gte('created_at', todayStart.toISOString());
 
-      const { data: monthUsage } = await supabase
+      const { data: monthUsage } = await (supabase as any)
         .from('usage_logs')
         .select('feature_type, usage_count')
         .eq('user_id', userId)
@@ -323,7 +323,7 @@ export class UsageTrackingService {
       const startDate = dateRange?.start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const endDate = dateRange?.end || new Date();
 
-      const { data: usageLogs } = await supabase
+      const { data: usageLogs } = await (supabase as any)
         .from('usage_logs')
         .select(`
           user_id,
@@ -341,31 +341,33 @@ export class UsageTrackingService {
 
       if (!usageLogs) return null;
 
-      const totalUsage = usageLogs.reduce((sum, log) => sum + log.usage_count, 0);
+      const logs = (usageLogs as any[]) || [];
+
+      const totalUsage = logs.reduce((sum, log: any) => sum + (log.usage_count ?? 0), 0);
 
       // Usage by feature
-      const usageByFeature = usageLogs.reduce((acc, log) => {
+      const usageByFeature = logs.reduce((acc: Record<string, number>, log: any) => {
         const feature = `${log.feature_type}: ${log.feature_name}`;
-        acc[feature] = (acc[feature] || 0) + log.usage_count;
+        acc[feature] = (acc[feature] || 0) + (log.usage_count ?? 0);
         return acc;
       }, {} as Record<string, number>);
 
       // Usage by tier
-      const usageByTier = usageLogs.reduce((acc, log) => {
+      const usageByTier = logs.reduce((acc: Record<string, number>, log: any) => {
         const tier = log.user?.subscription?.plan?.tier || 'free';
-        acc[tier] = (acc[tier] || 0) + log.usage_count;
+        acc[tier] = (acc[tier] || 0) + (log.usage_count ?? 0);
         return acc;
       }, {} as Record<string, number>);
 
       // Top users
-      const userUsage = usageLogs.reduce((acc, log) => {
+      const userUsage = logs.reduce((acc: Record<string, { user_id: string; total_usage: number; tier: string }>, log: any) => {
         const userId = log.user_id;
         const tier = log.user?.subscription?.plan?.tier || 'free';
         
         if (!acc[userId]) {
           acc[userId] = { user_id: userId, total_usage: 0, tier };
         }
-        acc[userId].total_usage += log.usage_count;
+        acc[userId].total_usage += (log.usage_count ?? 0);
         return acc;
       }, {} as Record<string, { user_id: string; total_usage: number; tier: string }>);
 
@@ -499,7 +501,7 @@ export class UsageTrackingService {
       yesterday.setHours(23, 59, 59, 999);
 
       // Archive old usage data (move to usage_logs_archive table)
-      const { error: archiveError } = await supabase
+      const { error: archiveError } = await (supabase as any)
         .from('usage_logs_archive')
         .insert([
           // This would typically be done with a SQL function or cron job
@@ -509,7 +511,7 @@ export class UsageTrackingService {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { error: cleanupError } = await supabase
+      const { error: cleanupError } = await (supabase as any)
         .from('usage_logs')
         .delete()
         .lt('created_at', thirtyDaysAgo.toISOString());

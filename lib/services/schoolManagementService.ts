@@ -169,11 +169,11 @@ export class SchoolManagementService {
         throw error;
       }
 
-      return {
-        success: true,
-        invitation_code: invitationCode,
-        expires_at: data.expires_at,
-      };
+        return {
+          success: true,
+          invitation_code: invitationCode,
+          expires_at: data.expires_at ?? undefined,
+        };
 
     } catch (error: any) {
       console.error('Error creating principal invitation:', error);
@@ -219,7 +219,7 @@ export class SchoolManagementService {
       return {
         success: true,
         invitation_code: invitationCode,
-        expires_at: data.expires_at,
+        expires_at: data.expires_at ?? undefined,
       };
 
     } catch (error: any) {
@@ -263,7 +263,7 @@ export class SchoolManagementService {
       return {
         success: true,
         invitation_code: invitationCode,
-        expires_at: data.expires_at,
+        expires_at: data.expires_at ?? undefined,
       };
 
     } catch (error: any) {
@@ -303,7 +303,8 @@ export class SchoolManagementService {
       }
 
       // 2. Check expiration and usage limits
-      if (new Date(invitation.expires_at) < new Date()) {
+      const expiresAt = invitation.expires_at ? new Date(invitation.expires_at) : null;
+      if (expiresAt && expiresAt < new Date()) {
         return { success: false, error: 'Invitation code has expired' };
       }
 

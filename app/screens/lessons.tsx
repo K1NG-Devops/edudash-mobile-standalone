@@ -21,12 +21,12 @@ interface Lesson {
   title: string;
   description: string | null;
   content: string | null;
-  category_id: string;
-  age_group_id: string;
+  category_id: string | null;
+  age_group_id: string | null;
   duration_minutes: number | null;
   difficulty_level: number | null;
-  is_public: boolean;
-  created_at: string;
+  is_public: boolean | null;
+  created_at: string | null;
 }
 
 export default function LessonsScreen() {
@@ -61,7 +61,7 @@ export default function LessonsScreen() {
         .order('created_at', { ascending: false });
 
       if (lessonsError) throw lessonsError;
-      setLessons(lessonsData || []);
+      setLessons(((lessonsData || []) as unknown as Lesson[]));
 
     } catch (error: any) {
       console.error('Error loading lessons:', error);

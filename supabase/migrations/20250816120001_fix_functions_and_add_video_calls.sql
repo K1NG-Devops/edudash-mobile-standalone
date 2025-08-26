@@ -72,31 +72,61 @@ CREATE TABLE IF NOT EXISTS video_call_participants (
 ALTER TABLE video_calls ENABLE ROW LEVEL SECURITY;
 ALTER TABLE video_call_participants ENABLE ROW LEVEL SECURITY;
 
--- Video calls policies
-CREATE POLICY "Users can view video calls in their preschool" ON video_calls
-  FOR SELECT USING (
-    preschool_id IN (
-      SELECT preschool_id FROM users 
-      WHERE auth_user_id = auth.uid()
-    )
-  );
+-- Video calls policies (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+      AND tablename = 'video_calls' 
+      AND policyname = 'Users can view video calls in their preschool'
+  ) THEN
+    CREATE POLICY "Users can view video calls in their preschool" ON video_calls
+      FOR SELECT USING (
+        preschool_id IN (
+          SELECT preschool_id FROM users 
+          WHERE auth_user_id = auth.uid()
+        )
+      );
+  END IF;
+END$$;
 
-CREATE POLICY "Teachers can manage video calls" ON video_calls
-  FOR ALL USING (
-    teacher_id IN (
-      SELECT id FROM users 
-      WHERE auth_user_id = auth.uid()
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+      AND tablename = 'video_calls' 
+      AND policyname = 'Teachers can manage video calls'
+  ) THEN
+    CREATE POLICY "Teachers can manage video calls" ON video_calls
+      FOR ALL USING (
+        teacher_id IN (
+          SELECT id FROM users 
+          WHERE auth_user_id = auth.uid()
+        )
+      );
+  END IF;
+END$$;
 
--- Video call participants policies
-CREATE POLICY "Users can view their video call participations" ON video_call_participants
-  FOR SELECT USING (
-    user_id IN (
-      SELECT id FROM users 
-      WHERE auth_user_id = auth.uid()
-    )
-  );
+-- Video call participants policies (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+      AND tablename = 'video_call_participants' 
+      AND policyname = 'Users can view their video call participations'
+  ) THEN
+    CREATE POLICY "Users can view their video call participations" ON video_call_participants
+      FOR SELECT USING (
+        user_id IN (
+          SELECT id FROM users 
+          WHERE auth_user_id = auth.uid()
+        )
+      );
+  END IF;
+END$$;
 
 -- =============================================
 -- RECREATE RPC FUNCTIONS WITH CORRECT TYPES

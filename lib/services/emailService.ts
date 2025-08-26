@@ -41,7 +41,7 @@ export class EmailService {
       // Build deep links (native scheme and web fallback)
       const appScheme = 'edudashpro://join-with-code?code=' + encodeURIComponent(data.invitationCode);
       const shortScheme = 'edudashpro://invite/' + encodeURIComponent(data.invitationCode);
-      const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.org.za';
+      const webUrlBase = this.getSafeWebBaseUrl();
       const webUrl = `${webUrlBase}/join-with-code?code=${encodeURIComponent(data.invitationCode)}`;
 
       const emailOptions: EmailOptions = {
@@ -104,6 +104,27 @@ export class EmailService {
     } catch (error) {
       log.error('Email sending failed:', error);
       return { success: false, error: 'Email service unavailable' };
+    }
+  }
+
+  /**
+   * Resolve a safe base URL for links in emails. Falls back if EXPO_PUBLIC_WEB_URL is local or invalid.
+   */
+  private static getSafeWebBaseUrl(): string {
+    try {
+      const raw = process.env.EXPO_PUBLIC_WEB_URL || '';
+      if (!raw) return 'https://www.edudashpro.org.za';
+      const url = new URL(raw);
+      const hostname = url.hostname.toLowerCase();
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname === '::1';
+      if (isLocal) {
+        log.warn('EXPO_PUBLIC_WEB_URL is local in email context; falling back to https://www.edudashpro.org.za');
+        return 'https://www.edudashpro.org.za';
+      }
+      return raw.replace(/\/$/, '');
+    } catch (e) {
+      log.warn('Invalid EXPO_PUBLIC_WEB_URL; falling back to https://www.edudashpro.org.za');
+      return 'https://www.edudashpro.org.za';
     }
   }
 
@@ -217,7 +238,7 @@ export class EmailService {
   private static generateTeacherInvitationHTML(data: TeacherInvitationEmailData): string {
     const appScheme = 'edudashpro://join-with-code?code=' + encodeURIComponent(data.invitationCode);
     const shortScheme = 'edudashpro://invite/' + encodeURIComponent(data.invitationCode);
-    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.org.za';
+    const webUrlBase = this.getSafeWebBaseUrl();
     const webUrl = `${webUrlBase}/join-with-code?code=${encodeURIComponent(data.invitationCode)}`;
     return `
 <!DOCTYPE html>
@@ -310,7 +331,7 @@ export class EmailService {
   private static generateTeacherInvitationText(data: TeacherInvitationEmailData): string {
     const appScheme = 'edudashpro://join-with-code?code=' + encodeURIComponent(data.invitationCode);
     const shortScheme = 'edudashpro://invite/' + encodeURIComponent(data.invitationCode);
-    const webUrlBase = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.org.za';
+    const webUrlBase = this.getSafeWebBaseUrl();
     const webUrl = `${webUrlBase}/join-with-code?code=${encodeURIComponent(data.invitationCode)}`;
     return `
 Welcome to EduDash Pro!

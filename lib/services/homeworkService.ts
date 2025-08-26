@@ -156,7 +156,7 @@ export class HomeworkService {
         throw new Error(`Failed to fetch homework assignments: ${response.error.message}`);
       }
 
-      return response.data as HomeworkAssignment[];
+      return (response.data as unknown) as HomeworkAssignment[];
     } catch (error) {
       log.error('Error fetching homework assignments:', error);
       throw error;
@@ -215,11 +215,11 @@ export class HomeworkService {
   }[]): Promise<{ submissionId: string; uploadedFiles: string[] }> {
     try {
       // First, create the homework submission
-      const submissionData = {
+        const submissionData = {
         homework_assignment_id: data.homework_assignment_id,
         student_id: data.student_id,
         submission_text: data.submission_content,
-        attachment_urls: data.attachment_urls || [],
+        file_urls: data.attachment_urls || [],
         submitted_at: new Date().toISOString(),
         status: 'submitted'
       };
@@ -274,9 +274,9 @@ export class HomeworkService {
         }
 
         // Collect successful upload URLs
-        const successfulUploads = uploadResults
-          .filter(result => result.data)
-          .map(result => result.data!.file_url);
+        const successfulUploads = (uploadResults as any[])
+          .filter((result: any) => result.data)
+          .map((result: any) => result.data!.file_url);
 
         uploadedFiles.push(...successfulUploads);
 
@@ -285,7 +285,7 @@ export class HomeworkService {
           const { error: updateError } = await supabase
             .from('homework_submissions')
             .update({
-              attachment_urls: [...(data.attachment_urls || []), ...successfulUploads]
+              file_urls: [...(data.attachment_urls || []), ...successfulUploads]
             })
             .eq('id', submissionId);
 

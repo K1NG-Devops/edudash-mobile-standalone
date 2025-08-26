@@ -271,8 +271,8 @@ export class AdvancedAIService {
       intelligence_level: intelligenceLevels[tier],
       specializations: specializations.slice(0, tier === 'free' ? 3 : tier === 'premium' ? 6 : 10),
       neural_network_config: await this.createNeuralNetworkForTutor(tier),
-      holographic_avatar: AI_FEATURES_BY_TIER[tier].holographicLessons || false,
-      temporal_awareness: AI_FEATURES_BY_TIER[tier].timeTravelAnalytics || false,
+      holographic_avatar: ((AI_FEATURES_BY_TIER[tier] as any).holographicLessons === true),
+      temporal_awareness: ((AI_FEATURES_BY_TIER[tier] as any).timeTravelAnalytics === true),
       multiverse_access: tier === 'enterprise'
     };
   }
@@ -309,12 +309,12 @@ export class AdvancedAIService {
     let dimension: HolographicLesson['dimension'] = '2D';
     let reality_type: HolographicLesson['reality_type'] = 'standard';
 
-    if (features.holographicLessons) {
+    if ((features as any).holographicLessons === true) {
       dimension = '3D';
       reality_type = 'virtual';
     }
     
-    if (features.holographic4D) {
+    if ((features as any).holographic4D === true) {
       dimension = '4D';
       reality_type = 'quantum';
     }
@@ -365,8 +365,8 @@ export class AdvancedAIService {
       reality_type,
       interaction_modes: interaction_modes.filter(mode => mode.enabled),
       neural_feedback: features.brainInterface !== false,
-      brain_interface_compatible: features.brainInterface === 'direct_brain_upload',
-      time_travel_elements: features.timeTravelAnalytics || false
+      brain_interface_compatible: (features as any).brainInterface === true,
+      time_travel_elements: (features as any).timeTravelAnalytics === true
     };
   }
 
@@ -501,8 +501,8 @@ export class AdvancedAIService {
    * Check if feature is available for user's subscription tier
    */
   isFeatureAvailable(feature: string, subscriptionTier: 'free' | 'premium' | 'enterprise'): boolean {
-    const features = AI_FEATURES_BY_TIER[subscriptionTier];
-    return Object.prototype.hasOwnProperty.call(features, feature) && features[feature as keyof typeof features];
+    const features = AI_FEATURES_BY_TIER[subscriptionTier] as any;
+    return Object.prototype.hasOwnProperty.call(features, feature) && Boolean(features[feature]);
   }
 }
 

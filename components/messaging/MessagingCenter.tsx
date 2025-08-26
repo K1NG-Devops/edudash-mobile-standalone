@@ -126,7 +126,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
               .eq('id', recipientRow.message_id)
               .single();
             if (msg) {
-              setMessages(prev => [...prev, { id: msg.id, content: msg.content, created_at: msg.created_at || new Date().toISOString(), sender_id: msg.sender_id, message_type: 'general' }]);
+              setMessages(prev => [...prev, { id: msg.id, content: msg.content, created_at: msg.created_at || new Date().toISOString(), sender_id: msg.sender_id || '', message_type: 'general' }]);
               loadConversations();
               scrollToBottom();
             }
@@ -153,7 +153,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       if (schoolError) throw schoolError;
 
       // Convert to conversation format
-      const schoolContacts: Conversation[] = (schoolUsers || []).map(user => ({
+      const schoolContacts: Conversation[] = ((schoolUsers || []) as any[]).map((user: any) => ({
         id: user.id,
         participant_name: user.name || user.email || 'Unknown User',
         participant_avatar: user.avatar_url,
@@ -211,7 +211,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             sender:users!messages_sender_id_fkey(name, avatar_url, role)
           )
         `)
-        .eq('recipient_id', parentProfile.id)
+        .eq('recipient_id', userProfile.id)
         .order('created_at', { ascending: false });
       if (incomingError) throw incomingError;
 
@@ -225,7 +225,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           sender_id,
           message_recipients(recipient_id)
         `)
-        .eq('sender_id', parentProfile.id)
+        .eq('sender_id', userProfile.id)
         .order('created_at', { ascending: false });
       if (outgoingError) throw outgoingError;
 

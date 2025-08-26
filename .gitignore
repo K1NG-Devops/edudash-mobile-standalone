@@ -49,6 +49,7 @@ android/android/
 .env.production.local
 .env*.local
 .env*.backup
+.env*.remote
 
 # Supabase
 .supabase/
