@@ -100,7 +100,7 @@
     "react-native-webview": "13.13.5",
     "@shopify/flash-list": "^1.6.5",
     "supabase": "^2.39.2"
-  }
+  },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@expo/ngrok": "^4.1.3",
