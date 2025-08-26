@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, RefreshControl, TouchableOpacity } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
@@ -50,11 +51,12 @@ export default function ParentsScreen() {
         <Text style={styles.title}>Parents</Text>
         <TextInput placeholder="Search parents" value={q} onChangeText={setQ} style={styles.search} />
       </View>
-      <FlatList
+      <FlashList
         data={filtered}
         keyExtractor={(p) => p.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         contentContainerStyle={styles.list}
+        estimatedItemSize={72}
         ListEmptyComponent={!loading ? (
           <View style={styles.empty}>
             <IconSymbol name="person.slash" size={28} color="#9CA3AF" />

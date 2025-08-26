@@ -5,7 +5,18 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   // Global ignores so other configs (like expoConfig) also skip these paths
   {
-    ignores: ['dist/**', 'node_modules/**', 'android/**', 'ios/**', 'archive/**', 'scripts/**', 'supabase/functions/**', 'legacy/_excluded/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'android/**',
+      'ios/**',
+      'archive/**',
+      'scripts/**',
+      'project-scripts/**',
+      'supabase/functions/**',
+      'app/api/**',
+      'legacy/_excluded/**'
+    ],
   },
   expoConfig,
   {

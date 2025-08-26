@@ -6,12 +6,12 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  FlatList,
   TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { CommunicationService, Message } from '@/lib/services/communicationService';
 import { MessageService } from '@/lib/services/messageService';
@@ -128,12 +128,13 @@ export default function ConversationScreen() {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <FlatList
-        ref={flatListRef}
+      <FlashList
+        ref={flatListRef as any}
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={renderMessageItem}
         contentContainerStyle={styles.listContent}
+        estimatedItemSize={64}
         showsVerticalScrollIndicator={false}
       />
       <View style={styles.inputContainer}>

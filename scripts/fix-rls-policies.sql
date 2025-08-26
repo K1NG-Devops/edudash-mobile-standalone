@@ -1,3 +1,10 @@
+-- ARCHIVED/DISABLED: This SQL script is disabled by default to prevent accidental execution in production.
+-- Move this script to a private ops location if you truly need it, and remove this guard.
+DO $$
+BEGIN
+  RAISE EXCEPTION 'Archived script disabled by default';
+END $$;
+-- ===== Original content below =====
 -- Fix RLS Policies for EduDash Pro
 -- This script addresses authentication and authorization issues
 

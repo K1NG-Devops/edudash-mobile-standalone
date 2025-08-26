@@ -878,21 +878,6 @@ const EmbeddedPricingSection = () => {
 const EnhancedAdSection = () => {
   const [showRevenueBanner, setShowRevenueBanner] = useState(true);
   
-  const mockUserProfile = {
-    id: 'landing-visitor',
-    role: 'parent' as const,
-    subscriptionTier: 'free' as const,
-    daysActive: 0,
-    engagementScore: 0.5,
-    featureUsage: {},
-    limitHits: 0,
-    lastActiveDate: new Date().toISOString(),
-    preferences: {
-      allowAds: true,
-      allowAffiliate: true,
-      allowNotifications: true,
-    },
-  };
 
   const sponsoredContent = {
     title: '🎓 Professional Development for Educators',

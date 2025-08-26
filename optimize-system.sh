@@ -1,4 +1,9 @@
 #!/bin/bash
+# ARCHIVED/DISABLED: This script is disabled by default to prevent accidental execution in production.
+if [ "${ALLOW_DANGEROUS_SCRIPTS:-}" != "true" ]; then
+  echo "This script is archived and disabled by default. Set ALLOW_DANGEROUS_SCRIPTS=true to run, and ensure you are NOT on production." >&2
+  exit 1
+fi
 
 echo "🚀 System Optimization for Development Environment"
 echo "================================================"

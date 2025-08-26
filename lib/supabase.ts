@@ -175,9 +175,9 @@ export const hasRole = (profile: any, role: string): boolean => {
   return profile?.role === role;
 };
 
-// Helper function to get user's school
+// Helper function to get user's school (preschool_id per schema)
 export const getUserSchool = (profile: any) => {
-  return profile?.schools;
+  return profile?.preschool_id;
 };
 
 // Sign out helper to ensure tokens are fully cleared across platforms

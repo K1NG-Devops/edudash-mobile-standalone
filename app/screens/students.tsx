@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, RefreshControl, TouchableOpacity } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -162,11 +163,12 @@ export default function StudentsScreen() {
           }]}
         />
       </View>
-      <FlatList
+      <FlashList
         data={filtered}
         keyExtractor={(s) => s.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         contentContainerStyle={styles.list}
+        estimatedItemSize={72}
         ListEmptyComponent={!loading ? (
           <View style={styles.empty}> 
             <IconSymbol name="person.slash" size={28} color={isDark ? '#6B7280' : '#9CA3AF'} />

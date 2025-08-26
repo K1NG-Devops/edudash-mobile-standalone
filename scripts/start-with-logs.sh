@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ARCHIVED/DISABLED: This script is disabled by default to prevent accidental execution in production.
+if [ "${ALLOW_DANGEROUS_SCRIPTS:-}" != "true" ]; then
+  echo "This script is archived and disabled by default. Set ALLOW_DANGEROUS_SCRIPTS=true to run, and ensure you are NOT on production." >&2
+  exit 1
+fi
 # Start Expo dev server and write output to timestamped log file
 # Usage: ./scripts/start-with-logs.sh [extra expo args]
 # Examples: ./scripts/start-with-logs.sh --clear --web

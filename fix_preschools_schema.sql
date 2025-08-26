@@ -1,3 +1,10 @@
+-- ARCHIVED/DISABLED: This SQL script is disabled by default to prevent accidental execution in production.
+-- Move this script to a private ops location if you truly need it, and remove this guard.
+DO $$
+BEGIN
+  RAISE EXCEPTION 'Archived script disabled by default';
+END $$;
+-- ===== Original content below =====
 -- Add missing columns to preschools table for school management functionality
 -- This fixes the "Could not find the 'onboarding_status' column" error
 

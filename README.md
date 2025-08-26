@@ -120,9 +120,19 @@ EXPO_PUBLIC_ANTHROPIC_API_KEY=your_anthropic_key
 ```
 
 ### 3. Database Setup
+
+IMPORTANT: Never run `supabase db reset` on production. This wipes live data and violates project rules. See `.cursorrules` for strict guidance.
+
+Local development (safe)
 ```bash
-# Run Supabase migrations
-npx supabase db reset
+# Local only:
+npx supabase db reset --local
+npx supabase migration up
+```
+
+Production/Staging
+```bash
+# Apply migrations only — do not reset
 npx supabase migration up
 ```
 

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
-  FlatList,
   Share,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -406,7 +406,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
       </View>
 
       {/* Content */}
-      <FlatList
+      <FlashList
         style={styles.content}
         ListHeaderComponent={
           <View>
@@ -429,6 +429,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        estimatedItemSize={180}
       />
     </View>
   );

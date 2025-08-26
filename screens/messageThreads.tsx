@@ -5,11 +5,11 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   Alert,
   RefreshControl,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { CommunicationService, MessageThread } from '@/lib/services/communicationService';
 import { MessageService } from '@/lib/services/messageService';
@@ -132,11 +132,12 @@ export default function MessageThreadsScreen() {
 
   return (
     <View style={styles.container}>
-      <FlatList
+      <FlashList
         data={threads}
         keyExtractor={(item) => item.id}
         renderItem={renderThreadItem}
         contentContainerStyle={styles.listContent}
+        estimatedItemSize={72}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
