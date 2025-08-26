@@ -12,8 +12,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { DesignSystem } from '@/constants/DesignSystem';
+import { DesignSystem, trackRevenue } from '@/constants/DesignSystem';
 import { useSubscription } from '@/lib/hooks/useSubscription';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
 
 interface PlanDetails {
   id: string;
@@ -32,6 +33,7 @@ export default function SignUpComplete() {
   const [loading, setLoading] = useState(false);
   const [planDetails, setPlanDetails] = useState<PlanDetails | null>(null);
   const { createSubscription } = useSubscription();
+  const { user } = useAuth();
 
   const plans: { [key: string]: PlanDetails } = {
     'free': {
@@ -126,6 +128,18 @@ export default function SignUpComplete() {
         return;
       }
 
+      // Analytics: track intent
+      try {
+        const numeric = parseFloat(planDetails.price.replace(/[^0-9.]/g, '')) || 0;
+        trackRevenue({
+          type: 'subscription',
+          value: numeric,
+          source: 'signup-complete',
+          userId: user?.id || 'anon',
+          metadata: { plan_id: planDetails.id, plan_name: planDetails.name }
+        });
+      } catch {}
+
       // Create real subscription (default to PayFast monthly)
       const result = await createSubscription({
         plan_id: planDetails.id,
@@ -162,6 +176,18 @@ export default function SignUpComplete() {
     setLoading(true);
     
     try {
+      // Analytics: track trial intent
+      try {
+        const numeric = parseFloat(planDetails.price.replace(/[^0-9.]/g, '')) || 0;
+        trackRevenue({
+          type: 'subscription',
+          value: numeric,
+          source: 'trial-start',
+          userId: user?.id || 'anon',
+          metadata: { plan_id: planDetails.id, plan_name: planDetails.name }
+        });
+      } catch {}
+
       // Start a subscription which will begin with trial if the plan defines trial_days > 0
       const result = await createSubscription({
         plan_id: planDetails.id,
@@ -206,6 +232,7 @@ export default function SignUpComplete() {
 
   const roleDisplayName = role === 'parent' ? 'Parent' : role === 'teacher' ? 'Teacher' : role === 'principal' ? 'Principal' : 'User';
   const isFree = planDetails.id === 'free-tier';
+  const isEnterprise = planDetails.id === 'singularity';
   const hasTrialPeriod = ['starter', 'premium'].includes(plan || '');
 
   return (
@@ -258,7 +285,17 @@ export default function SignUpComplete() {
 
             {/* Action Buttons */}
             <View style={styles.actionsContainer}>
-              {isFree ? (
+              {isEnterprise ? (
+                <TouchableOpacity
+                  style={styles.primaryButton}
+                  onPress={() => router.push('/support/help')}
+                >
+                  <LinearGradient colors={DesignSystem.gradients.primary} style={styles.buttonGradient}>
+                    <IconSymbol name="envelope" size={20} color="#000000" />
+                    <Text style={styles.primaryButtonText}>Contact Sales</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ) : isFree ? (
                 <TouchableOpacity 
                   style={styles.primaryButton}
                   onPress={handleContinueToPayment}

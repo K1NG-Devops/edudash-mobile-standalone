@@ -195,7 +195,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
     };
 
     const renderMetricCard = (title: string, value: string | number, icon: string, color: string) => (
-        <View style={[styles.metricCard, { backgroundColor: colors.card, borderTopColor: color }]}>
+        <View style={[styles.metricCard, shadow(2), { backgroundColor: colors.card, borderTopColor: color }]}>
             <View style={styles.metricHeader}>
                 <IconSymbol name={icon as any} size={24} color={color} />
                 <Text style={[styles.metricTitle, { color: colors.textSecondary }]}>{title}</Text>
@@ -205,9 +205,9 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
     );
 
     const renderClassCard = (classItem: Class) => (
-        <TouchableOpacity
+            <TouchableOpacity
             key={classItem.id}
-            style={[styles.classCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={[styles.classCard, shadow(2), { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={() => router.push(`/screens/students?classId=${classItem.id}`)}
         >
             <View style={styles.classHeader}>
@@ -229,7 +229,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
         return (
             <TouchableOpacity
                 key={lesson.id}
-                style={[styles.lessonCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[styles.lessonCard, shadow(2), { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={() => router.push(`/screens/lessons?lessonId=${lesson.id}`)}
             >
                 <View style={styles.lessonHeader}>
@@ -492,7 +492,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                         return (
                             <TouchableOpacity
                                 key={homework.id}
-                                style={[styles.assignmentCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                style={[styles.assignmentCard, shadow(2), { backgroundColor: colors.card, borderColor: colors.border }]}
                                 onPress={() => router.push(`/screens/analytics`)}
                             >
                                 <View style={styles.assignmentHeader}>
@@ -577,11 +577,6 @@ const styles = StyleSheet.create({
         borderTopWidth: 3,
         width: '48%',
         marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
     },
     metricHeader: {
         flexDirection: 'row',
@@ -610,11 +605,6 @@ const styles = StyleSheet.create({
         marginHorizontal: 6,
         marginBottom: 12,
         minWidth: '45%',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
     },
     quickActionIcon: {
         width: 48,
@@ -634,11 +624,6 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 12,
         borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
     },
     classHeader: {
         flexDirection: 'row',
@@ -669,11 +654,6 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 12,
         borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
     },
     lessonHeader: {
         flexDirection: 'row',
