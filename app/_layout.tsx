@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { Colors } from '@/constants/Colors';
+import RevenueCatProvider from '@/components/payments/RevenueCatProvider';
 
 // Error boundary for route-level errors
 function RouteErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -66,9 +67,10 @@ export default function RootLayout() {
     <AuthErrorBoundary>
       <AuthProvider>
         <ThemeProvider>
-          <SafeAreaProvider>
-            <ThemeStatusBar />
-            <View style={styles.container}>
+          <RevenueCatProvider>
+            <SafeAreaProvider>
+              <ThemeStatusBar />
+              <View style={styles.container}>
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="landing" options={{ headerShown: false }} />
@@ -82,6 +84,7 @@ export default function RootLayout() {
               {!hideBottomNav && <GlobalBottomNav />}
             </View>
           </SafeAreaProvider>
+          </RevenueCatProvider>
         </ThemeProvider>
       </AuthProvider>
     </AuthErrorBoundary>

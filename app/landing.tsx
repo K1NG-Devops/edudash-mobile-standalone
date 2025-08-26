@@ -694,6 +694,7 @@ const EmbeddedPricingSection = () => {
           embedded={true}
           showRoles={true}
           showComparison={false}
+          compactMode={width < 480}
         />
         
         <TouchableOpacity 

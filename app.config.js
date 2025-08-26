@@ -70,7 +70,9 @@ export default {
           androidAppId: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713",
           iosAppId: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID || "ca-app-pub-3940256099942544~1458002511"
         }
-      ]
+      ],
+      // RevenueCat purchases plugin to configure native requirements
+      "react-native-purchases"
     ],
     // Some libraries read from this key in app.json/config (kept for compatibility)
     "react-native-google-mobile-ads": {
@@ -89,6 +91,10 @@ export default {
       router: {},
       eas: {
         projectId: "b1fd3356-08ed-4331-92b5-52a7be4cd4bc"
+      },
+      revenuecat: {
+        iosSdkKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_SDK_KEY || null,
+        androidSdkKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_SDK_KEY || null
       }
     },
     updates: {

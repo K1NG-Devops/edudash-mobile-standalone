@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import WebSafeModal from '@/components/ui/WebSafeModal';
 import { DesignSystem, getRoleColors, trackRevenue, formatCurrency } from '@/constants/DesignSystem';
+import { getOfferingsSafe, purchaseDefault } from '@/lib/services/revenuecat';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
@@ -62,12 +63,14 @@ export const PricingComponent = ({
   defaultSelectedRole = null,
   onPlanSelect,
   showComparison = true,
+  compactMode = false,
 }: {
   embedded?: boolean;
   showRoles?: boolean;
   defaultSelectedRole?: 'parent' | 'teacher' | 'principal' | null;
   onPlanSelect?: (plan: PricingPlan, role: string) => void;
   showComparison?: boolean;
+  compactMode?: boolean;
 }) => {
   const { user, session } = useAuth();
   const { subscription, createSubscription, loading: subscriptionLoading, error: subscriptionError, plans } = useSubscription();
@@ -77,6 +80,9 @@ export const PricingComponent = ({
   const [viewMode, setViewMode] = useState<'overview' | 'role-specific'>('overview');
   const [creatingSubscription, setCreatingSubscription] = useState(false);
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
+  const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
+  const [rcOfferingLoaded, setRcOfferingLoaded] = useState(false);
+  const [rcHasOffering, setRcHasOffering] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [effectivePremiumPrice, setEffectivePremiumPrice] = useState<number | null>(null);
@@ -116,6 +122,24 @@ export const PricingComponent = ({
       cancelled = true;
     };
   }, [billingInterval]);
+
+  // Try to fetch RevenueCat default offering on mobile (so we can purchase)
+  useEffect(() => {
+    let cancelled = false;
+    if (Platform.OS === 'web') {
+      setRcOfferingLoaded(true);
+      setRcHasOffering(false);
+      return;
+    }
+    (async () => {
+      const res = await getOfferingsSafe();
+      if (!cancelled) {
+        setRcOfferingLoaded(true);
+        setRcHasOffering(!!res?.current);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const [basePlans] = useState<PricingPlan[]>([
     {
@@ -357,6 +381,25 @@ export const PricingComponent = ({
 
   const handleSelectPlan = async (plan: PricingPlan) => {
     
+    // If running on mobile (iOS/Android), attempt in-app purchase via RevenueCat for paid tiers
+    if (Platform.OS !== 'web' && plan.value !== 'free') {
+      try {
+        const res = await getOfferingsSafe();
+        if (res?.current) {
+          const result = await purchaseDefault(res.current, billingInterval);
+          if (result.success) {
+            Alert.alert('Success', 'Your purchase was completed successfully.');
+            // Optionally, trigger a refresh of subscription context via a callback or event
+            return;
+          } else {
+            Alert.alert('Purchase cancelled', 'No changes were made.');
+            return;
+          }
+        }
+      } catch {}
+      // If no offering available, fall through to web flow below (or show informative message)
+    }
+
     // For embedded pricing, allow plan selection without auth
     // Users will be prompted to create accounts during the flow
     if (!session || !user) {
@@ -725,13 +768,26 @@ export const PricingComponent = ({
                   {plan.trialInfo && (
                     <Text style={styles.planTrialInfo}>{plan.trialInfo}</Text>
                   )}
-                  <Text style={styles.planDescription}>{plan.description}</Text>
+                  {(!compactMode || expandedPlans[plan.id]) && (
+                    <Text style={styles.planDescription}>{plan.description}</Text>
+                  )}
             
-            <View style={styles.featuresContainer}>
-              {plan.features.map((feature, i) => (
-                <Text key={i} style={styles.featureItem}>{feature}</Text>
-              ))}
-            </View>
+            {(!compactMode || expandedPlans[plan.id]) && (
+              <View style={styles.featuresContainer}>
+                {plan.features.map((feature, i) => (
+                  <Text key={i} style={styles.featureItem}>{feature}</Text>
+                ))}
+              </View>
+            )}
+
+            {compactMode && (
+              <TouchableOpacity
+                style={styles.readMoreButton}
+                onPress={() => setExpandedPlans(prev => ({ ...prev, [plan.id]: !prev[plan.id] }))}
+              >
+                <Text style={styles.readMoreText}>{expandedPlans[plan.id] ? 'Read less' : 'Read more'}</Text>
+              </TouchableOpacity>
+            )}
             
             <View style={styles.planTargetRoles}>
               <Text style={styles.targetRolesLabel}>Perfect for:</Text>
@@ -1188,6 +1244,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  readMoreButton: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 8,
+  },
+  readMoreText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+    opacity: 0.9,
   },
   
   // Role-Specific Benefits
