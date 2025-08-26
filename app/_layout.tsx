@@ -21,6 +21,11 @@ function RouteErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   );
 }
 
+// Global error boundary for this route segment
+export function ErrorBoundary(props: ErrorBoundaryProps) {
+  return RouteErrorBoundary(props);
+}
+
 export default function RootLayout() {
   const pathname = usePathname();
   const hideBottomNav = pathname === '/' || pathname.startsWith('/(auth)') || pathname.startsWith('/screens/super-admin-dashboard');

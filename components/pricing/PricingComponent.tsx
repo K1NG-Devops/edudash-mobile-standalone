@@ -1123,22 +1123,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     marginTop: 45, // Add top margin to avoid overlap with popular badge
-    ...(Platform.OS !== 'web' ? {
-      textShadowColor: 'rgba(0,0,0,0.8)',
-      textShadowOffset: { width: 1, height: 1 },
-      textShadowRadius: 2,
-    } : {}),
+    ...({ textShadow: { color: 'rgba(0,0,0,0.8)', offset: { width: 1, height: 1 }, radius: 2 } } as any),
   },
   planPrice: {
     fontSize: 32,
     fontWeight: '900',
     color: '#ffffff',
     textAlign: 'center',
-    ...(Platform.OS !== 'web' ? {
-      textShadowColor: 'rgba(0,0,0,0.8)',
-      textShadowOffset: { width: 1, height: 1 },
-      textShadowRadius: 2,
-    } : {}),
+    ...({ textShadow: { color: 'rgba(0,0,0,0.8)', offset: { width: 1, height: 1 }, radius: 2 } } as any),
   },
   planPeriod: {
     fontSize: 16,

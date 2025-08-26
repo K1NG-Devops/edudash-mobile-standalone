@@ -115,9 +115,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
+    ...( { textShadow: { color: 'rgba(0,0,0,0.3)', offset: { width: 0, height: 2 }, radius: 8 } } as any ),
   },
   subtitle: {
     fontSize: 16,

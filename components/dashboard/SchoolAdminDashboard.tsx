@@ -1769,9 +1769,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
+    ...({ textShadow: { color: 'rgba(0,0,0,0.3)', offset: { width: 0, height: 2 }, radius: 8 } } as any),
   },
   heroSubtitle: {
     fontSize: 16,
@@ -1807,9 +1805,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    ...({ textShadow: { color: 'rgba(0,0,0,0.2)', offset: { width: 0, height: 1 }, radius: 4 } } as any),
   },
   heroStatLabel: {
     fontSize: 14,
@@ -2084,9 +2080,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    ...({ textShadow: { color: 'rgba(0,0,0,0.3)', offset: { width: 0, height: 2 }, radius: 4 } } as any),
   },
   overviewSubtitle: {
     fontSize: 16,

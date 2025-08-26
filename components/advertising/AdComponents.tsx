@@ -373,7 +373,7 @@ export const SponsoredContent = ({
         
         {content.image && !compact && (
           <View style={styles.sponsoredImageContainer}>
-            <Image source={{ uri: content.image }} style={styles.sponsoredImage} />
+            <Image source={{ uri: content.image }} style={styles.sponsoredImage} resizeMode="cover" />
           </View>
         )}
         
@@ -916,7 +916,6 @@ const styles = StyleSheet.create({
   sponsoredImage: {
     width: '100%',
     height: 120,
-    resizeMode: 'cover',
   },
   sponsoredTitle: {
     fontSize: 16,
