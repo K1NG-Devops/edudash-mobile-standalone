@@ -18,6 +18,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem, getRoleColors } from '@/constants/DesignSystem';
+import { shadow } from '@/lib/ui/shadow';
 import { SmartRoutingService } from '@/lib/services/smartRoutingService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { useSubscription } from '@/lib/hooks/useSubscription';
@@ -36,6 +37,23 @@ export default function PricingPage() {
   const [selectedRole, setSelectedRole] = useState<'parent' | 'teacher' | 'principal' | null>(null);
   const [showInvitationPrompt, setShowInvitationPrompt] = useState(false);
   const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
+  const [hoveredPlanId, setHoveredPlanId] = useState<string | null>(null);
+  
+  // lightweight toast state
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' } | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ visible: true, message, type });
+    toastOpacity.setValue(0);
+    Animated.timing(toastOpacity, { toValue: 1, duration: 160, useNativeDriver: true }).start(() => {
+      setTimeout(() => {
+        Animated.timing(toastOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start(() => {
+          setToast(null);
+        });
+      }, 2400);
+    });
+  };
   
   const floatingAnimation = useRef(new Animated.Value(0)).current;
 
@@ -207,6 +225,7 @@ const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
         
         // Handle success
         if (result.success) {
+          showToast('Redirecting to payment…', 'success');
           // If no payment URL (dev environment), go to success page
           if (!result.payment_url && !result.approval_url) {
             const amount = plan.price.replace(/[^0-9.]/g, '') || '0';
@@ -216,19 +235,11 @@ const handleSelectPlan = async (plan: typeof pricingPlans[0]) => {
         } else {
           // Show error to user
           console.error('Subscription creation failed:', result.error);
-          Alert.alert(
-            'Subscription Error', 
-            result.error || 'Failed to create subscription. Please try again.',
-            [{ text: 'OK' }]
-          );
+          showToast(result.error || 'Failed to create subscription. Please try again.', 'error');
         }
       } catch (e) {
         console.error('Subscription error:', e);
-        Alert.alert(
-          'Error', 
-          'An unexpected error occurred. Please try again.',
-          [{ text: 'OK' }]
-        );
+        showToast('An unexpected error occurred. Please try again.', 'error');
       } finally {
         setProcessingPlanId(null);
       }
@@ -416,8 +427,14 @@ const handleInvitationCodeDecision = async (hasCode: boolean) => {
                 <View 
                   key={plan.id} 
                   style={styles.pricingCard}
+                  onMouseEnter={() => setHoveredPlanId(plan.id)}
+                  onMouseLeave={() => setHoveredPlanId(null)}
                 >
-                  <LinearGradient colors={plan.color} style={styles.pricingCardGradient}>
+                  <LinearGradient colors={plan.color} style={[
+                    styles.pricingCardGradient,
+                    shadow(hoveredPlanId === plan.id ? 4 : 2, '#000'),
+                    Platform.OS === 'web' && hoveredPlanId === plan.id ? ({ transform: [{ scale: 1.01 }] } as any) : null,
+                  ]}>
                     {plan.popular && (
                       <View style={styles.popularBadge}>
                         <Text style={styles.popularText}>MOST POPULAR</Text>
@@ -596,6 +613,18 @@ const handleInvitationCodeDecision = async (hasCode: boolean) => {
         </View>
       </Modal>
       )}
+      {toast?.visible && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.toast,
+            { opacity: toastOpacity },
+            toast?.type === 'error' ? styles.toastError : styles.toastSuccess,
+          ]}
+        >
+          <Text style={styles.toastText}>{toast?.message}</Text>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -662,6 +691,7 @@ const styles = StyleSheet.create({
   sectionGradient: {
     paddingHorizontal: 20,
     paddingVertical: 30,
+    gap: 12,
   },
   ctaGradient: {
     paddingHorizontal: 30,
@@ -743,6 +773,7 @@ const styles = StyleSheet.create({
   pricingCardGradient: {
     padding: 25,
     position: 'relative',
+    borderRadius: 25,
   },
   popularBadge: {
     position: 'absolute',
@@ -932,6 +963,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#000000',
     letterSpacing: 1,
+  },
+
+  // Toast styles
+  toast: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 70 : 50,
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    ...shadow(3),
+  } as any,
+  toastSuccess: {
+    backgroundColor: 'rgba(34,197,94,0.95)',
+  },
+  toastError: {
+    backgroundColor: 'rgba(239,68,68,0.95)',
+  },
+  toastText: {
+    color: '#000',
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 
   // Modal Styles
