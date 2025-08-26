@@ -3,6 +3,7 @@ import { AIUsageInfo, SubscriptionData } from '@/contexts/SubscriptionContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { shadow } from '@/lib/ui/shadow';
 
 interface PlanStatusProps {
     subscription: SubscriptionData | null;
@@ -114,7 +115,7 @@ const PlanStatus: React.FC<PlanStatusProps> = ({
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background, borderColor: colors.border }]}>
+        <View style={[styles.container, shadow(2), { backgroundColor: colors.background, borderColor: colors.border }]}>
             <View style={styles.header}>
                 <View style={styles.planInfo}>
                     <IconSymbol
@@ -182,11 +183,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         padding: 16,
         marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
     },
     compactContainer: {
         borderRadius: 8,

@@ -6,6 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { router, usePathname } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { shadow } from '@/lib/ui/shadow';
 
 interface TabItem {
   key: string;
@@ -65,9 +66,9 @@ export default function GlobalBottomNav() {
   const backgroundColor = isDark ? '#0F172A' : '#FFFFFF';
   const borderColor = isDark ? '#475569' : '#E5E7EB';
   return (
-    <View style={styles.wrapper} pointerEvents="box-none">
+    <View style={[styles.wrapper, { pointerEvents: 'box-none' as any }]}> 
       <SafeAreaView edges={['bottom','left','right']}>
-        <View style={[styles.tabNavigationBottom, {
+        <View style={[styles.tabNavigationBottom, shadow(3), {
           backgroundColor,
           borderTopColor: borderColor,
         }]}
@@ -113,14 +114,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -3,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
   },
   tabButton: {
     flex: 1,

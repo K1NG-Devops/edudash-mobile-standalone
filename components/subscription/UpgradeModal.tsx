@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { shadow } from '@/lib/ui/shadow';
 
 interface UpgradeModalProps {
     visible: boolean;
@@ -75,7 +76,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
             onRequestClose={onClose}
         >
             <View style={styles.overlay}>
-                <View style={[styles.modal, { backgroundColor: colors.modal }]}>
+                <View style={[styles.modal, shadow(8), { backgroundColor: colors.modal }]}>
                     {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.headerIcon}>
@@ -220,11 +221,6 @@ const styles = StyleSheet.create({
         width: '90%',
         maxHeight: '85%',
         borderRadius: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
     },
     header: {
         flexDirection: 'row',

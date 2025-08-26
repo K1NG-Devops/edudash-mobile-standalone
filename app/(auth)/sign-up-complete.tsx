@@ -13,6 +13,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem } from '@/constants/DesignSystem';
+import { useSubscription } from '@/lib/hooks/useSubscription';
 
 interface PlanDetails {
   id: string;
@@ -30,6 +31,7 @@ export default function SignUpComplete() {
   
   const [loading, setLoading] = useState(false);
   const [planDetails, setPlanDetails] = useState<PlanDetails | null>(null);
+  const { createSubscription } = useSubscription();
 
   const plans: { [key: string]: PlanDetails } = {
     'free': {
@@ -111,81 +113,85 @@ export default function SignUpComplete() {
     setLoading(true);
     
     try {
+      // For free plan, just go straight to welcome
       if (planDetails.id === 'free-tier') {
-        // Free tier - go to welcome page first, then dashboard
         setLoading(false);
         Alert.alert(
           'Welcome to EduDash Pro!',
           'Your free account has been created successfully.',
           [
-            {
-              text: 'Get Started',
-              onPress: () => router.replace('/welcome-success')
-            }
+            { text: 'Get Started', onPress: () => router.replace('/welcome-success') }
           ]
         );
+        return;
+      }
+
+      // Create real subscription (default to PayFast monthly)
+      const result = await createSubscription({
+        plan_id: planDetails.id,
+        billing_interval: 'monthly',
+        payment_provider: 'payfast',
+      });
+
+      setLoading(false);
+
+      if (result.success) {
+        if (result.payment_url) {
+          if (typeof window !== 'undefined') window.location.href = result.payment_url;
+          return;
+        }
+        if (result.approval_url) {
+          if (typeof window !== 'undefined') window.location.href = result.approval_url;
+          return;
+        }
+        // No external URL required
+        router.replace('/payment/success');
       } else {
-        // Paid plans - initiate payment flow
-        // For now, we'll simulate a successful payment
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setLoading(false);
-        
-        Alert.alert(
-          'Success!',
-          'Your account has been created successfully. Welcome to EduDash Pro!',
-          [
-            {
-              text: 'Get Started',
-              onPress: () => router.replace('/(tabs)/dashboard')
-            }
-          ]
-        );
+        Alert.alert('Payment Error', result.error || 'Failed to initiate payment');
       }
     } catch (error) {
       console.error('Payment flow error:', error);
       setLoading(false);
-      Alert.alert(
-        'Error',
-        'There was an issue processing your request. Please try again.'
-      );
+      Alert.alert('Error', 'There was an issue processing your request. Please try again.');
     }
   };
 
   const handleStartTrial = async () => {
-    if (loading) return; // Prevent multiple clicks
+    if (loading || !planDetails) return; // Prevent multiple clicks
     
     setLoading(true);
     
     try {
-      // In a real implementation, you would:
-      // 1. Create a subscription record with trial status
-      // 2. Set up trial expiration date
-      // 3. Initialize user permissions
-      
-      // For now, we'll simulate the trial setup process
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      // Start a subscription which will begin with trial if the plan defines trial_days > 0
+      const result = await createSubscription({
+        plan_id: planDetails.id,
+        billing_interval: 'monthly',
+        payment_provider: 'payfast',
+      });
+
       setLoading(false);
-      
-      Alert.alert(
-        'Trial Started!',
-        `Your 14-day free trial of ${planDetails?.name} has started successfully. Enjoy all premium features!`,
-        [
-          {
-            text: 'Get Started',
-            onPress: () => {
-              router.replace('/welcome-success');
-            }
-          }
-        ]
-      );
+
+      if (result.success) {
+        if (result.payment_url) {
+          if (typeof window !== 'undefined') window.location.href = result.payment_url;
+          return;
+        }
+        if (result.approval_url) {
+          if (typeof window !== 'undefined') window.location.href = result.approval_url;
+          return;
+        }
+        Alert.alert(
+          'Trial Started!',
+          `Your 14-day free trial of ${planDetails?.name} has started successfully. Enjoy all premium features!`,
+          [{ text: 'Get Started', onPress: () => router.replace('/welcome-success') }]
+        );
+      } else {
+        Alert.alert('Error', result.error || 'Failed to start free trial');
+      }
     } catch (error) {
       console.error('Trial setup error:', error);
       setLoading(false);
-      Alert.alert(
-        'Error',
-        'There was an issue starting your trial. Please try again.'
-      );
+      Alert.alert('Error', 'There was an issue starting your trial. Please try again.');
     }
   };
 
