@@ -12,7 +12,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Platform,
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -55,7 +56,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     Animated.timing(slideAnimation, {
       toValue: isVisible ? 0 : -screenWidth,
       duration: 300,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [isVisible, slideAnimation]);
 

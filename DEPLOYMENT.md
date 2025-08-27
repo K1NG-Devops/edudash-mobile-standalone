@@ -88,6 +88,28 @@ Ensure your Supabase project has:
    - Site URL: `https://your-app.vercel.app`
    - Redirect URLs: Include your Vercel domain
 
+### Step 6: Configure Supabase Edge Function CORS (ALLOWED_ORIGINS)
+
+All Edge Functions now use a shared CORS allowlist. Set the ALLOWED_ORIGINS secret in Supabase so we don't fall back to wildcard origins.
+
+- In Supabase: Project Settings → Functions → Secrets
+- Add key: ALLOWED_ORIGINS
+- Value: comma-separated origins (protocol + host), supports prefix wildcard like https://*.yourdomain.com
+
+Examples:
+```
+# Production only
+https://app.edudashpro.org.za,https://console.edudashpro.org.za
+
+# Production + Vercel preview (optional)
+https://app.edudashpro.org.za,https://*.vercel.app
+
+# Local development
+http://localhost:8081,http://localhost:19006,http://localhost:3000
+```
+
+Note: If ALLOWED_ORIGINS is empty, functions default to Access-Control-Allow-Origin: * (not recommended for production).
+
 ### Step 6: Test Production Deployment
 
 1. **Visit your deployed app**

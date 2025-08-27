@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem, getRoleColors } from '@/constants/DesignSystem';
 import { PricingComponent } from '@/components/pricing/PricingComponent';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { AdBanner, SponsoredContent, RevenueBanner } from '@/components/advertising/AdComponents';
 
 const { width, height } = Dimensions.get('window');
@@ -67,12 +68,12 @@ export default function FuturisticMarketingPage() {
         Animated.timing(floatingAnimation, {
           toValue: 1,
           duration: 3000,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(floatingAnimation, {
           toValue: 0,
           duration: 3000,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ])
     ).start();
@@ -83,12 +84,12 @@ export default function FuturisticMarketingPage() {
         Animated.timing(pulseAnimation, {
           toValue: 1.1,
           duration: 2000,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(pulseAnimation, {
           toValue: 1,
           duration: 2000,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ])
     ).start();
@@ -102,7 +103,7 @@ export default function FuturisticMarketingPage() {
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
+          { useNativeDriver: Platform.OS !== 'web' }
         )}
         scrollEventThrottle={16}
       >
@@ -131,12 +132,12 @@ const HeroSection = () => {
         Animated.timing(floatingY, {
           toValue: -20,
           duration: 2000,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(floatingY, {
           toValue: 0,
           duration: 2000,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ])
     ).start();
@@ -682,6 +683,10 @@ const RoleBasedBenefitsSection = () => {
 
 // Embedded Pricing Section
 const EmbeddedPricingSection = () => {
+  const { profile } = useAuth();
+  const roleStr = (profile?.role ?? undefined) as string | undefined;
+  const isPrincipal = !!(roleStr === 'principal' || roleStr === 'preschool_admin');
+
   return (
     <View style={styles.embeddedPricingContainer}>
       <LinearGradient colors={DesignSystem.gradients.section} style={styles.embeddedPricingGradient}>
@@ -695,6 +700,8 @@ const EmbeddedPricingSection = () => {
           showRoles={true}
           showComparison={false}
           compactMode={width < 480}
+          defaultSelectedRole={isPrincipal ? 'principal' : null}
+          initialView={isPrincipal ? 'role-specific' : 'overview'}
         />
         
         <TouchableOpacity 

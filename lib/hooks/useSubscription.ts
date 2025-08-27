@@ -137,14 +137,38 @@ export function useSubscription(): UseSubscriptionReturn {
       // For Supabase Edge Functions, apiBase should be ...supabase.co/functions/v1 and fnCreate is the function name
       const sanitizedApiBase = (apiBase || '').replace(/\/$/, '');
       const createPath = apiBase ? `${sanitizedApiBase}/${fnCreate}` : `${appBase}/api/subscriptions/create`;
-      const response = await fetch(createPath, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(requestBody)
-      });
+      async function callCreate(url: string) {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(requestBody)
+        })
+        return res
+      }
+
+      let response = await callCreate(createPath)
+
+      // Fallback: if the configured function fails (404/500), try common alt names
+      if (!response.ok) {
+        try {
+          const body = await response.text()
+          log.error('Primary subscription endpoint failed:', response.status, body)
+          // Specific migration hint: older function imports used std/hash/md5.ts (removed)
+          if (body?.includes('std@0.223.0/hash/md5.ts')) {
+            console.warn('[Subscriptions] Your Edge Function is importing std/hash/md5.ts. Update to std/crypto/md5.ts')
+          }
+        } catch {}
+
+        const altFn = fnCreate === 'subscriptions' ? 'subscriptions-create' : 'subscriptions'
+        const altPath = apiBase ? `${sanitizedApiBase}/${altFn}` : `${appBase}/api/subscriptions/create`
+        if (apiBase) {
+          console.info(`[Subscriptions] Retrying with alternate function name: ${altFn}`)
+          response = await callCreate(altPath)
+        }
+      }
 
       const data = await response.json();
       

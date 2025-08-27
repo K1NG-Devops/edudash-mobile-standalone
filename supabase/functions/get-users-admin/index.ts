@@ -3,22 +3,20 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = buildCorsHeaders(origin);
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: cors });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SERVICE_ROLE_KEY = Deno.env.get("SERVER_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-      return json({ success: false, error: "Missing service configuration" }, 500);
+      return json({ success: false, error: "Missing service configuration" }, 500, corsHeaders);
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -62,16 +60,16 @@ serve(async (req) => {
     return json({
       success: true,
       users: enhancedUsers,
-    });
+    }, 200, corsHeaders);
   } catch (e) {
     console.error("get-users-admin error:", e);
-    return json({ success: false, error: String(e?.message || e) }, 500);
+    return json({ success: false, error: String(e?.message || e) }, 500, corsHeaders);
   }
 });
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...cors, "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }

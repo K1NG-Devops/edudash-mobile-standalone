@@ -1,33 +1,11 @@
+import { supabase } from '@/lib/supabase';
 import { logger as log } from '@/lib/utils/logger';
-import Anthropic from '@anthropic-ai/sdk';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// AI Configuration
-const CLAUDE_API_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
 const DEFAULT_MODEL = 'claude-3-5-sonnet-20241022';
-
-// Initialize Claude client
-const anthropic = CLAUDE_API_KEY ? new Anthropic({
-  apiKey: CLAUDE_API_KEY,
-}) : null;
-
-// AI Usage Tracking
-interface AIUsage {
-  userId: string;
-  preschoolId: string;
-  feature: string;
-  tokensUsed: number;
-  timestamp: Date;
-}
 
 // Core AI Service Class
 export class ClaudeAIService {
   private static instance: ClaudeAIService;
-  private usageTracker: AIUsage[] = [];
-
-  private constructor() {
-    this.initializeUsageTracking();
-  }
 
   static getInstance(): ClaudeAIService {
     if (!ClaudeAIService.instance) {
@@ -36,49 +14,12 @@ export class ClaudeAIService {
     return ClaudeAIService.instance;
   }
 
-  private async initializeUsageTracking() {
-    // Guard for SSR / Node during web static rendering
-    if (typeof window === 'undefined') {
-      return;
-    }
-    try {
-      const savedUsage = await AsyncStorage.getItem('ai_usage_tracker');
-      if (savedUsage) {
-        this.usageTracker = JSON.parse(savedUsage);
-      }
-    } catch (error) {
-      log.error('Failed to initialize AI usage tracking:', error);
-    }
-  }
-
-  private async trackUsage(userId: string, preschoolId: string, feature: string, tokensUsed: number) {
-    const usage: AIUsage = {
-      userId,
-      preschoolId,
-      feature,
-      tokensUsed,
-      timestamp: new Date()
-    };
-
-    this.usageTracker.push(usage);
-
-    // Guard for SSR / Node during web static rendering
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    try {
-      await AsyncStorage.setItem('ai_usage_tracker', JSON.stringify(this.usageTracker));
-    } catch (error) {
-      log.error('Failed to save AI usage tracking:', error);
-    }
-  }
-
   /**
-   * Check if AI service is available
+   * Check if AI service is available (edge function is reachable)
    */
   isAvailable(): boolean {
-    return !!anthropic && !!CLAUDE_API_KEY;
+    // If Supabase is configured, the edge function will be reachable
+    return true;
   }
 
   /**
@@ -109,10 +50,6 @@ export class ClaudeAIService {
     };
     error?: string;
   }> {
-    if (!this.isAvailable()) {
-      return { success: false, error: 'AI service not available' };
-    }
-
     try {
       const prompt = `Create an engaging preschool lesson plan for ${params.ageGroup} children on the topic "${params.topic}".
 
@@ -148,32 +85,23 @@ Format as JSON with this structure:
 
 Make it educational, fun, and age-appropriate with hands-on learning experiences.`;
 
-      const response = await anthropic!.messages.create({
-        model: DEFAULT_MODEL,
-        max_tokens: 4000,
-        temperature: 0.7,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: {
+          feature: 'lesson_generation',
+          prompt,
+          model: DEFAULT_MODEL,
+        },
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
-        const lessonData = JSON.parse(content.text);
-
-        // Track AI usage
-        await this.trackUsage(params.userId, params.preschoolId, 'lesson_generation', response.usage?.input_tokens || 0);
-
-        return {
-          success: true,
-          content: lessonData
-        };
+      if (error) {
+        return { success: false, error: error.message };
       }
 
-      return { success: false, error: 'Invalid response format' };
+      const contentText: string | undefined = data?.content;
+      if (!contentText) return { success: false, error: 'Empty AI response' };
+
+      const lessonData = JSON.parse(contentText);
+      return { success: true, content: lessonData };
     } catch (error) {
       log.error('AI Lesson Generation Error:', error);
       return {
@@ -206,10 +134,6 @@ Make it educational, fun, and age-appropriate with hands-on learning experiences
     };
     error?: string;
   }> {
-    if (!this.isAvailable()) {
-      return { success: false, error: 'AI service not available' };
-    }
-
     try {
       const prompt = `Grade this preschool homework submission for a ${params.studentAge}-year-old child.
 
@@ -239,32 +163,19 @@ Format as JSON:
   "parentNotes": "notes for parents to support at home"
 }`;
 
-      const response = await anthropic!.messages.create({
-        model: DEFAULT_MODEL,
-        max_tokens: 2000,
-        temperature: 0.5,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: {
+          feature: 'homework_grading',
+          prompt,
+          model: DEFAULT_MODEL,
+        },
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
-        const gradingData = JSON.parse(content.text);
-
-        // Track AI usage
-        await this.trackUsage(params.userId, params.preschoolId, 'homework_grading', response.usage?.input_tokens || 0);
-
-        return {
-          success: true,
-          grading: gradingData
-        };
-      }
-
-      return { success: false, error: 'Invalid response format' };
+      if (error) return { success: false, error: error.message };
+      const text: string | undefined = data?.content;
+      if (!text) return { success: false, error: 'Empty AI response' };
+      const gradingData = JSON.parse(text);
+      return { success: true, grading: gradingData };
     } catch (error) {
       log.error('AI Homework Grading Error:', error);
       return {
@@ -296,10 +207,6 @@ Format as JSON:
     };
     error?: string;
   }> {
-    if (!this.isAvailable()) {
-      return { success: false, error: 'AI service not available' };
-    }
-
     try {
       const prompt = `Create an engaging STEM activity for ${params.ageGroup} children on "${params.topic}".
 
@@ -323,32 +230,19 @@ Format as JSON:
   "safetyNotes": ["safety1", "safety2"]
 }`;
 
-      const response = await anthropic!.messages.create({
-        model: DEFAULT_MODEL,
-        max_tokens: 2000,
-        temperature: 0.7,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: {
+          feature: 'stem_activity',
+          prompt,
+          model: DEFAULT_MODEL,
+        },
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
-        const activityData = JSON.parse(content.text);
-
-        // Track AI usage
-        await this.trackUsage(params.userId, params.preschoolId, 'stem_activity', response.usage?.input_tokens || 0);
-
-        return {
-          success: true,
-          activity: activityData
-        };
-      }
-
-      return { success: false, error: 'Invalid response format' };
+      if (error) return { success: false, error: error.message };
+      const text: string | undefined = data?.content;
+      if (!text) return { success: false, error: 'Empty AI response' };
+      const activityData = JSON.parse(text);
+      return { success: true, activity: activityData };
     } catch (error) {
       log.error('AI STEM Activity Generation Error:', error);
       return {
@@ -383,10 +277,6 @@ Format as JSON:
     };
     error?: string;
   }> {
-    if (!this.isAvailable()) {
-      return { success: false, error: 'AI service not available' };
-    }
-
     try {
       const activitiesText = params.recentActivities
         .map(a => `${a.activity}: ${a.performance} (${a.date})`)
@@ -420,32 +310,19 @@ Format as JSON:
   "parentSuggestions": ["suggestion1", "suggestion2"]
 }`;
 
-      const response = await anthropic!.messages.create({
-        model: DEFAULT_MODEL,
-        max_tokens: 2000,
-        temperature: 0.5,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: {
+          feature: 'progress_analysis',
+          prompt,
+          model: DEFAULT_MODEL,
+        },
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
-        const analysisData = JSON.parse(content.text);
-
-        // Track AI usage
-        await this.trackUsage(params.userId, params.preschoolId, 'progress_analysis', response.usage?.input_tokens || 0);
-
-        return {
-          success: true,
-          analysis: analysisData
-        };
-      }
-
-      return { success: false, error: 'Invalid response format' };
+      if (error) return { success: false, error: error.message };
+      const text: string | undefined = data?.content;
+      if (!text) return { success: false, error: 'Empty AI response' };
+      const analysisData = JSON.parse(text);
+      return { success: true, analysis: analysisData };
     } catch (error) {
       log.error('AI Progress Analysis Error:', error);
       return {
@@ -456,39 +333,16 @@ Format as JSON:
   }
 
   /**
-   * Get AI usage statistics for a preschool
+   * Get AI usage statistics for a preschool (client-side approximation only)
    */
-  async getUsageStats(preschoolId: string): Promise<{
+  async getUsageStats(_preschoolId: string): Promise<{
     totalQueries: number;
     totalTokens: number;
     featureBreakdown: Record<string, number>;
     monthlyUsage: number;
   }> {
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const preschoolUsage = this.usageTracker.filter(u =>
-      u.preschoolId === preschoolId
-    );
-
-    const monthlyUsage = preschoolUsage.filter(u =>
-      new Date(u.timestamp) >= monthStart
-    );
-
-    const featureBreakdown: Record<string, number> = {};
-    let totalTokens = 0;
-
-    preschoolUsage.forEach(usage => {
-      featureBreakdown[usage.feature] = (featureBreakdown[usage.feature] || 0) + 1;
-      totalTokens += usage.tokensUsed;
-    });
-
-    return {
-      totalQueries: preschoolUsage.length,
-      totalTokens,
-      featureBreakdown,
-      monthlyUsage: monthlyUsage.length
-    };
+    // Usage is authoritatively tracked server-side. Provide zeros here to avoid misleading billing data.
+    return { totalQueries: 0, totalTokens: 0, featureBreakdown: {}, monthlyUsage: 0 };
   }
 }
 
@@ -510,23 +364,14 @@ export type ProgressAnalysis = Awaited<ReturnType<typeof claudeAI.analyzeStudent
 export const claudeService = {
   async generateContent(args: { prompt: string; type?: string; context?: any }) {
     const { prompt } = args;
-    if (!anthropic || !CLAUDE_API_KEY) {
-      return { success: false, content: '' } as { success: boolean; content: string };
-    }
     try {
-      const response = await anthropic.messages.create({
-        model: DEFAULT_MODEL,
-        max_tokens: 2000,
-        temperature: 0.7,
-        messages: [{ role: 'user', content: prompt }],
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: { feature: 'content', prompt, model: DEFAULT_MODEL },
       });
-      const first = response.content?.[0];
-      if (first && first.type === 'text') {
-        return { success: true, content: first.text } as { success: boolean; content: string };
-      }
-      return { success: false, content: '' } as { success: boolean; content: string };
+      if (error) return { success: false, content: '' } as { success: boolean; content: string };
+      const text: string = data?.content || '';
+      return { success: !!text, content: text } as { success: boolean; content: string };
     } catch (error) {
-
       log.error('Claude simple generateContent error:', error);
       return { success: false, content: '' } as { success: boolean; content: string };
     }

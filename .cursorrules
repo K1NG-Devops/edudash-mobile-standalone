@@ -626,9 +626,51 @@ Your job includes:
 - Implement impersonation tool for support (e.g., "Login as Principal X").
 - Create feature toggles for platform-wide beta features and announcement banners.
 - Build Principal onboarding wizard with default templates and AI-generated starter content.
-- Scaffold AI utility hooks for lesson planning and homework generation.
-- Build parent-facing submission form that supports media files.
-- Implement PWA and push notification infrastructure.
-- After every major phase completed commit and push to github
+|- Scaffold AI utility hooks for lesson planning and homework generation.
+|- Build parent-facing submission form that supports media files.
+|- Implement PWA and push notification infrastructure.
+|- After every major phase completed commit and push to github
 
+---
+
+# Strict Enforcement Addendum (Aug 2025)
+
+AI and secrets
+- Never call Anthropic from the client. Use the Supabase Edge Function `ai-proxy` exclusively
+- Do not bundle AI keys (no EXPO_PUBLIC_ANTHROPIC_API_KEY usage in app logic)
+- All AI usage must be logged server-side to `ai_usage_logs`; client-side counters are non-authoritative
+- Enforce subscription limits in the server before calling AI
+
+Server state & offline
+- All server reads must go through TanStack Query; avoid raw useEffect fetches in components
+- Persist cache to AsyncStorage and scope query keys by `preschool_id` and role
+
+Observability & privacy
+- Initialize Sentry and PostHog in production only (env-gated)
+- Do not send PII; use hashed identifiers when needed
+
+RLS & data
+- Every tenant query must filter by `preschool_id` or use a secured RPC/view
+- Superadmin operations run on server with service role; never expose service role keys or bypass RLS on client
+
+i18n
+- Externalize all new strings and add Afrikaans/isiZulu stubs
+
+Performance
+- Use FlashList for lists > 20 items with proper estimatedItemSize
+- Use expo-image with caching and avoid unbounded images
+
+Ads & child safety
+- Ads show only for freemium and never during active learning
+- Guard ads behind `EXPO_PUBLIC_ENABLE_ADS` and use test IDs outside production
+
+Testing & environments
+- New features require unit tests; critical flows need at least one e2e test
+- Tests target local/test Supabase only; no destructive ops on production
+
+Security
+- Never log secrets/tokens; use HTTPS; sanitize inputs in edge functions
+
+Rule precedence
+- WARP.md > rules.md > .cursorrules (this file)
 

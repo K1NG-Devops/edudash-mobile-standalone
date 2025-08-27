@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'rea
 
 import { HomeworkAssignment } from '@/types/homework-types';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { shadow } from '@/lib/ui/shadow';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -60,11 +61,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginVertical: screenWidth * 0.02,
     padding: screenWidth * 0.04,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...shadow(2),
   },
   imageContainer: {
     marginRight: 12,

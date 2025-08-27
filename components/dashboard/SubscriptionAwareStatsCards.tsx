@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -87,8 +88,8 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
     if (usageStats?.upgrade_recommended) {
       const pulse = () => {
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 0.8, duration: 800, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 0.8, duration: 800, useNativeDriver: Platform.OS !== 'web' }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== 'web' }),
         ]).start(() => {
           setTimeout(pulse, 3000); // Pulse every 3 seconds
         });

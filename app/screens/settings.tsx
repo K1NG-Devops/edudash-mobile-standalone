@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import { restorePurchases } from '@/lib/services/revenuecat';
+import { shadow } from '@/lib/ui/shadow';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,7 +17,8 @@ import {
   Switch,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Platform,
 } from 'react-native';
 
 interface UserSettings {
@@ -357,6 +360,30 @@ const { data: { session } } = await supabase.auth.getSession();
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Contact Support</Text>
             <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
+
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]}
+              onPress={async () => {
+                try {
+                  const result = await restorePurchases();
+                  if (result.success) {
+                    Alert.alert('Restored', 'Your purchases have been restored successfully.');
+                  } else {
+                    Alert.alert('No Purchases', 'No previous purchases were found to restore.');
+                  }
+                } catch (e: any) {
+                  Alert.alert('Error', 'Failed to restore purchases. Please try again later.');
+                }
+              }}
+            >
+              <IconSymbol name="arrow.clockwise.circle" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
+              <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Restore Purchases</Text>
+              <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Danger Zone */}
@@ -427,11 +454,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   settingInfo: {
     flexDirection: 'row',
@@ -459,11 +482,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   dangerButton: {
     borderWidth: 1,

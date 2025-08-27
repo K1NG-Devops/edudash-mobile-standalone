@@ -64,6 +64,7 @@ export const PricingComponent = ({
   onPlanSelect,
   showComparison = true,
   compactMode = false,
+  initialView = 'overview',
 }: {
   embedded?: boolean;
   showRoles?: boolean;
@@ -71,13 +72,14 @@ export const PricingComponent = ({
   onPlanSelect?: (plan: PricingPlan, role: string) => void;
   showComparison?: boolean;
   compactMode?: boolean;
+  initialView?: 'overview' | 'role-specific';
 }) => {
   const { user, session } = useAuth();
   const { subscription, createSubscription, loading: subscriptionLoading, error: subscriptionError, plans } = useSubscription();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'parent' | 'teacher' | 'principal' | null>(defaultSelectedRole);
-  const [viewMode, setViewMode] = useState<'overview' | 'role-specific'>('overview');
+  const [viewMode, setViewMode] = useState<'overview' | 'role-specific'>(initialView ?? 'overview');
   const [creatingSubscription, setCreatingSubscription] = useState(false);
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
@@ -572,7 +574,10 @@ export const PricingComponent = ({
                 {roles.map((role) => (
                   <TouchableOpacity
                     key={role.id}
-                    style={styles.roleCard}
+                    style={[styles.roleCard, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]
+                    }
+                    accessibilityRole="button"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     onPress={() => handleRoleSelection(role.id)}
                     activeOpacity={0.8}
                   >
@@ -730,8 +735,10 @@ export const PricingComponent = ({
                   </View>
                   
                   <TouchableOpacity 
-                    style={styles.selectPlanButton}
+                    style={[styles.selectPlanButton, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     onPress={() => handleSelectPlan(plan)}
                   >
                     <Text style={styles.selectPlanText}>
@@ -804,8 +811,10 @@ export const PricingComponent = ({
             </View>
             
             <TouchableOpacity 
-              style={[styles.selectPlanButton, (creatingSubscription && selectedPlan === plan.id) && styles.selectPlanButtonLoading]}
+              style={[styles.selectPlanButton, (creatingSubscription && selectedPlan === plan.id) && styles.selectPlanButtonLoading, Platform.OS === 'web' ? ({ cursor: creatingSubscription ? 'not-allowed' : 'pointer' } as any) : undefined]}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               onPress={() => handleSelectPlan(plan)}
               disabled={creatingSubscription}
             >
@@ -887,18 +896,22 @@ export const PricingComponent = ({
 
       {/* Billing Interval Toggle */}
       <View style={styles.billingToggle}>
-        <TouchableOpacity
-          style={[styles.billingButton, billingInterval === 'monthly' && styles.billingButtonActive]}
-          onPress={() => setBillingInterval('monthly')}
-        >
+          <TouchableOpacity
+            style={[styles.billingButton, billingInterval === 'monthly' && styles.billingButtonActive, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
+            accessibilityRole="button"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            onPress={() => setBillingInterval('monthly')}
+          >
           <Text style={[styles.billingButtonText, billingInterval === 'monthly' && styles.billingButtonTextActive]}>
             Monthly
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.billingButton, billingInterval === 'annual' && styles.billingButtonActive]}
-          onPress={() => setBillingInterval('annual')}
-        >
+          <TouchableOpacity
+            style={[styles.billingButton, billingInterval === 'annual' && styles.billingButtonActive, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
+            accessibilityRole="button"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            onPress={() => setBillingInterval('annual')}
+          >
           <Text style={[styles.billingButtonText, billingInterval === 'annual' && styles.billingButtonTextActive]}>
             Annual (Save 17%)
           </Text>
@@ -908,7 +921,9 @@ export const PricingComponent = ({
       {showRoles && (
         <View style={styles.viewToggle}>
           <TouchableOpacity
-            style={[styles.toggleButton, viewMode === 'overview' && styles.toggleButtonActive]}
+            style={[styles.toggleButton, viewMode === 'overview' && styles.toggleButtonActive, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
+            accessibilityRole="button"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             onPress={() => setViewMode('overview')}
           >
             <Text style={[styles.toggleButtonText, viewMode === 'overview' && styles.toggleButtonTextActive]}>
@@ -916,7 +931,9 @@ export const PricingComponent = ({
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.toggleButton, viewMode === 'role-specific' && styles.toggleButtonActive]}
+            style={[styles.toggleButton, viewMode === 'role-specific' && styles.toggleButtonActive, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
+            accessibilityRole="button"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             onPress={() => setViewMode('role-specific')}
           >
             <Text style={[styles.toggleButtonText, viewMode === 'role-specific' && styles.toggleButtonTextActive]}>

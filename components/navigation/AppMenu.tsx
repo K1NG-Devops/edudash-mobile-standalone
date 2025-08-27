@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors, getRoleColors } from '@/constants/Colors';
 import { router } from 'expo-router';
+import { shadow } from '@/lib/ui/shadow';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -469,14 +470,7 @@ const styles = StyleSheet.create({
     width: screenWidth * 0.85,
     height: screenHeight,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: -2,
-      height: 0,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 20,
+    ...shadow(8),
   },
   header: {
     paddingTop: 60,

@@ -1,33 +1,48 @@
-import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Platform, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import { shadow } from '@/lib/ui/shadow';
+import { DesignSystem } from '@/constants/DesignSystem';
 
 interface CardProps {
   children: React.ReactNode;
   style?: ViewStyle;
   variant?: 'elevated' | 'flat' | 'outlined';
+  hoverEffect?: boolean;
 }
 
-export default function ThemedCard({ children, style, variant = 'elevated' }: CardProps) {
+export default function ThemedCard({ children, style, variant = 'elevated', hoverEffect = true }: CardProps) {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
+  const [hovered, setHovered] = useState(false);
 
-  const styles = StyleSheet.create({
+  const baseShadowDepth = variant === 'elevated' ? 4 : 0;
+  const hoverShadowDepth = 6;
+
+  const styles = useMemo(() => StyleSheet.create({
     card: {
       backgroundColor: palette.surface,
-      borderRadius: 16,
-      padding: 16,
+      borderRadius: DesignSystem.borderRadius.lg,
+      padding: DesignSystem.spacing.lg,
       borderWidth: variant === 'outlined' ? 1 : 0,
       borderColor: palette.outline,
-      shadowColor: '#000',
-      shadowOpacity: variant === 'elevated' ? 0.2 : 0,
-      shadowRadius: variant === 'elevated' ? 8 : 0,
-      shadowOffset: { width: 0, height: variant === 'elevated' ? 4 : 0 },
-      elevation: variant === 'elevated' ? 4 : 0,
+      ...(hoverEffect && Platform.OS === 'web' && hovered ? shadow(hoverShadowDepth) : shadow(baseShadowDepth)),
+      ...(hoverEffect && Platform.OS === 'web' && hovered ? ({ transform: [{ scale: 1.01 }] } as any) : null),
+      transitionDuration: Platform.OS === 'web' ? '120ms' : undefined,
+      transitionProperty: Platform.OS === 'web' ? 'box-shadow, transform' : undefined,
     },
-  });
+  }), [palette.surface, palette.outline, variant, hovered, hoverEffect]);
 
-  return <View style={[styles.card, style]}>{children}</View>;
+  return (
+    <Pressable
+      onHoverIn={hoverEffect && Platform.OS === 'web' ? () => setHovered(true) : undefined}
+      onHoverOut={hoverEffect && Platform.OS === 'web' ? () => setHovered(false) : undefined}
+      style={[styles.card, style]}
+      accessibilityRole="summary"
+    >
+      {children}
+    </Pressable>
+  );
 }
 

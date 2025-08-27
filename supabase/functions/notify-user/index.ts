@@ -5,25 +5,23 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, X-Edudash-Token",
-};
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  const origin = req.headers.get("Origin");
+  const corsHeaders = buildCorsHeaders(origin);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SERVICE_ROLE_KEY = Deno.env.get("SERVER_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const NOTIFY_FUNCTION_TOKEN = Deno.env.get("SERVER_NOTIFY_FUNCTION_TOKEN") || Deno.env.get("NOTIFY_FUNCTION_TOKEN");
-    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Service not configured" }, 500);
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Service not configured" }, 500, corsHeaders);
 
     // Simple shared-secret check
     const token = req.headers.get("X-Edudash-Token");
     if (!NOTIFY_FUNCTION_TOKEN || token !== NOTIFY_FUNCTION_TOKEN) {
-      return json({ error: "Unauthorized" }, 401);
+      return json({ error: "Unauthorized" }, 401, corsHeaders);
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
@@ -36,7 +34,7 @@ serve(async (req) => {
     const action_url = body?.action_url ? String(body.action_url) : null;
 
     if (!user_id || !title || !message) {
-      return json({ error: "Missing required fields (user_id, title, message)" }, 400);
+      return json({ error: "Missing required fields (user_id, title, message)" }, 400, corsHeaders);
     }
 
     // Validate the target user exists
@@ -46,8 +44,8 @@ serve(async (req) => {
       .eq('id', user_id)
       .maybeSingle();
 
-    if (userErr) return json({ error: userErr.message }, 500);
-    if (!userRow) return json({ error: "User not found" }, 404);
+    if (userErr) return json({ error: userErr.message }, 500, corsHeaders);
+    if (!userRow) return json({ error: "User not found" }, 404, corsHeaders);
 
     // Insert notification
     const { error: insErr } = await admin
@@ -62,18 +60,18 @@ serve(async (req) => {
         created_at: new Date().toISOString(),
       } as any);
 
-    if (insErr) return json({ error: insErr.message }, 500);
+    if (insErr) return json({ error: insErr.message }, 500, corsHeaders);
 
-    return json({ success: true });
+    return json({ success: true }, 200, corsHeaders);
   } catch (e) {
-    return json({ error: String(e?.message || e) }, 500);
+    return json({ error: String(e?.message || e) }, 500, corsHeaders);
   }
 });
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...cors, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 

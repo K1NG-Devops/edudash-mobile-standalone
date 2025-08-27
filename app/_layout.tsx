@@ -1,3 +1,4 @@
+import '@/lib/monitoring';
 import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary';
 import { AuthProvider } from '@/contexts/SimpleWorkingAuth';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
@@ -11,6 +12,8 @@ import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { Colors } from '@/constants/Colors';
 import RevenueCatProvider from '@/components/payments/RevenueCatProvider';
+import { QueryProvider } from '@/contexts/QueryProvider';
+import { ToastProvider } from '@/components/ui/Toast';
 
 // Error boundary for route-level errors
 function RouteErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -67,24 +70,28 @@ export default function RootLayout() {
     <AuthErrorBoundary>
       <AuthProvider>
         <ThemeProvider>
-          <RevenueCatProvider>
-            <SafeAreaProvider>
-              <ThemeStatusBar />
-              <View style={styles.container}>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="landing" options={{ headerShown: false }} />
-                <Stack.Screen name="pricing" options={{ headerShown: false }} />
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="screens" options={{ headerShown: false }} />
-                <Stack.Screen name="about" options={{ headerShown: false }} />
-                <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
-              </Stack>
-              {!hideBottomNav && <GlobalBottomNav />}
-            </View>
-          </SafeAreaProvider>
-          </RevenueCatProvider>
+          <QueryProvider>
+            <ToastProvider>
+              <RevenueCatProvider>
+                <SafeAreaProvider>
+                  <ThemeStatusBar />
+                  <View style={styles.container}>
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="index" options={{ headerShown: false }} />
+                    <Stack.Screen name="landing" options={{ headerShown: false }} />
+                    <Stack.Screen name="pricing" options={{ headerShown: false }} />
+                    <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="screens" options={{ headerShown: false }} />
+                    <Stack.Screen name="about" options={{ headerShown: false }} />
+                    <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
+                  </Stack>
+                  {!hideBottomNav && <GlobalBottomNav />}
+                </View>
+              </SafeAreaProvider>
+              </RevenueCatProvider>
+            </ToastProvider>
+          </QueryProvider>
         </ThemeProvider>
       </AuthProvider>
     </AuthErrorBoundary>

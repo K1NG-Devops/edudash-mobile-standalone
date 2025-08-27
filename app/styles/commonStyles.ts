@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { shadow } from '@/lib/ui/shadow';
 
 export const styles = StyleSheet.create({
   // Container styles
@@ -57,14 +58,7 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...shadow(4),
   },
   
   sectionTitle: {
@@ -97,14 +91,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
-    shadowColor: '#2563eb',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    ...shadow(4, '#2563eb'),
   },
   
   primaryButtonText: {
@@ -153,14 +140,7 @@ export const styles = StyleSheet.create({
   
   inputFocused: {
     borderColor: '#2563eb',
-    shadowColor: '#2563eb',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...shadow(2, '#2563eb'),
   },
   
   textArea: {
@@ -174,14 +154,7 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...shadow(2),
   },
   
   cardHeader: {
@@ -456,36 +429,15 @@ export const styles = StyleSheet.create({
   
   // Shadow utilities
   shadow: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...shadow(2),
   },
   
   shadowMd: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...shadow(4),
   },
   
   shadowLg: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
+    ...shadow(8),
   },
 });
 
