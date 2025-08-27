@@ -92,13 +92,39 @@ export class PrincipalService {
         log.warn('Error fetching student count:', studentsError);
       }
 
-      // Get total teachers
-      const { count: totalTeachers, error: teachersError } = await this.countRows('users', (qb: any) =>
+      // Get total teachers (primary source: users table)
+      let { count: totalTeachers, error: teachersError } = await this.countRows('users', (qb: any) =>
         qb.eq('role', 'teacher').eq('preschool_id', preschoolId).eq('is_active', true)
       );
 
       if (teachersError && teachersError.code !== 'PGRST116') {
         log.warn('Error fetching teacher count:', teachersError);
+      }
+
+      // Fallback: If primary count returns 0 or null (e.g., stricter RLS or incomplete linking),
+      // estimate teachers from distinct teacher assignments on active classes in the same preschool.
+      // This keeps RLS intact and avoids mock data.
+      if (!totalTeachers || totalTeachers === 0) {
+        try {
+          const { data: classTeacherIds, error: classErr } = await (supabase as any)
+            .from('classes')
+            .select('teacher_id')
+            .eq('preschool_id', preschoolId)
+            .eq('is_active', true)
+            .not('teacher_id', 'is', null);
+          if (!classErr && Array.isArray(classTeacherIds)) {
+            const distinct = new Set<string>();
+            for (const row of classTeacherIds) {
+              if (row && row.teacher_id) distinct.add(String(row.teacher_id));
+            }
+            if (distinct.size > 0) {
+              totalTeachers = distinct.size;
+            }
+          }
+        } catch (fallbackErr) {
+          // Non-fatal; keep original count
+          log.warn('Teacher count fallback failed:', fallbackErr);
+        }
       }
 
       // Get total parents
@@ -257,18 +283,56 @@ export class PrincipalService {
         return { data: null, error: 'No preschool ID provided' };
       }
 
-      const { data: results, error } = await supabase
-        .from('school_invitation_codes')
-        .select('*')
-        .eq('preschool_id', preschoolId)
-        .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false })
-        .limit(10);
+      // Primary path: request an array response (never object+json) and pick newest
+      const nowIso = new Date().toISOString();
+      let listResp: any;
+      try {
+        listResp = await supabase
+          .from('school_invitation_codes')
+          .select('*')
+          .eq('preschool_id', preschoolId)
+          .eq('is_active', true)
+          .gt('expires_at', nowIso)
+          .order('created_at', { ascending: false })
+          .limit(10);
+      } catch (e) {
+        // Network/transport error
+        return { data: null, error: e };
+      }
+
+      let results: any[] | null = listResp?.data ?? null;
+      let error = listResp?.error ?? null;
+
+      // Some environments may still respond with PGRST116 when object was requested implicitly.
+      // Fallback: re-run with strict list semantics and limit(1) to force a single newest row.
+      if (error && (error.code === 'PGRST116' || error.code === 'PGRST106')) {
+        try {
+          const retry = await supabase
+            .from('school_invitation_codes')
+            .select('*')
+            .eq('preschool_id', preschoolId)
+            .eq('is_active', true)
+            .gt('expires_at', nowIso)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          results = retry.data ?? null;
+          error = retry.error ?? null;
+        } catch (e2) {
+          return { data: null, error: e2 };
+        }
+      }
 
       if (error) {
-        log.error('Database error getting active school invitation code:', error);
-        return { data: null, error };
+        // Downgrade severity for expected multi-row scenarios
+        if (error.code === 'PGRST116') {
+          log.warn('Multiple active invitation codes detected; falling back to newest. Details:', error);
+        } else {
+          log.error('Database error getting active school invitation code:', error);
+        }
+        // If we have no data after retry, surface the error
+        if (!results || results.length === 0) {
+          return { data: null, error };
+        }
       }
 
       // If no results, return null
@@ -276,15 +340,11 @@ export class PrincipalService {
         return { data: null, error: null };
       }
 
-      // If multiple results, log warning and deactivate older ones
+      // If multiple results, keep newest and deactivate older in the background
+      const mostRecent = results[0];
       if (results.length > 1) {
         log.warn(`Found ${results.length} active invitation codes for preschool ${preschoolId}. Deactivating older ones.`);
-        
-        // Keep the most recent one, deactivate the rest
-        const mostRecent = results[0];
         const olderCodes = results.slice(1);
-        
-        // Deactivate older codes in the background (don't wait)
         for (const oldCode of olderCodes) {
           supabase
             .from('school_invitation_codes')
@@ -298,26 +358,9 @@ export class PrincipalService {
               }
             });
         }
-        
-        // Use the most recent code
-        const data = mostRecent;
-        const validatedCode: SchoolInvitationCode = {
-          id: data.id,
-          code: data.code,
-          preschool_id: data.preschool_id,
-          created_by: (data as any).created_by || (data as any).invited_by,
-          created_at: (data.created_at || new Date().toISOString()) as string,
-          expires_at: (data.expires_at || new Date(Date.now() + 86400000).toISOString()) as string,
-          is_active: Boolean(data.is_active ?? false),
-          usage_count: (data.current_uses ?? 0) as number,
-          max_usage: (data.max_uses ?? undefined) as number | undefined,
-          description: (data as any).description || '',
-        };
-        return { data: validatedCode, error: null };
       }
 
-      // Single result - normal case
-      const data = results[0];
+      const data = mostRecent;
       const validatedCode: SchoolInvitationCode = {
         id: data.id,
         code: data.code,
