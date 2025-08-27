@@ -37,7 +37,7 @@
           'Mobile app access',
           'Ads on non-learning pages'
         ],
-        ai_quota_monthly: 0,
+ai_quota_monthly: 5,
         max_students: 3,
         max_teachers: 1,
         is_active: true,
@@ -48,13 +48,13 @@
         price_monthly: 49.0,
         price_annual: Math.round(49 * 12 * 0.83 * 100) / 100,
         features: [
-          '5 AI lessons per day',
+'25 AI lessons per month',
           'Up to 15 students',
           'Advanced progress tracking',
           'Parent-teacher messaging',
           'No ads'
         ],
-        ai_quota_monthly: 5 * 30,
+ai_quota_monthly: 25,
         max_students: 15,
         max_teachers: 3,
         is_active: true,

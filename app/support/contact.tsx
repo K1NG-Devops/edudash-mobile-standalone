@@ -142,7 +142,7 @@ export default function ContactSupportPage() {
                       style={styles.contactMethodCard}
                       onPress={() => {
                         if (method.title === 'Help Center') {
-                          router.push('/support/help');
+router.push('/support/help' as any);
                         } else if (method.title === 'Email Support') {
                           // Open email client
                         } else if (method.title === 'Phone Support' || method.title === 'WhatsApp Chat') {

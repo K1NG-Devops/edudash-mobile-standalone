@@ -1,9 +1,11 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { AIUsageInfo, SubscriptionData } from '@/contexts/SubscriptionContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { shadow } from '@/lib/ui/shadow';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { BillingPreferencesService } from '@/lib/services/billingPreferencesService';
 
 interface PlanStatusProps {
     subscription: SubscriptionData | null;
@@ -22,6 +24,31 @@ const PlanStatus: React.FC<PlanStatusProps> = ({
 }) => {
     const { theme } = useTheme();
     const isDark = theme.isDark;
+    const { profile } = useAuth();
+    const [overageEnabled, setOverageEnabled] = useState<boolean | null>(null);
+    const [overagePrice, setOveragePrice] = useState<number>(3);
+    const [savingOverage, setSavingOverage] = useState(false);
+
+    useEffect(() => {
+        (async () => {
+            if (!profile?.auth_user_id) return;
+            const prefs = await BillingPreferencesService.getPreferencesByAuth(profile.auth_user_id);
+            if (prefs) {
+                setOverageEnabled(!!prefs.overage_enabled);
+                setOveragePrice(Number(prefs.overage_price_per_unit || 3));
+            } else {
+                setOverageEnabled(false);
+            }
+        })();
+    }, [profile?.auth_user_id]);
+
+    const handleEnableOverage = async () => {
+        if (!profile?.auth_user_id) return;
+        setSavingOverage(true);
+        const ok = await BillingPreferencesService.setOverageEnabledByAuth(profile.auth_user_id, true);
+        if (ok) setOverageEnabled(true);
+        setSavingOverage(false);
+    };
 
     const colors = {
         background: isDark ? '#1E293B' : '#FFFFFF',
@@ -159,13 +186,35 @@ const PlanStatus: React.FC<PlanStatusProps> = ({
                         </Text>
                     </View>
 
-                    {aiUsage.remainingUsage === 0 && aiUsage.monthlyLimit !== -1 && (
-                        <View style={styles.limitWarning}>
+                    {aiUsage.monthlyLimit !== -1 && aiUsage.remainingUsage <= 2 && aiUsage.remainingUsage > 0 && (
+                        <View style={styles.limitApproaching}>
                             <IconSymbol name="exclamationmark.triangle.fill" size={16} color={colors.warning} />
                             <Text style={[styles.limitWarningText, { color: colors.warning }]}>
-                                You've reached your monthly AI usage limit. Upgrade for more requests.
+                                Only {aiUsage.remainingUsage} AI request{aiUsage.remainingUsage === 1 ? '' : 's'} left this month.
                             </Text>
                         </View>
+                    )}
+
+                    {aiUsage.remainingUsage === 0 && aiUsage.monthlyLimit !== -1 && (
+                        <>
+                            <View style={styles.limitWarning}>
+                                <IconSymbol name="exclamationmark.triangle.fill" size={16} color={colors.warning} />
+                                <Text style={[styles.limitWarningText, { color: colors.warning }]}>
+                                    You've reached your monthly AI usage limit. Upgrade for more requests.
+                                </Text>
+                            </View>
+                            {overageEnabled === false && (
+                                <TouchableOpacity 
+                                  style={[styles.overageButton, { borderColor: colors.premium }]}
+                                  onPress={handleEnableOverage}
+                                  disabled={savingOverage}
+                                >
+                                  <Text style={[styles.overageButtonText, { color: colors.premium }]}>
+                                    {savingOverage ? 'Enabling…' : `Enable overage (${new Intl.NumberFormat(undefined, { style: 'currency', currency: 'ZAR' }).format(overagePrice)}/request)`}
+                                  </Text>
+                                </TouchableOpacity>
+                            )}
+                        </>
                     )}
 
                     <Text style={[styles.resetText, { color: colors.textSecondary }]}>
@@ -299,7 +348,15 @@ const styles = StyleSheet.create({
     limitWarning: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+        padding: 8,
+        borderRadius: 8,
+        marginBottom: 8,
+    },
+    limitApproaching: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(245, 158, 11, 0.08)',
         padding: 8,
         borderRadius: 8,
         marginBottom: 8,
@@ -312,6 +369,18 @@ const styles = StyleSheet.create({
     resetText: {
         fontSize: 12,
         textAlign: 'center',
+    },
+    overageButton: {
+        marginTop: 10,
+        alignSelf: 'flex-start',
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    overageButtonText: {
+        fontSize: 13,
+        fontWeight: '600'
     },
 });
 

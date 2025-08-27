@@ -25,6 +25,12 @@ function monthBounds(now = new Date()) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+function dayBounds(now = new Date()) {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 function featureModelDefaults(feature: string) {
   switch (feature) {
     case "homework_grading":
@@ -77,7 +83,15 @@ serve(async (req) => {
     }
 
     // Authenticated client (for user context)
-    const client = createClient(SUPABASE_URL, SUPABASE_ANON, { global: { headers: req.headers } });
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+          apikey: SUPABASE_ANON,
+        },
+      },
+    });
     // Admin client (privileged DB access)
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
@@ -111,10 +125,64 @@ serve(async (req) => {
     const userId = dbUser?.id;
     const userTier = (dbUser?.subscription_tier as string) || "free";
 
-    // Enforce monthly usage limits
+    // Load school subscription to detect trial status
+    let isTrial = false;
+    let trialExpired = false;
+    if (dbUser?.preschool_id) {
+      const { data: school } = await admin
+        .from('preschools')
+        .select('subscription_status, subscription_start_date, subscription_end_date')
+        .eq('id', dbUser.preschool_id)
+        .maybeSingle();
+      const status = school?.subscription_status as string | null;
+      const startISO = school?.subscription_start_date as string | null;
+      const endISO = school?.subscription_end_date as string | null;
+      isTrial = status === 'trial';
+      if (isTrial) {
+        const now = new Date();
+        if (endISO) {
+          trialExpired = new Date(endISO) < now;
+        } else if (startISO) {
+          const start = new Date(startISO);
+          const expiry = new Date(start.getTime() + 14 * 24 * 60 * 60 * 1000);
+          trialExpired = expiry < now;
+        }
+      }
+    }
+
+    if (isTrial && trialExpired) {
+      return json({ success: false, error: 'Your 14-day trial has expired. Please upgrade to continue using AI features.', code: 'TRIAL_EXPIRED' }, 402, corsHeaders);
+    }
+
+    // Generic rate limiting for all users
+    // - Burst: max 1 request per 2 seconds
+    // - Sustained: max 10 requests per minute
+    if (userId) {
+      const burstWindow = new Date(Date.now() - 2_000).toISOString();
+      const { count: burstCount } = await admin
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', burstWindow);
+      if ((burstCount ?? 0) >= 1) {
+        return json({ success: false, error: 'You are sending requests too quickly. Please wait a moment and try again.', code: 'RATE_LIMIT_BURST' }, 429, corsHeaders);
+      }
+
+      const minuteWindow = new Date(Date.now() - 60_000).toISOString();
+      const { count: minuteCount } = await admin
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', minuteWindow);
+      if ((minuteCount ?? 0) >= 10) {
+        return json({ success: false, error: 'Too many requests in a short time. Please try again in a minute.', code: 'RATE_LIMIT_MINUTE' }, 429, corsHeaders);
+      }
+    }
+
+    // Enforce monthly usage limits with overage support
     const limits: Record<string, number> = {
       free: 5,
-      starter: 20,
+      starter: 25,
       premium: 100,
       enterprise: -1, // unlimited
     };
@@ -124,16 +192,82 @@ serve(async (req) => {
     let currentMonthCount = 0;
     if (userId) {
       const { count } = await admin
-        .from("ai_usage_logs")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .gte("created_at", start)
-        .lte("created_at", end);
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', start)
+        .lte('created_at', end);
       currentMonthCount = count ?? 0;
     }
 
+    let overageApplied = false;
+    let overageAmount = 0;
+
     if (limit !== -1 && currentMonthCount >= limit) {
-      return json({ success: false, error: "Monthly AI usage limit reached", code: "USAGE_LIMIT" }, 402, corsHeaders);
+      if (userId) {
+        const { data: prefs } = await admin
+          .from('billing_preferences')
+          .select('overage_enabled, overage_price_per_unit')
+          .eq('user_id', userId)
+          .maybeSingle();
+        const overageEnabled = !!prefs?.overage_enabled;
+        const pricePerUnit = Number(prefs?.overage_price_per_unit ?? (Deno.env.get('OVERAGE_PRICE_PER_REQUEST') || 3.0));
+        if (overageEnabled) {
+          overageApplied = true;
+          overageAmount = pricePerUnit;
+        } else {
+          return json({ success: false, error: 'Monthly AI usage limit reached', code: 'USAGE_LIMIT' }, 402, corsHeaders);
+        }
+      } else {
+        return json({ success: false, error: 'Monthly AI usage limit reached', code: 'USAGE_LIMIT' }, 402, corsHeaders);
+      }
+    }
+
+    // Trial-specific limits
+    if (isTrial && userId) {
+      const dailyLimit = Number(Deno.env.get('TRIAL_AI_DAILY_LIMIT') || 10);
+      const totalLimit = Number(Deno.env.get('TRIAL_AI_TOTAL_LIMIT') || 50);
+
+      // Daily usage
+      const { start: dStart, end: dEnd } = dayBounds();
+      const { count: dailyCount } = await admin
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', dStart)
+        .lte('created_at', dEnd);
+      if ((dailyCount ?? 0) >= dailyLimit) {
+        return json({ success: false, error: `Daily AI usage limit reached during trial (limit ${dailyLimit})`, code: 'TRIAL_DAILY_LIMIT' }, 402, corsHeaders);
+      }
+
+      // Total usage across trial period
+      // If we know trial start, use it; else last 14 days
+      const trialStartISO = (await admin
+        .from('preschools')
+        .select('subscription_start_date')
+        .eq('id', dbUser!.preschool_id!)
+        .maybeSingle()).data?.subscription_start_date as string | null;
+
+      const totalStart = trialStartISO ? new Date(trialStartISO) : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+      const { count: totalCount } = await admin
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', totalStart.toISOString());
+      if ((totalCount ?? 0) >= totalLimit) {
+        return json({ success: false, error: `Trial AI usage limit reached (limit ${totalLimit})`, code: 'TRIAL_TOTAL_LIMIT' }, 402, corsHeaders);
+      }
+
+      // Simple burst rate limit: 1 request per 5 seconds per user
+      const recentWindow = new Date(Date.now() - 5_000).toISOString();
+      const { count: recent } = await admin
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', recentWindow);
+      if ((recent ?? 0) >= 1) {
+        return json({ success: false, error: 'You are sending requests too quickly. Please wait a few seconds and try again.', code: 'RATE_LIMIT' }, 429, corsHeaders);
+      }
     }
 
     // Build or accept prompt
@@ -196,9 +330,19 @@ Return JSON { title, description, instructions[], scientificConcepts[], extensio
         tokens_used: tokensUsed,
         created_at: new Date().toISOString(),
       } as any);
+
+      if (overageApplied) {
+        await admin.from('ai_overage_logs').insert({
+          user_id: userId,
+          feature,
+          units: 1,
+          amount: overageAmount,
+          created_at: new Date().toISOString(),
+        } as any);
+      }
     }
 
-    return json({ success: true, content: contentText, usage: { inputTokens, outputTokens } }, 200, corsHeaders);
+    return json({ success: true, content: contentText, usage: { inputTokens, outputTokens }, overage: overageApplied ? { charged: true, amount: overageAmount } : { charged: false } }, 200, corsHeaders);
   } catch (e) {
     console.error("ai-proxy error:", e);
     return json({ success: false, error: (e as Error).message || String(e) }, 500, corsHeaders);

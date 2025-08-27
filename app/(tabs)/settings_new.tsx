@@ -17,7 +17,7 @@ import { router } from 'expo-router';
 
 export default function SettingsNewScreen() {
   const { colorScheme, setColorScheme } = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, signOut, profile } = useAuth();
   const [settings, setSettings] = useState({
     notifications: true,
     emailNotifications: true,
@@ -128,20 +128,33 @@ export default function SettingsNewScreen() {
         </View>
 
         {/* Admin Section */}
-        <View style={[styles.section, { backgroundColor: palette.surface }]}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>Admin</Text>
-          
-          <TouchableOpacity 
-            style={[styles.actionButton, { backgroundColor: palette.surface }]}
-            onPress={handleSendTestNotification}
-          >
-            <IconSymbol name="paperplane" size={20} color={palette.success} />
-            <Text style={[styles.actionButtonText, { color: palette.text }]}>
-              Send test notification
-            </Text>
-            <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
-          </TouchableOpacity>
-        </View>
+        {(profile?.role === 'preschool_admin' || profile?.role === 'superadmin') && (
+          <View style={[styles.section, { backgroundColor: palette.surface }]}>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>Admin</Text>
+
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: palette.surface }]}
+              onPress={() => router.push('/screens/school-settings')}
+            >
+              <IconSymbol name="gearshape.fill" size={20} color={palette.primary} />
+              <Text style={[styles.actionButtonText, { color: palette.text }]}> 
+                School Settings
+              </Text>
+              <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: palette.surface }]}
+              onPress={handleSendTestNotification}
+            >
+              <IconSymbol name="paperplane" size={20} color={palette.success} />
+              <Text style={[styles.actionButtonText, { color: palette.text }]}> 
+                Send test notification
+              </Text>
+              <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Account Section */}
         <View style={[styles.section, { backgroundColor: palette.surface }]}>

@@ -35,7 +35,7 @@ export function ThemedText({
     <Text
       style={[
         { color },
-        ds,
+        ds as any,
         type === 'link' ? styles.link : undefined,
         semiBold,
         style,

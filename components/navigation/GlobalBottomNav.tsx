@@ -4,7 +4,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { router, usePathname } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { shadow } from '@/lib/ui/shadow';
 
@@ -78,8 +78,12 @@ export default function GlobalBottomNav() {
   const textColorInactive = isDark ? '#9CA3AF' : '#6B7280';
   const backgroundColor = isDark ? '#0F172A' : '#FFFFFF';
   const borderColor = isDark ? '#475569' : '#E5E7EB';
+  const wrapperStyle = Platform.OS === 'web' 
+    ? [styles.wrapper, { position: 'fixed' as any }] 
+    : [styles.wrapper];
+
   return (
-    <View style={[styles.wrapper, { pointerEvents: 'box-none' as any }]}> 
+    <View style={[...wrapperStyle, { pointerEvents: 'box-none' as any }]}> 
       <SafeAreaView edges={['bottom','left','right']}>
         <View style={[styles.tabNavigationBottom, shadow(3), {
           backgroundColor,

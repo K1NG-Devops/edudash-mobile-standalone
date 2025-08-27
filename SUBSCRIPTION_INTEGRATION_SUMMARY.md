@@ -20,30 +20,30 @@ I've created a comprehensive subscription-aware Parent Dashboard system that int
 **Subscription Tiers & Limits**:
 ```typescript
 Free: {
-  ai_lessons_per_day: 3,
-  homework_grading_per_day: 5,
-  ai_tutoring_sessions_per_day: 1,
+  ai_lessons_per_month: 5,
+  homework_grading_per_month: 10,
+  ai_tutoring_sessions_per_month: 2,
   premium_content_access: false
 }
 
 Starter: {
-  ai_lessons_per_day: 15,
-  homework_grading_per_day: 25,
-  ai_tutoring_sessions_per_day: 5,
+  ai_lessons_per_month: 25,
+  homework_grading_per_month: 50,
+  ai_tutoring_sessions_per_month: 10,
   premium_content_access: true
 }
 
 Premium: {
-  ai_lessons_per_day: 50,
-  homework_grading_per_day: 100,
-  ai_tutoring_sessions_per_day: 20,
+  ai_lessons_per_month: 100,
+  homework_grading_per_month: 200,
+  ai_tutoring_sessions_per_month: 60,
   advanced_analytics: true
 }
 
 Enterprise: {
-  ai_lessons_per_day: null, // unlimited
-  homework_grading_per_day: null,
-  ai_tutoring_sessions_per_day: null
+  ai_lessons_per_month: null, // unlimited
+  homework_grading_per_month: null,
+  ai_tutoring_sessions_per_month: null
 }
 ```
 

@@ -22,7 +22,7 @@ export interface SubscriptionPlan {
   features: string[];
   limits: {
     students: number | null; // null = unlimited
-    ai_lessons_per_day: number | null;
+    ai_lessons_per_month: number | null;
     ai_tutors: number | null;
     schools: number | null;
     storage_gb: number | null;
@@ -282,11 +282,10 @@ export class SubscriptionService {
 
     // Derive limits from existing columns
     const ai_quota_monthly: number | null = db.ai_quota_monthly ?? null;
-    const ai_lessons_per_day: number | null = ai_quota_monthly != null ? Math.max(0, Math.floor(ai_quota_monthly / 30)) : null;
 
     const limits = {
       students: db.max_students ?? null,
-      ai_lessons_per_day,
+      ai_lessons_per_month: ai_quota_monthly,
       ai_tutors: null as number | null,
       schools: tier === 'enterprise' ? null : 1,
       storage_gb: null as number | null,
@@ -452,7 +451,7 @@ export class SubscriptionService {
           price_annual: 0,
           currency: 'ZAR',
           features: ['basic_lessons', 'class_management', 'student_enrollment'],
-          limits: { students: 3, ai_lessons_per_day: 0, ai_tutors: 0, schools: 1, storage_gb: 1 },
+limits: { students: 3, ai_lessons_per_month: 5, ai_tutors: 0, schools: 1, storage_gb: 1 },
           trial_days: 0,
           is_active: true,
           created_at: now,
@@ -466,7 +465,7 @@ export class SubscriptionService {
           price_annual: Math.round(49 * 12 * 0.83),
           currency: 'ZAR',
           features: ['ai_lesson_generator', 'class_management', 'basic_lessons', 'student_enrollment'],
-          limits: { students: 15, ai_lessons_per_day: 5, ai_tutors: 2, schools: 1, storage_gb: 5 },
+limits: { students: 15, ai_lessons_per_month: 25, ai_tutors: 2, schools: 1, storage_gb: 5 },
           trial_days: 14,
           is_active: true,
           created_at: now,
@@ -480,7 +479,7 @@ export class SubscriptionService {
           price_annual: Math.round(149 * 12 * 0.83),
           currency: 'ZAR',
           features: ['ai_lesson_generator', 'homework_grader', 'stem_activities', 'progress_analysis', 'class_management', 'basic_lessons', 'student_enrollment'],
-          limits: { students: 50, ai_lessons_per_day: null, ai_tutors: 5, schools: 1, storage_gb: 50 },
+limits: { students: 50, ai_lessons_per_month: null, ai_tutors: 5, schools: 1, storage_gb: 50 },
           trial_days: 14,
           is_active: true,
           created_at: now,
@@ -494,7 +493,7 @@ export class SubscriptionService {
           price_annual: Math.round(999 * 12 * 0.83),
           currency: 'ZAR',
           features: ['ai_lesson_generator', 'homework_grader', 'stem_activities', 'progress_analysis', 'class_management', 'basic_lessons', 'student_enrollment'],
-          limits: { students: null, ai_lessons_per_day: null, ai_tutors: null, schools: null, storage_gb: null },
+limits: { students: null, ai_lessons_per_month: null, ai_tutors: null, schools: null, storage_gb: null },
           trial_days: 30,
           is_active: true,
           created_at: now,

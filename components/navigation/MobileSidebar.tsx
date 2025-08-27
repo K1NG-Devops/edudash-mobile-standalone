@@ -68,7 +68,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
         title: 'Profile Settings',
         subtitle: 'Manage your account',
         icon: 'person.circle.fill',
-        route: 'screens/profile',
+        route: '/screens/profile',
         color: '#6366F1',
       },
       {
@@ -76,8 +76,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
         title: 'Notifications',
         subtitle: 'Manage alerts & updates',
         icon: 'bell.fill',
-        route: 'screens/notifications',
-        badge: 5,
+        route: '/screens/notifications',
         color: '#8B5CF6',
       },
     ];
@@ -90,7 +89,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'Super Admin Dashboard',
             subtitle: 'Platform overview & management',
             icon: 'rectangle.3.group.fill',
-            route: 'screens/admin-dashboard',
+            route: '/screens/admin-dashboard',
             color: '#DC2626',
           },
           {
@@ -98,7 +97,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'Platform Analytics',
             subtitle: 'Growth metrics & insights',
             icon: 'chart.bar.fill',
-            route: 'screens/analytics',
+            route: '/screens/analytics',
             color: '#DC2626',
           },
           {
@@ -106,7 +105,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'User Management',
             subtitle: 'Manage all platform users',
             icon: 'person.3.fill',
-            route: 'screens/admin-dashboard',
+            route: '/screens/admin-dashboard',
             color: '#DC2626',
           },
           {
@@ -114,7 +113,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'Platform Settings',
             subtitle: 'Global configuration',
             icon: 'gearshape.fill',
-            route: 'screens/settings',
+            route: '/screens/settings',
             color: '#DC2626',
           },
           { id: 'divider1', title: '', divider: true },
@@ -129,7 +128,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'Principal Dashboard',
             subtitle: 'School overview & management',
             icon: 'rectangle.3.group.fill',
-            route: 'screens/principal-dashboard',
+            route: '/screens/principal-dashboard',
             color: '#059669',
           },
           {
@@ -137,8 +136,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'Parent Directory',
             subtitle: 'Parent engagement & communication',
             icon: 'person.3.fill',
-            route: 'screens/parents',
-            badge: 8,
+            route: '/screens/parents',
             color: '#059669',
           },
           {
@@ -146,7 +144,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'School Reports',
             subtitle: 'Performance analytics',
             icon: 'doc.text.fill',
-            route: 'screens/principal-reports',
+            route: '/screens/principal-reports',
             color: '#059669',
           },
           {
@@ -158,11 +156,19 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             color: '#059669',
           },
           {
+            id: 'setup',
+            title: 'School Setup',
+            subtitle: 'Classes & assignments',
+            icon: 'rectangle.and.pencil.and.ellipsis',
+            route: '/screens/school-setup',
+            color: '#059669',
+          },
+          {
             id: 'settings',
             title: 'School Settings',
             subtitle: 'Configure school',
             icon: 'gearshape.fill',
-            route: 'screens/settings',
+            route: '/screens/settings',
             color: '#059669',
           },
           { id: 'divider1', title: '', divider: true },
@@ -194,7 +200,6 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             subtitle: 'Parent engagement tools',
             icon: 'person.3.fill',
             route: '/screens/parents',
-            badge: 8,
             color: '#059669',
           },
           {
@@ -249,7 +254,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'All Lessons',
             subtitle: 'View & manage lessons',
             icon: 'book.fill',
-            route: 'screens/lessons',
+            route: '/screens/lessons',
             color: '#7C3AED',
           },
           {

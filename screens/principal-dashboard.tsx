@@ -4,6 +4,7 @@ import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { PrincipalService } from '@/lib/services/principalService';
+import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DashboardSubscriptionCard } from '@/components/dashboard/DashboardSubscriptionCard';
 import { BillingHistoryCard } from '@/components/billing/BillingHistoryCard';
@@ -48,27 +49,70 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
   const [showSchoolCodeManager, setShowSchoolCodeManager] = useState(false);
   const queryClient = useQueryClient();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
 
+  // If principal profile isn't linked yet, infer schoolId from invitation artifacts
+  const [resolvedSchoolId, setResolvedSchoolId] = useState<string | null>(null);
   const preschoolId = profile?.preschool_id || '';
+  const activePreschoolId = preschoolId || resolvedSchoolId || '';
+
+  React.useEffect(() => {
+    const inferSchoolId = async () => {
+      if (profile?.preschool_id || !profile?.id) return;
+      try {
+        const { data: tInvite } = await supabase
+          .from('teacher_invitations')
+          .select('preschool_id, created_at')
+          .eq('invited_by', profile.id)
+          .not('preschool_id', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (tInvite?.preschool_id) { setResolvedSchoolId(tInvite.preschool_id as string); return; }
+        const { data: inviteCode } = await supabase
+          .from('invitation_codes')
+          .select('preschool_id, created_at, is_active')
+          .eq('invited_by', profile.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (inviteCode?.preschool_id) { setResolvedSchoolId(inviteCode.preschool_id as string); return; }
+        const { data: schoolCode } = await supabase
+          .from('school_invitation_codes')
+          .select('preschool_id, created_at, is_active')
+          .eq('invited_by', profile.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (schoolCode?.preschool_id) { setResolvedSchoolId(schoolCode.preschool_id as string); return; }
+      } catch {
+        // ignore
+      }
+    };
+    inferSchoolId();
+  }, [profile?.preschool_id, profile?.id]);
 
   // 1) School info query
   const schoolInfoQuery = useQuery({
-    queryKey: ['schoolInfo', preschoolId],
+    queryKey: ['schoolInfo', activePreschoolId],
     queryFn: async () => {
-      if (!preschoolId) return { name: 'Your Preschool' } as any;
-      const res = await PrincipalService.getSchoolInfo(preschoolId);
+      if (!activePreschoolId) return { name: 'Your Preschool' } as any;
+      const res = await PrincipalService.getSchoolInfo(activePreschoolId);
       if (res.error) throw res.error;
       return res.data || { name: 'Your Preschool' };
     },
-    enabled: !!preschoolId,
+    enabled: !!activePreschoolId,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // 2) Principal stats query
   const statsQuery = useQuery({
-    queryKey: ['principalStats', preschoolId],
+    queryKey: ['principalStats', activePreschoolId],
     queryFn: async () => {
-      if (!preschoolId) return {
+      if (!activePreschoolId) return {
         totalStudents: 0,
         totalTeachers: 0,
         totalParents: 0,
@@ -78,47 +122,47 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         activeClasses: 0,
         newEnrollments: 0,
       } as PrincipalStats;
-      const res = await PrincipalService.getPrincipalStats(preschoolId);
+      const res = await PrincipalService.getPrincipalStats(activePreschoolId);
       if (res.error) throw res.error;
       return res.data as PrincipalStats;
     },
-    enabled: !!preschoolId,
+    enabled: !!activePreschoolId,
     staleTime: 1000 * 30, // 30s for fresher stats
   });
 
   // 3) Recent activity query
   const activityQuery = useQuery({
-    queryKey: ['recentActivity', preschoolId],
+    queryKey: ['recentActivity', activePreschoolId],
     queryFn: async () => {
-      if (!preschoolId) return [] as string[];
-      const res = await PrincipalService.getRecentActivity(preschoolId);
+      if (!activePreschoolId) return [] as string[];
+      const res = await PrincipalService.getRecentActivity(activePreschoolId);
       if (res.error) return [] as string[]; // show empty quietly
       return res.data || [];
     },
-    enabled: !!preschoolId,
+    enabled: !!activePreschoolId,
     staleTime: 1000 * 60, // 1 minute
   });
 
   // 4) Pending tasks query
   const tasksQuery = useQuery({
-    queryKey: ['pendingTasks', preschoolId],
+    queryKey: ['pendingTasks', activePreschoolId],
     queryFn: async () => {
-      if (!preschoolId) return [] as Array<{ priority: string; text: string; color: string }>;
-      const res = await PrincipalService.getPendingTasks(preschoolId);
+      if (!activePreschoolId) return [] as Array<{ priority: string; text: string; color: string }>;
+      const res = await PrincipalService.getPendingTasks(activePreschoolId);
       if (res.error) return [];
       return res.data || [];
     },
-    enabled: !!preschoolId,
+    enabled: !!activePreschoolId,
     staleTime: 1000 * 60, // 1 minute
   });
 
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['schoolInfo', preschoolId] }),
-      queryClient.invalidateQueries({ queryKey: ['principalStats', preschoolId] }),
-      queryClient.invalidateQueries({ queryKey: ['recentActivity', preschoolId] }),
-      queryClient.invalidateQueries({ queryKey: ['pendingTasks', preschoolId] }),
+      queryClient.invalidateQueries({ queryKey: ['schoolInfo', activePreschoolId] }),
+      queryClient.invalidateQueries({ queryKey: ['principalStats', activePreschoolId] }),
+      queryClient.invalidateQueries({ queryKey: ['recentActivity', activePreschoolId] }),
+      queryClient.invalidateQueries({ queryKey: ['pendingTasks', activePreschoolId] }),
     ]);
     setRefreshing(false);
   };
@@ -169,12 +213,16 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   );
 
   const handleNavigate = (route: string) => {
-
+    if (!route) return;
     if (route.startsWith('/')) {
       router.push(route as any);
-    } else {
-      router.push(`/screens/${route}` as any);
+      return;
     }
+    if (route.startsWith('screens/')) {
+      router.push(`/${route}` as any);
+      return;
+    }
+    router.push(`/screens/${route}` as any);
   };
 
   return (
@@ -208,8 +256,16 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
 
         {/* Subscription / Plan */}
         <View style={[styles.actionsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-          <DashboardSubscriptionCard userId={profile?.auth_user_id || ''} />
-          <BillingHistoryCard userId={profile?.id || ''} />
+          {mounted ? (
+            <>
+              <DashboardSubscriptionCard userId={profile?.auth_user_id || ''} />
+              <BillingHistoryCard userId={profile?.auth_user_id || ''} />
+            </>
+          ) : (
+            <View style={{ padding: 16 }} testID="subscription-skeleton">
+              <Text style={{ color: isDark ? '#94A3B8' : '#6B7280' }}>Loading subscription…</Text>
+            </View>
+          )}
         </View>
 
         {/* School Statistics */}
@@ -238,7 +294,6 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               subtitle="Engaged families"
               icon="heart.fill"
               color="#EA4335"
-              onPress={() => handleNavigate('parents')}
             />
             <MetricCard
               title="Monthly Revenue"
@@ -255,6 +310,13 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         <View style={[styles.actionsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>⚡ Principal Tools</Text>
           <View style={styles.actionsGrid}>
+            <ActionCard
+              title="School Setup"
+              subtitle="Classes & assignments"
+              icon="rectangle.and.pencil.and.ellipsis"
+              color="#6366F1"
+              onPress={() => handleNavigate('/screens/school-setup')}
+            />
             <ActionCard
               title="Teacher Management"
               subtitle="Invite & manage teachers"
@@ -284,6 +346,13 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               onPress={() => router.push('/(tabs)/messages')}
             />
             <ActionCard
+              title="Diagnostics"
+              subtitle="Verify counts & RLS"
+              icon="stethoscope"
+              color="#10B981"
+              onPress={() => handleNavigate('/screens/diagnostics')}
+            />
+            <ActionCard
               title="School Analytics"
               subtitle="Performance insights"
               icon="chart.line.uptrend.xyaxis"
@@ -295,7 +364,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               subtitle="Configure policies"
               icon="gearshape.fill"
               color="#34A853"
-              onPress={() => handleNavigate('/screens/settings')}
+              onPress={() => handleNavigate('/screens/school-settings')}
             />
           </View>
         </View>
@@ -316,7 +385,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               <IconSymbol name="envelope.fill" size={20} color="#FBBC05" />
               <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Send Announcement</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => handleNavigate('support')}>
+            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => handleNavigate('/screens/support')}>
               <IconSymbol name="questionmark.circle.fill" size={20} color="#EA4335" />
               <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Get Support</Text>
             </TouchableOpacity>
@@ -358,25 +427,25 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
       {/* Bottom nav removed; now rendered globally in RootLayout */}
 
       {/* Management Modals */}
-      {profile?.preschool_id && profile?.id && (
+      {activePreschoolId && profile?.id && (
         <>
           <TeacherManagement
             visible={showTeacherManagement}
-            preschoolId={profile.preschool_id}
+            preschoolId={activePreschoolId}
             principalId={profile.id}
             onClose={async () => {
               setShowTeacherManagement(false);
               // Refresh stats when closing to reflect any changes
               await Promise.all([
-                queryClient.invalidateQueries({ queryKey: ['principalStats', preschoolId] }),
-                queryClient.invalidateQueries({ queryKey: ['pendingTasks', preschoolId] }),
+                queryClient.invalidateQueries({ queryKey: ['principalStats', activePreschoolId] }),
+                queryClient.invalidateQueries({ queryKey: ['pendingTasks', activePreschoolId] }),
               ]);
             }}
           />
 
           <SchoolCodeManager
             visible={showSchoolCodeManager}
-            preschoolId={profile.preschool_id}
+            preschoolId={activePreschoolId}
             principalId={profile.id}
             schoolName={(schoolInfoQuery.data as any)?.name || 'Your Preschool'}
             onClose={() => setShowSchoolCodeManager(false)}

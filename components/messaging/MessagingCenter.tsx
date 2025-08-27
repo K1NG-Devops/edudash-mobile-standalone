@@ -145,8 +145,10 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         .select('id, name, avatar_url, role, email')
         .eq('preschool_id', userProfile.preschool_id)
         .neq('id', userProfile.id) // Exclude self
-        .eq('is_active', true)
-        .in('role', ['preschool_admin', 'teacher', 'parent'])
+        // Accept active users and users with null is_active to avoid hiding contacts
+        .or('is_active.is.null,is_active.eq.true')
+        // Include principal alias in addition to preschool_admin
+        .in('role', ['preschool_admin', 'principal', 'teacher', 'parent'])
         .order('role', { ascending: true }) // Admins first, then teachers, then parents
         .order('name', { ascending: true });
 
@@ -191,10 +193,51 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       }
       setParentUserId(userProfile.id);
 
-      // If user is a teacher, show other school staff and parents
-      if (userProfile.role === 'teacher' && userProfile.preschool_id) {
-        await loadSchoolContacts(userProfile);
-        return;
+      // If user is a teacher or principal, show other school staff and parents
+      if ((userProfile.role === 'teacher' || userProfile.role === 'principal' || userProfile.role === 'preschool_admin')) {
+        if (userProfile.preschool_id) {
+          await loadSchoolContacts(userProfile);
+          return;
+        }
+        // Fallback: try infer preschool_id from invitations
+        try {
+          // teacher_invitations invited_by
+          const { data: tInvite } = await supabase
+            .from('teacher_invitations')
+            .select('preschool_id, created_at')
+            .eq('invited_by', userProfile.id)
+            .not('preschool_id', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          let fallbackSchool = tInvite?.preschool_id as string | null;
+          if (!fallbackSchool) {
+            const { data: inviteCode } = await supabase
+              .from('invitation_codes')
+              .select('preschool_id, created_at, is_active')
+              .eq('invited_by', userProfile.id)
+              .eq('is_active', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            fallbackSchool = (inviteCode?.preschool_id as string | null) || null;
+          }
+          if (!fallbackSchool) {
+            const { data: schoolCode } = await supabase
+              .from('school_invitation_codes')
+              .select('preschool_id, created_at, is_active')
+              .eq('invited_by', userProfile.id)
+              .eq('is_active', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            fallbackSchool = (schoolCode?.preschool_id as string | null) || null;
+          }
+          if (fallbackSchool) {
+            await loadSchoolContacts({ ...userProfile, preschool_id: fallbackSchool });
+            return;
+          }
+        } catch {}
       }
 
       // 1) Incoming messages to parent
@@ -529,10 +572,9 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             <View style={styles.conversationDetails}>
               <Text style={[styles.participantRole, { color: colors.muted }]}>
                 {conversation.participant_role === 'teacher' && '👩‍🏫 Teacher'}
-                {conversation.participant_role === 'preschool_admin' && '👨‍💼 Principal'}
-                {conversation.participant_role === 'parent' && '👨‍👩‍👧‍👦 Parent'}
-                {!['teacher', 'preschool_admin', 'parent'].includes(conversation.participant_role) && '👤 User'}
-                {conversation.child_name && ` • ${conversation.child_name}`}
+                {(conversation.participant_role === 'preschool_admin' || conversation.participant_role === 'principal') && '👨‍💼 Principal'}
+                {conversation.participant_role === 'parent' && '👨‍👩‍👦 Parent'}
+                {!['teacher', 'preschool_admin', 'principal', 'parent'].includes(conversation.participant_role) && '👤 User'}
               </Text>
             </View>
 

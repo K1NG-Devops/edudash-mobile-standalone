@@ -244,7 +244,7 @@ export class SmartRoutingService {
  */
 export const AI_FEATURES_BY_TIER = {
   free: {
-    aiLessonsPerWeek: 5, // Changed from per day to per week
+    aiLessonsPerMonth: 5,
     aiStudentsLimit: 3,  // Reduced limit
     roboticTutors: 1,
     neuralNetworks: ['basic'],
@@ -257,7 +257,7 @@ export const AI_FEATURES_BY_TIER = {
     trialPeriod: false
   },
   starter: {
-    aiLessonsPerWeek: 25, // 5 per day
+    aiLessonsPerMonth: 25,
     aiStudentsLimit: 15,
     roboticTutors: 2,
     neuralNetworks: ['basic', 'advanced'],
@@ -271,7 +271,7 @@ export const AI_FEATURES_BY_TIER = {
     price: 49 // R49/month
   },
   premium: {
-    aiLessonsPerWeek: -1, // Unlimited
+    aiLessonsPerMonth: -1, // Unlimited
     aiStudentsLimit: -1,  // Unlimited
     roboticTutors: 5,
     neuralNetworks: ['basic', 'advanced', 'deep_learning'],
@@ -286,7 +286,7 @@ export const AI_FEATURES_BY_TIER = {
     price: 149 // R149/month
   },
   enterprise: {
-    aiLessonsPerWeek: -1, // Unlimited
+    aiLessonsPerMonth: -1, // Unlimited
     aiStudentsLimit: -1,  // Unlimited
     roboticTutors: -1,    // Unlimited
     neuralNetworks: ['basic', 'advanced', 'quantum_ai', 'consciousness'],

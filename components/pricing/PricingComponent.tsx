@@ -151,7 +151,7 @@ export const PricingComponent = ({
       period: "/month",
       description: "Basic features with ads",
       features: [
-        "✨ 3 AI lessons per week",
+        "✨ 5 AI lessons per month",
         "👨‍👩‍👧‍👦 Up to 3 students",
         "📊 Basic progress tracking",
         "💬 Parent-teacher messaging",
@@ -170,7 +170,7 @@ export const PricingComponent = ({
           'Access to basic learning activities',
         ],
         teacher: [
-          'Create 3 AI-powered lessons weekly',
+'Create up to 5 AI-powered lessons monthly',
           'Manage up to 3 students',
           'Basic parent communication',
         ],
@@ -187,7 +187,7 @@ export const PricingComponent = ({
       period: "/month",
       description: "Perfect for getting started with AI education",
       features: [
-        "✨ 5 AI lessons per day",
+        "✨ 25 AI lessons per month",
         "👨‍👩‍👧‍👦 Up to 15 students",
         "📊 Advanced progress tracking",
         "💬 Parent-teacher messaging",
@@ -206,7 +206,7 @@ export const PricingComponent = ({
           'Access learning activities at home',
         ],
         teacher: [
-          'Create 5 AI-powered lessons daily',
+'Create up to 25 AI-powered lessons monthly',
           'Manage small class sizes effectively',
           'Connect with parents instantly',
         ],

@@ -20,6 +20,7 @@ import AdPlacement from '@/components/ui/AdPlacement';
 import { useTheme } from '@/contexts/ThemeContext';
 import ThemedCard from '@/components/ui/ThemedCard';
 import ThemedButton from '@/components/ui/ThemedButton';
+import { useSubscription } from '@/lib/hooks/useSubscription';
 
 interface Notification {
   id: string;
@@ -37,6 +38,8 @@ interface Notification {
 export default function NotificationsScreen() {
   const { colorScheme } = useTheme();
   const { user } = useAuth();
+  const { subscription } = useSubscription();
+  const isFreeTier = (subscription?.plan?.tier || 'free') === 'free';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -164,76 +167,75 @@ export default function NotificationsScreen() {
     );
   }
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#0B1220' : '#F8FAFC' }]}>
-      {/* Optional Ad banner */}
-      <AdPlacement>
-        {/* Header */}
-      <View style={[styles.header, { backgroundColor: colorScheme === 'dark' ? '#0F172A' : '#FFFFFF', borderBottomColor: colorScheme === 'dark' ? '#1F2937' : '#E5E7EB' }]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              try {
-                // Prefer safe back; if none, go home
-                // @ts-ignore
-                if (router.canGoBack && router.canGoBack()) {
-                  router.back();
-                } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
-                  window.history.back();
-                } else {
-                  router.replace('/screens/principal-dashboard' as any);
-                }
-              } catch {
+  // Header section (reused)
+  const HeaderSection = (
+    <View style={[styles.header, { backgroundColor: colorScheme === 'dark' ? '#0F172A' : '#FFFFFF', borderBottomColor: colorScheme === 'dark' ? '#1F2937' : '#E5E7EB' }]}>
+      <View style={styles.headerLeft}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            try {
+              // Prefer safe back; if none, go home
+              // @ts-ignore
+              if (router.canGoBack && router.canGoBack()) {
+                router.back();
+              } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+                window.history.back();
+              } else {
                 router.replace('/screens/principal-dashboard' as any);
+              }
+            } catch {
+              router.replace('/screens/principal-dashboard' as any);
+            }
+          }}
+        >
+          <IconSymbol name="chevron.left" size={24} color="#1F2937" />
+        </TouchableOpacity>
+        <View>
+          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerSubtitle}>
+            {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+          </Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        {__DEV__ && (
+          <TouchableOpacity
+            style={[styles.markAllButton, { backgroundColor: '#10B981' }]}
+            onPress={async () => {
+              try {
+                if (!user?.id) return;
+                await NotificationService.createNotification(
+                  user.id,
+                  'Test notification',
+                  'This is a test notification for verification.',
+                  'activity'
+                );
+                await fetchNotifications();
+              } catch (e: any) {
+                Alert.alert('Not allowed', 'Your current permissions or RLS policies do not allow creating notifications from the client. This is expected in production.');
               }
             }}
           >
-            <IconSymbol name="chevron.left" size={24} color="#1F2937" />
+            <Text style={styles.markAllText}>Add test</Text>
           </TouchableOpacity>
-          <View>
-            <Text style={styles.headerTitle}>Notifications</Text>
-            <Text style={styles.headerSubtitle}>
-              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {__DEV__ && (
-            <TouchableOpacity
-              style={[styles.markAllButton, { backgroundColor: '#10B981' }]}
-              onPress={async () => {
-                try {
-                  if (!user?.id) return;
-                  await NotificationService.createNotification(
-                    user.id,
-                    'Test notification',
-                    'This is a test notification for verification.',
-                    'activity'
-                  );
-                  await fetchNotifications();
-                } catch (e: any) {
-                  Alert.alert('Not allowed', 'Your current permissions or RLS policies do not allow creating notifications from the client. This is expected in production.');
-                }
-              }}
-            >
-              <Text style={styles.markAllText}>Add test</Text>
-            </TouchableOpacity>
-          )}
+        )}
 
-          {unreadCount > 0 && (
-            <TouchableOpacity
-              style={styles.markAllButton}
-              onPress={markAllAsRead}
-            >
-              <Text style={styles.markAllText}>Mark all read</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {unreadCount > 0 && (
+          <TouchableOpacity
+            style={styles.markAllButton}
+            onPress={markAllAsRead}
+          >
+            <Text style={styles.markAllText}>Mark all read</Text>
+          </TouchableOpacity>
+        )}
       </View>
+    </View>
+  );
 
-      {/* Content */}
+  // Body content section (reused)
+  const ContentSection = (
+    <>
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="large" color="#8B5CF6" />
@@ -308,7 +310,22 @@ export default function NotificationsScreen() {
           <View style={styles.bottomSpacing} />
         </ScrollView>
       )}
-      </AdPlacement>
+    </>
+  );
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#0B1220' : '#F8FAFC' }]}>
+      {isFreeTier ? (
+        <AdPlacement>
+          {HeaderSection}
+          {ContentSection}
+        </AdPlacement>
+      ) : (
+        <>
+          {HeaderSection}
+          {ContentSection}
+        </>
+      )}
     </SafeAreaView>
   );
 }

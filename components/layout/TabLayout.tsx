@@ -1,5 +1,4 @@
 import { StandardizedNavigation } from '@/components/navigation/StandardizedNavigation';
-import AdPlacement from '@/components/ui/AdPlacement';
 import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -58,11 +57,9 @@ export function TabLayout({
           notificationCount={notificationCount}
         />
       )}
-      <AdPlacement>
-        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-          {children}
-        </View>
-      </AdPlacement>
+      <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        {children}
+      </View>
     </View>
   );
 }

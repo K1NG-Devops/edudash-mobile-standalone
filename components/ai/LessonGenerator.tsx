@@ -54,6 +54,7 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   // Generated content
   const [generatedLesson, setGeneratedLesson] = useState<LessonContent | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [lastGenAt, setLastGenAt] = useState<number>(0);
 
   const steps: GenerationStep[] = [
     { id: 0, title: 'Choose Template', completed: false, active: true },
@@ -135,6 +136,13 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   };
 
   const generateLesson = async () => {
+    // Basic client-side rate limit: 1 request every 2 seconds
+    const now = Date.now();
+    if (now - lastGenAt < 2000) {
+      Alert.alert('Please wait', 'You are generating too quickly. Try again in a moment.');
+      return;
+    }
+    setLastGenAt(now);
     if (!validateForm()) return;
 
     setIsGenerating(true);

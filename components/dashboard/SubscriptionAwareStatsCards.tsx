@@ -140,15 +140,15 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
       baseCards.push({
         id: 'ai_lessons',
         title: 'AI Lessons',
-        value: usageStats.ai_lessons_used_today.toString(),
-        subtitle: usageStats.quotas.ai_lessons_per_day 
-          ? `of ${usageStats.quotas.ai_lessons_per_day} today`
+        value: usageStats.ai_lessons_used_this_month.toString(),
+        subtitle: usageStats.quotas.ai_lessons_per_month 
+          ? `of ${usageStats.quotas.ai_lessons_per_month} this month`
           : 'Unlimited',
         icon: 'brain.head.profile',
         gradient: ['#8B5CF6', '#7C3AED'] as const,
-        usageInfo: usageStats.quotas.ai_lessons_per_day ? {
-          used: usageStats.ai_lessons_used_today,
-          limit: usageStats.quotas.ai_lessons_per_day,
+        usageInfo: usageStats.quotas.ai_lessons_per_month ? {
+          used: usageStats.ai_lessons_used_this_month,
+          limit: usageStats.quotas.ai_lessons_per_month,
           feature: 'ai_lessons'
         } : undefined,
         isLocked: !usageStats.can_use_ai_lessons
@@ -158,34 +158,34 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
       baseCards.push({
         id: 'homework_ai',
         title: 'Homework AI',
-        value: usageStats.homework_graded_today.toString(),
-        subtitle: usageStats.quotas.homework_grading_per_day
-          ? `of ${usageStats.quotas.homework_grading_per_day} today`
+        value: usageStats.homework_graded_this_month.toString(),
+        subtitle: usageStats.quotas.homework_grading_per_month
+          ? `of ${usageStats.quotas.homework_grading_per_month} this month`
           : 'Unlimited',
         icon: 'doc.text.below.ecg',
         gradient: ['#06B6D4', '#0891B2'] as const,
-        usageInfo: usageStats.quotas.homework_grading_per_day ? {
-          used: usageStats.homework_graded_today,
-          limit: usageStats.quotas.homework_grading_per_day,
-          feature: 'homework_grading'
-        } : undefined,
+        usageInfo: usageStats.quotas.homework_grading_per_month ? {
+            used: usageStats.homework_graded_this_month,
+            limit: usageStats.quotas.homework_grading_per_month,
+            feature: 'homework_grading'
+          } : undefined,
         isLocked: !usageStats.can_use_homework_grading
       });
 
       // AI Tutoring card (Premium feature)
-      if (usageStats.quotas.ai_tutoring_sessions_per_day !== null || usageStats.can_access_premium_features) {
+      if (usageStats.quotas.ai_tutoring_sessions_per_month !== null || usageStats.can_access_premium_features) {
         baseCards.push({
           id: 'ai_tutoring',
           title: 'AI Tutoring',
-          value: usageStats.ai_tutoring_sessions_today.toString(),
-          subtitle: usageStats.quotas.ai_tutoring_sessions_per_day
-            ? `of ${usageStats.quotas.ai_tutoring_sessions_per_day} today`
+        value: usageStats.ai_tutoring_sessions_today.toString(),
+        subtitle: usageStats.quotas.ai_tutoring_sessions_per_month
+            ? `of ${usageStats.quotas.ai_tutoring_sessions_per_month} this month`
             : 'Unlimited',
           icon: 'person.2.badge.gearshape',
         gradient: ['#EC4899', '#DB2777'] as const,
-          usageInfo: usageStats.quotas.ai_tutoring_sessions_per_day ? {
+          usageInfo: usageStats.quotas.ai_tutoring_sessions_per_month ? {
             used: usageStats.ai_tutoring_sessions_today,
-            limit: usageStats.quotas.ai_tutoring_sessions_per_day,
+            limit: usageStats.quotas.ai_tutoring_sessions_per_month,
             feature: 'ai_tutoring'
           } : undefined,
           isPremium: true,
@@ -362,6 +362,11 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
                   </Text>
                   <Text style={styles.cardTitle}>{card.title}</Text>
                   <Text style={styles.cardSubtitle}>{card.subtitle}</Text>
+                  {card.id === 'ai_lessons' && card.usageInfo && !card.isLocked && (
+                    <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 }}>
+                      {card.usageInfo.limit === -1 ? '∞ left this month' : `${Math.max(0, card.usageInfo.limit - card.usageInfo.used)} left this month`}
+                    </Text>
+                  )}
                 </>
               )}
 

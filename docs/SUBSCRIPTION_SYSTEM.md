@@ -18,7 +18,7 @@ EduDash Pro now includes a complete SaaS subscription system with multi-tier pri
 ### 💰 Subscription Tiers
 
 #### 🆓 Free Tier - R0/month
-- 3 AI lessons per week
+- 5 AI lessons per month
 - Up to 3 students
 - 1 Basic AI Tutor
 - Basic Analytics
@@ -26,7 +26,7 @@ EduDash Pro now includes a complete SaaS subscription system with multi-tier pri
 - **Target**: Individual parents, trial users
 
 #### 🚀 Neural Starter - R49/month
-- 5 AI lessons per day (25/week)
+- 25 AI lessons per month
 - Up to 15 students
 - 2 Advanced AI Tutors
 - Advanced Analytics
@@ -188,7 +188,7 @@ function PremiumFeature() {
 const { subscription, checkLimit } = useSubscription();
 
 const canCreateStudent = await checkLimit('students');
-const canUseAILesson = await checkLimit('ai_lessons_per_day');
+const canUseAILesson = await checkLimit('ai_lessons_per_month');
 ```
 
 ## 🚀 Next Steps

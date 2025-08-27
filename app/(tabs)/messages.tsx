@@ -11,7 +11,7 @@ export default function MessagesTabScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }}>
       <AuthConsumer>
         {({ profile }) => (
-          <MessagingCenter profile={profile} childrenList={[]} onClose={() => {}} />
+          <MessagingCenter profile={profile} childrenList={[]} onClose={() => {}} showHeader={false} />
         )}
       </AuthConsumer>
     </SafeAreaView>

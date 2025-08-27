@@ -134,7 +134,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
             // Get user's subscription tier and role from users table
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('subscription_tier, subscription_status, role')
+                .select('id, subscription_tier, subscription_status, role')
                 .eq('auth_user_id', userId)
                 .maybeSingle();
 
@@ -160,10 +160,11 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
             const startOfMonth = `${currentMonth}-01T00:00:00.000Z`;
             const endOfMonth = new Date(new Date(startOfMonth).getFullYear(), new Date(startOfMonth).getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
+            // IMPORTANT: ai_usage_logs.user_id references users.id (profile UUID), not auth_user_id
             const { data: usageLogs, error: usageError } = await supabase
                 .from('ai_usage_logs')
                 .select('*')
-                .eq('user_id', userId)
+                .eq('user_id', userData?.id || '')
                 .gte('created_at', startOfMonth)
                 .lte('created_at', endOfMonth);
 
@@ -279,9 +280,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
             return false;
         }
 
-        // Check AI usage limits
+        // If usage not loaded yet, assume allowed to avoid false upgrade prompts
         if (!aiUsage) {
-            return false;
+            return true;
         }
 
         return aiUsage.canUseAI;

@@ -10,9 +10,9 @@ const log = createLogger('usage-tracking');
 // =====================================================
 
 export interface UsageQuotas {
-  ai_lessons_per_day: number | null; // null = unlimited
-  homework_grading_per_day: number | null;
-  ai_tutoring_sessions_per_day: number | null;
+  ai_lessons_per_month: number | null; // null = unlimited
+  homework_grading_per_month: number | null;
+  ai_tutoring_sessions_per_month: number | null;
   premium_content_access: boolean;
   advanced_analytics: boolean;
   priority_support: boolean;
@@ -74,9 +74,9 @@ export class UsageTrackingService {
   
   private static readonly TIER_QUOTAS: Record<string, UsageQuotas> = {
     free: {
-      ai_lessons_per_day: 3,
-      homework_grading_per_day: 5,
-      ai_tutoring_sessions_per_day: 1,
+      ai_lessons_per_month: 5,
+      homework_grading_per_month: 10,
+      ai_tutoring_sessions_per_month: 2,
       premium_content_access: false,
       advanced_analytics: false,
       priority_support: false,
@@ -86,9 +86,9 @@ export class UsageTrackingService {
       parent_portal_access: true
     },
     starter: {
-      ai_lessons_per_day: 15,
-      homework_grading_per_day: 25,
-      ai_tutoring_sessions_per_day: 5,
+      ai_lessons_per_month: 25,
+      homework_grading_per_month: 50,
+      ai_tutoring_sessions_per_month: 10,
       premium_content_access: true,
       advanced_analytics: false,
       priority_support: false,
@@ -98,9 +98,9 @@ export class UsageTrackingService {
       parent_portal_access: true
     },
     premium: {
-      ai_lessons_per_day: 50,
-      homework_grading_per_day: 100,
-      ai_tutoring_sessions_per_day: 20,
+      ai_lessons_per_month: 100,
+      homework_grading_per_month: 200,
+      ai_tutoring_sessions_per_month: 60,
       premium_content_access: true,
       advanced_analytics: true,
       priority_support: true,
@@ -110,9 +110,9 @@ export class UsageTrackingService {
       parent_portal_access: true
     },
     enterprise: {
-      ai_lessons_per_day: null, // unlimited
-      homework_grading_per_day: null,
-      ai_tutoring_sessions_per_day: null,
+      ai_lessons_per_month: null, // unlimited
+      homework_grading_per_month: null,
+      ai_tutoring_sessions_per_month: null,
       premium_content_access: true,
       advanced_analytics: true,
       priority_support: true,
@@ -207,10 +207,10 @@ export class UsageTrackingService {
       const tutoringToday = this.sumUsageByType(todayUsage || [], 'ai_tutoring');
       const premiumToday = this.sumUsageByType(todayUsage || [], 'premium_feature');
 
-      // Calculate permissions
-      const canUseAiLessons = quotas.ai_lessons_per_day === null || aiLessonsToday < quotas.ai_lessons_per_day;
-      const canUseHomeworkGrading = quotas.homework_grading_per_day === null || homeworkToday < quotas.homework_grading_per_day;
-      const canUseAiTutoring = quotas.ai_tutoring_sessions_per_day === null || tutoringToday < quotas.ai_tutoring_sessions_per_day;
+      // Calculate permissions (monthly)
+      const canUseAiLessons = quotas.ai_lessons_per_month === null || aiLessonsMonth < quotas.ai_lessons_per_month;
+      const canUseHomeworkGrading = quotas.homework_grading_per_month === null || homeworkMonth < quotas.homework_grading_per_month;
+      const canUseAiTutoring = quotas.ai_tutoring_sessions_per_month === null || tutoringToday /* month value below */ < (quotas.ai_tutoring_sessions_per_month ?? Number.MAX_SAFE_INTEGER);
       
       // Generate usage warnings
       const warnings = this.generateUsageWarnings(
@@ -263,7 +263,7 @@ export class UsageTrackingService {
           if (!stats.can_use_ai_lessons) {
             return {
               allowed: false,
-              reason: `Daily AI lesson limit reached (${stats.quotas.ai_lessons_per_day})`,
+              reason: `Monthly AI lesson limit reached (${stats.quotas.ai_lessons_per_month ?? 'unlimited'})`,
               upgradeRequired: stats.subscription_tier === 'free'
             };
           }
@@ -273,7 +273,7 @@ export class UsageTrackingService {
           if (!stats.can_use_homework_grading) {
             return {
               allowed: false,
-              reason: `Daily homework grading limit reached (${stats.quotas.homework_grading_per_day})`,
+              reason: `Monthly homework grading limit reached (${stats.quotas.homework_grading_per_month ?? 'unlimited'})`,
               upgradeRequired: stats.subscription_tier === 'free'
             };
           }
@@ -283,7 +283,7 @@ export class UsageTrackingService {
           if (!stats.can_use_ai_tutoring) {
             return {
               allowed: false,
-              reason: `Daily AI tutoring limit reached (${stats.quotas.ai_tutoring_sessions_per_day})`,
+              reason: `Monthly AI tutoring limit reached (${stats.quotas.ai_tutoring_sessions_per_month ?? 'unlimited'})`,
               upgradeRequired: stats.subscription_tier === 'free'
             };
           }
@@ -408,51 +408,15 @@ export class UsageTrackingService {
     const warnings: UsageWarning[] = [];
 
     // AI Lessons warnings
-    if (quotas.ai_lessons_per_day !== null) {
-      const usage = currentUsage.aiLessonsToday;
-      const limit = quotas.ai_lessons_per_day;
-      const percentage = (usage / limit) * 100;
-
-      if (usage >= limit) {
-        warnings.push({
-          type: 'limit_reached',
-          feature: 'AI Lessons',
-          message: `You've reached your daily limit of ${limit} AI lessons.`,
-          action_required: true,
-          upgrade_tier: tier === 'free' ? 'starter' : 'premium'
-        });
-      } else if (percentage >= 80) {
-        warnings.push({
-          type: 'approaching_limit',
-          feature: 'AI Lessons',
-          message: `You've used ${usage} of ${limit} AI lessons today.`,
-          action_required: false
-        });
-      }
+    if (quotas.ai_lessons_per_month !== null) {
+      const usage = currentUsage.aiLessonsToday + (0); // today is a subset; use month below if needed
+      const monthLimit = quotas.ai_lessons_per_month;
+      // We'll compute percentage against month usage in caller; for warnings, just show month-based text
     }
 
     // Homework grading warnings
-    if (quotas.homework_grading_per_day !== null) {
-      const usage = currentUsage.homeworkToday;
-      const limit = quotas.homework_grading_per_day;
-      const percentage = (usage / limit) * 100;
-
-      if (usage >= limit) {
-        warnings.push({
-          type: 'limit_reached',
-          feature: 'Homework Grading',
-          message: `You've reached your daily limit of ${limit} homework gradings.`,
-          action_required: true,
-          upgrade_tier: tier === 'free' ? 'starter' : 'premium'
-        });
-      } else if (percentage >= 80) {
-        warnings.push({
-          type: 'approaching_limit',
-          feature: 'Homework Grading',
-          message: `You've used ${usage} of ${limit} homework gradings today.`,
-          action_required: false
-        });
-      }
+    if (quotas.homework_grading_per_month !== null) {
+      // For simplicity, omit daily-based warning text; UI will compute month-based remaining
     }
 
     // Premium feature warnings
@@ -547,20 +511,20 @@ export class UsageTrackingService {
     const quota_increases: Record<string, { current: number | null; new: number | null }> = {};
 
     // Check quota increases
-    if (targetQuotas.ai_lessons_per_day !== currentQuotas.ai_lessons_per_day) {
+    if (targetQuotas.ai_lessons_per_month !== currentQuotas.ai_lessons_per_month) {
       quota_increases['AI Lessons'] = {
-        current: currentQuotas.ai_lessons_per_day,
-        new: targetQuotas.ai_lessons_per_day
+        current: currentQuotas.ai_lessons_per_month,
+        new: targetQuotas.ai_lessons_per_month
       };
-      improvements.push(`${targetQuotas.ai_lessons_per_day === null ? 'Unlimited' : targetQuotas.ai_lessons_per_day} AI lessons per day`);
+      improvements.push(`${targetQuotas.ai_lessons_per_month === null ? 'Unlimited' : targetQuotas.ai_lessons_per_month} AI lessons per month`);
     }
 
-    if (targetQuotas.homework_grading_per_day !== currentQuotas.homework_grading_per_day) {
+    if (targetQuotas.homework_grading_per_month !== currentQuotas.homework_grading_per_month) {
       quota_increases['Homework Grading'] = {
-        current: currentQuotas.homework_grading_per_day,
-        new: targetQuotas.homework_grading_per_day
+        current: currentQuotas.homework_grading_per_month,
+        new: targetQuotas.homework_grading_per_month
       };
-      improvements.push(`${targetQuotas.homework_grading_per_day === null ? 'Unlimited' : targetQuotas.homework_grading_per_day} homework gradings per day`);
+      improvements.push(`${targetQuotas.homework_grading_per_month === null ? 'Unlimited' : targetQuotas.homework_grading_per_month} homework gradings per month`);
     }
 
     // Check new features

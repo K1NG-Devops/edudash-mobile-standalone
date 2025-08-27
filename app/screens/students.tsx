@@ -35,14 +35,17 @@ export default function StudentsScreen() {
     
     try {
       setLoading(true);
+      const isTeacher = String(profile?.role) === 'teacher';
       
       // Fetch classes for filter chips
-      const { data: classRows, error: classError } = await supabase
+      let classQuery = supabase
         .from('classes')
         .select('id, name')
         .eq('preschool_id', profile.preschool_id)
         .eq('is_active', true)
         .order('name');
+      if (isTeacher) classQuery = classQuery.eq('teacher_id', profile.id as any);
+      const { data: classRows, error: classError } = await classQuery;
       
       if (classError) {
       }
@@ -55,6 +58,17 @@ export default function StudentsScreen() {
         .eq('preschool_id', profile.preschool_id)
         .order('first_name');
       
+      if (isTeacher) {
+        const teacherClassIds = (classRows || []).map(c => c.id);
+        if (teacherClassIds.length === 0) {
+          setItems([]);
+          setLoading(false);
+          setRefreshing(false);
+          return;
+        }
+        query = query.in('class_id', teacherClassIds);
+      }
+
       if (status !== 'all') query = query.eq('is_active', status === 'active');
       if (classFilter !== 'all') query = query.eq('class_id', classFilter);
       

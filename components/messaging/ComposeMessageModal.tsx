@@ -104,7 +104,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
           )
         `)
         .eq('preschool_id', profile.preschool_id)
-        .in('role', ['teacher', 'admin'])
+        .in('role', ['teacher', 'admin', 'principal', 'preschool_admin'])
         .neq('id', parentProfile.id);
 
       if (!teachersError && teachersData) {

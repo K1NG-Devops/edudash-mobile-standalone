@@ -34,8 +34,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const hide = useCallback(() => {
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: -10, duration: 180, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(translateY, { toValue: -10, duration: 180, useNativeDriver: Platform.OS !== 'web' }),
     ]).start(() => setToast(null))
   }, [opacity, translateY])
 
@@ -53,8 +53,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     translateY.setValue(-10)
 
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 160, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 160, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 160, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(translateY, { toValue: 0, duration: 160, useNativeDriver: Platform.OS !== 'web' }),
     ]).start(() => {
       timerRef.current = setTimeout(() => {
         if (id === idRef.current) hide()

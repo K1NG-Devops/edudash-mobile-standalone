@@ -75,6 +75,8 @@ interface AuthProviderState {
 
 class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderState> {
   private authListener: any;
+  // Guard to avoid repeated select attempts/logging when RLS policy recursion (42P17) is detected
+  private skipEnsureProfileDueToPolicy: boolean = false;
 
   constructor(props: AuthProviderProps) {
     super(props);
@@ -209,7 +211,7 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
       if (!error && data) {
         console.log('✅ [DEBUG] Profile loaded successfully via direct query');
-        this.handleProfileData(data);
+        await this.handleProfileData(data);
         return;
       } else if (error) {
         console.error('❌ [DEBUG] Supabase error details:', {
@@ -256,7 +258,7 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
   };
 
   // Helper method to handle profile data consistently
-  handleProfileData = (data: any) => {
+  handleProfileData = async (data: any) => {
     console.log('✅ [DEBUG] Profile loaded successfully:');
     console.log('  - ID:', data.id || 'Unknown');
     console.log('  - Name:', data.name || 'Unknown');
@@ -266,13 +268,40 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     console.log('  - Is Active:', data.is_active);
     console.log('  - Auth User ID:', data.auth_user_id);
 
+    // As a last-resort fallback: infer preschool_id for principals if missing
+    let resolvedPreschoolId: string | null = data.preschool_id || null;
+    const isPrincipalRole = data.role === 'principal' || data.role === 'preschool_admin';
+    if (!resolvedPreschoolId && isPrincipalRole) {
+      try {
+        console.log('🧭 [DEBUG] Attempting to infer preschool_id for principal with missing association...');
+        const inferred = await this.inferPreschoolId(data.id);
+        if (inferred) {
+          console.log('✅ [DEBUG] Inferred preschool_id from invitation-related records:', inferred);
+          resolvedPreschoolId = inferred;
+          // Best-effort to persist this association to the users table (ignore RLS failures)
+          try {
+            await supabase
+              .from('users')
+              .update({ preschool_id: inferred })
+              .eq('id', data.id);
+          } catch (persistErr) {
+            console.warn('⚠️ [DEBUG] Could not persist inferred preschool_id to users table (likely RLS):', (persistErr as any)?.message || persistErr);
+          }
+        } else {
+          console.log('ℹ️ [DEBUG] No preschool inference available. Continuing with null preschool_id.');
+        }
+      } catch (inferErr) {
+        console.warn('⚠️ [DEBUG] Error attempting to infer preschool_id:', (inferErr as any)?.message || inferErr);
+      }
+    }
+
     // Create a complete profile with all fields from database
     const profileData: UserProfile = {
       id: data.id,
       email: data.email,
       name: data.name,
       role: data.role as 'superadmin' | 'preschool_admin' | 'teacher' | 'parent',
-      preschool_id: data.preschool_id,
+      preschool_id: resolvedPreschoolId,
       auth_user_id: data.auth_user_id,
       is_active: data.is_active,
       avatar_url: data.avatar_url,
@@ -308,9 +337,58 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     });
   };
 
-  // Ensure a minimal user profile exists for the current auth user (idempotent)
-  ensureUserProfile = async (authUser: User) => {
+  // Try to infer a preschool_id when the principal/preschool_admin profile is missing it.
+  // This uses invite-related tables as hints, and will gracefully handle RLS denials.
+  private inferPreschoolId = async (userId: string): Promise<string | null> => {
+    // 1) Teacher invitations created by this user
     try {
+      const { data: tInvite } = await supabase
+        .from('teacher_invitations')
+        .select('preschool_id, created_at')
+        .eq('invited_by', userId)
+        .not('preschool_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (tInvite?.preschool_id) return tInvite.preschool_id as string;
+    } catch (_) {}
+
+    // 2) Generic invitation_codes with invited_by
+    try {
+      const { data: inviteCode } = await supabase
+        .from('invitation_codes')
+        .select('preschool_id, created_at, is_active')
+        .eq('invited_by', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (inviteCode?.preschool_id) return inviteCode.preschool_id as string;
+    } catch (_) {}
+
+    // 3) School-wide codes created or invited_by this user
+    try {
+      const { data: schoolCode } = await supabase
+        .from('school_invitation_codes')
+        .select('preschool_id, created_at, is_active')
+        .eq('invited_by', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (schoolCode?.preschool_id) return schoolCode.preschool_id as string;
+    } catch (_) {}
+
+    return null;
+  };
+
+  // Ensure a minimal user profile exists for the current auth user (idempotent)
+ensureUserProfile = async (authUser: User) => {
+    try {
+      // If we've detected a policy recursion error before, skip further attempts to reduce noise
+      if (this.skipEnsureProfileDueToPolicy) {
+        return;
+      }
       // Check if profile exists
       const { data: existing, error: selectError } = await supabase
         .from('users')
@@ -320,6 +398,11 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
       if (selectError) {
         console.warn('⚠️ ensureUserProfile: select error', selectError.message);
+        // If RLS recursion error is detected, set guard to avoid repeated attempts/logging
+        if ((selectError as any)?.code === '42P17' || /recursion/i.test(String((selectError as any)?.message))) {
+          this.skipEnsureProfileDueToPolicy = true;
+          return;
+        }
       }
 
       if (existing && existing.id) {

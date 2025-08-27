@@ -518,9 +518,9 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                 )}
               </View>
               <Text style={[styles.quickActionLabel, { color: '#8B5CF6' }]}>AI Lessons</Text>
-              {usageStats?.quotas.ai_lessons_per_day && (
+              {usageStats?.quotas.ai_lessons_per_month && (
                 <Text style={styles.usageIndicator}>
-                  {usageStats.ai_lessons_used_today}/{usageStats.quotas.ai_lessons_per_day}
+                  {usageStats.ai_lessons_used_this_month}/{usageStats.quotas.ai_lessons_per_month}
                 </Text>
               )}
             </TouchableOpacity>
@@ -538,9 +538,9 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                 )}
               </View>
               <Text style={[styles.quickActionLabel, { color: '#8B5CF6' }]}>AI Grading</Text>
-              {usageStats?.quotas.homework_grading_per_day && (
+              {usageStats?.quotas.homework_grading_per_month && (
                 <Text style={styles.usageIndicator}>
-                  {usageStats.homework_graded_today}/{usageStats.quotas.homework_grading_per_day}
+                  {usageStats.homework_graded_this_month}/{usageStats.quotas.homework_grading_per_month}
                 </Text>
               )}
             </TouchableOpacity>
@@ -620,10 +620,10 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
           <View style={[styles.usageSummary, { backgroundColor: palette.surface }]}>
             <View style={styles.usageSummaryHeader}>
               <IconSymbol name="chart.bar.xaxis" size={20} color="#8B5CF6" />
-              <Text style={[styles.usageSummaryTitle, { color: palette.text }]}>Today's Usage</Text>
+              <Text style={[styles.usageSummaryTitle, { color: palette.text }]}>This Month's Usage</Text>
             </View>
             <Text style={[styles.usageSummaryText, { color: palette.textSecondary }]}>
-              You've used {usageStats.ai_lessons_used_today} of {usageStats.quotas.ai_lessons_per_day} AI lessons and {usageStats.homework_graded_today} of {usageStats.quotas.homework_grading_per_day} homework gradings today.
+              You've used {usageStats.ai_lessons_used_this_month} of {usageStats.quotas.ai_lessons_per_month ?? '∞'} AI lessons and {usageStats.homework_graded_this_month} of {usageStats.quotas.homework_grading_per_month ?? '∞'} homework gradings this month.
             </Text>
             <TouchableOpacity style={styles.upgradeNowButton} onPress={handleUpgrade}>
               <Text style={styles.upgradeNowText}>Upgrade for Unlimited Access</Text>

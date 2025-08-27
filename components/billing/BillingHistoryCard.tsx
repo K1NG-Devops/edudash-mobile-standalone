@@ -27,7 +27,7 @@ export const BillingHistoryCard = ({ userId }: Props) => {
               {p.status}
             </Text>
             <Text style={[styles.date, { color: isDark ? '#94A3B8' : '#6B7280' }]}>
-              {new Date(p.processed_at).toLocaleDateString()}
+              {new Date(p.processed_at).toISOString().slice(0, 10)}
             </Text>
           </View>
         ))

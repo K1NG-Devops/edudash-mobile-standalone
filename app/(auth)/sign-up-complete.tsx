@@ -43,7 +43,7 @@ export default function SignUpComplete() {
       price: 'R0',
       period: '/month',
       features: [
-        '⚡ 3 AI Lessons per week',
+        '⚡ 5 AI Lessons per month',
         '👥 Up to 3 students',
         '🤖 1 Basic AI Tutor',
         '📊 Basic Analytics',
@@ -57,7 +57,7 @@ export default function SignUpComplete() {
       price: 'R49',
       period: '/month',
       features: [
-        '⚡ 5 AI Lessons per day (25/week)',
+        '⚡ 25 AI Lessons per month',
         '👥 Up to 15 students',
         '🤖 2 Advanced AI Tutors',
         '📊 Advanced Analytics',

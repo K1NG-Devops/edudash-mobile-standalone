@@ -461,6 +461,41 @@ export class SchoolManagementService {
   }
 
   /**
+   * Create a class in the current preschool
+   */
+  static async createClass(data: { 
+    name: string; 
+    max_capacity: number; 
+    room_number?: string; 
+    teacher_id?: string | null; 
+    preschool_id: string; 
+    age_group_id?: string | null; 
+  }): Promise<{ success: boolean; error?: string; class_id?: string }> {
+    try {
+      const payload: any = {
+        name: data.name,
+        max_capacity: data.max_capacity,
+        room_number: data.room_number || null,
+        teacher_id: data.teacher_id || null,
+        preschool_id: data.preschool_id,
+        age_group_id: data.age_group_id || null,
+        is_active: true,
+        current_enrollment: 0,
+        created_at: new Date().toISOString(),
+      };
+      const { data: inserted, error } = await supabase
+        .from('classes')
+        .insert(payload)
+        .select('id')
+        .single();
+      if (error) throw error;
+      return { success: true, class_id: inserted?.id };
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Failed to create class' };
+    }
+  }
+
+  /**
    * Get subscription plan limits
    */
   private static getDefaultLimits(plan: string) {

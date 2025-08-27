@@ -25,7 +25,8 @@ export class TeacherService {
    */
   static async getTeachersByPreschool(preschoolId: string) {
     try {
-      const { data, error } = await supabase
+      // Primary: teachers already linked to this preschool
+      let { data, error } = await supabase
         .from('users')
         .select(`
           id,
@@ -49,6 +50,55 @@ export class TeacherService {
         .order('name');
 
       if (error) throw error;
+
+      // Fallback: look for teacher users whose email was invited by this school (via school_invitation_codes)
+      if (!data || data.length === 0) {
+        try {
+          const { data: invs } = await supabase
+            .from('school_invitation_codes')
+            .select('invited_email')
+            .eq('preschool_id', preschoolId)
+            .eq('invitation_type', 'teacher');
+          const emails = Array.from(new Set((invs || []).map((r: any) => (r.invited_email || '').toLowerCase()).filter(Boolean)));
+          if (emails.length > 0) {
+            const { data: invitedUsers } = await supabase
+              .from('users')
+              .select(`
+                id,
+                name,
+                email,
+                phone,
+                preschool_id,
+                is_active,
+                auth_user_id,
+                created_at
+              `)
+              .eq('role', 'teacher')
+              .in('email', emails);
+
+            // Attach classes for these users (may be empty because not linked yet)
+            const teacherIds = (invitedUsers || []).map((t: any) => t.id);
+            let classesMap = new Map<string, any[]>();
+            if (teacherIds.length) {
+              const { data: cls } = await supabase
+                .from('classes')
+                .select('id, name, current_enrollment, max_capacity, teacher_id')
+                .in('teacher_id', teacherIds as string[]);
+              (cls || []).forEach((c: any) => {
+                const arr = classesMap.get(c.teacher_id) || [];
+                arr.push(c);
+                classesMap.set(c.teacher_id, arr);
+              });
+            }
+
+            data = (invitedUsers || []).map((t: any) => ({ ...t, classes: classesMap.get(t.id) || [] }));
+          }
+        } catch (fallbackErr) {
+          // best-effort fallback; ignore errors
+          log.warn('Teacher fallback query failed:', fallbackErr);
+        }
+      }
+
       return { data, error: null };
     } catch (error) {
       log.error('Error fetching teachers:', error);

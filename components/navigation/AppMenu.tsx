@@ -64,7 +64,6 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
         subtitle: 'Manage alerts & updates',
         icon: 'bell.fill',
         route: '/notifications',
-        badge: 3,
         color: '#8B5CF6',
       },
       {
@@ -149,7 +148,6 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
             subtitle: 'Parent engagement',
             icon: 'person.3.fill',
             route: '/parents',
-            badge: 5,
             color: '#059669',
           },
           {
@@ -197,7 +195,6 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
             subtitle: 'Create & grade work',
             icon: 'doc.text.fill',
             route: '/assignments',
-            badge: 12,
             color: '#7C3AED',
           },
           {
@@ -245,7 +242,6 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
             subtitle: 'Assignments & submissions',
             icon: 'doc.text.fill',
             route: '/homework',
-            badge: 2,
             color: '#2563EB',
           },
           {

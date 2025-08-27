@@ -23,6 +23,7 @@ import { SmartRoutingService } from '@/lib/services/smartRoutingService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { useToast } from '@/components/ui/Toast';
+import AdZone from '@/components/ui/AdZone';
 
 const { width, height } = Dimensions.get('window');
 
@@ -69,7 +70,7 @@ export default function PricingPage() {
       period: "/month",
       description: "Basic features with ads",
       features: [
-        "⚡ 3 AI Lessons per week",
+        "⚡ 5 AI Lessons per month",
         "👥 Up to 3 students", 
         "🤖 1 Basic AI Tutor",
         "📊 Basic Analytics",
@@ -88,7 +89,7 @@ export default function PricingPage() {
       period: "/month",
       description: "Perfect for growing families & educators",
       features: [
-        "⚡ 5 AI Lessons per day (25/week)",
+        "⚡ 25 AI Lessons per month",
         "👥 Up to 15 students",
         "🤖 2 Advanced AI Tutors", 
         "📊 Advanced Analytics",
@@ -335,14 +336,15 @@ const handleInvitationCodeDecision = async (hasCode: boolean) => {
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" translucent />
-      
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+    <AdZone>
+      <View style={styles.container}>
+        <StatusBar style="light" translucent />
+        
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
         {/* Header */}
         <LinearGradient
           colors={DesignSystem.gradients.hero}
@@ -385,8 +387,7 @@ const handleInvitationCodeDecision = async (hasCode: boolean) => {
                 <View 
                   key={plan.id} 
                   style={styles.pricingCard}
-                  onMouseEnter={() => setHoveredPlanId(plan.id)}
-                  onMouseLeave={() => setHoveredPlanId(null)}
+                  {...(Platform.OS === 'web' ? ({ onMouseEnter: () => setHoveredPlanId(plan.id), onMouseLeave: () => setHoveredPlanId(null) } as any) : {})}
                 >
                   <LinearGradient colors={plan.color} style={[
                     styles.pricingCardGradient,
@@ -507,19 +508,19 @@ const handleInvitationCodeDecision = async (hasCode: boolean) => {
             </TouchableOpacity>
           </LinearGradient>
         </View>
-      </ScrollView>
+        </ScrollView>
 
-      {/* Only render RoleModal and Invitation prompt for non-principal flows */}
-      {!isPrincipal && <RoleModal />}
-      
-      {/* Invitation Code Prompt Modal */}
-      {!isPrincipal && (
-      <Modal
-        visible={showInvitationPrompt}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowInvitationPrompt(false)}
-      >
+        {/* Only render RoleModal and Invitation prompt for non-principal flows */}
+        {!isPrincipal && <RoleModal />}
+        
+        {/* Invitation Code Prompt Modal */}
+        {!isPrincipal && (
+        <Modal
+          visible={showInvitationPrompt}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowInvitationPrompt(false)}
+        >
         <View style={styles.modalOverlay}>
           <View style={styles.roleModalContent}>
             <LinearGradient colors={DesignSystem.gradients.hero} style={styles.roleModalGradient}>
@@ -571,7 +572,8 @@ const handleInvitationCodeDecision = async (hasCode: boolean) => {
         </View>
       </Modal>
       )}
-    </View>
+      </View>
+    </AdZone>
   );
 }
 
@@ -584,7 +586,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 50,
+    paddingBottom: 120, // ensure content doesn't collide with bottom nav
   },
   
   // Header Styles

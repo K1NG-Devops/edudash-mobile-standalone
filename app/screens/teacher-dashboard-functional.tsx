@@ -290,12 +290,9 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
         if (isAIFeature) {
             const success = await trackAIUsage(featureId);
             if (!success) {
-                setUpgradeModal({
-                    visible: true,
-                    featureName: `${featureName} - Usage Error`,
-                    description: `Unable to track AI usage. Please try again or contact support.`
-                });
-                return;
+                // Non-blocking: do not force upgrade if client-side tracking fails.
+                // Server-side ai-proxy will enforce real limits.
+                console.warn('AI usage tracking failed on client; proceeding to feature.');
             }
         }
 
@@ -317,6 +314,11 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
         const isAIFeature = featureAccess?.isAIFeature || false;
         const isLimited = isAIFeature && !canUseAI;
 
+        // Compute remaining counter for AI quick actions
+        const remainingText = (featureId === 'ai_lesson_generator' && isAIFeature && aiUsage)
+          ? (aiUsage.monthlyLimit === -1 ? '∞ left' : `${Math.max(0, aiUsage.monthlyLimit - aiUsage.currentUsage)} left`)
+          : null;
+
         return (
             <TouchableOpacity
                 style={[
@@ -332,7 +334,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                     }
                 }}
             >
-                <View style={[styles.quickActionIcon, { backgroundColor: `${color}15` }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: `${color}15` }]}> 
                     <IconSymbol name={icon as any} size={24} color={isLimited ? '#94A3B8' : color} />
                     {(needsUpgrade || isLimited) && (
                         <View style={styles.premiumBadge}>
@@ -344,9 +346,12 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                         </View>
                     )}
                 </View>
-                <Text style={[styles.quickActionTitle, { color: isLimited ? colors.textSecondary : colors.text }]}>
+                <Text style={[styles.quickActionTitle, { color: isLimited ? colors.textSecondary : colors.text }]}> 
                     {title}
                 </Text>
+                {remainingText && !needsUpgrade && !isLimited && (
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{remainingText}</Text>
+                )}
                 {needsUpgrade && (
                     <Text style={[styles.premiumText, { color: colors.textSecondary }]}>Premium</Text>
                 )}
@@ -763,7 +768,7 @@ const styles = StyleSheet.create({
 // Wrapper component with SubscriptionProvider
 export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
     return (
-        <SubscriptionProvider userId={profile?.id}>
+        <SubscriptionProvider userId={profile?.auth_user_id}>
             <TeacherDashboardInner profile={profile} />
         </SubscriptionProvider>
     );
