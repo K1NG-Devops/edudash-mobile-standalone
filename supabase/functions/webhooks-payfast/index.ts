@@ -3,16 +3,10 @@
 
 import { serve } from 'https://deno.land/std@0.223.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Md5 } from 'https://deno.land/std@0.223.0/hash/md5.ts';
 
 function md5(input: string): string {
-  const data = new TextEncoder().encode(input);
-  const hashBuffer = (globalThis as any).crypto.subtle.digestSync?.('MD5', data);
-  if (hashBuffer) {
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-  // Fallback: not available in all runtimes
-  return '';
+  return new Md5().update(input).toString();
 }
 
 function buildSignaturePayload(params: Record<string, string>, passphrase?: string) {
@@ -63,8 +57,11 @@ serve(async (req: Request) => {
 
     // Update subscription status & insert payment record
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnon);
+    const serviceRole = Deno.env.get('SERVER_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!serviceRole) {
+      return new Response('Missing service role key', { status: 500 });
+    }
+    const admin = createClient(supabaseUrl, serviceRole, { auth: { persistSession: false } });
 
     const paymentStatus = params['payment_status'] || '';
     const mPaymentId = params['m_payment_id'] || '';
@@ -74,14 +71,14 @@ serve(async (req: Request) => {
       return new Response('Missing payment id', { status: 400 });
     }
 
-    let status: 'active' | 'past_due' | 'trial' = 'trial';
-    if (paymentStatus === 'COMPLETE') status = 'active';
-    else if (paymentStatus === 'FAILED') status = 'past_due';
+    let subStatus: 'active' | 'past_due' | 'trial' = 'trial';
+    if (paymentStatus === 'COMPLETE') subStatus = 'active';
+    else if (paymentStatus === 'FAILED') subStatus = 'past_due';
 
-    const { error } = await supabase
+    const { error } = await admin
       .from('platform_subscriptions')
       .update({
-        status,
+        status: subStatus,
         provider_subscription_id: pfPaymentId || null,
         updated_at: new Date().toISOString(),
       })
@@ -91,21 +88,46 @@ serve(async (req: Request) => {
       return new Response(`DB error: ${error.message}`, { status: 500 });
     }
 
+    // Look up subscription id for payments FK
+    const { data: subRow } = await admin
+      .from('platform_subscriptions')
+      .select('id')
+      .eq('metadata->>payment_id', mPaymentId)
+      .maybeSingle();
+
+    // Map PayFast status to our allowed payment statuses
+    const mapStatus = (s: string): 'completed' | 'pending' | 'failed' | 'refunded' => {
+      switch (s.toUpperCase()) {
+        case 'COMPLETE':
+          return 'completed';
+        case 'PENDING':
+          return 'pending';
+        case 'FAILED':
+          return 'failed';
+        case 'REFUNDED':
+          return 'refunded';
+        default:
+          return 'pending';
+      }
+    };
+
     // Insert payment row (best-effort)
     try {
-      const amount = paymentStatus === 'COMPLETE' ? Number(params['amount_net'] || params['amount_gross'] || 0) : Number(params['amount_gross'] || 0)
-      const processedAt = params['billing_date'] || new Date().toISOString()
-      await supabase
-        .from('subscription_payments')
-        .insert({
-          subscription_id: mPaymentId,
-          amount,
-          currency: 'ZAR',
-          status: paymentStatus.toLowerCase(),
-          provider_payment_id: pfPaymentId || null,
-          processed_at: processedAt,
-          metadata: { payfast: params },
-        })
+      if (subRow?.id) {
+        const amount = paymentStatus === 'COMPLETE' ? Number(params['amount_net'] || params['amount_gross'] || 0) : Number(params['amount_gross'] || 0);
+        const processedAt = params['billing_date'] || new Date().toISOString();
+        await admin
+          .from('subscription_payments')
+          .insert({
+            subscription_id: subRow.id,
+            amount,
+            currency: 'ZAR',
+            status: mapStatus(paymentStatus),
+            provider_payment_id: pfPaymentId || null,
+            processed_at: processedAt,
+            metadata: { payfast: params },
+          });
+      }
     } catch (_) {
       // non-fatal
     }
