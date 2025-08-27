@@ -15,6 +15,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { PlatformSubscription } from '@/lib/services/subscriptionService';
+import { AIUsageService } from '@/lib/services/aiUsageService';
 
 interface DashboardSubscriptionCardProps {
   userId: string;
@@ -51,24 +52,52 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
 
-  // Fetch usage statistics
+  // Resolve monthly AI usage limit based on subscription tier (aligned with server ai-proxy)
+  const resolveMonthlyLimit = (): number => {
+    const tier = (subscription?.plan as any)?.tier as
+      | 'free'
+      | 'starter'
+      | 'premium'
+      | 'enterprise'
+      | undefined;
+    if (tier === 'enterprise') return -1; // unlimited
+    if (tier === 'premium') return 100;
+    if (tier === 'starter') return 20;
+    // Treat null subscription or unknown tier as free
+    return 5;
+  };
+
+  // Fetch usage statistics (DB-backed via ai_usage_logs)
   const fetchUsageStats = async () => {
     if (!showUsage) return;
-    
     setLoadingUsage(true);
     try {
-      // TODO: Replace with actual usage tracking service
-      // This would typically call a service to get real usage data
-      const mockStats: UsageStats = {
-        ai_lessons_used: Math.floor(Math.random() * 50),
-        ai_lessons_limit: subscription ? 100 : 5, // Free: 5, Premium: 100
-        homework_graded: Math.floor(Math.random() * 20),
-        homework_limit: subscription ? 50 : 3, // Free: 3, Premium: 50
-        premium_features_accessed: Math.floor(Math.random() * 10),
+      // userId prop is the auth user id
+      const summary = await AIUsageService.getUsageSummaryByFeature(userId);
+      const monthlyLimit = resolveMonthlyLimit();
+
+      const aiLessonsUsed = (summary['lesson_generation'] ?? 0) as number;
+      const homeworkUsed = (summary['homework_grading'] ?? 0) as number;
+      const premiumAccessed = ((summary['progress_analysis'] ?? 0) as number) +
+        ((summary['stem_activity'] ?? 0) as number);
+
+      const stats: UsageStats = {
+        ai_lessons_used: aiLessonsUsed,
+        ai_lessons_limit: monthlyLimit,
+        homework_graded: homeworkUsed,
+        homework_limit: monthlyLimit,
+        premium_features_accessed: premiumAccessed,
       };
-      setUsageStats(mockStats);
+      setUsageStats(stats);
     } catch (error) {
       console.error('Failed to fetch usage stats:', error);
+      setUsageStats({
+        ai_lessons_used: 0,
+        ai_lessons_limit: resolveMonthlyLimit(),
+        homework_graded: 0,
+        homework_limit: resolveMonthlyLimit(),
+        premium_features_accessed: 0,
+      });
     } finally {
       setLoadingUsage(false);
     }
@@ -148,6 +177,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
   };
 
   const getUsagePercentage = (used: number, limit: number) => {
+    if (limit === -1) return used > 0 ? 100 : 0; // unlimited: show full bar if any usage
     if (limit === 0) return 0;
     return Math.min((used / limit) * 100, 100);
   };
@@ -261,7 +291,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
                   />
                 </View>
                 <Text style={[styles.usageNumbers, { color: palette.text }]}>
-                  {usageStats.ai_lessons_used}/{usageStats.ai_lessons_limit}
+                  {usageStats.ai_lessons_used}/{usageStats.ai_lessons_limit === -1 ? '∞' : usageStats.ai_lessons_limit}
                 </Text>
               </View>
 
@@ -285,7 +315,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
                   />
                 </View>
                 <Text style={[styles.usageNumbers, { color: palette.text }]}>
-                  {usageStats.homework_graded}/{usageStats.homework_limit}
+                  {usageStats.homework_graded}/{usageStats.homework_limit === -1 ? '∞' : usageStats.homework_limit}
                 </Text>
               </View>
             </View>

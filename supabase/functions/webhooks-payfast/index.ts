@@ -61,7 +61,7 @@ serve(async (req: Request) => {
       return new Response('Invalid signature', { status: 400 });
     }
 
-    // Update subscription status
+    // Update subscription status & insert payment record
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnon);
@@ -89,6 +89,25 @@ serve(async (req: Request) => {
 
     if (error) {
       return new Response(`DB error: ${error.message}`, { status: 500 });
+    }
+
+    // Insert payment row (best-effort)
+    try {
+      const amount = paymentStatus === 'COMPLETE' ? Number(params['amount_net'] || params['amount_gross'] || 0) : Number(params['amount_gross'] || 0)
+      const processedAt = params['billing_date'] || new Date().toISOString()
+      await supabase
+        .from('subscription_payments')
+        .insert({
+          subscription_id: mPaymentId,
+          amount,
+          currency: 'ZAR',
+          status: paymentStatus.toLowerCase(),
+          provider_payment_id: pfPaymentId || null,
+          processed_at: processedAt,
+          metadata: { payfast: params },
+        })
+    } catch (_) {
+      // non-fatal
     }
 
     return new Response('OK', { status: 200 });

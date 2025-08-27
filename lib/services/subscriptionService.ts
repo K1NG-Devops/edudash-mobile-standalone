@@ -1188,6 +1188,44 @@ export class SubscriptionService {
   }
 
   /**
+   * Get recent payments for the current user (joins through platform_subscriptions)
+   */
+  static async getRecentPayments(userId: string, limit: number = 10): Promise<{ data: Array<{ id: string; amount: number; currency: string; status: string; processed_at: string; provider_payment_id: string | null }>; error: any }> {
+    try {
+      // Join payments -> subscription -> user
+      const { data, error } = await (supabase as any)
+        .from('subscription_payments')
+        .select(`
+          id,
+          amount,
+          currency,
+          status,
+          processed_at,
+          provider_payment_id,
+          subscription:platform_subscriptions!inner(user_id)
+        `)
+        .eq('subscription.user_id', userId)
+        .order('processed_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      const mapped = (data || []).map((p: any) => ({
+        id: p.id,
+        amount: Number(p.amount || 0),
+        currency: p.currency || 'ZAR',
+        status: String(p.status || 'unknown'),
+        processed_at: p.processed_at || new Date().toISOString(),
+        provider_payment_id: p.provider_payment_id || null,
+      }));
+      return { data: mapped, error: null };
+    } catch (error) {
+      log.error('Error fetching recent payments:', error);
+      return { data: [], error } as any;
+    }
+  }
+
+  /**
    * Update subscription status
    */
   static async updateSubscriptionStatus(

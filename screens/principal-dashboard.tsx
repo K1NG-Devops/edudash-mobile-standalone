@@ -6,8 +6,9 @@ import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { PrincipalService } from '@/lib/services/principalService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DashboardSubscriptionCard } from '@/components/dashboard/DashboardSubscriptionCard';
+import { BillingHistoryCard } from '@/components/billing/BillingHistoryCard';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
   Alert,
@@ -20,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -43,81 +45,81 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
   const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState<PrincipalStats>({
-    totalStudents: 0,
-    totalTeachers: 0,
-    totalParents: 0,
-    attendanceRate: 0,
-    monthlyRevenue: 0,
-    pendingPayments: 0,
-    activeClasses: 0,
-    newEnrollments: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [schoolName, setSchoolName] = useState('');
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
   const [showSchoolCodeManager, setShowSchoolCodeManager] = useState(false);
-  const [recentActivity, setRecentActivity] = useState<string[]>([]);
-  const [pendingTasks, setPendingTasks] = useState<Array<{ priority: string, text: string, color: string }>>([]);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    loadPrincipalStats();
-  }, []);
+  const preschoolId = profile?.preschool_id || '';
 
-  const loadPrincipalStats = async () => {
-    try {
-      setLoading(true);
+  // 1) School info query
+  const schoolInfoQuery = useQuery({
+    queryKey: ['schoolInfo', preschoolId],
+    queryFn: async () => {
+      if (!preschoolId) return { name: 'Your Preschool' } as any;
+      const res = await PrincipalService.getSchoolInfo(preschoolId);
+      if (res.error) throw res.error;
+      return res.data || { name: 'Your Preschool' };
+    },
+    enabled: !!preschoolId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-      if (!profile?.preschool_id) {
-        // Removed debug statement: console.warn('No preschool_id found in profile');
-        setSchoolName('Your Preschool');
-        return;
-      }
+  // 2) Principal stats query
+  const statsQuery = useQuery({
+    queryKey: ['principalStats', preschoolId],
+    queryFn: async () => {
+      if (!preschoolId) return {
+        totalStudents: 0,
+        totalTeachers: 0,
+        totalParents: 0,
+        attendanceRate: 0,
+        monthlyRevenue: 0,
+        pendingPayments: 0,
+        activeClasses: 0,
+        newEnrollments: 0,
+      } as PrincipalStats;
+      const res = await PrincipalService.getPrincipalStats(preschoolId);
+      if (res.error) throw res.error;
+      return res.data as PrincipalStats;
+    },
+    enabled: !!preschoolId,
+    staleTime: 1000 * 30, // 30s for fresher stats
+  });
 
-      // Fetch school information
-      const schoolResult = await PrincipalService.getSchoolInfo(profile.preschool_id);
-      if (schoolResult.data) {
+  // 3) Recent activity query
+  const activityQuery = useQuery({
+    queryKey: ['recentActivity', preschoolId],
+    queryFn: async () => {
+      if (!preschoolId) return [] as string[];
+      const res = await PrincipalService.getRecentActivity(preschoolId);
+      if (res.error) return [] as string[]; // show empty quietly
+      return res.data || [];
+    },
+    enabled: !!preschoolId,
+    staleTime: 1000 * 60, // 1 minute
+  });
 
-        setSchoolName(schoolResult.data.name);
-      } else {
-
-        setSchoolName('Your Preschool');
-      }
-
-      // Fetch real stats from database
-      const statsResult = await PrincipalService.getPrincipalStats(profile.preschool_id);
-      if (statsResult.data) {
-
-        setStats(statsResult.data);
-      } else {
-        // Removed debug statement: console.error('❌ [DEBUG] Failed to load stats:', statsResult.error);
-        // Keep existing stats or use defaults
-      }
-
-      // Load recent activity
-      const activityResult = await PrincipalService.getRecentActivity(profile.preschool_id);
-      if (activityResult.data) {
-        setRecentActivity(activityResult.data);
-      }
-
-      // Load pending tasks
-      const tasksResult = await PrincipalService.getPendingTasks(profile.preschool_id);
-      if (tasksResult.data) {
-        setPendingTasks(tasksResult.data);
-      }
-
-    } catch (error) {
-      // Removed debug statement: console.error('Error loading principal stats:', error);
-      Alert.alert('Error', 'Failed to load school statistics');
-      setSchoolName('Your Preschool');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 4) Pending tasks query
+  const tasksQuery = useQuery({
+    queryKey: ['pendingTasks', preschoolId],
+    queryFn: async () => {
+      if (!preschoolId) return [] as Array<{ priority: string; text: string; color: string }>;
+      const res = await PrincipalService.getPendingTasks(preschoolId);
+      if (res.error) return [];
+      return res.data || [];
+    },
+    enabled: !!preschoolId,
+    staleTime: 1000 * 60, // 1 minute
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadPrincipalStats();
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['schoolInfo', preschoolId] }),
+      queryClient.invalidateQueries({ queryKey: ['principalStats', preschoolId] }),
+      queryClient.invalidateQueries({ queryKey: ['recentActivity', preschoolId] }),
+      queryClient.invalidateQueries({ queryKey: ['pendingTasks', preschoolId] }),
+    ]);
     setRefreshing(false);
   };
 
@@ -183,11 +185,11 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
           role: profile?.role || 'preschool_admin',
           avatar: profile?.avatar_url || undefined,
         }}
-        schoolName={schoolName || undefined}
+        schoolName={(schoolInfoQuery.data as any)?.name || 'Your Preschool'}
         onNotificationsPress={() => handleNavigate('notifications')}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
-        notificationCount={stats.pendingPayments}
+        notificationCount={statsQuery.data?.pendingPayments || 0}
       />
 
       <ScrollView
@@ -201,12 +203,13 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         {/* Overview Header (matches Super Admin look) */}
         <View style={[styles.welcomeSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
           <Text style={[styles.welcomeTitle, { color: isDark ? '#F8FAFC' : '#1F2937' }]}>📊 School Overview</Text>
-          <Text style={[styles.welcomeSubtitle, { color: isDark ? '#94A3B8' : '#6B7280' }]}>Manage {schoolName}</Text>
+          <Text style={[styles.welcomeSubtitle, { color: isDark ? '#94A3B8' : '#6B7280' }]}>Manage {(schoolInfoQuery.data as any)?.name || 'Your Preschool'}</Text>
         </View>
 
         {/* Subscription / Plan */}
         <View style={[styles.actionsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-          <DashboardSubscriptionCard userId={profile?.id || ''} />
+          <DashboardSubscriptionCard userId={profile?.auth_user_id || ''} />
+          <BillingHistoryCard userId={profile?.id || ''} />
         </View>
 
         {/* School Statistics */}
@@ -215,23 +218,23 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
           <View style={styles.statsGrid}>
             <MetricCard
               title="Total Students"
-              value={stats.totalStudents}
-              subtitle={`${stats.newEnrollments} new this month`}
+              value={statsQuery.data?.totalStudents ?? 0}
+              subtitle={`${statsQuery.data?.newEnrollments ?? 0} new this month`}
               icon="graduationcap.fill"
               color="#EA4335"
               onPress={() => handleNavigate('students')}
             />
             <MetricCard
               title="Teaching Staff"
-              value={stats.totalTeachers}
-              subtitle={`${stats.activeClasses} active classes`}
+              value={statsQuery.data?.totalTeachers ?? 0}
+              subtitle={`${statsQuery.data?.activeClasses ?? 0} active classes`}
               icon="person.2.fill"
               color="#EA4335"
               onPress={() => handleNavigate('teachers')}
             />
             <MetricCard
               title="Parent Community"
-              value={stats.totalParents}
+              value={statsQuery.data?.totalParents ?? 0}
               subtitle="Engaged families"
               icon="heart.fill"
               color="#EA4335"
@@ -239,8 +242,8 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
             />
             <MetricCard
               title="Monthly Revenue"
-              value={`R${(stats.monthlyRevenue / 1000).toFixed(0)}k`}
-              subtitle={`${stats.pendingPayments} pending payments`}
+              value={`R${(((statsQuery.data?.monthlyRevenue ?? 0) / 1000) | 0).toFixed(0)}k`}
+              subtitle={`${statsQuery.data?.pendingPayments ?? 0} pending payments`}
               icon="creditcard.fill"
               color="#EA4335"
               onPress={() => handleNavigate('/screens/principal-reports')}
@@ -324,8 +327,8 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         <View style={[styles.activitySection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>📈 Recent School Activity</Text>
           <View style={[styles.activityCard, { backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }] }>
-            {recentActivity.length > 0 ? (
-              recentActivity.map((activity, index) => (
+            {activityQuery.data && activityQuery.data.length > 0 ? (
+              activityQuery.data.map((activity, index) => (
                 <Text key={index} style={[styles.activityItem, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>• {activity}</Text>
               ))
             ) : (
@@ -338,8 +341,8 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         <View style={[styles.tasksSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>📋 Pending Tasks</Text>
           <View style={styles.tasksList}>
-            {pendingTasks.length > 0 ? (
-              pendingTasks.map((task, index) => (
+            {tasksQuery.data && tasksQuery.data.length > 0 ? (
+              tasksQuery.data.map((task, index) => (
                 <View key={index} style={[styles.taskItem, isDark && { backgroundColor: '#0B1220' }]}>
                   <View style={[styles.taskDot, { backgroundColor: task.color }]} />
                   <Text style={[styles.taskText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>{task.text}</Text>
@@ -361,10 +364,13 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
             visible={showTeacherManagement}
             preschoolId={profile.preschool_id}
             principalId={profile.id}
-            onClose={() => {
+            onClose={async () => {
               setShowTeacherManagement(false);
               // Refresh stats when closing to reflect any changes
-              loadPrincipalStats();
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['principalStats', preschoolId] }),
+                queryClient.invalidateQueries({ queryKey: ['pendingTasks', preschoolId] }),
+              ]);
             }}
           />
 
@@ -372,7 +378,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
             visible={showSchoolCodeManager}
             preschoolId={profile.preschool_id}
             principalId={profile.id}
-            schoolName={schoolName}
+            schoolName={(schoolInfoQuery.data as any)?.name || 'Your Preschool'}
             onClose={() => setShowSchoolCodeManager(false)}
           />
         </>
