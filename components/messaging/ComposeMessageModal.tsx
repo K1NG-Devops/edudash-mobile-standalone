@@ -179,7 +179,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
           subject: '',
           content: messageContent.trim() || (attachedMedia.length > 0 ? '📷 Photo message' : ''),
           sender_id: parentProfile.id,
-          message_type: 'private'
+          message_type: 'direct'
         })
         .select('id')
         .single();
