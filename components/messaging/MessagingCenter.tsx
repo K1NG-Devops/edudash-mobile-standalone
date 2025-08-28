@@ -515,9 +515,9 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       // Mark as read for any incoming unread
       await supabase
         .from('message_recipients')
-        .update({ read_at: new Date().toISOString() })
+        .update({ is_read: true, read_at: new Date().toISOString() })
         .eq('recipient_id', parentProfile.id)
-        .is('read_at', null);
+        .eq('is_read', false);
 
       scrollToBottom();
     } catch (error) {
@@ -654,29 +654,16 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         throw new Error('Parent profile not found');
       }
 
-      const { data: newMsg, error } = await supabase
-        .from('messages')
-          .insert({
-            preschool_id: profile.preschool_id!,
-            subject: '',
-            content: newMessage.trim(),
-            sender_id: parentProfile.id,
-            message_type: 'direct',
-          })
-        .select('id')
-        .single();
+      // Atomic server-side send via RPC (handles RLS)
+      const { data: messageId, error: rpcError } = await supabase.rpc('send_direct_message', {
+        p_recipient_user_id: selectedConversation,
+        p_content: newMessage.trim(),
+        p_subject: '',
+        p_message_type: 'direct',
+      });
 
-      if (!error) {
-        await supabase
-          .from('message_recipients')
-          .insert({
-            message_id: newMsg.id,
-            recipient_id: selectedConversation,
-          });
-      }
-
-      if (error) {
-        throw error;
+      if (rpcError || !messageId) {
+        throw rpcError || new Error('send_direct_message failed');
       }
 
       setNewMessage('');

@@ -246,7 +246,7 @@ export class MessageService {
         .from('message_recipients')
         .select('*', { count: 'exact', head: true })
         .eq('recipient_id', userId)
-        .is('read_at', null)
+        .eq('is_read', false)
         .eq('is_archived', false);
 
       if (error) throw error;
