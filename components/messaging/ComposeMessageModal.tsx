@@ -18,6 +18,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { MediaService } from '@/lib/services/mediaService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 
 interface Contact {
   id: string;
@@ -45,6 +47,11 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   childrenList,
   onMessageSent,
 }) => {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
+  const placeholderColor = isDark ? '#94A3B8' : '#9CA3AF';
+  const selectionBg = isDark ? 'rgba(59,130,246,0.15)' : '#EBF4FF';
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
@@ -301,7 +308,13 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
     }
   };
 
-  const handleAddPhoto = () => {
+const handleAddPhoto = () => {
+    // RN Web doesn't support multi-button Alert reliably; open gallery directly
+    if (Platform.OS === 'web') {
+      pickImageFromGallery();
+      return;
+    }
+
     const options = [
       'Take Photo',
       'Choose from Gallery',
@@ -384,7 +397,8 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       key={contact.id}
       style={[
         styles.contactItem,
-        selectedContact?.id === contact.id && styles.selectedContact
+        { backgroundColor: palette.surface, borderBottomColor: palette.outline },
+        selectedContact?.id === contact.id && { backgroundColor: selectionBg }
       ]}
       onPress={() => setSelectedContact(contact)}
     >
@@ -392,8 +406,8 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         {contact.avatar_url ? (
           <Image source={{ uri: contact.avatar_url }} style={styles.avatar} />
         ) : (
-          <View style={styles.defaultAvatar}>
-            <Text style={styles.avatarText}>
+          <View style={[styles.defaultAvatar, { backgroundColor: isDark ? '#334155' : '#E5E7EB' }]}>
+            <Text style={[styles.avatarText, { color: isDark ? '#CBD5E1' : '#6B7280' }]}>
               {contact.name.charAt(0).toUpperCase()}
             </Text>
           </View>
@@ -402,14 +416,14 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       </View>
 
       <View style={styles.contactInfo}>
-        <Text style={styles.contactName}>{contact.name}</Text>
-        <Text style={styles.contactRole}>
+        <Text style={[styles.contactName, { color: palette.text }]}>{contact.name}</Text>
+        <Text style={[styles.contactRole, { color: palette.textSecondary }]}>
           {contact.role === 'teacher' ? '👩‍🏫 Teacher' :
            contact.role === 'admin' ? '👨‍💼 Admin' : '👨‍👩‍👧‍👦 Parent'}
           {contact.class_name && ` • ${contact.class_name}`}
         </Text>
         {contact.email && (
-          <Text style={styles.contactEmail}>{contact.email}</Text>
+          <Text style={[styles.contactEmail, { color: palette.textSecondary }]}>{contact.email}</Text>
         )}
       </View>
 
@@ -420,54 +434,54 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   );
 
   const renderMessageComposer = () => (
-    <View style={styles.composerContainer}>
-      <View style={styles.selectedContactHeader}>
+    <View style={[styles.composerContainer, { backgroundColor: 'transparent' }]}>
+      <View style={[styles.selectedContactHeader, { backgroundColor: palette.surface }]}>
         <View style={styles.selectedContactInfo}>
-          <Text style={styles.composerTitle}>Send message to:</Text>
-          <Text style={styles.selectedContactName}>{selectedContact?.name}</Text>
-          <Text style={styles.selectedContactRole}>
+          <Text style={[styles.composerTitle, { color: palette.textSecondary }]}>Send message to:</Text>
+          <Text style={[styles.selectedContactName, { color: palette.text }]}>{selectedContact?.name}</Text>
+          <Text style={[styles.selectedContactRole, { color: palette.textSecondary }]}>
             {selectedContact?.role === 'teacher' ? 'Teacher' :
              selectedContact?.role === 'admin' ? 'Administrator' : 'Parent'}
             {selectedContact?.class_name && ` • ${selectedContact.class_name}`}
           </Text>
         </View>
         <TouchableOpacity
-          style={styles.changeContactButton}
+          style={[styles.changeContactButton, { borderColor: palette.primary }]}
           onPress={() => setSelectedContact(null)}
         >
-          <Text style={styles.changeContactText}>Change</Text>
+          <Text style={[styles.changeContactText, { color: palette.primary }]}>Change</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.messageInputContainer}>
-        <Text style={styles.messageInputLabel}>Message</Text>
+      <View style={[styles.messageInputContainer, { backgroundColor: palette.surface }]}>
+        <Text style={[styles.messageInputLabel, { color: palette.textSecondary }]}>Message</Text>
         <TextInput
-          style={styles.messageInput}
+          style={[styles.messageInput, { borderColor: palette.outline, color: palette.text }]}
           value={messageContent}
           onChangeText={setMessageContent}
           placeholder="Type your message here..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={placeholderColor}
           multiline
           textAlignVertical="top"
           maxLength={1000}
         />
-        <Text style={styles.characterCount}>
+        <Text style={[styles.characterCount, { color: palette.textSecondary }]}>
           {messageContent.length}/1000
         </Text>
         
         {/* Media Attachment Controls */}
         <View style={styles.mediaControls}>
           <TouchableOpacity
-            style={styles.addPhotoButton}
+            style={[styles.addPhotoButton, { borderColor: palette.primary, backgroundColor: isDark ? 'rgba(59,130,246,0.12)' : '#EBF4FF' }]}
             onPress={handleAddPhoto}
             disabled={uploadingMedia}
           >
             {uploadingMedia ? (
-              <ActivityIndicator size="small" color="#3B82F6" />
+              <ActivityIndicator size="small" color={palette.primary} />
             ) : (
-              <IconSymbol name="camera.fill" size={20} color="#3B82F6" />
+              <IconSymbol name="camera.fill" size={20} color={palette.primary} />
             )}
-            <Text style={styles.addPhotoText}>
+            <Text style={[styles.addPhotoText, { color: palette.primary }]}>
               {uploadingMedia ? 'Adding...' : 'Add Photo'}
             </Text>
           </TouchableOpacity>
@@ -475,14 +489,14 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         
         {/* Attached Media Preview */}
         {attachedMedia.length > 0 && (
-          <View style={styles.attachedMediaContainer}>
-            <Text style={styles.attachedMediaLabel}>Attached Photos ({attachedMedia.length})</Text>
+          <View style={[styles.attachedMediaContainer, { borderTopColor: palette.outline }]}>
+            <Text style={[styles.attachedMediaLabel, { color: palette.text }]}>Attached Photos ({attachedMedia.length})</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaPreviewScroll}>
               {attachedMedia.map((media, index) => (
                 <View key={index} style={styles.mediaPreviewItem}>
-                  <Image source={{ uri: media.uri }} style={styles.mediaPreviewImage} />
+                  <Image source={{ uri: media.uri }} style={[styles.mediaPreviewImage, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]} />
                   <TouchableOpacity
-                    style={styles.removeMediaButton}
+                    style={[styles.removeMediaButton, { backgroundColor: isDark ? palette.surface : '#FFFFFF' }]}
                     onPress={() => removeMedia(index)}
                   >
                     <IconSymbol name="xmark.circle.fill" size={20} color="#EF4444" />
@@ -496,20 +510,21 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
 
       <View style={styles.composerActions}>
         <TouchableOpacity
-          style={styles.cancelButton}
+          style={[styles.cancelButton, { borderColor: palette.outline }]}
           onPress={() => {
             setSelectedContact(null);
             setMessageContent('');
             setAttachedMedia([]);
           }}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={[styles.cancelButtonText, { color: palette.textSecondary }]}>Cancel</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
           style={[
             styles.sendMessageButton,
-            ((!messageContent.trim() && attachedMedia.length === 0) || sending) && styles.sendButtonDisabled
+            { backgroundColor: palette.primary },
+            ((!messageContent.trim() && attachedMedia.length === 0) || sending) && { opacity: 0.6 }
           ]}
           onPress={sendMessage}
           disabled={(!messageContent.trim() && attachedMedia.length === 0) || sending}
@@ -534,14 +549,14 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: palette.background }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <IconSymbol name="xmark" size={20} color="#6B7280" />
+        <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.outline }]}>
+          <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]} onPress={onClose}>
+            <IconSymbol name="xmark" size={20} color={palette.textSecondary} />
           </TouchableOpacity>
           
-          <Text style={styles.headerTitle}>New Message</Text>
+          <Text style={[styles.headerTitle, { color: palette.text }]}>New Message</Text>
           
           <View style={styles.headerSpacer} />
         </View>
@@ -551,25 +566,26 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         ) : (
           <>
             {/* Search */}
-            <View style={styles.searchContainer}>
-              <IconSymbol name="magnifyingglass" size={16} color="#9CA3AF" />
+            <View style={[styles.searchContainer, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
+              <IconSymbol name="magnifyingglass" size={16} color={placeholderColor} />
               <TextInput
-                style={styles.searchInput}
+                style={[styles.searchInput, { color: palette.text }]}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="Search contacts..."
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={placeholderColor}
               />
             </View>
 
             {/* Tabs */}
-            <View style={styles.tabsContainer}>
+            <View style={[styles.tabsContainer, { backgroundColor: palette.surface }]}>
               <TouchableOpacity
-                style={[styles.tab, activeTab === 'teachers' && styles.activeTab]}
+                style={[styles.tab, activeTab === 'teachers' && [styles.activeTab, { backgroundColor: palette.primary }]]}
                 onPress={() => setActiveTab('teachers')}
               >
                 <Text style={[
                   styles.tabText,
+                  { color: palette.textSecondary },
                   activeTab === 'teachers' && styles.activeTabText
                 ]}>
                   Teachers
@@ -577,11 +593,12 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[styles.tab, activeTab === 'admin' && styles.activeTab]}
+                style={[styles.tab, activeTab === 'admin' && [styles.activeTab, { backgroundColor: palette.primary }]]}
                 onPress={() => setActiveTab('admin')}
               >
                 <Text style={[
                   styles.tabText,
+                  { color: palette.textSecondary },
                   activeTab === 'admin' && styles.activeTabText
                 ]}>
                   Staff
@@ -589,11 +606,12 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[styles.tab, activeTab === 'parents' && styles.activeTab]}
+                style={[styles.tab, activeTab === 'parents' && [styles.activeTab, { backgroundColor: palette.primary }]]}
                 onPress={() => setActiveTab('parents')}
               >
                 <Text style={[
                   styles.tabText,
+                  { color: palette.textSecondary },
                   activeTab === 'parents' && styles.activeTabText
                 ]}>
                   Parents
@@ -605,16 +623,16 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
             <ScrollView style={styles.contactsList}>
               {loading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#3B82F6" />
-                  <Text style={styles.loadingText}>Loading contacts...</Text>
+                  <ActivityIndicator size="large" color={palette.primary} />
+                  <Text style={[styles.loadingText, { color: palette.textSecondary }]}>Loading contacts...</Text>
                 </View>
               ) : filteredContacts.length > 0 ? (
                 filteredContacts.map(renderContactItem)
               ) : (
                 <View style={styles.emptyState}>
-                  <IconSymbol name="person.2" size={48} color="#9CA3AF" />
-                  <Text style={styles.emptyStateTitle}>No contacts found</Text>
-                  <Text style={styles.emptyStateText}>
+                  <IconSymbol name="person.2" size={48} color={placeholderColor} />
+                  <Text style={[styles.emptyStateTitle, { color: palette.text }]}>No contacts found</Text>
+                  <Text style={[styles.emptyStateText, { color: palette.textSecondary }]}>
                     {searchQuery ? 
                       'Try adjusting your search terms' : 
                       `No ${activeTab} available to message`
