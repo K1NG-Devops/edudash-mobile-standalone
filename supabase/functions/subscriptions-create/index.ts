@@ -340,27 +340,28 @@ serve(async (req: Request) => {
     // Insert subscription row first (RLS ensures user owns it)
     const { data: sub, error: subErr } = await supabase
       .from('platform_subscriptions')
-      .insert({
-        user_id: userData.user.id,
-        plan_id: planRow.id,
-        status: trialDays > 0 ? 'trial' : 'active',
-        billing_interval,
-        amount: price,
-        currency: planRow.currency || 'ZAR',
-        trial_start: trialDays > 0 ? now.toISOString() : null,
-        trial_end: trialEnd ? trialEnd.toISOString() : null,
-        current_period_start: periodStart.toISOString(),
-        current_period_end: periodEnd.toISOString(),
-        payment_provider,
-        provider_customer_id: null,
-        metadata: {
-          created_via: 'edge_function',
-          notify_url,
-          payment_id: paymentId,
-        },
-        created_at: now.toISOString(),
-        updated_at: now.toISOString(),
-      })
+        .insert({
+          user_id: userData.user.id,
+          plan_id: planRow.id,
+          // Never mark as active on creation; wait for valid payment ITN
+          status: trialDays > 0 ? 'trial' : 'past_due',
+          billing_interval,
+          amount: price,
+          currency: planRow.currency || 'ZAR',
+          trial_start: trialDays > 0 ? now.toISOString() : null,
+          trial_end: trialEnd ? trialEnd.toISOString() : null,
+          current_period_start: periodStart.toISOString(),
+          current_period_end: periodEnd.toISOString(),
+          payment_provider,
+          provider_customer_id: null,
+          metadata: {
+            created_via: 'edge_function',
+            notify_url,
+            payment_id: paymentId,
+          },
+          created_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        })
       .select('*')
       .single();
 

@@ -114,6 +114,14 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
   const isFreeTier = !subscription || subscription.plan?.name?.toLowerCase().includes('free');
 
   const getStatusInfo = () => {
+    // Derive display status from payment-validated helpers to avoid false positives
+    // Rules:
+    // - No subscription: Free
+    // - Trial active: Trial
+    // - Active only when isSubscriptionActive() returns true (payment confirmed this period)
+    // - If provider status is 'active' but not payment-validated: show Past Due
+    // - If status explicitly canceled/expired: reflect that
+    // - Otherwise: Inactive
     if (!subscription) {
       return {
         status: 'Free',
@@ -123,36 +131,62 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       };
     }
 
-    switch (subscription.status) {
-      case 'active':
-        return {
-          status: 'Active',
-          color: '#10B981',
-          bgColor: ['#D1FAE5', '#A7F3D0'] as const,
-          icon: 'checkmark.circle.fill'
-        };
-      case 'trial':
-        return {
-          status: 'Trial',
-          color: '#F59E0B',
-          bgColor: ['#FEF3C7', '#FDE68A'] as const,
-          icon: 'clock.fill'
-        };
-      case 'past_due':
-        return {
-          status: 'Past Due',
-          color: '#EF4444',
-          bgColor: ['#FEE2E2', '#FECACA'] as const,
-          icon: 'exclamationmark.triangle.fill'
-        };
-      default:
-        return {
-          status: 'Inactive',
-          color: '#6B7280',
-          bgColor: ['#F3F4F6', '#E5E7EB'] as const,
-          icon: 'xmark.circle.fill'
-        };
+    const now = new Date();
+    const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+    const isExpired = !!(periodEnd && now > periodEnd);
+
+    if (isTrial) {
+      return {
+        status: 'Trial',
+        color: '#F59E0B',
+        bgColor: ['#FEF3C7', '#FDE68A'] as const,
+        icon: 'clock.fill'
+      };
     }
+
+    if (isActive) {
+      return {
+        status: 'Active',
+        color: '#10B981',
+        bgColor: ['#D1FAE5', '#A7F3D0'] as const,
+        icon: 'checkmark.circle.fill'
+      };
+    }
+
+    if (subscription.status === 'canceled') {
+      return {
+        status: 'Canceled',
+        color: '#6B7280',
+        bgColor: ['#F3F4F6', '#E5E7EB'] as const,
+        icon: 'xmark.circle.fill'
+      };
+    }
+
+    if (subscription.status === 'expired' || isExpired) {
+      return {
+        status: 'Expired',
+        color: '#6B7280',
+        bgColor: ['#F3F4F6', '#E5E7EB'] as const,
+        icon: 'xmark.circle.fill'
+      };
+    }
+
+    // If provider reports active but payment isn't confirmed, call it Past Due
+    if (subscription.status === 'active' || subscription.status === 'past_due') {
+      return {
+        status: 'Past Due',
+        color: '#EF4444',
+        bgColor: ['#FEE2E2', '#FECACA'] as const,
+        icon: 'exclamationmark.triangle.fill'
+      };
+    }
+
+    return {
+      status: 'Inactive',
+      color: '#6B7280',
+      bgColor: ['#F3F4F6', '#E5E7EB'] as const,
+      icon: 'xmark.circle.fill'
+    };
   };
 
   const statusInfo = getStatusInfo();

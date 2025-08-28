@@ -151,7 +151,12 @@ const MAPPING: IconMapping = {
 
   // AI & Brain
   'brain.head.profile': 'psychology',
-  'brain': 'psychology',
+  'cpu': 'memory',
+  // Medical/diagnostics
+  'stethoscope': 'medical-services',
+  'doc.text.below.ecg': 'insert-chart',
+  // Stars
+  'star.circle': 'star',
   'cpu': 'memory',
   'lightbulb': 'lightbulb',
   'bolt': 'flash-on',

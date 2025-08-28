@@ -77,36 +77,30 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
   const isTrial = isTrialActive();
 
   const getStatusColor = () => {
-    switch (subscription.status) {
-      case 'active': return '#10b981';
-      case 'trial': return '#f59e0b';
-      case 'past_due': return '#ef4444';
-      case 'canceled': return '#6b7280';
-      case 'expired': return '#6b7280';
-      default: return '#6b7280';
-    }
+    // Use payment-validated helpers to avoid false "Active"
+    if (isTrial) return '#f59e0b';
+    if (isActive) return '#10b981';
+    // Treat provider 'active' without payment as past_due for display
+    if (subscription.status === 'active' || subscription.status === 'past_due') return '#ef4444';
+    if (subscription.status === 'canceled' || subscription.status === 'expired') return '#6b7280';
+    return '#6b7280';
   };
 
   const getStatusText = () => {
-    switch (subscription.status) {
-      case 'active': return 'Active';
-      case 'trial': return 'Free Trial';
-      case 'past_due': return 'Past Due';
-      case 'canceled': return 'Canceled';
-      case 'expired': return 'Expired';
-      default: return subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1);
-    }
+    if (isTrial) return 'Free Trial';
+    if (isActive) return 'Active';
+    if (subscription.status === 'active' || subscription.status === 'past_due') return 'Past Due';
+    if (subscription.status === 'canceled') return 'Canceled';
+    if (subscription.status === 'expired' || (daysUntilExpiry !== null && daysUntilExpiry === 0)) return 'Expired';
+    return 'Inactive';
   };
 
   const getStatusIcon = () => {
-    switch (subscription.status) {
-      case 'active': return 'checkmark.circle.fill';
-      case 'trial': return 'clock.fill';
-      case 'past_due': return 'exclamationmark.triangle.fill';
-      case 'canceled': return 'xmark.circle.fill';
-      case 'expired': return 'xmark.circle.fill';
-      default: return 'info.circle.fill';
-    }
+    if (isTrial) return 'clock.fill';
+    if (isActive) return 'checkmark.circle.fill';
+    if (subscription.status === 'active' || subscription.status === 'past_due') return 'exclamationmark.triangle.fill';
+    if (subscription.status === 'canceled' || subscription.status === 'expired') return 'xmark.circle.fill';
+    return 'info.circle.fill';
   };
 
   const handleCancelSubscription = async () => {

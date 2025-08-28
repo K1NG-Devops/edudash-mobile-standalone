@@ -59,6 +59,8 @@ export function useSubscription(): UseSubscriptionReturn {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Track whether a completed payment exists for the current period
+  const [hasPaymentThisPeriod, setHasPaymentThisPeriod] = useState(false);
 
   // Fetch current subscription
   const fetchSubscription = useCallback(async () => {
@@ -72,6 +74,27 @@ export function useSubscription(): UseSubscriptionReturn {
       const userSubscription = await SubscriptionService.getUserSubscription(user.id);
       setSubscription(userSubscription);
       log.info('User subscription loaded:', userSubscription?.status);
+
+      // Derive payment state for the current billing period to avoid false "Active"
+      try {
+        setHasPaymentThisPeriod(false);
+        if (userSubscription) {
+          const { data: payments } = await SubscriptionService.getRecentPayments(user.id, 20);
+          if (payments && payments.length > 0) {
+            const start = new Date(userSubscription.current_period_start).getTime();
+            const end = new Date(userSubscription.current_period_end).getTime();
+            const paid = payments.some((p) => {
+              const t = new Date(p.processed_at).getTime();
+              return p.status === 'completed' && t >= start && t <= end;
+            });
+            setHasPaymentThisPeriod(paid);
+          }
+        }
+      } catch (e) {
+        // Non-fatal; keep conservative
+        log.warn('Could not derive payment state for subscription:', e);
+        setHasPaymentThisPeriod(false);
+      }
     } catch (err) {
       const errorMessage = 'Failed to fetch subscription';
       setError(errorMessage);
@@ -238,13 +261,22 @@ export function useSubscription(): UseSubscriptionReturn {
 
   // Helper functions
   const isSubscriptionActive = useCallback((): boolean => {
-    return subscription?.status === 'active' || subscription?.status === 'trial';
-  }, [subscription]);
+    if (!subscription) return false;
+    // Trial is active only while within trial window
+    if (subscription.status === 'trial') {
+      const trialEnd = subscription.trial_end ? new Date(subscription.trial_end) : null;
+      return !!trialEnd && new Date() < trialEnd;
+    }
+    // Active requires at least one completed payment in the current period
+    if (subscription.status === 'active') {
+      return hasPaymentThisPeriod;
+    }
+    return false;
+  }, [subscription, hasPaymentThisPeriod]);
 
   const isTrialActive = useCallback((): boolean => {
     if (!subscription || subscription.status !== 'trial') return false;
     if (!subscription.trial_end) return false;
-    
     const trialEnd = new Date(subscription.trial_end);
     return new Date() < trialEnd;
   }, [subscription]);
