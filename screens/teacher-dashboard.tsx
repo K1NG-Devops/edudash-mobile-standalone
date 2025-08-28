@@ -634,6 +634,8 @@ export default class TeacherDashboard extends React.Component<TeacherDashboardPr
   }
 }
 
+import { shadow } from '@/lib/ui/shadow';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -656,11 +658,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderTopWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   metricHeader: {
     flexDirection: 'row',
@@ -698,11 +696,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   quickActionIcon: {
     width: 48,
@@ -723,11 +717,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   classHeader: {
     flexDirection: 'row',
@@ -762,11 +752,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   lessonHeader: {
     flexDirection: 'row',
@@ -834,11 +820,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   assignmentHeader: {
     flexDirection: 'row',
@@ -881,11 +863,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   announcementHeader: {
     flexDirection: 'row',
@@ -955,11 +933,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#8B5CF6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   aiInsightsTitle: {
     fontSize: 16,

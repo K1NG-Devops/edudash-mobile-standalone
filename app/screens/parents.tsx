@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { shadow } from '@/lib/ui/shadow';
 
 interface ParentRow { id: string; name: string; email?: string | null; phone?: string | null; }
 
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 8 },
   search: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
   list: { padding: 16 },
-  row: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+  row: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', ...shadow(2) },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#ECFDF5', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   avatarText: { color: '#059669', fontWeight: '700' },
   name: { fontSize: 16, fontWeight: '600', color: '#111827' },

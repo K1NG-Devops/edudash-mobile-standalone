@@ -26,6 +26,7 @@ import {
   SystemHealth,
   UserOverview
 } from '@/lib/services/superAdminDataService';
+import { shadow } from '@/lib/ui/shadow';
 
 interface SuperAdminDashboardProps {
   userId: string;
@@ -623,11 +624,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     width: (screenWidth - 60) / 3, // 3 cards per row with gaps
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   statValue: {
     fontSize: 20,
@@ -649,11 +646,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   cardHeader: {
     flexDirection: 'row',
@@ -731,11 +724,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   schoolInfo: {
     flex: 1,
@@ -786,11 +775,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   userInfo: {
     flex: 1,
@@ -823,11 +808,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   activitySeverity: {
     width: 4,
@@ -891,11 +872,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   approvalCount: {
     fontSize: 24,
@@ -926,11 +903,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     width: (screenWidth - 60) / 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   quickActionLabel: {
     fontSize: 12,

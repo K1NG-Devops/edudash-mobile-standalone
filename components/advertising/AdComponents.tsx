@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem, trackRevenue, formatCurrency } from '@/constants/DesignSystem';
+import { shadow } from '@/lib/ui/shadow';
 
 const { width } = Dimensions.get('window');
 
@@ -1338,11 +1339,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...((shadow(1, '#000') as any)),
   },
   safeBannerGradient: {
     padding: 16,
@@ -1444,11 +1441,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
-    shadowColor: '#3498db',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    ...((shadow(2, '#3498db') as any)),
   },
   interstitialCTAText: {
     fontSize: 14,

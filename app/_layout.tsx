@@ -51,7 +51,6 @@ Notifications.setNotificationHandler({
 export default function RootLayout() {
   const pathname = usePathname();
   const hideBottomNav = pathname === '/' || pathname.startsWith('/(auth)') || pathname.startsWith('/screens/super-admin-dashboard');
-  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const register = async () => {
@@ -92,8 +91,28 @@ export default function RootLayout() {
     return <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} backgroundColor={palette.background} />;
   };
 
-  const bottomNavBase = 64; // estimated nav height on mobile
-  const containerPaddingBottom = (!hideBottomNav && Platform.OS !== 'web') ? (bottomNavBase + (insets?.bottom || 0)) : 0;
+  // Move useSafeAreaInsets usage inside the SafeAreaProvider via an inner component
+  const ContainerWithInsets = ({ hideBottomNav }: { hideBottomNav: boolean }) => {
+    const insets = useSafeAreaInsets();
+    const bottomNavBase = 64; // estimated nav height on mobile
+    const containerPaddingBottom = (!hideBottomNav && Platform.OS !== 'web') ? (bottomNavBase + (insets?.bottom || 0)) : 0;
+
+    return (
+      <View style={[styles.container, { paddingBottom: containerPaddingBottom }]}> 
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="landing" options={{ headerShown: false }} />
+          <Stack.Screen name="pricing" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="screens" options={{ headerShown: false }} />
+          <Stack.Screen name="about" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
+        </Stack>
+        {!hideBottomNav && <GlobalBottomNav />}
+      </View>
+    );
+  };
 
   return (
     <AuthErrorBoundary>
@@ -105,19 +124,7 @@ export default function RootLayout() {
                 <RevenueCatProvider>
                   <SafeAreaProvider>
                     <ThemeStatusBar />
-                    <View style={[styles.container, { paddingBottom: containerPaddingBottom }]}> 
-                      <Stack screenOptions={{ headerShown: false }}>
-                        <Stack.Screen name="index" options={{ headerShown: false }} />
-                        <Stack.Screen name="landing" options={{ headerShown: false }} />
-                        <Stack.Screen name="pricing" options={{ headerShown: false }} />
-                        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                        <Stack.Screen name="screens" options={{ headerShown: false }} />
-                        <Stack.Screen name="about" options={{ headerShown: false }} />
-                        <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
-                      </Stack>
-                      {!hideBottomNav && <GlobalBottomNav />}
-                    </View>
+                    <ContainerWithInsets hideBottomNav={hideBottomNav} />
                   </SafeAreaProvider>
                 </RevenueCatProvider>
               </ToastProvider>

@@ -19,6 +19,7 @@ import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { StudentDataService, EnhancedStudent, ParentDashboardData } from '@/lib/services/studentDataService';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import { shadow } from '@/lib/ui/shadow';
 
 interface GoogleStyleParentDashboardProps {
   userId: string;
@@ -79,11 +80,7 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
     childCard: {
       borderRadius: 12,
       padding: 24,
-      elevation: 3,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
+      ...shadow(3),
     },
     childCardHeader: {
       flexDirection: 'row',
@@ -171,11 +168,7 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
       borderRadius: 12,
       padding: 16,
       alignItems: 'center',
-      elevation: 1,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
+      ...shadow(1),
       minHeight: 88,
       justifyContent: 'center',
     },
@@ -208,11 +201,7 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
       borderRadius: 12,
       padding: 16,
       alignItems: 'center',
-      elevation: 1,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
+      ...shadow(1),
       minHeight: 88,
       justifyContent: 'center',
     },
@@ -243,11 +232,7 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
     activityList: {
       backgroundColor: palette.surface,
       borderRadius: 12,
-      elevation: 1,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
+      ...shadow(1),
     },
     activityItem: {
       flexDirection: 'row',

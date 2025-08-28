@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-raw-text */
 import React from 'react';
 import PrincipalDashboard from '../../screens/principal-dashboard';
 import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';

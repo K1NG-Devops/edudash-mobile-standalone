@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { shadow } from '@/lib/ui/shadow';
 
 import { sendForgotPasswordEmail, isPasswordStrong, getPasswordRequirements } from '@/lib/utils/authUtils';
 import { createLogger } from '@/lib/utils/logger';
@@ -332,11 +333,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...((shadow(4, '#000') as any)),
   },
   iconContainer: {
     alignItems: 'center',
@@ -485,11 +482,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...((shadow(4, '#000') as any)),
   },
   successIcon: {
     marginBottom: 24,
