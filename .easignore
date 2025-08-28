@@ -1,12 +1,17 @@
 # .easignore - Exclude unnecessary files from EAS builds
 
-# Dependencies (will be installed on EAS servers)
+# Dependencies (will be installed on EAS servers; keep lockfiles for reproducible installs)
 node_modules/
-*.lock
-yarn.lock
-package-lock.json
 .npm/
 .yarn/
+
+# Android native build outputs (exclude heavy caches and build artifacts)
+android/app/build/
+android/build/
+android/.gradle/
+android/.cxx/
+android/.externalNativeBuild/
+android/local.properties
 
 # Development and build artifacts
 .expo/
