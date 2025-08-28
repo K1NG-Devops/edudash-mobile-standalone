@@ -3,6 +3,21 @@
 
 begin;
 
+-- Drop any existing CHECK constraints on message_type to allow normalization
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN (
+    SELECT conname
+    FROM pg_constraint
+    WHERE conrelid = 'public.messages'::regclass
+      AND contype = 'c'
+      AND pg_get_constraintdef(oid) ILIKE '%message_type%'
+  ) LOOP
+    EXECUTE format('ALTER TABLE public.messages DROP CONSTRAINT %I', r.conname);
+  END LOOP;
+END $$;
+
 -- Map legacy/unsupported types to the new canonical set
 -- private, group, general -> direct
 UPDATE public.messages
