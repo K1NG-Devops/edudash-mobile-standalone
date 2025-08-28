@@ -24,7 +24,7 @@ import { Colors } from '@/constants/Colors';
 interface Contact {
   id: string;
   name: string;
-  role: 'teacher' | 'admin' | 'parent';
+  role: 'teacher' | 'admin' | 'parent' | 'principal' | 'preschool_admin';
   avatar_url?: string;
   email?: string;
   class_name?: string;
@@ -129,6 +129,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         `)
         .eq('preschool_id', profile.preschool_id)
         .in('role', ['teacher', 'admin', 'principal', 'preschool_admin'])
+        .or('is_active.is.null,is_active.eq.true')
         .neq('id', parentProfile.id);
 
       if (!teachersError && teachersData) {
@@ -443,9 +444,9 @@ const handleAddPhoto = () => {
         <View style={styles.selectedContactInfo}>
           <Text style={[styles.composerTitle, { color: palette.textSecondary }]}>Send message to:</Text>
           <Text style={[styles.selectedContactName, { color: palette.text }]}>{selectedContact?.name}</Text>
-          <Text style={[styles.selectedContactRole, { color: palette.textSecondary }]}>
+          <Text style={[styles.selectedContactRole, { color: palette.textSecondary }]}> 
             {selectedContact?.role === 'teacher' ? 'Teacher' :
-             selectedContact?.role === 'admin' ? 'Administrator' : 'Parent'}
+             (selectedContact?.role === 'admin' || selectedContact?.role === 'principal' || selectedContact?.role === 'preschool_admin') ? 'Administrator' : 'Parent'}
             {selectedContact?.class_name && ` • ${selectedContact.class_name}`}
           </Text>
         </View>
