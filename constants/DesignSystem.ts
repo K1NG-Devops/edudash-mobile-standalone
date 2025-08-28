@@ -44,6 +44,8 @@ export const DesignSystem = {
       inverseSecondary: '#6b7280', // Medium gray for light backgrounds
       quantum: '#00f5ff',       // Quantum text (special highlights)
     },
+    border: 'rgba(255,255,255,0.08)',
+    neutral: { 50:'#f9fafb', 100:'#f3f4f6', 200:'#e5e7eb', 800:'#1f2937', 900:'#111827' },
     
     // Background Colors (Theme-aware)
     background: {
@@ -92,6 +94,9 @@ export const DesignSystem = {
     
     // Professional Gradients (for dashboard compatibility)
     professional: ['#3b82f6', '#1d4ed8'] as readonly [ColorValue, ColorValue, ...ColorValue[]],
+    professionalSubtle: ['#0f172a', '#111827'] as readonly [ColorValue, ColorValue, ...ColorValue[]],
+    surfaceCard: ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.03)'] as readonly [ColorValue, ColorValue, ...ColorValue[]],
+    surfaceCardAlt: ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.02)'] as readonly [ColorValue, ColorValue, ...ColorValue[]],
     success: ['#10b981', '#059669'] as readonly [ColorValue, ColorValue, ...ColorValue[]],
     warning: ['#f59e0b', '#d97706'] as readonly [ColorValue, ColorValue, ...ColorValue[]],
     error: ['#ef4444', '#dc2626'] as readonly [ColorValue, ColorValue, ...ColorValue[]],
@@ -232,6 +237,13 @@ export const DesignSystem = {
     },
   },
 
+  // Breakpoints for responsive layouts
+  breakpoints: {
+    sm: 360,
+    md: 768,
+    lg: 1024,
+  },
+
   // Component Styles
   components: {
     button: {
@@ -268,6 +280,10 @@ export const DesignSystem = {
         padding: 16,
         shadow: 'md',
       },
+    },
+    avatar: {
+      background: '#1f2937',
+      border: 'rgba(255,255,255,0.08)'
     },
   },
 

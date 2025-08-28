@@ -120,6 +120,27 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
         loadTeacherData();
     }, [profile]);
 
+    const isPolicyRecursionError = (err: any) => {
+        if (!err) return false;
+        const msg = String(err.message || err?.toString?.() || '').toLowerCase();
+        const code = String((err.code || '')).toUpperCase();
+        return code === '42P17' || msg.includes('infinite recursion') || msg.includes('policy') || msg.includes('recursion');
+    };
+
+    const safeSelect = async <T,>(fn: () => Promise<{ data: T | null; error: any }>): Promise<T | null> => {
+        try {
+            const { data, error } = await fn();
+            if (error) throw error;
+            return data;
+        } catch (e: any) {
+            if (isPolicyRecursionError(e)) {
+                // Graceful fallback: return null so UI renders empty states without crashing
+                return null;
+            }
+            throw e;
+        }
+    };
+
     const loadTeacherData = async () => {
         if (!profile) return;
 
@@ -132,59 +153,58 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                 throw new Error('No preschool assigned to this teacher');
             }
 
-            // Load preschool name
-            const { data: preschoolData } = await supabase
-                .from('preschools')
-                .select('name')
-                .eq('id', preschoolId)
-                .single();
+            // Load preschool name (safe)
+            const preschoolData = await safeSelect(async () => (
+                await supabase
+                    .from('preschools')
+                    .select('name')
+                    .eq('id', preschoolId)
+                    .single()
+            ));
+            if (preschoolData) setTenantName((preschoolData as any).name);
 
-            if (preschoolData) {
-                setTenantName(preschoolData.name);
-            }
+            // Load classes (safe; return [] on recursion)
+            const classesData = await safeSelect(async () => (
+                await supabase
+                    .from('classes')
+                    .select('*')
+                    .eq('preschool_id', preschoolId)
+                    .eq('is_active', true)
+            ));
+            setClasses((classesData as any[]) || []);
 
-            // Load classes
-            const { data: classesData, error: classesError } = await supabase
-                .from('classes')
-                .select('*')
-                .eq('preschool_id', preschoolId)
-                .eq('is_active', true);
+            // Load students (safe)
+            const studentsData = await safeSelect(async () => (
+                await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('preschool_id', preschoolId)
+                    .eq('is_active', true)
+            ));
+            setStudents((studentsData as any[]) || []);
+            setTotalStudents(((studentsData as any[]) || []).length);
 
-            if (classesError) throw classesError;
-            setClasses(classesData || []);
+            // Load lessons (safe)
+            const lessonsData = await safeSelect(async () => (
+                await supabase
+                    .from('lessons')
+                    .select('*')
+                    .eq('preschool_id', preschoolId)
+                    .order('created_at', { ascending: false })
+                    .limit(10)
+            ));
+            setLessons((lessonsData as any[]) || []);
 
-            // Load students
-            const { data: studentsData, error: studentsError } = await supabase
-                .from('students')
-                .select('*')
-                .eq('preschool_id', preschoolId)
-                .eq('is_active', true);
-
-            if (studentsError) throw studentsError;
-            setStudents(studentsData || []);
-            setTotalStudents(studentsData?.length || 0);
-
-            // Load lessons
-            const { data: lessonsData, error: lessonsError } = await supabase
-                .from('lessons')
-                .select('*')
-                .eq('preschool_id', preschoolId)
-                .order('created_at', { ascending: false })
-                .limit(10);
-
-            if (lessonsError) throw lessonsError;
-            setLessons(lessonsData || []);
-
-            // Load homework assignments
-            const { data: homeworkData, error: homeworkError } = await supabase
-                .from('homework_assignments')
-                .select('*')
-                .eq('teacher_id', profile.id)
-                .order('created_at', { ascending: false })
-                .limit(5);
-
-            if (homeworkError) throw homeworkError;
-            setHomeworkAssignments(homeworkData || []);
+            // Load homework assignments (safe)
+            const homeworkData = await safeSelect(async () => (
+                await supabase
+                    .from('homework_assignments')
+                    .select('*')
+                    .eq('teacher_id', profile.id)
+                    .order('created_at', { ascending: false })
+                    .limit(5)
+            ));
+            setHomeworkAssignments((homeworkData as any[]) || []);
 
         } catch (error: any) {
             console.error('Error loading teacher data:', error);

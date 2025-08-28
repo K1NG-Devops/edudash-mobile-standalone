@@ -171,44 +171,31 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         throw new Error('Parent profile not found');
       }
 
-      // Create the message first
-      const { data: messageData, error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          preschool_id: profile.preschool_id!,
-          subject: '',
-          content: messageContent.trim() || (attachedMedia.length > 0 ? '📷 Photo message' : ''),
-          sender_id: parentProfile.id,
-          message_type: 'direct'
-        })
-        .select('id')
-        .single();
+      // Atomic server-side send to satisfy RLS via SECURITY DEFINER RPC
+      const { data: newMessageId, error: rpcError } = await supabase.rpc('send_direct_message', {
+        p_recipient_user_id: selectedContact.id,
+        p_content: messageContent.trim() || (attachedMedia.length > 0 ? '📷 Photo message' : ''),
+        p_subject: '',
+        p_message_type: 'direct',
+      });
 
-      if (messageError) {
-        throw messageError;
+      if (rpcError || !newMessageId) {
+        throw rpcError || new Error('send_direct_message failed');
       }
 
-      // Insert recipients row for selected contact
-      if (selectedContact?.id) {
-        await supabase
-          .from('message_recipients')
-          .insert({
-            message_id: messageData.id,
-            recipient_id: selectedContact.id
-          });
-      }
+      const messageId = typeof newMessageId === 'string' ? newMessageId : (newMessageId as any);
 
       // Upload attached media if any
       if (attachedMedia.length > 0) {
         const uploadPromises = attachedMedia.map(async (media, index) => {
-          const fileName = media.fileName || `message_${messageData.id}_${index}_${Date.now()}.jpg`;
+          const fileName = media.fileName || `message_${messageId}_${index}_${Date.now()}.jpg`;
           return MediaService.uploadMedia(
             media.uri,
             fileName,
             'image/jpeg', // Assuming images for now
             parentProfile.id,
             profile.preschool_id!,
-            { messageId: messageData.id }
+            { messageId }
           );
         });
 

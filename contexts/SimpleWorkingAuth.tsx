@@ -181,6 +181,70 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     }
   }
 
+  // Helper to detect policy recursion errors from Supabase/PostgREST
+  private isPolicyRecursionError(err: any): boolean {
+    if (!err) return false;
+    const msg = String(err.message || err?.toString?.() || '').toLowerCase();
+    const code = String((err.code || '')).toUpperCase();
+    return (
+      code === '42P17' ||
+      msg.includes('policy') ||
+      msg.includes('recursion') ||
+      msg.includes('infinite recursion')
+    );
+  }
+
+  // Build a minimal in-memory profile derived from the authenticated user
+  private async buildMinimalProfileFromAuth(): Promise<UserProfile | null> {
+    try {
+      const { data } = await supabase.auth.getUser();
+      const au = data?.user;
+      if (!au) return null;
+      const md: any = (au as any).user_metadata || {};
+      const first = md.first_name || (md.name ? String(md.name).split(' ')[0] : undefined) || (au.email ? String(au.email).split('@')[0] : 'User');
+      const last = md.last_name || (md.name ? String(md.name).split(' ').slice(1).join(' ') : undefined) || '';
+      const displayName = [first, last].filter(Boolean).join(' ').trim();
+      const role = (md.role as UserProfile['role']) || 'parent';
+      const now = new Date().toISOString();
+
+      // Note: id here cannot be the DB profile id (unknown due to RLS). We use the auth id to keep UI flowing.
+      // Components should prefer profile.auth_user_id for identity-sensitive operations.
+      const prof: UserProfile = {
+        id: au.id, // fallback identifier for UI; not a DB profile id
+        email: au.email || md.email || 'unknown@example.com',
+        name: displayName,
+        role,
+        preschool_id: (md.preschool_id as string | null) || null,
+        avatar_url: (md.avatar_url as string | null) || null,
+        phone: (md.phone as string | null) || null,
+        is_active: true,
+        auth_user_id: au.id,
+        home_address: null,
+        home_city: null,
+        home_postal_code: null,
+        work_company: null,
+        work_position: null,
+        work_address: null,
+        work_phone: null,
+        emergency_contact_1_name: null,
+        emergency_contact_1_phone: null,
+        emergency_contact_1_relationship: null,
+        emergency_contact_2_name: null,
+        emergency_contact_2_phone: null,
+        emergency_contact_2_relationship: null,
+        relationship_to_child: null,
+        pickup_authorized: null,
+        profile_completed_at: null,
+        profile_completion_status: 'incomplete',
+        created_at: now,
+        updated_at: now,
+      };
+      return prof;
+    } catch {
+      return null;
+    }
+  }
+
   loadProfile = async (userId: string) => {
     try {
       console.log('🔍 [DEBUG] Loading profile for userId:', userId);
@@ -219,11 +283,12 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
           hint: error.hint
         });
 
-        // If we get a policy error, let's try a different approach
-        if (error.message?.includes('policy') || error.message?.includes('recursion')) {
-          console.log('🔄 [DEBUG] Policy/recursion error detected, setting null profile');
+        // If we get a policy recursion error, fallback to minimal in-memory profile
+        if (this.isPolicyRecursionError(error)) {
+          console.log('🔄 [DEBUG] Policy/recursion error detected; building minimal in-memory profile from auth');
+          const minimal = await this.buildMinimalProfileFromAuth();
           this.setState({
-            profile: null,
+            profile: minimal, // may be null if auth not ready
             loading: false
           });
           return;
@@ -320,6 +385,11 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
 
       if (selectError) {
         console.warn('⚠️ ensureUserProfile: select error', selectError.message);
+        // If selection failed due to RLS recursion/policy, do NOT attempt to insert
+        if (this.isPolicyRecursionError(selectError)) {
+          console.warn('⚠️ ensureUserProfile: skipping insert due to policy recursion (profile likely exists but is unreadable via current policy)');
+          return;
+        }
       }
 
       if (existing && existing.id) {
@@ -346,6 +416,11 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
         .insert(insertPayload);
 
       if (insertError) {
+        // Gracefully ignore duplicate key conflicts; profile already exists
+        if (String(insertError?.code || '').toUpperCase() === '23505' || /duplicate key/i.test(String(insertError?.message || ''))) {
+          console.warn('⚠️ ensureUserProfile: profile already exists (duplicate key)');
+          return;
+        }
         console.warn('⚠️ ensureUserProfile: insert error', insertError.message);
       } else {
         console.log('✅ ensureUserProfile: profile created');

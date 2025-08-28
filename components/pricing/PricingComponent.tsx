@@ -65,6 +65,7 @@ export const PricingComponent = ({
   showComparison = true,
   compactMode = false,
   initialView = 'overview',
+  theme = 'futuristic',
 }: {
   embedded?: boolean;
   showRoles?: boolean;
@@ -73,8 +74,10 @@ export const PricingComponent = ({
   showComparison?: boolean;
   compactMode?: boolean;
   initialView?: 'overview' | 'role-specific';
+  theme?: 'professional' | 'futuristic';
 }) => {
   const { user, session } = useAuth();
+  const isProfessional = theme === 'professional';
   const { subscription, createSubscription, loading: subscriptionLoading, error: subscriptionError, plans } = useSubscription();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
@@ -713,16 +716,16 @@ export const PricingComponent = ({
                 key={plan.id}
                 style={styles.roleSpecificPlan}
               >
-                <LinearGradient colors={plan.color} style={styles.planCardGradient}>
+                <LinearGradient colors={(isProfessional ? (DesignSystem.gradients.surfaceCard as any) : plan.color)} style={styles.planCardGradient}>
                   {plan.popular && (
                     <View style={styles.popularBadge}>
                       <Text style={styles.popularText}>RECOMMENDED</Text>
                     </View>
                   )}
                   
-                  <Text style={styles.planName}>{plan.name}</Text>
-                  <Text style={styles.planPrice}>
-                    {plan.price}<Text style={styles.planPeriod}>{plan.period}</Text>
+                  <Text style={[styles.planName, isProfessional && ({ textShadowColor: 'transparent', textShadowRadius: 0 } as any)]}>{plan.name}</Text>
+                  <Text style={[styles.planPrice, isProfessional && ({ textShadowColor: 'transparent', textShadowRadius: 0 } as any)]}>
+                    {plan.price}<Text style={[styles.planPeriod, isProfessional && ({ textShadowColor: 'transparent' } as any)]}>{plan.period}</Text>
                   </Text>
                   
                   <View style={styles.roleSpecificBenefits}>
@@ -763,7 +766,7 @@ export const PricingComponent = ({
         >
           <LinearGradient colors={plan.color} style={styles.pricingCardGradient}>
             {plan.popular && (
-              <View style={styles.popularBadge}>
+              <View style={[styles.popularBadge, isProfessional && { backgroundColor: DesignSystem.colors.primary }]}>
                 <Text style={styles.popularText}>MOST POPULAR</Text>
               </View>
             )}
@@ -821,7 +824,7 @@ export const PricingComponent = ({
               {creatingSubscription && selectedPlan === plan.id ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Text style={styles.selectPlanText}>
+                <Text style={[styles.selectPlanText, isProfessional && ({ textShadowColor: 'transparent' } as any)]}>
                   {plan.value === 'free' ? 'START FREE' : 'CHOOSE PLAN'}
                 </Text>
               )}

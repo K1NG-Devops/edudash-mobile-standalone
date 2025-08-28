@@ -18,6 +18,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem, getRoleColors } from '@/constants/DesignSystem';
+import { Avatar } from '@/components/ui/Avatar';
+import { rolesContent, featuresContent, testimonialsContent } from '@/constants/marketing';
 import { PricingComponent } from '@/components/pricing/PricingComponent';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { AdBanner, SponsoredContent, RevenueBanner } from '@/components/advertising/AdComponents';
@@ -269,63 +271,14 @@ const HoloStatCard: React.FC<HoloStatCardProps> = ({ icon, number, label, color 
 
 // Revolutionary Features Section
 const FeaturesSection: React.FC<FeaturesSectionProps> = ({ setSelectedFeature }) => {
-  const features = [
-    {
-      id: 1,
-      title: "🧠 Quantum AI Brain",
-      subtitle: "Neural Processing Unit",
-      description: "Advanced quantum AI that thinks like a teacher, adapts like a student",
-      tech: "Claude 4.0 + Quantum Computing",
-      color: ['#00f5ff', '#0080ff']
-    },
-    {
-      id: 2,
-      title: "🤖 Robotic Tutors",
-      subtitle: "Digital Companions",
-      description: "Virtual reality teachers that provide 24/7 personalized education",
-      tech: "AR/VR + Machine Learning",
-      color: ['#8000ff', '#ff0080']
-    },
-    {
-      id: 3,
-      title: "🔮 Predictive Analytics",
-      subtitle: "Future Vision",
-      description: "Predict student needs before they know them themselves",
-      tech: "Deep Learning + Big Data",
-      color: ['#ff0080', '#ff8000']
-    },
-    {
-      id: 4,
-      title: "🚀 Holographic Lessons",
-      subtitle: "3D Reality",
-      description: "Immersive 3D lessons that bring learning to life",
-      tech: "Holography + Spatial Computing",
-      color: ['#ff8000', '#80ff00']
-    },
-    {
-      id: 5,
-      title: "⚡ Neural Networks",
-      subtitle: "Brain Sync",
-      description: "Direct neural interface for instant knowledge transfer",
-      tech: "BCI + Neuromorphic Computing",
-      color: ['#80ff00', '#00f5ff']
-    },
-    {
-      id: 6,
-      title: "🌐 Metaverse Campus",
-      subtitle: "Virtual World",
-      description: "Infinite virtual campuses across multiple dimensions",
-      tech: "Web3 + Blockchain + VR",
-      color: ['#00f5ff', '#8000ff']
-    }
-  ];
+  const features = featuresContent;
 
   return (
     <View style={styles.featuresContainer}>
-      <LinearGradient colors={['#0a0a0f', '#1a1a2e']} style={styles.featuresGradient}>
-        <Text style={styles.sectionTitle}>REVOLUTIONARY TECH</Text>
+      <LinearGradient colors={DesignSystem.gradients.professionalSubtle as [ColorValue, ColorValue]} style={styles.featuresGradient}>
+        <Text style={styles.sectionTitle}>Revolutionary Tech</Text>
         <Text style={styles.sectionSubtitle}>
-          Powered by Society 5.0 • Quantum Computing • Neural Networks
+          Powered by Society 5.0 • AI • Neural Networks
         </Text>
 
         <View style={styles.featuresGrid}>
@@ -335,13 +288,15 @@ const FeaturesSection: React.FC<FeaturesSectionProps> = ({ setSelectedFeature })
               style={styles.featureCard}
               onPress={() => setSelectedFeature(feature)}
             >
-              <LinearGradient colors={feature.color as [string, string]} style={styles.featureGradient}>
+              <LinearGradient colors={DesignSystem.gradients.surfaceCard as [ColorValue, ColorValue]} style={styles.featureGradient}>
                 <Text style={styles.featureTitle}>{feature.title}</Text>
                 <Text style={styles.featureSubtitle}>{feature.subtitle}</Text>
                 <Text style={styles.featureDescription}>{feature.description}</Text>
-                <View style={styles.featureTech}>
-                  <Text style={styles.featureTechText}>{feature.tech}</Text>
-                </View>
+                {feature.tech ? (
+                  <View style={styles.featureTech}>
+                    <Text style={styles.featureTechText}>{feature.tech}</Text>
+                  </View>
+                ) : null}
               </LinearGradient>
             </TouchableOpacity>
           ))}
@@ -353,79 +308,67 @@ const FeaturesSection: React.FC<FeaturesSectionProps> = ({ setSelectedFeature })
 
 // Testimonials Section with Video Support
 const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ activeTestimonial, setActiveTestimonial }) => {
-  const testimonials = [
-    {
-      name: "Dr. Sarah Chen",
-      role: "Quantum Education Specialist",
-      school: "Neo Tokyo Academy",
-      message: "EduDash Pro has revolutionized our teaching methods. The AI is so advanced, it's like having a team of PhD educators in every classroom.",
-      rating: 5,
-      avatar: "👩‍🔬",
-      isVideo: true
-    },
-    {
-      name: "Prof. Marcus Webb",
-      role: "Neural Interface Designer", 
-      school: "Cyberpunk University",
-      message: "The neural network integration is phenomenal. Students are learning 10x faster than traditional methods.",
-      rating: 5,
-      avatar: "👨‍💻",
-      isVideo: false
-    },
-    {
-      name: "Principal Mabol Mabasa",
-      role: "Future Learning Director",
-      school: "Quantum Kids Academy", 
-      message: "Society 5.0 education is finally here. Our students are preparing for jobs that don't even exist yet.",
-      rating: 5,
-      avatar: "👩‍🚀",
-      isVideo: true
-    }
-  ];
+  const testimonials = testimonialsContent;
+  const isDesktop = width >= (DesignSystem.breakpoints?.lg ?? 1024);
 
   useEffect(() => {
+    if (isDesktop) return; // No auto-rotate on desktop grid
     const interval = setInterval(() => {
       setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isDesktop]);
+
+  const TestimonialCard = ({ index }: { index: number }) => (
+    <View style={styles.testimonialCard}>
+      <LinearGradient 
+        colors={DesignSystem.gradients.surfaceCard as [ColorValue, ColorValue]} 
+        style={styles.testimonialGradient}
+      >
+        <View style={styles.testimonialHeader}>
+          <View style={styles.avatarContainer}>
+            <Avatar name={testimonials[index].name} imageUri={testimonials[index].imageUri} size={50} />
+            {testimonials[index].isVideo && (
+              <View style={styles.videoIndicator}>
+                <IconSymbol name="play.fill" size={12} color="#00f5ff" />
+              </View>
+            )}
+          </View>
+          <View style={styles.testimonialInfo}>
+            <Text style={styles.testimonialName}>{testimonials[index].name}</Text>
+            <Text style={styles.testimonialRole}>{testimonials[index].role}</Text>
+            <Text style={styles.testimonialSchool}>{testimonials[index].org}</Text>
+          </View>
+          <View style={styles.ratingContainer}>
+            {[...Array(testimonials[index].rating)].map((_, i) => (
+              <Text key={i} style={styles.star}>⭐</Text>
+            ))}
+          </View>
+        </View>
+        <Text style={styles.testimonialMessage}>"{testimonials[index].message}"</Text>
+      </LinearGradient>
+    </View>
+  );
 
   return (
     <View style={styles.testimonialsContainer}>
-      <LinearGradient colors={['#1a1a2e', '#16213e']} style={styles.testimonialsGradient}>
-        <Text style={styles.sectionTitle}>NEURAL TESTIMONIALS</Text>
+      <LinearGradient colors={DesignSystem.gradients.professionalSubtle as [ColorValue, ColorValue]} style={styles.testimonialsGradient}>
+        <Text style={styles.sectionTitle}>Neural Testimonials</Text>
         <Text style={styles.sectionSubtitle}>
-          From the future educators using tomorrow's technology today
+          From the educators using tomorrow's technology today
         </Text>
 
-        <View style={styles.testimonialCard}>
-          <LinearGradient 
-            colors={['rgba(0,245,255,0.1)', 'rgba(128,0,255,0.1)']} 
-            style={styles.testimonialGradient}
-          >
-            <View style={styles.testimonialHeader}>
-              <View style={styles.avatarContainer}>
-                <Text style={styles.avatar}>{testimonials[activeTestimonial].avatar}</Text>
-                {testimonials[activeTestimonial].isVideo && (
-                  <View style={styles.videoIndicator}>
-                    <IconSymbol name="play.fill" size={12} color="#00f5ff" />
-                  </View>
-                )}
+        {isDesktop ? (
+          <View style={{ flexDirection: 'row', gap: 16, justifyContent: 'center', flexWrap: 'wrap' as any }}>
+            {testimonials.map((_, idx) => (
+              <View key={idx} style={{ width: Math.min(380, (width - 120) / 3) }}>
+                <TestimonialCard index={idx} />
               </View>
-              <View style={styles.testimonialInfo}>
-                <Text style={styles.testimonialName}>{testimonials[activeTestimonial].name}</Text>
-                <Text style={styles.testimonialRole}>{testimonials[activeTestimonial].role}</Text>
-                <Text style={styles.testimonialSchool}>{testimonials[activeTestimonial].school}</Text>
-              </View>
-              <View style={styles.ratingContainer}>
-                {[...Array(testimonials[activeTestimonial].rating)].map((_, i) => (
-                  <Text key={i} style={styles.star}>⭐</Text>
-                ))}
-              </View>
-            </View>
-            <Text style={styles.testimonialMessage}>"{testimonials[activeTestimonial].message}"</Text>
-            
-            {/* Navigation Dots */}
+            ))}
+          </View>
+        ) : (
+          <>
+            <TestimonialCard index={activeTestimonial} />
             <View style={styles.testimonialDots}>
               {testimonials.map((_, index) => (
                 <TouchableOpacity
@@ -438,9 +381,9 @@ const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ activeTestimo
                 />
               ))}
             </View>
-          </LinearGradient>
-        </View>
-        
+          </>
+        )}
+
         {/* Navigation to About Team Section */}
         <View style={styles.teamNavigationContainer}>
           <TouchableOpacity 
@@ -571,22 +514,19 @@ const FeatureModal: React.FC<FeatureModalProps> = ({ selectedFeature, setSelecte
 
 // Role-Based Benefits Section
 const RoleBasedBenefitsSection = () => {
-
   const roles = [
     {
       id: 'parent',
       title: 'Parents & Guardians',
       subtitle: 'Monitor & Support Your Child\'s Journey',
       description: 'Stay connected with your child\'s educational progress',
-      icon: '👨‍👩‍👧‍👦',
       benefits: [
-        '📊 Real-time progress tracking',
-        '💬 Direct teacher communication',
-        '🏠 Home learning activities',
-        '🎯 Personalized recommendations',
-        '📱 Mobile-first experience',
+        'Real-time progress tracking',
+        'Direct teacher communication',
+        'Home learning activities',
+        'Personalized recommendations',
+        'Mobile-first experience',
       ],
-      cta: 'Join as Parent',
       color: getRoleColors('parent'),
     },
     {
@@ -594,15 +534,13 @@ const RoleBasedBenefitsSection = () => {
       title: 'Teachers & Educators',
       subtitle: 'AI-Powered Teaching Revolution',
       description: 'Transform your classroom with intelligent tools',
-      icon: '👩‍🏫',
       benefits: [
-        '🤖 AI lesson generation',
-        '⚡ Automated grading',
-        '📈 Student analytics',
-        '👨‍👩‍👧‍👦 Parent communication',
-        '🎨 Creative activity tools',
+        'AI lesson generation',
+        'Automated grading',
+        'Student analytics',
+        'Parent communication',
+        'Creative activity tools',
       ],
-      cta: 'Join as Teacher',
       color: getRoleColors('teacher'),
     },
     {
@@ -610,56 +548,64 @@ const RoleBasedBenefitsSection = () => {
       title: 'Principals & Admins',
       subtitle: 'Complete School Management',
       description: 'Oversee your institution with comprehensive tools',
-      icon: '👩‍💼',
       benefits: [
-        '🏢 Multi-class management',
-        '👥 Teacher & staff tools',
-        '💰 Financial reporting',
-        '📊 School-wide analytics',
-        '⚙️ System administration',
+        'Multi-class management',
+        'Teacher & staff tools',
+        'Financial reporting',
+        'School-wide analytics',
+        'System administration',
       ],
-      cta: 'Register School',
       color: getRoleColors('principal'),
     },
   ];
 
+  const [activeIndex, setActiveIndex] = useState(0);
+  const sliderRef = useRef<ScrollView | null>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const next = (activeIndex + 1) % roles.length;
+      setActiveIndex(next);
+      const slideWidth = Math.min(560, width - 48);
+      sliderRef.current?.scrollTo({ x: next * (slideWidth + 16), animated: true });
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [activeIndex]);
+
+  const slideWidth = Math.min(560, width - 48);
+
   return (
     <View style={styles.roleSection}>
-      <LinearGradient colors={DesignSystem.gradients.section} style={styles.roleSectionGradient}>
-        <Text style={styles.sectionTitle}>WHO IS EDUDASH PRO FOR?</Text>
+      <LinearGradient colors={DesignSystem.gradients.professionalSubtle as [ColorValue, ColorValue]} style={styles.roleSectionGradient}>
+        <Text style={styles.sectionTitle}>Who is EduDash Pro for?</Text>
         <Text style={styles.sectionSubtitle}>
           Designed for every member of the education community
         </Text>
 
-        <View style={styles.rolesContainer}>
-          {roles.map((role) => (
-            <TouchableOpacity
-              key={role.id}
-              style={styles.roleCard}
-              onPress={() => {
-                if (role.id === 'principal') {
-                  router.push('/(auth)/school-onboarding?role=principal');
-                } else {
-                  router.push(`/(auth)/sign-up?role=${role.id}`);
-                }
-              }}
-            >
+        <ScrollView
+          ref={sliderRef as any}
+          horizontal
+          pagingEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          contentContainerStyle={[styles.roleCarousel, { paddingHorizontal: 16 }]}>
+          {roles.map((role, idx) => (
+            <View key={role.id} style={[styles.roleSlide, { width: slideWidth }]}> 
               <LinearGradient
-                colors={[`${role.color.primary}20`, `${role.color.secondary}10`]}
+                colors={[`${String(role.color.primary)}20`, `${String(role.color.secondary)}10`]}
                 style={styles.roleCardGradient}
               >
-                <Text style={styles.roleIcon}>{role.icon}</Text>
+                <Avatar name={role.title} size={56} />
                 <Text style={styles.roleTitle}>{role.title}</Text>
                 <Text style={styles.roleSubtitle}>{role.subtitle}</Text>
                 <Text style={styles.roleDescription}>{role.description}</Text>
-                
                 <View style={styles.roleBenefits}>
                   {role.benefits.map((benefit, index) => (
-                    <Text key={index} style={styles.roleBenefit}>{benefit}</Text>
+                    <Text key={index} style={styles.roleBenefit}>• {benefit}</Text>
                   ))}
                 </View>
-                
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.roleCTA}
                   onPress={() => {
                     if (role.id === 'principal') {
@@ -669,11 +615,20 @@ const RoleBasedBenefitsSection = () => {
                     }
                   }}
                 >
-                  <Text style={styles.roleCTAText}>{role.cta}</Text>
-                  <IconSymbol name="arrow.right" size={16} color={role.color.primary} />
+                  <Text style={styles.roleCTAText}>
+                    {role.id === 'principal' ? 'Register School' : role.id === 'teacher' ? 'Join as Teacher' : 'Join as Parent'}
+                  </Text>
+                  <IconSymbol name="arrow.right" size={16} color={role.color.primary as any} />
                 </TouchableOpacity>
               </LinearGradient>
-            </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Pagination dots */}
+        <View style={styles.roleDots}>
+          {roles.map((_, idx) => (
+            <View key={idx} style={[styles.roleDot, idx === activeIndex && styles.roleDotActive]} />
           ))}
         </View>
       </LinearGradient>
@@ -689,8 +644,8 @@ const EmbeddedPricingSection = () => {
 
   return (
     <View style={styles.embeddedPricingContainer}>
-      <LinearGradient colors={DesignSystem.gradients.section} style={styles.embeddedPricingGradient}>
-        <Text style={styles.sectionTitle}>QUANTUM PRICING</Text>
+<LinearGradient colors={DesignSystem.gradients.professionalSubtle as [ColorValue, ColorValue]} style={styles.embeddedPricingGradient}>
+        <Text style={styles.sectionTitle}>Pricing</Text>
         <Text style={styles.sectionSubtitle}>
           Transparent pricing • No hidden fees • Start free today
         </Text>
@@ -702,6 +657,7 @@ const EmbeddedPricingSection = () => {
           compactMode={width < 480}
           defaultSelectedRole={isPrincipal ? 'principal' : null}
           initialView={isPrincipal ? 'role-specific' : 'overview'}
+          theme="professional"
         />
         
         <TouchableOpacity 
@@ -737,7 +693,7 @@ const EnhancedAdSection = () => {
 
   return (
     <View style={styles.enhancedAdContainer}>
-      <LinearGradient colors={['#533a71', '#1a0a2e']} style={styles.enhancedAdGradient}>
+<LinearGradient colors={DesignSystem.gradients.professionalSubtle as [ColorValue, ColorValue]} style={styles.enhancedAdGradient}>
         <Text style={styles.sectionTitle}>STRATEGIC PARTNERSHIPS</Text>
         <Text style={styles.sectionSubtitle}>
           Curated educational resources and tools for your success
@@ -805,7 +761,7 @@ const EnhancedAdSection = () => {
 const FooterSection = () => {
   return (
     <View style={styles.footerContainer}>
-      <LinearGradient colors={['#1a0a2e', '#0a0a0f']} style={styles.footerGradient}>
+<LinearGradient colors={DesignSystem.gradients.professionalSubtle as [ColorValue, ColorValue]} style={styles.footerGradient}>
         <View style={styles.footerContent}>
           {/* Logo Section */}
           <View style={styles.footerLogo}>
@@ -1721,6 +1677,29 @@ const styles = StyleSheet.create({
   },
   rolesContainer: {
     gap: 20,
+  },
+  roleCarousel: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  roleSlide: {
+    borderRadius: DesignSystem.borderRadius.xl,
+    overflow: 'hidden',
+  },
+  roleDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  roleDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  roleDotActive: {
+    backgroundColor: '#00f5ff',
   },
   roleCard: {
     borderRadius: DesignSystem.borderRadius.xl,

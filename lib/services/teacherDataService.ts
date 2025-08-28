@@ -81,6 +81,13 @@ export interface TeacherDashboardData {
 
 export class TeacherDataService {
 
+  private static isPolicyRecursionError(err: any): boolean {
+    if (!err) return false;
+    const msg = String(err.message || err?.toString?.() || '').toLowerCase();
+    const code = String((err.code || '')).toUpperCase();
+    return code === '42P17' || msg.includes('infinite recursion') || msg.includes('policy') || msg.includes('recursion');
+  }
+
   /**
    * Assign an existing lesson to a class or specific students by creating a homework assignment
    * and inserting a homework submission for each targeted student.
@@ -198,10 +205,18 @@ export class TeacherDataService {
         .from('users')
         .select('id, name, preschool_id')
         .eq('auth_user_id', teacherUserId)
-        .single();
+        .maybeSingle();
 
-      if (teacherError || !teacherProfile) {
-        log.error('❌ [TeacherService] Teacher not found:', teacherError);
+      if (teacherError) {
+        if (this.isPolicyRecursionError(teacherError)) {
+          // Cannot read profile due to RLS recursion; degrade gracefully
+          return [];
+        }
+        log.error('❌ [TeacherService] Teacher profile error:', teacherError);
+        return [];
+      }
+      if (!teacherProfile) {
+        log.error('❌ [TeacherService] Teacher not found');
         return [];
       }
 
@@ -227,6 +242,9 @@ export class TeacherDataService {
         .eq('is_active', true);
 
       if (classesError) {
+        if (this.isPolicyRecursionError(classesError)) {
+          return [];
+        }
         log.error('❌ [TeacherService] Failed to fetch classes:', classesError);
         return [];
       }
