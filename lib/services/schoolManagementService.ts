@@ -15,7 +15,7 @@ export interface CreateSchoolData {
   subscription_plan: 'free' | 'basic' | 'pro' | 'enterprise';
   max_students?: number;
   max_teachers?: number;
-  
+
   // Principal information
   principal_name: string;
   principal_email: string;
@@ -29,13 +29,13 @@ export interface SchoolConfigurationData {
   curriculum_type?: string;
   academic_year_start?: string;
   academic_year_end?: string;
-  
+
   // Features
   enable_video_calls?: boolean;
   enable_homework_ai?: boolean;
   enable_lesson_generator?: boolean;
   enable_parent_messaging?: boolean;
-  
+
   // Branding
   logo_url?: string;
   primary_color?: string;
@@ -57,7 +57,7 @@ export interface OnboardingStepResult {
 }
 
 export class SchoolManagementService {
-  
+
   /**
    * Create a new school with principal
    */
@@ -169,11 +169,11 @@ export class SchoolManagementService {
         throw error;
       }
 
-        return {
-          success: true,
-          invitation_code: invitationCode,
-          expires_at: data.expires_at ?? undefined,
-        };
+      return {
+        success: true,
+        invitation_code: invitationCode,
+        expires_at: data.expires_at,
+      };
 
     } catch (error: any) {
       console.error('Error creating principal invitation:', error);
@@ -219,7 +219,7 @@ export class SchoolManagementService {
       return {
         success: true,
         invitation_code: invitationCode,
-        expires_at: data.expires_at ?? undefined,
+        expires_at: data.expires_at,
       };
 
     } catch (error: any) {
@@ -263,7 +263,7 @@ export class SchoolManagementService {
       return {
         success: true,
         invitation_code: invitationCode,
-        expires_at: data.expires_at ?? undefined,
+        expires_at: data.expires_at,
       };
 
     } catch (error: any) {
@@ -303,14 +303,13 @@ export class SchoolManagementService {
       }
 
       // 2. Check expiration and usage limits
-      const expiresAt = invitation.expires_at ? new Date(invitation.expires_at) : null;
-      if (expiresAt && expiresAt < new Date()) {
+      if (new Date(invitation.expires_at) < new Date()) {
         return { success: false, error: 'Invitation code has expired' };
       }
 
       const currentUses = invitation.current_uses || 0;
       const maxUses = invitation.max_uses || 1;
-      
+
       if (currentUses >= maxUses) {
         return { success: false, error: 'Invitation code has reached maximum uses' };
       }
@@ -337,7 +336,7 @@ export class SchoolManagementService {
 
       // 4. Create user profile
       const role = invitation.invitation_type === 'principal' ? 'preschool_admin' :
-                   invitation.invitation_type === 'teacher' ? 'teacher' : 'parent';
+        invitation.invitation_type === 'teacher' ? 'teacher' : 'parent';
 
       const { error: profileError } = await supabase
         .from('users')
@@ -369,7 +368,7 @@ export class SchoolManagementService {
       if (invitation.invitation_type === 'principal') {
         await supabase
           .from('preschools')
-          .update({ 
+          .update({
             onboarding_status: 'principal_created',
           })
           .eq('id', invitation.preschool_id);
@@ -457,41 +456,6 @@ export class SchoolManagementService {
         success: false,
         error: error.message || 'Failed to complete onboarding',
       };
-    }
-  }
-
-  /**
-   * Create a class in the current preschool
-   */
-  static async createClass(data: { 
-    name: string; 
-    max_capacity: number; 
-    room_number?: string; 
-    teacher_id?: string | null; 
-    preschool_id: string; 
-    age_group_id?: string | null; 
-  }): Promise<{ success: boolean; error?: string; class_id?: string }> {
-    try {
-      const payload: any = {
-        name: data.name,
-        max_capacity: data.max_capacity,
-        room_number: data.room_number || null,
-        teacher_id: data.teacher_id || null,
-        preschool_id: data.preschool_id,
-        age_group_id: data.age_group_id || null,
-        is_active: true,
-        current_enrollment: 0,
-        created_at: new Date().toISOString(),
-      };
-      const { data: inserted, error } = await supabase
-        .from('classes')
-        .insert(payload)
-        .select('id')
-        .single();
-      if (error) throw error;
-      return { success: true, class_id: inserted?.id };
-    } catch (e: any) {
-      return { success: false, error: e?.message || 'Failed to create class' };
     }
   }
 

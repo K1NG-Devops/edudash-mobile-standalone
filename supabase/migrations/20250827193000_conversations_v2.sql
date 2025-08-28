@@ -241,28 +241,46 @@ create policy conv_members_delete_admins_v2
 
 -- Messages: conversation-scoped policies (keep existing DM policies intact)
 -- View messages in conversations where user is a member
-create policy if not exists messages_select_conversation_v2
-  on public.messages
-  for select
-  to authenticated
-  using (
-    conversation_id is not null and exists (
-      select 1 from public.conversation_members cm
-      join public.users u on u.id = cm.user_id
-      where cm.conversation_id = public.messages.conversation_id
-        and u.auth_user_id = auth.uid()
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'messages' AND p.policyname = 'messages_select_conversation_v2'
+  ) THEN
+    EXECUTE $POL$
+      CREATE POLICY messages_select_conversation_v2
+        ON public.messages
+        FOR SELECT
+        TO authenticated
+        USING (
+          conversation_id IS NOT NULL AND EXISTS (
+            SELECT 1 FROM public.conversation_members cm
+            JOIN public.users u ON u.id = cm.user_id
+            WHERE cm.conversation_id = public.messages.conversation_id
+              AND u.auth_user_id = auth.uid()
+          )
+        )
+    $POL$;
+  END IF;
+END $$;
 
 -- Send messages in conversations only if can_send_in_conversation and sender matches current user
-create policy if not exists messages_insert_conversation_v2
-  on public.messages
-  for insert
-  to authenticated
-  with check (
-    conversation_id is not null
-    and sender_id = (select id from public.users where auth_user_id = auth.uid())
-    and public.can_send_in_conversation(conversation_id)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'messages' AND p.policyname = 'messages_insert_conversation_v2'
+  ) THEN
+    EXECUTE $POL$
+      CREATE POLICY messages_insert_conversation_v2
+        ON public.messages
+        FOR INSERT
+        TO authenticated
+        WITH CHECK (
+          conversation_id IS NOT NULL
+          AND sender_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid())
+          AND public.can_send_in_conversation(conversation_id)
+        )
+    $POL$;
+  END IF;
+END $$;
 
 commit;

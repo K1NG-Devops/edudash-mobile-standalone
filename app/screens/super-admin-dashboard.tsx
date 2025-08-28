@@ -3,7 +3,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Dimensions,
   RefreshControl,
   ScrollView,
@@ -19,11 +18,11 @@ import { TabLayout } from '@/components/layout/TabLayout';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { NotificationService } from '@/lib/services/notificationService';
 import {
   SuperAdminDashboardData,
   SuperAdminDataService
 } from '@/lib/services/superAdminDataService';
-import { NotificationService } from '@/lib/services/notificationService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -42,7 +41,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
   // Fetch notification count
   const fetchNotificationCount = async () => {
     if (!user?.id) return;
-    
+
     try {
       const count = await NotificationService.getUnreadCount(user.id);
       setNotificationCount(count);
@@ -55,7 +54,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     if (!user?.id) return;
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -65,7 +64,7 @@ const SuperAdminDashboardScreen: React.FC = () => {
         SuperAdminDataService.getSuperAdminDashboardData(user.id),
         fetchNotificationCount()
       ]);
-      
+
       setDashboardData(data);
     } catch (err: any) {
       console.error('Error fetching super admin dashboard data:', err);
@@ -149,9 +148,9 @@ const SuperAdminDashboardScreen: React.FC = () => {
   // Render platform stats cards
   const renderStatsCards = () => {
     if (!dashboardData) return null;
-    
+
     const { platform_stats } = dashboardData;
-    
+
     return (
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
@@ -191,15 +190,15 @@ const SuperAdminDashboardScreen: React.FC = () => {
   // Render system health indicator
   const renderSystemHealth = () => {
     if (!dashboardData) return null;
-    
+
     const { system_health } = dashboardData;
-    
+
     return (
       <View style={styles.healthCard}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>🖥️ System Health</Text>
-          <View style={[styles.healthStatus, { 
-            backgroundColor: system_health.database_status === 'healthy' ? '#10B981' : '#EF4444' 
+          <View style={[styles.healthStatus, {
+            backgroundColor: system_health.database_status === 'healthy' ? '#10B981' : '#EF4444'
           }]}>
             <Text style={styles.healthStatusText}>
               {system_health.database_status === 'healthy' ? 'Healthy' : 'Issues'}
@@ -234,28 +233,28 @@ const SuperAdminDashboardScreen: React.FC = () => {
     <View style={styles.quickActionsSection}>
       <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
       <View style={styles.quickActionsGrid}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.quickActionCard}
           onPress={() => setSelectedTab('onboarding')}
         >
           <IconSymbol name="plus.app" size={24} color="#3B82F6" />
           <Text style={styles.quickActionLabel}>Manage Onboarding</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.quickActionCard}
           onPress={() => setSelectedTab('activity')}
         >
           <IconSymbol name="chart.bar.doc.horizontal" size={24} color="#10B981" />
           <Text style={styles.quickActionLabel}>Platform Reports</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.quickActionCard}
           onPress={() => setSelectedTab('system')}
         >
           <IconSymbol name="gear.badge" size={24} color="#F59E0B" />
           <Text style={styles.quickActionLabel}>System Settings</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.quickActionCard}
           onPress={() => setSelectedTab('users')}
         >

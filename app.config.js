@@ -27,8 +27,12 @@ export default {
       package: "com.edudashpro.app",
       permissions: [
         "INTERNET",
-        "CAMERA"
+        "CAMERA",
+        // Android 13+ runtime permission for notifications
+        "POST_NOTIFICATIONS"
       ],
+      // If you add your Firebase config, point to it here (required for background push on Android)
+      googleServicesFile: "./android/app/google-services.json",
       edgeToEdgeEnabled: true,
       // Enable Android App Links so https://www.edudashpro.org.za/open in the app
       intentFilters: [
@@ -54,6 +58,7 @@ export default {
       "expo-router",
       "expo-dev-client",
       "expo-secure-store",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {

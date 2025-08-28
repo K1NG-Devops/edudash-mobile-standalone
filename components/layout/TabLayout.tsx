@@ -1,4 +1,5 @@
 import { StandardizedNavigation } from '@/components/navigation/StandardizedNavigation';
+import AdPlacement from '@/components/ui/AdPlacement';
 import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -19,18 +20,18 @@ interface TabLayoutProps {
   notificationCount?: number;
 }
 
-export function TabLayout({ 
-  children, 
-  user, 
+export function TabLayout({
+  children,
+  user,
   schoolName,
   title,
   showBackButton = false,
   onBackPress,
-  onSignOut, 
-  notificationCount = 0 
+  onSignOut,
+  notificationCount = 0
 }: TabLayoutProps) {
   const insets = useSafeAreaInsets();
-  
+
   const handleNavigate = (route: string) => {
     router.push(route as any);
   };
@@ -57,9 +58,11 @@ export function TabLayout({
           notificationCount={notificationCount}
         />
       )}
-      <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-        {children}
-      </View>
+      <AdPlacement>
+        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+          {children}
+        </View>
+      </AdPlacement>
     </View>
   );
 }

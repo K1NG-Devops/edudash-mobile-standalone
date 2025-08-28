@@ -14,7 +14,7 @@ import {
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { SchoolManagementService, SchoolConfigurationData } from '@/lib/services/schoolManagementService';
+import { SchoolConfigurationData, SchoolManagementService } from '@/lib/services/schoolManagementService';
 
 interface SchoolOnboardingProps {
   schoolId: string;
@@ -88,10 +88,10 @@ const SchoolOnboardingScreen: React.FC<SchoolOnboardingProps> = ({
     try {
       setLoading(true);
       const result = await SchoolManagementService.getOnboardingStatus(schoolId);
-      
+
       if (result.success) {
         setOnboardingStatus(result);
-        
+
         // Set current step based on status
         if (result.status === 'principal_created') {
           setCurrentStep(1);
@@ -126,14 +126,14 @@ const SchoolOnboardingScreen: React.FC<SchoolOnboardingProps> = ({
     try {
       // Save configuration
       const configResult = await SchoolManagementService.configureSchool(schoolId, config);
-      
+
       if (!configResult.success) {
         throw new Error(configResult.error || 'Failed to save configuration');
       }
 
       // Complete onboarding
       const onboardingResult = await SchoolManagementService.completeOnboarding(schoolId);
-      
+
       if (!onboardingResult.success) {
         throw new Error(onboardingResult.error || 'Failed to complete onboarding');
       }
@@ -166,7 +166,7 @@ const SchoolOnboardingScreen: React.FC<SchoolOnboardingProps> = ({
     const newGrades = currentGrades.includes(grade)
       ? currentGrades.filter(g => g !== grade)
       : [...currentGrades, grade];
-    
+
     updateConfig('grade_levels', newGrades);
   };
 

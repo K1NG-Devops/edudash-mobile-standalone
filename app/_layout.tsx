@@ -7,6 +7,7 @@ import { Stack, usePathname, ErrorBoundaryProps } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform, View, StyleSheet, Text } from 'react-native';
 import GlobalBottomNav from '@/components/navigation/GlobalBottomNav';
+import { PushService } from '@/lib/services/pushService';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -14,6 +15,8 @@ import { Colors } from '@/constants/Colors';
 import RevenueCatProvider from '@/components/payments/RevenueCatProvider';
 import { QueryProvider } from '@/contexts/QueryProvider';
 import { ToastProvider } from '@/components/ui/Toast';
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
 
 // Error boundary for route-level errors
 function RouteErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -30,6 +33,21 @@ export function ErrorBoundary(props: ErrorBoundaryProps) {
   return RouteErrorBoundary(props);
 }
 
+function SubscriptionProviderWithAuth({ children }: { children: React.ReactNode }) {
+  const { user, profile } = useAuth();
+  const userId = profile?.auth_user_id || user?.id || undefined;
+  return <SubscriptionProvider userId={userId}>{children}</SubscriptionProvider>;
+}
+
+// Foreground notifications behavior
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: true,
+  }),
+});
+
 export default function RootLayout() {
   const pathname = usePathname();
   const hideBottomNav = pathname === '/' || pathname.startsWith('/(auth)') || pathname.startsWith('/screens/super-admin-dashboard');
@@ -38,6 +56,8 @@ export default function RootLayout() {
   useEffect(() => {
     const register = async () => {
       try {
+        const ENABLE_PUSH = process.env.EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS === 'true';
+        if (!ENABLE_PUSH) return;
         // Ask for permissions on mobile devices
         if (Platform.OS !== 'web') {
           const { status } = await Notifications.requestPermissionsAsync();
@@ -49,8 +69,13 @@ export default function RootLayout() {
               importance: Notifications.AndroidImportance.DEFAULT,
             });
           }
-          // Get FCM device token (requires google-services.json in android/app)
-          await Notifications.getExpoPushTokenAsync();
+          // Get Expo push token
+          const token = await Notifications.getExpoPushTokenAsync();
+          const expoToken = typeof token === 'string' ? token : (token?.data ?? null);
+          if (expoToken) {
+            // Save token to Supabase (RLS-safe)
+            await PushService.saveExpoPushToken({ token: expoToken, projectId: null, appVersion: null });
+          }
         }
       } catch {
         // best-effort; non-fatal
@@ -73,30 +98,32 @@ export default function RootLayout() {
   return (
     <AuthErrorBoundary>
       <AuthProvider>
-        <ThemeProvider>
-          <QueryProvider>
-            <ToastProvider>
-              <RevenueCatProvider>
-                <SafeAreaProvider>
-                  <ThemeStatusBar />
-                  <View style={[styles.container, { paddingBottom: containerPaddingBottom }]}> 
-                    <Stack screenOptions={{ headerShown: false }}>
-                      <Stack.Screen name="index" options={{ headerShown: false }} />
-                      <Stack.Screen name="landing" options={{ headerShown: false }} />
-                      <Stack.Screen name="pricing" options={{ headerShown: false }} />
-                      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="screens" options={{ headerShown: false }} />
-                      <Stack.Screen name="about" options={{ headerShown: false }} />
-                      <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
-                    </Stack>
-                    {!hideBottomNav && <GlobalBottomNav />}
-                  </View>
-                </SafeAreaProvider>
-              </RevenueCatProvider>
-            </ToastProvider>
-          </QueryProvider>
-        </ThemeProvider>
+        <SubscriptionProviderWithAuth>
+          <ThemeProvider>
+            <QueryProvider>
+              <ToastProvider>
+                <RevenueCatProvider>
+                  <SafeAreaProvider>
+                    <ThemeStatusBar />
+                    <View style={[styles.container, { paddingBottom: containerPaddingBottom }]}> 
+                      <Stack screenOptions={{ headerShown: false }}>
+                        <Stack.Screen name="index" options={{ headerShown: false }} />
+                        <Stack.Screen name="landing" options={{ headerShown: false }} />
+                        <Stack.Screen name="pricing" options={{ headerShown: false }} />
+                        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                        <Stack.Screen name="screens" options={{ headerShown: false }} />
+                        <Stack.Screen name="about" options={{ headerShown: false }} />
+                        <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
+                      </Stack>
+                      {!hideBottomNav && <GlobalBottomNav />}
+                    </View>
+                  </SafeAreaProvider>
+                </RevenueCatProvider>
+              </ToastProvider>
+            </QueryProvider>
+          </ThemeProvider>
+        </SubscriptionProviderWithAuth>
       </AuthProvider>
     </AuthErrorBoundary>
   );

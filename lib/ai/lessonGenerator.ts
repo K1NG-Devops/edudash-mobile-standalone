@@ -152,7 +152,10 @@ export class LessonGeneratorService {
       preschoolId: params.preschoolId
     });
 
-    return result;
+    if (result.success && result.content) {
+      return { success: true, lesson: result.content };
+    }
+    return { success: false, error: result.error || 'Failed to generate lesson' };
   }
 
   /**

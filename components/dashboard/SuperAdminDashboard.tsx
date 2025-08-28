@@ -14,9 +14,9 @@ import {
   View
 } from 'react-native';
 
+import CreateSchoolModal from '@/components/modals/CreateSchoolModal';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import CreateSchoolModal from '@/components/modals/CreateSchoolModal';
 import {
   PlatformActivity,
   PlatformStats,
@@ -388,7 +388,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         <MobileHeader
           user={userProfile}
           schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => {/* TODO: Implement notifications */}}
+          onNotificationsPress={() => {/* TODO: Implement notifications */ }}
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -408,7 +408,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         <MobileHeader
           user={userProfile}
           schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => {/* TODO: Implement notifications */}}
+          onNotificationsPress={() => {/* TODO: Implement notifications */ }}
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
@@ -433,7 +433,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       <MobileHeader
         user={userProfile}
         schoolName="EduDash Pro Platform"
-        onNotificationsPress={() => {/* TODO: Implement notifications */}}
+        onNotificationsPress={() => {/* TODO: Implement notifications */ }}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
         notificationCount={dashboardData.alerts.length}

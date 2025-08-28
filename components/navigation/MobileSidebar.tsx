@@ -89,7 +89,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'Super Admin Dashboard',
             subtitle: 'Platform overview & management',
             icon: 'rectangle.3.group.fill',
-            route: '/screens/admin-dashboard',
+            route: '/screens/super-admin-dashboard',
             color: '#DC2626',
           },
           {
@@ -97,7 +97,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'Platform Analytics',
             subtitle: 'Growth metrics & insights',
             icon: 'chart.bar.fill',
-            route: '/screens/analytics',
+            route: '/screens/super-admin-dashboard?tab=activity',
             color: '#DC2626',
           },
           {
@@ -105,7 +105,15 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'User Management',
             subtitle: 'Manage all platform users',
             icon: 'person.3.fill',
-            route: '/screens/admin-dashboard',
+            route: '/screens/super-admin-dashboard?tab=users',
+            color: '#DC2626',
+          },
+          {
+            id: 'onboarding',
+            title: 'Onboarding Requests',
+            subtitle: 'Approve or reject schools',
+            icon: 'person.badge.plus',
+            route: '/screens/super-admin-dashboard?tab=onboarding',
             color: '#DC2626',
           },
           {
@@ -113,7 +121,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             title: 'Platform Settings',
             subtitle: 'Global configuration',
             icon: 'gearshape.fill',
-            route: '/screens/settings',
+            route: '/screens/super-admin-dashboard?tab=system',
             color: '#DC2626',
           },
           { id: 'divider1', title: '', divider: true },

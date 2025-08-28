@@ -71,11 +71,25 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
     filterContacts();
   }, [searchQuery, contacts, activeTab]);
 
+  const waitForAuthSession = async (timeoutMs = 3000) => {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.access_token) return true;
+      } catch {}
+      await new Promise(r => setTimeout(r, 150));
+    }
+    return false;
+  };
+
   const loadContacts = async () => {
     if (!profile?.preschool_id) return;
 
     try {
       setLoading(true);
+
+      await waitForAuthSession();
 
       // Get parent's internal ID
       const { data: parentProfile, error: parentError } = await supabase
@@ -125,43 +139,48 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       // Load other parents with children in the same classes
       if (childrenList.length > 0) {
         const classIds = childrenList.map(child => child.class_id).filter(Boolean);
-        
         if (classIds.length > 0) {
-          const { data: classParentsData, error: parentsError } = await supabase
+          // Step 1: fetch parent IDs per class
+          const { data: studentsSimple, error: parentsError } = await supabase
             .from('students')
-            .select(`
-              parent_id,
-              classes (
-                name
-              ),
-              users!students_parent_id_fkey (
-                id,
-                name,
-                avatar_url,
-                email
-              )
-            `)
+            .select('parent_id, class_id')
             .in('class_id', classIds)
             .neq('parent_id', parentProfile.id);
 
-          if (!parentsError && classParentsData) {
-            const seenParents = new Set<string>();
-            
-            classParentsData.forEach((student: any) => {
-              if (student.users && !seenParents.has(student.users.id)) {
-                seenParents.add(student.users.id);
+          if (!parentsError && studentsSimple) {
+            const parentIds = Array.from(new Set((studentsSimple || []).map((s: any) => s.parent_id).filter(Boolean)));
+            let classNameById: Record<string, string> = {};
+            try {
+              const { data: classRows } = await supabase
+                .from('classes')
+                .select('id, name')
+                .in('id', classIds);
+              (classRows || []).forEach((c: any) => { classNameById[c.id] = c.name; });
+            } catch {}
+
+            if (parentIds.length > 0) {
+              const { data: parentUsers } = await supabase
+                .from('users')
+                .select('id, name, avatar_url, email')
+                .in('id', parentIds);
+              const firstClassForParent: Record<string, string | undefined> = {};
+              (studentsSimple || []).forEach((s: any) => {
+                if (!firstClassForParent[s.parent_id]) firstClassForParent[s.parent_id] = s.class_id;
+              });
+              (parentUsers || []).forEach((u: any) => {
                 allContacts.push({
-                  id: student.users.id,
-                  name: student.users.name || 'Unknown Parent',
+                  id: u.id,
+                  name: u.name || 'Unknown Parent',
                   role: 'parent',
-                  avatar_url: student.users.avatar_url,
-                  email: student.users.email,
-                  class_name: student.classes?.name,
+                  avatar_url: u.avatar_url,
+                  email: u.email,
+                  class_name: classNameById[firstClassForParent[u.id] || '']
+                  ,
   // TODO: Replace with real presence status
   is_online: false,
                 });
-              }
-            });
+              });
+            }
           }
         }
       }
@@ -205,6 +224,8 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
     try {
       setSending(true);
 
+      await waitForAuthSession();
+
       // Get parent's internal ID
       const { data: parentProfile, error: parentError } = await supabase
         .from('users')
@@ -224,10 +245,9 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
           subject: '',
           content: messageContent.trim() || (attachedMedia.length > 0 ? '📷 Photo message' : ''),
           sender_id: parentProfile.id,
-          message_type: attachedMedia.length > 0 ? 'image' : 'text',
-          is_draft: false,
+          message_type: 'private'
         })
-        .select()
+        .select('id')
         .single();
 
       if (messageError) {
@@ -240,8 +260,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
           .from('message_recipients')
           .insert({
             message_id: messageData.id,
-            recipient_id: selectedContact.id,
-            recipient_type: 'user',
+            recipient_id: selectedContact.id
           });
       }
 

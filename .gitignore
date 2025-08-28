@@ -181,3 +181,4 @@ build-fixes.md
 project-scripts/
 .vercel
 .secrets.txt
+android/app/service-account.json

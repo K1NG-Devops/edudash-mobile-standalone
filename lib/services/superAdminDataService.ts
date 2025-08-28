@@ -968,7 +968,7 @@ export class SuperAdminDataService {
     schoolId: string;
   }) {
     const { schoolName, adminName, adminEmail, tempPassword, schoolId } = emailData;
-const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.org.za';
+    const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://edudashpro.org.za';
     const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME || '';
     const loginHref = appScheme
       ? `${appScheme}://login`
@@ -1790,10 +1790,10 @@ const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.edudashpro.or
       'premium': 1000,
       'enterprise': 2000
     };
-    
+
     const baseRate = baseFees[plan as keyof typeof baseFees] || 0;
     const perStudentRate = 50; // R50 per student
-    
+
     return baseRate + (studentCount * perStudentRate);
   }
 }

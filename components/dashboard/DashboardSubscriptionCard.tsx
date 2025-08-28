@@ -69,7 +69,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
 
   // Fetch usage statistics (DB-backed via ai_usage_logs)
   const fetchUsageStats = async () => {
-    if (!showUsage) return;
+    if (!showUsage || !userId) return;
     setLoadingUsage(true);
     try {
       // userId prop is the auth user id
@@ -105,7 +105,8 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
 
   useEffect(() => {
     fetchUsageStats();
-  }, [subscription, showUsage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscription, showUsage, userId]);
 
   const isActive = isSubscriptionActive();
   const isTrial = isTrialActive();

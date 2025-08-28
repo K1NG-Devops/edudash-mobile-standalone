@@ -6,10 +6,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
 interface InvokeBody {
-  feature: "lesson_generation" | "homework_grading" | "stem_activity" | "progress_analysis" | string;
+  feature?: "lesson_generation" | "homework_grading" | "stem_activity" | "progress_analysis" | string;
   prompt?: string;
   params?: Record<string, unknown>;
   model?: string;
+  action?: string; // e.g., 'admin_reset_ai_usage'
+  reset?: {
+    scope: 'user' | 'preschool' | 'platform';
+    target_user_id?: string;
+    target_preschool_id?: string;
+    mode?: 'soft' | 'hard';
+    reason?: string;
+  };
 }
 
 function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
@@ -114,7 +122,7 @@ serve(async (req) => {
     // Map auth user to platform user & tier
     const { data: dbUser, error: dbErr } = await admin
       .from("users")
-      .select("id, subscription_tier, preschool_id")
+      .select("id, subscription_tier, preschool_id, role, is_active")
       .eq("auth_user_id", authUserId)
       .maybeSingle();
 
@@ -124,11 +132,49 @@ serve(async (req) => {
 
     const userId = dbUser?.id;
     const userTier = (dbUser?.subscription_tier as string) || "free";
+    const isSuperAdmin = dbUser?.role === 'superadmin' && !!dbUser?.is_active;
 
-    // Load school subscription to detect trial status
+    // Admin-only action: AI usage reset with full audit trail
+    if (body.action === 'admin_reset_ai_usage') {
+      if (!isSuperAdmin || !userId) {
+        return json({ success: false, error: 'Forbidden' }, 403, corsHeaders);
+      }
+      const r = body.reset || {} as any;
+      const scope = (r.scope || 'platform') as 'user' | 'preschool' | 'platform';
+      const target_user_id = r.target_user_id || null;
+      const target_preschool_id = r.target_preschool_id || null;
+      const mode = (r.mode || 'soft') as 'soft' | 'hard';
+      const reason = r.reason || null;
+
+      // Insert reset record
+      await admin.from('ai_usage_resets').insert({
+        requested_by_user_id: userId,
+        target_scope: scope,
+        target_user_id,
+        target_preschool_id,
+        mode,
+        reason,
+        status: 'completed',
+        metadata: { initiated_from: 'ai-proxy', auth_user_id: authUserId }
+      } as any);
+
+      // Audit log
+      await admin.from('ai_admin_actions').insert({
+        actor_user_id: userId,
+        action: 'ai_usage_reset',
+        target_scope: scope,
+        target_user_id,
+        target_preschool_id,
+        details: { mode, reason }
+      } as any);
+
+      return json({ success: true, reset: { scope, target_user_id, target_preschool_id, mode } }, 200, corsHeaders);
+    }
+
+    // Load school subscription to detect trial status (skip for superadmins)
     let isTrial = false;
     let trialExpired = false;
-    if (dbUser?.preschool_id) {
+    if (!isSuperAdmin && dbUser?.preschool_id) {
       const { data: school } = await admin
         .from('preschools')
         .select('subscription_status, subscription_start_date, subscription_end_date')
@@ -150,14 +196,14 @@ serve(async (req) => {
       }
     }
 
-    if (isTrial && trialExpired) {
+    if (!isSuperAdmin && isTrial && trialExpired) {
       return json({ success: false, error: 'Your 14-day trial has expired. Please upgrade to continue using AI features.', code: 'TRIAL_EXPIRED' }, 402, corsHeaders);
     }
 
     // Generic rate limiting for all users
     // - Burst: max 1 request per 2 seconds
     // - Sustained: max 10 requests per minute
-    if (userId) {
+    if (!isSuperAdmin && userId) {
       const burstWindow = new Date(Date.now() - 2_000).toISOString();
       const { count: burstCount } = await admin
         .from('ai_usage_logs')
@@ -189,13 +235,61 @@ serve(async (req) => {
     const limit = limits[userTier] ?? 5;
     const { start, end } = monthBounds();
 
+    // Soft reset baseline support: if a recent soft reset exists for the user/school/platform, use that time as the baseline
+    let baseline = start;
+    if (userId) {
+      const queries: Promise<any>[] = [];
+      queries.push(
+        admin.from('ai_usage_resets')
+          .select('created_at')
+          .eq('mode', 'soft')
+          .eq('target_scope', 'user')
+          .eq('target_user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      );
+      if (dbUser?.preschool_id) {
+        queries.push(
+          admin.from('ai_usage_resets')
+            .select('created_at')
+            .eq('mode', 'soft')
+            .eq('target_scope', 'preschool')
+            .eq('target_preschool_id', dbUser.preschool_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        );
+      }
+      queries.push(
+        admin.from('ai_usage_resets')
+          .select('created_at')
+          .eq('mode', 'soft')
+          .eq('target_scope', 'platform')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      );
+
+      const results = await Promise.allSettled(queries);
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          const ts = (r.value?.data?.created_at as string | null) || null;
+          if (ts) {
+            const candidate = new Date(ts).toISOString();
+            if (candidate > baseline) baseline = candidate;
+          }
+        }
+      }
+    }
+
     let currentMonthCount = 0;
     if (userId) {
       const { count } = await admin
         .from('ai_usage_logs')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .gte('created_at', start)
+        .gte('created_at', baseline)
         .lte('created_at', end);
       currentMonthCount = count ?? 0;
     }
@@ -203,7 +297,7 @@ serve(async (req) => {
     let overageApplied = false;
     let overageAmount = 0;
 
-    if (limit !== -1 && currentMonthCount >= limit) {
+    if (!isSuperAdmin && limit !== -1 && currentMonthCount >= limit) {
       if (userId) {
         const { data: prefs } = await admin
           .from('billing_preferences')
@@ -224,7 +318,7 @@ serve(async (req) => {
     }
 
     // Trial-specific limits
-    if (isTrial && userId) {
+    if (!isSuperAdmin && isTrial && userId) {
       const dailyLimit = Number(Deno.env.get('TRIAL_AI_DAILY_LIMIT') || 10);
       const totalLimit = Number(Deno.env.get('TRIAL_AI_TOTAL_LIMIT') || 50);
 

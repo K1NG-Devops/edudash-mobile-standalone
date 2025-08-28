@@ -18,6 +18,8 @@ import { LessonContent , isAIAvailable } from '@/lib/ai/claudeService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
+const SUBJECT_OPTIONS = ['Science', 'Math', 'Language Arts', 'Art', 'Music', 'Creative Expression', 'Social Skills', 'Emotional Development', 'Nature Studies', 'Physical Activity', 'Engineering'];
+
 interface LessonGeneratorProps {
   userId: string;
   preschoolId: string;
@@ -44,17 +46,19 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   const [customMode, setCustomMode] = useState(false);
   
   // Form data
-  const [topic, setTopic] = useState('');
+const [topic, setTopic] = useState('Colors and Rainbows');
   const [ageGroup, setAgeGroup] = useState('3-4 years');
   const [duration, setDuration] = useState(30);
   const [subjects, setSubjects] = useState<string[]>([]);
-  const [learningObjectives, setLearningObjectives] = useState<string[]>(['']);
+const [learningObjectives, setLearningObjectives] = useState<string[]>(['Recognize basic colors']);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'challenging'>('medium');
   
   // Generated content
   const [generatedLesson, setGeneratedLesson] = useState<LessonContent | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [lastGenAt, setLastGenAt] = useState<number>(0);
+const [lastGenAt, setLastGenAt] = useState<number>(0);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
 
   const steps: GenerationStep[] = [
     { id: 0, title: 'Choose Template', completed: false, active: true },
@@ -95,6 +99,7 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   const handleCustomMode = () => {
     setCustomMode(true);
     setSelectedTemplate(null);
+    setSubjects(['Science']);
     setCurrentStep(1);
     updateSteps(1);
   };
@@ -115,36 +120,49 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
     }
   };
 
+  const toggleSubject = (s: string) => {
+    setSubjects(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  };
+
   const validateForm = (): boolean => {
-    if (!topic.trim()) {
-      Alert.alert('Missing Topic', 'Please enter a topic for your lesson.');
+if (!topic.trim()) {
+      const msg = 'Please enter a topic for your lesson.';
+      setFormError(msg);
+      try { Alert.alert('Missing Topic', msg); } catch {}
       return false;
     }
 
-    if (customMode && subjects.length === 0) {
-      Alert.alert('Missing Subjects', 'Please select at least one subject.');
+if (customMode && subjects.length === 0) {
+      const msg = 'Please select at least one subject.';
+      setFormError(msg);
+      try { Alert.alert('Missing Subjects', msg); } catch {}
       return false;
     }
 
     const validObjectives = learningObjectives.filter(obj => obj.trim().length > 0);
-    if (validObjectives.length === 0) {
-      Alert.alert('Missing Objectives', 'Please add at least one learning objective.');
+if (validObjectives.length === 0) {
+      const msg = 'Please add at least one learning objective.';
+      setFormError(msg);
+      try { Alert.alert('Missing Objectives', msg); } catch {}
       return false;
     }
 
+setFormError(null);
     return true;
   };
 
   const generateLesson = async () => {
     // Basic client-side rate limit: 1 request every 2 seconds
     const now = Date.now();
-    if (now - lastGenAt < 2000) {
-      Alert.alert('Please wait', 'You are generating too quickly. Try again in a moment.');
+if (now - lastGenAt < 2000) {
+      try { Alert.alert('Please wait', 'You are generating too quickly. Try again in a moment.'); } catch {}
       return;
     }
     setLastGenAt(now);
-    if (!validateForm()) return;
+if (!validateForm()) return;
 
+    setFormError(null);
+    setGenError(null);
     setIsGenerating(true);
     setCurrentStep(2);
     updateSteps(2);
@@ -183,15 +201,18 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
         throw new Error(result.error || 'Failed to generate lesson');
       }
     } catch (error) {
-      // Removed debug statement: console.error('Lesson generation error:', error);
-      Alert.alert(
-        'Generation Failed',
-        error instanceof Error ? error.message : 'Failed to generate lesson. Please try again.',
-        [
-          { text: 'Retry', onPress: () => setCurrentStep(1) },
-          { text: 'Cancel', onPress: onClose }
-        ]
-      );
+      const msg = error instanceof Error ? error.message : 'Failed to generate lesson. Please try again.';
+      setGenError(msg);
+      try {
+        Alert.alert(
+          'Generation Failed',
+          msg,
+          [
+            { text: 'Retry', onPress: () => setCurrentStep(1) },
+            { text: 'OK' }
+          ]
+        );
+      } catch {}
     } finally {
       setIsGenerating(false);
     }
@@ -350,6 +371,27 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
               ))}
             </View>
           </View>
+
+          <View style={{ marginTop: 8 }}>
+            <Text style={styles.inputLabel}>Subjects</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+              {SUBJECT_OPTIONS.map((sub) => {
+                const active = subjects.includes(sub);
+                return (
+                  <TouchableOpacity
+                    key={sub}
+                    style={[styles.subjectChip, active && styles.subjectChipActive]}
+                    onPress={() => toggleSubject(sub)}
+                  >
+                    <Text style={[styles.subjectChipText, active && styles.subjectChipTextActive]}>{sub}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <Text style={{ marginTop: 6, color: '#6B7280', fontSize: 12 }}>
+              Select one or more subjects to guide the lesson focus.
+            </Text>
+          </View>
         </>
       )}
 
@@ -380,12 +422,21 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.generateButton} onPress={generateLesson}>
-        <LinearGradient colors={['#10B981', '#059669']} style={styles.generateGradient}>
-          <IconSymbol name="sparkles" size={20} color="#FFFFFF" />
-          <Text style={styles.generateButtonText}>Generate Lesson with AI</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+      {formError && (
+        <Text style={styles.errorText}>{formError}</Text>
+      )}
+
+      {(() => {
+        const canGenerate = topic.trim().length > 0 && learningObjectives.some(obj => obj.trim().length > 0);
+        return (
+          <TouchableOpacity style={[styles.generateButton, !canGenerate && { opacity: 0.6 }]} onPress={generateLesson} disabled={!canGenerate}>
+            <LinearGradient colors={['#10B981', '#059669']} style={styles.generateGradient}>
+              <IconSymbol name="sparkles" size={20} color="#FFFFFF" />
+              <Text style={styles.generateButtonText}>Generate Lesson with AI</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        );
+      })()}
     </ScrollView>
   );
 
@@ -401,6 +452,19 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
         <Text style={styles.generatingStep}>• Creating engaging activities</Text>
         <Text style={styles.generatingStep}>• Generating assessment questions</Text>
         <Text style={styles.generatingStep}>• Adding home extension ideas</Text>
+      </View>
+    </View>
+  );
+
+  const renderGenerationError = () => (
+    <View style={styles.generatingContainer}>
+      <IconSymbol name="exclamationmark.triangle" size={28} color="#EF4444" />
+      <Text style={[styles.generatingTitle, { color: '#EF4444' }]}>Generation failed</Text>
+      <Text style={styles.generatingDescription}>{genError || 'Something went wrong. Please try again.'}</Text>
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+        <TouchableOpacity onPress={() => { setCurrentStep(1); setGenError(null); }} style={[styles.previewButton, { backgroundColor: '#F3F4F6' }]}>
+          <Text style={[styles.previewButtonText, { color: '#111827' }]}>Back to parameters</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -470,7 +534,7 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
 
         {currentStep === 0 && renderTemplateSelection()}
         {currentStep === 1 && renderParameterSetting()}
-        {currentStep === 2 && (isGenerating ? renderGenerating() : renderPreview())}
+        {currentStep === 2 && (isGenerating ? renderGenerating() : (generatedLesson ? renderPreview() : renderGenerationError()))}
         {currentStep === 3 && renderPreview()}
       </View>
 
@@ -977,5 +1041,29 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     marginBottom: 8,
     lineHeight: 20,
+  },
+  subjectChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginRight: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  subjectChipActive: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  subjectChipText: {
+    color: '#111827',
+  },
+  subjectChipTextActive: {
+    color: '#FFFFFF',
+  },
+  errorText: {
+    color: '#EF4444',
+    marginTop: 8,
+    marginBottom: 8,
   },
 });

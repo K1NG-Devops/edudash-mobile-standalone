@@ -5,19 +5,19 @@
  * It handles role-based styling, unified sidebar menu, and standardized header.
  */
 
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Dimensions,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { getRoleColors } from '@/constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
+import {
+  Dimensions,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { MobileSidebar } from './MobileSidebar';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -52,7 +52,7 @@ export function StandardizedNavigation({
 
   const getDisplayTitle = () => {
     if (title) return title;
-    
+
     switch (user?.role) {
       case 'superadmin':
         return 'EduDash Pro Platform';
@@ -97,7 +97,7 @@ export function StandardizedNavigation({
   return (
     <>
       <SafeAreaView style={[styles.safeArea, { backgroundColor: roleColors.gradient[0] }]}>
-        <StatusBar 
+        <StatusBar
           barStyle="light-content"
           backgroundColor={roleColors.gradient[0]}
           translucent={false}
@@ -110,7 +110,7 @@ export function StandardizedNavigation({
         >
           {/* Glass morphism overlay */}
           <View style={styles.glassOverlay} />
-          
+
           <View style={styles.headerContent}>
             {/* Left Section */}
             <View style={styles.leftSection}>
@@ -136,7 +136,7 @@ export function StandardizedNavigation({
                   <View style={styles.statusIndicator} />
                 </TouchableOpacity>
               )}
-              
+
               <View style={styles.titleSection}>
                 <Text style={styles.appTitle}>{getDisplayTitle()}</Text>
                 <View style={styles.userInfoRow}>
@@ -175,7 +175,7 @@ export function StandardizedNavigation({
         isVisible={sidebarVisible}
         onClose={() => setSidebarVisible(false)}
         userProfile={user}
-        onSignOut={onSignOut || (() => {})}
+        onSignOut={onSignOut || (() => { })}
         onNavigate={onNavigate}
       />
     </>

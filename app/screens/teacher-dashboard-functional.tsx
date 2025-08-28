@@ -441,7 +441,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                         {renderQuickAction(
                             'AI Lesson Generator',
                             'plus.circle',
-                            () => router.push('/screens/lessons'),
+                            () => router.push('/screens/ai-lesson-generator'),
                             '#3B82F6',
                             'ai_lesson_generator',
                             'Generate custom lessons using AI technology'

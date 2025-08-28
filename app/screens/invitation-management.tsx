@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
+  FlatList,
   Share,
   StyleSheet,
   Text,
@@ -9,12 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 
+import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { MobileHeader } from '@/components/navigation/MobileHeader';
-import { SchoolManagementService, InvitationResult } from '@/lib/services/schoolManagementService';
+import { SchoolManagementService } from '@/lib/services/schoolManagementService';
 import { supabase } from '@/lib/supabase';
 
 interface InvitationManagementProps {
@@ -33,8 +33,8 @@ interface InvitationCode {
   id: string;
   code: string;
   invitation_type: string | null;
-  invited_email: string | null;
-  expires_at: string | null;
+  invited_email: string;
+  expires_at: string;
   max_uses: number | null;
   current_uses: number | null;
   created_at: string | null;
@@ -54,11 +54,11 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'teacher' | 'parent'>('teacher');
-  
+
   // Teacher invitation form
   const [teacherName, setTeacherName] = useState('');
   const [teacherEmail, setTeacherEmail] = useState('');
-  
+
   // Parent invitation settings
   const [parentCodeUses, setParentCodeUses] = useState('50');
 
@@ -69,7 +69,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
   const fetchInvitations = async () => {
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
         .from('school_invitation_codes')
         .select('*')
@@ -176,7 +176,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
   };
 
   const shareInvitationCode = async (code: string, email: string, type: string) => {
-    const message = type === 'teacher' 
+    const message = type === 'teacher'
       ? `Hi! You've been invited to join our school as a teacher on EduDash Pro.\n\nInvitation Code: ${code}\n\nDownload the EduDash Pro app and use this code to create your account.`
       : `Join our school on EduDash Pro as a parent!\n\nInvitation Code: ${code}\n\nDownload the EduDash Pro app and use this code to create your account and connect with your child's education.`;
 
@@ -209,7 +209,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
   };
 
   const renderInvitationCard = ({ item }: { item: InvitationCode }) => {
-    const isExpired = item.expires_at ? new Date(item.expires_at) < new Date() : false;
+    const isExpired = new Date(item.expires_at) < new Date();
     const isExhausted = (item.current_uses || 0) >= (item.max_uses || 1);
     const isActive = item.is_active && !isExpired && !isExhausted;
 
@@ -222,15 +222,15 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
               {item.invitation_type?.toUpperCase()} INVITATION
             </Text>
           </View>
-          
+
           <View style={styles.invitationActions}>
             <TouchableOpacity
               style={styles.shareButton}
-              onPress={() => shareInvitationCode(item.code, item.invited_email || '', item.invitation_type || 'user')}
+              onPress={() => shareInvitationCode(item.code, item.invited_email, item.invitation_type || 'user')}
             >
               <IconSymbol name="square.and.arrow.up" size={16} color="#3B82F6" />
             </TouchableOpacity>
-            
+
             {isActive && (
               <TouchableOpacity
                 style={styles.deactivateButton}
@@ -260,7 +260,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
             Uses: {item.current_uses || 0} / {item.max_uses || 1}
           </Text>
           <Text style={styles.expiryText}>
-            Expires: {item.expires_at ? new Date(item.expires_at).toLocaleDateString() : '—'}
+            Expires: {new Date(item.expires_at).toLocaleDateString()}
           </Text>
         </View>
 
@@ -364,7 +364,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
         <MobileHeader
           user={{ ...userProfile, avatar: userProfile.avatar || undefined }}
           schoolName="Invitation Management"
-          onNotificationsPress={() => {}}
+          onNotificationsPress={() => { }}
           onSignOut={onSignOut}
           onNavigate={onNavigate}
           notificationCount={0}
@@ -379,7 +379,7 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
       <MobileHeader
         user={{ ...userProfile, avatar: userProfile.avatar || undefined }}
         schoolName="Invitation Management"
-        onNotificationsPress={() => {}}
+        onNotificationsPress={() => { }}
         onSignOut={onSignOut}
         onNavigate={onNavigate}
         notificationCount={0}
@@ -406,12 +406,12 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
       </View>
 
       {/* Content */}
-      <FlashList
+      <FlatList
         style={styles.content}
         ListHeaderComponent={
           <View>
             {selectedTab === 'teacher' ? renderTeacherTab() : renderParentTab()}
-            
+
             <View style={styles.existingSection}>
               <Text style={styles.sectionTitle}>
                 Existing {selectedTab === 'teacher' ? 'Teacher' : 'Parent'} Invitations
@@ -429,7 +429,6 @@ const InvitationManagementScreen: React.FC<InvitationManagementProps> = ({
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        estimatedItemSize={180}
       />
     </View>
   );

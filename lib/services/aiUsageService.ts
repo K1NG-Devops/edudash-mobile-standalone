@@ -10,6 +10,11 @@ export interface AIUsageStats {
     lastUsedAt: string | null;
 }
 
+// Simple guard to avoid bad requests when auth_user_id is empty
+function isValidUserId(userId?: string): userId is string {
+    return typeof userId === 'string' && userId.trim().length > 0;
+}
+
 export class AIUsageService {
     /**
      * Track AI usage for a specific user and feature
@@ -21,6 +26,7 @@ export class AIUsageService {
         costUsd?: number
     ): Promise<boolean> {
         try {
+            if (!isValidUserId(userId)) return false;
             // Get the user's database ID from their auth ID
             const { data: userData, error: userError } = await supabase
                 .from('users')
@@ -62,6 +68,7 @@ export class AIUsageService {
      */
     static async getUsageStats(userId: string): Promise<AIUsageStats | null> {
         try {
+            if (!isValidUserId(userId)) return null;
             // Get the user's database ID from their auth ID
             const { data: userData, error: userError } = await supabase
                 .from('users')
@@ -144,6 +151,9 @@ export class AIUsageService {
         limit: number;
     }> {
         try {
+            if (!isValidUserId(userId)) {
+                return { canUse: false, reason: 'Missing user', currentUsage: 0, limit: 0 };
+            }
             // Get user's subscription tier
             const { data: userData, error: userError } = await supabase
                 .from('users')
@@ -210,6 +220,7 @@ export class AIUsageService {
         feature?: string
     ): Promise<AIUsageLog[]> {
         try {
+            if (!isValidUserId(userId)) return [];
             // Get the user's database ID from their auth ID
             const { data: userData, error: userError } = await supabase
                 .from('users')
@@ -252,6 +263,7 @@ export class AIUsageService {
      */
     static async getUsageSummaryByFeature(userId: string): Promise<Record<string, number>> {
         try {
+            if (!isValidUserId(userId)) return {};
             // Get the user's database ID from their auth ID
             const { data: userData, error: userError } = await supabase
                 .from('users')
@@ -307,5 +319,4 @@ export class AIUsageService {
 export const trackAIUsage = AIUsageService.trackUsage;
 export const getAIUsageStats = AIUsageService.getUsageStats;
 export const canUseAIFeature = AIUsageService.canUseAIFeature;
-
 
