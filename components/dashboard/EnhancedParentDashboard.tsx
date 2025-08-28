@@ -844,7 +844,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         <View style={styles.floatingButtonContainer}>
           <MessagingButton
             profile={profile}
-            childrenData={children}
+            children={children}
             variant="floating"
             size="large"
           />

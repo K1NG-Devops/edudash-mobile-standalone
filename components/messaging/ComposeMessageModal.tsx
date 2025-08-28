@@ -78,6 +78,9 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
     filterContacts();
   }, [searchQuery, contacts, activeTab]);
 
+  // Defensive default for children list
+  const safeChildrenList = Array.isArray(childrenList) ? childrenList : [];
+
   const waitForAuthSession = async (timeoutMs = 3000) => {
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
@@ -144,8 +147,8 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       }
 
       // Load other parents with children in the same classes
-      if (childrenList.length > 0) {
-        const classIds = childrenList.map(child => child.class_id).filter(Boolean);
+      if (safeChildrenList.length > 0) {
+        const classIds = safeChildrenList.map(child => child.class_id).filter(Boolean);
         if (classIds.length > 0) {
           // Step 1: fetch parent IDs per class
           const { data: studentsSimple, error: parentsError } = await supabase
@@ -204,11 +207,12 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   const filterContacts = () => {
     let filtered = contacts.filter(contact => {
       const matchesSearch = searchQuery === '' || 
-        contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (contact.name && contact.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (contact.email && contact.email.toLowerCase().includes(searchQuery.toLowerCase()));
       
+      const isStaff = contact.role === 'admin' || contact.role === 'principal' || contact.role === 'preschool_admin';
       const matchesTab = activeTab === 'teachers' ? contact.role === 'teacher' :
-                        activeTab === 'admin' ? contact.role === 'admin' :
+                        activeTab === 'admin' ? isStaff :
                         contact.role === 'parent';
       
       return matchesSearch && matchesTab;
@@ -419,7 +423,7 @@ const handleAddPhoto = () => {
         <Text style={[styles.contactName, { color: palette.text }]}>{contact.name}</Text>
         <Text style={[styles.contactRole, { color: palette.textSecondary }]}>
           {contact.role === 'teacher' ? '👩‍🏫 Teacher' :
-           contact.role === 'admin' ? '👨‍💼 Admin' : '👨‍👩‍👧‍👦 Parent'}
+           (contact.role === 'admin' || contact.role === 'principal' || contact.role === 'preschool_admin') ? '👨‍💼 Admin' : '👨‍👩‍👧‍👦 Parent'}
           {contact.class_name && ` • ${contact.class_name}`}
         </Text>
         {contact.email && (
