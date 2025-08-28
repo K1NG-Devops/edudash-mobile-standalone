@@ -1175,7 +1175,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       ) : (
         <>
           {/* Tabs */}
-          <View style={styles.tabsContainer}>
+          <View style={[styles.tabsContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
             <TouchableOpacity
               style={[
                 styles.tab,

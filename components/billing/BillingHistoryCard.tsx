@@ -2,6 +2,7 @@ import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { useBillingHistory } from '@/lib/hooks/useBillingHistory'
 import { useTheme } from '@/contexts/ThemeContext'
+import { Colors } from '@/constants/Colors'
 
 interface Props {
   userId: string
@@ -10,18 +11,19 @@ interface Props {
 export const BillingHistoryCard = ({ userId }: Props) => {
   const { colorScheme } = useTheme()
   const isDark = colorScheme === 'dark'
+  const palette = Colors[colorScheme]
   const { data = [], isLoading } = useBillingHistory(userId)
 
   return (
-    <View style={[styles.card, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-      <Text style={[styles.title, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>Billing History</Text>
+    <View style={[styles.card, { backgroundColor: palette.surface }]}>
+      <Text style={[styles.title, { color: palette.text }]}>Billing History</Text>
       {isLoading ? (
         <Text style={{ color: isDark ? '#94A3B8' : '#6B7280' }}>Loading…</Text>
       ) : data.length === 0 ? (
         <Text style={{ color: isDark ? '#94A3B8' : '#6B7280' }}>No payments yet.</Text>
       ) : (
         data.slice(0, 5).map((p) => (
-          <View key={p.id} style={styles.row}>
+          <View key={p.id} style={[styles.row, { borderBottomColor: palette.outline }]}>
             <Text style={[styles.amount, { color: isDark ? '#F8FAFC' : '#111827' }]}>R{p.amount.toFixed(2)}</Text>
             <Text style={[styles.status, { color: p.status === 'completed' ? '#10B981' : p.status === 'pending' ? '#F59E0B' : '#EF4444' }]}>
               {p.status}

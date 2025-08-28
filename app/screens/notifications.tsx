@@ -21,6 +21,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import ThemedCard from '@/components/ui/ThemedCard';
 import ThemedButton from '@/components/ui/ThemedButton';
 import { useSubscription } from '@/lib/hooks/useSubscription';
+import { Colors } from '@/constants/Colors';
 
 interface Notification {
   id: string;
@@ -37,6 +38,7 @@ interface Notification {
 
 export default function NotificationsScreen() {
   const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
   const { user } = useAuth();
   const { subscription } = useSubscription();
   const isFreeTier = (subscription?.plan?.tier || 'free') === 'free';
@@ -189,11 +191,11 @@ export default function NotificationsScreen() {
             }
           }}
         >
-          <IconSymbol name="chevron.left" size={24} color="#1F2937" />
+<IconSymbol name="chevron.left" size={24} color={palette.text} />
         </TouchableOpacity>
         <View>
-          <Text style={styles.headerTitle}>Notifications</Text>
-          <Text style={styles.headerSubtitle}>
+<Text style={[styles.headerTitle, { color: palette.text }]}>Notifications</Text>
+<Text style={[styles.headerSubtitle, { color: palette.textSecondary }]}> 
             {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
           </Text>
         </View>
@@ -239,13 +241,13 @@ export default function NotificationsScreen() {
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Loading notifications...</Text>
+<Text style={[styles.loadingText, { color: palette.textSecondary }]}>Loading notifications...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <IconSymbol name="exclamationmark.triangle.fill" size={48} color="#EF4444" />
-          <Text style={styles.errorTitle}>Failed to Load</Text>
-          <Text style={styles.errorMessage}>{error}</Text>
+<Text style={[styles.errorTitle, { color: palette.text }]}>Failed to Load</Text>
+<Text style={[styles.errorMessage, { color: palette.textSecondary }]}>{error}</Text>
           <ThemedButton title="Try Again" onPress={fetchNotifications} />
         </View>
       ) : (
@@ -259,8 +261,8 @@ export default function NotificationsScreen() {
           {notifications.length === 0 ? (
             <View style={styles.emptyContainer}>
               <IconSymbol name="bell.slash" size={48} color="#9CA3AF" />
-              <Text style={styles.emptyTitle}>No Notifications</Text>
-              <Text style={styles.emptyMessage}>
+<Text style={[styles.emptyTitle, { color: palette.text }]}>No Notifications</Text>
+<Text style={[styles.emptyMessage, { color: palette.textSecondary }]}>
                 You're all caught up! Notifications will appear here when there's activity.
               </Text>
             </View>

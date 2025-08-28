@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import { shadow } from '@/lib/ui/shadow';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { PlatformSubscription } from '@/lib/services/subscriptionService';
 import { AIUsageService } from '@/lib/services/aiUsageService';
@@ -40,6 +41,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
 }) => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
   const {
     subscription,
     isSubscriptionActive,
@@ -126,7 +128,9 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       return {
         status: 'Free',
         color: '#6B7280',
-        bgColor: ['#F3F4F6', '#E5E7EB'] as const,
+        bgColor: isDark
+          ? (['rgba(148,163,184,0.18)', 'rgba(148,163,184,0.08)'] as const)
+          : (['#F3F4F6', '#E5E7EB'] as const),
         icon: 'star.circle'
       };
     }
@@ -139,7 +143,9 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       return {
         status: 'Trial',
         color: '#F59E0B',
-        bgColor: ['#FEF3C7', '#FDE68A'] as const,
+        bgColor: isDark
+          ? (['rgba(245,158,11,0.18)', 'rgba(245,158,11,0.08)'] as const)
+          : (['#FEF3C7', '#FDE68A'] as const),
         icon: 'clock.fill'
       };
     }
@@ -148,7 +154,9 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       return {
         status: 'Active',
         color: '#10B981',
-        bgColor: ['#D1FAE5', '#A7F3D0'] as const,
+        bgColor: isDark
+          ? (['rgba(16,185,129,0.18)', 'rgba(16,185,129,0.08)'] as const)
+          : (['#D1FAE5', '#A7F3D0'] as const),
         icon: 'checkmark.circle.fill'
       };
     }
@@ -157,7 +165,9 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       return {
         status: 'Canceled',
         color: '#6B7280',
-        bgColor: ['#F3F4F6', '#E5E7EB'] as const,
+        bgColor: isDark
+          ? (['rgba(148,163,184,0.18)', 'rgba(148,163,184,0.08)'] as const)
+          : (['#F3F4F6', '#E5E7EB'] as const),
         icon: 'xmark.circle.fill'
       };
     }
@@ -166,7 +176,9 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       return {
         status: 'Expired',
         color: '#6B7280',
-        bgColor: ['#F3F4F6', '#E5E7EB'] as const,
+        bgColor: isDark
+          ? (['rgba(148,163,184,0.18)', 'rgba(148,163,184,0.08)'] as const)
+          : (['#F3F4F6', '#E5E7EB'] as const),
         icon: 'xmark.circle.fill'
       };
     }
@@ -176,7 +188,9 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       return {
         status: 'Past Due',
         color: '#EF4444',
-        bgColor: ['#FEE2E2', '#FECACA'] as const,
+        bgColor: isDark
+          ? (['rgba(239,68,68,0.18)', 'rgba(239,68,68,0.08)'] as const)
+          : (['#FEE2E2', '#FECACA'] as const),
         icon: 'exclamationmark.triangle.fill'
       };
     }
@@ -184,7 +198,9 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
     return {
       status: 'Inactive',
       color: '#6B7280',
-      bgColor: ['#F3F4F6', '#E5E7EB'] as const,
+      bgColor: isDark
+        ? (['rgba(148,163,184,0.18)', 'rgba(148,163,184,0.08)'] as const)
+        : (['#F3F4F6', '#E5E7EB'] as const),
       icon: 'xmark.circle.fill'
     };
   };
@@ -270,7 +286,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.manageButton}
+              style={[styles.manageButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}
               onPress={handleManagePress}
             >
               <IconSymbol name="gear" size={16} color={palette.textSecondary} />
@@ -290,7 +306,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
 
         {/* Trial Warning */}
         {isTrial && daysUntilExpiry !== null && daysUntilExpiry <= 7 && (
-          <View style={styles.warningContainer}>
+          <View style={[styles.warningContainer, { backgroundColor: isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)' }]}>
             <IconSymbol name="exclamationmark.triangle.fill" size={14} color="#F59E0B" />
             <Text style={[styles.warningText, { color: palette.text }]}>
               Trial expires in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? 's' : ''}
@@ -314,7 +330,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
                     AI Lessons
                   </Text>
                 </View>
-                <View style={styles.usageBar}>
+                <View style={[styles.usageBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
                   <View 
                     style={[
                       styles.usageBarFill,
@@ -338,7 +354,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
                     Homework AI
                   </Text>
                 </View>
-                <View style={styles.usageBar}>
+                <View style={[styles.usageBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
                   <View 
                     style={[
                       styles.usageBarFill,
@@ -405,15 +421,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
+    ...shadow(3),
+  } as any,
   cardGradient: {
     padding: 20,
   },
@@ -422,15 +431,8 @@ const styles = StyleSheet.create({
   compactCard: {
     borderRadius: 12,
     padding: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
+    ...shadow(2),
+  } as any,
   compactContent: {
     flexDirection: 'row',
     alignItems: 'center',
