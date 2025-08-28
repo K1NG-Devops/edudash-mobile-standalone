@@ -19,13 +19,15 @@ const MAPPING: IconMapping = {
   'house': 'home',
   'chevron.right': 'chevron-right',
   'chevron.left': 'chevron-left',
+  'chevron.down': 'expand-more',
+  'chevron.up': 'expand-less',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'arrow.up.right': 'trending-up',
+  'arrow.up': 'arrow-upward',
   'magnifyingglass': 'search',
   'xmark': 'close',
   'xmark.circle': 'cancel',
-  // 'arrow.clockwise' already defined above; avoid duplicate key
 
   // User & Authentication
   'person.circle.fill': 'account-circle',
@@ -45,20 +47,24 @@ const MAPPING: IconMapping = {
   'graduationcap': 'school',
   'doc.text.fill': 'description',
   'doc.text': 'description',
+  'doc.fill': 'description',
+  'document': 'description',
   'building.2.fill': 'business',
   'building.2': 'business',
+  'building.columns.fill': 'account-balance',
 
   // Analytics & Charts
   'chart.bar.fill': 'bar-chart',
   'chart.bar': 'bar-chart',
-  // removed duplicate mapping; keep single entry below
   'chart.pie': 'pie-chart',
+  'chart.pie.fill': 'pie-chart',
   'chart.line.uptrend.xyaxis': 'trending-up',
   'dollarsign.circle.fill': 'attach-money',
   'dollarsign': 'attach-money',
 
   // Communication
   'message.fill': 'message',
+  'bubble.left.and.bubble.right': 'forum',
   'bell': 'notifications',
   'bell.fill': 'notifications',
   'clock': 'schedule',
@@ -66,10 +72,14 @@ const MAPPING: IconMapping = {
   'megaphone': 'campaign',
   'envelope.fill': 'email',
   'envelope': 'email',
+  'newspaper.fill': 'article',
 
   // Media & Devices
   'video.fill': 'videocam',
   'gamecontroller.fill': 'sports-esports',
+  'camera.fill': 'photo-camera',
+  'photo': 'photo',
+  'play.fill': 'play-arrow',
 
   // Actions
   'flag.fill': 'flag',
@@ -78,12 +88,17 @@ const MAPPING: IconMapping = {
   'plus': 'add',
   'checkmark.circle.fill': 'check-circle',
   'checkmark.circle': 'check-circle',
+  'checkmark.seal.fill': 'verified',
   'exclamationmark.triangle.fill': 'warning',
+  'exclamationmark.triangle': 'warning',
   'clock.fill': 'schedule',
   'qrcode.viewfinder': 'qr-code-scanner',
   'sparkles': 'auto-awesome',
   'trash': 'delete',
-'phone.fill': 'phone',
+  'trash.fill': 'delete-forever',
+  'trash.circle': 'delete-forever',
+  'xmark.circle.fill': 'highlight-off',
+  'phone.fill': 'phone',
   'lock.fill': 'lock',
   'lock': 'lock',
   'person.2': 'people',
@@ -103,13 +118,13 @@ const MAPPING: IconMapping = {
   'line.3.horizontal.decrease': 'filter-list',
   'arrow.clockwise': 'refresh',
   'snack.circle': 'local-dining',
-  'trash.circle': 'delete-forever',
 
   // Family
   'figure.2.and.child.holdinghands': 'family-restroom',
 
   // Settings & Info
   'questionmark.circle': 'help',
+  'questionmark.circle.fill': 'help',
   'info.circle': 'info',
   'info.circle.fill': 'info',
   'lock.shield': 'security',
@@ -132,10 +147,14 @@ const MAPPING: IconMapping = {
   'line.3.horizontal': 'menu',
   'globe': 'public',
   'globe.americas': 'public',
+  'ellipsis.vertical': 'more-vert',
 
   // AI & Brain
   'brain.head.profile': 'psychology',
+  'brain': 'psychology',
   'cpu': 'memory',
+  'lightbulb': 'lightbulb',
+  'bolt': 'flash-on',
 
   // Parent Dashboard Specific Icons
   'heart.fill': 'favorite',
@@ -144,14 +163,21 @@ const MAPPING: IconMapping = {
 
   // Additional missing icons
   'wrench': 'build',
+  'wrench.and.screwdriver.fill': 'build',
   'mail': 'mail',
   'checkmark': 'check',
   'x': 'close',
   'arrow.right': 'arrow-forward',
-  'trash.fill': 'delete-forever',
-  'document': 'description',
   'rectangle.3.group.fill': 'dashboard',
+  'rectangle.3.group': 'dashboard',
+  'rectangle.and.pencil.and.ellipsis': 'edit',
+  'shield.checkered': 'security',
+  'shield.fill': 'security',
+  'ticket': 'confirmation-number',
 };
+
+// Track dev-only warnings for unmapped icons
+const warnedUnmapped = new Set<string>();
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
@@ -171,10 +197,10 @@ export function IconSymbol({
 }) {
   const mapped = MAPPING[name];
   const safeName = mapped || 'help';
-  if (!mapped) {
-    // Log once per missing key to avoid noisy logs
-    if (process.env.NODE_ENV !== 'production') {
-      // Removed debug statement: console.warn(`[IconSymbol] Unmapped icon name "${name}". Falling back to "${safeName}".`);
+  if (!mapped && process.env.NODE_ENV !== 'production') {
+    if (!warnedUnmapped.has(name)) {
+      console.warn(`[IconSymbol] Unmapped icon "${name}". Falling back to "${safeName}".`);
+      warnedUnmapped.add(name);
     }
   }
   return <MaterialIcons color={color} size={size} name={safeName} style={style} />;
