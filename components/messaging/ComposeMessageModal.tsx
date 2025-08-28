@@ -98,107 +98,29 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
 
     try {
       setLoading(true);
-
       await waitForAuthSession();
 
-      // Get parent's internal ID
-      const { data: parentProfile, error: parentError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', profile.auth_user_id)
-        .single();
+      // Fetch contacts via SECURITY DEFINER RPC (scoped to same preschool)
+      const { data, error } = await supabase.rpc('get_messaging_contacts', {
+        p_include_staff: true,
+        p_include_parents: true,
+        p_limit: 500,
+      });
 
-      if (parentError || !parentProfile) {
-        throw new Error('Parent profile not found');
-      }
+      if (error) throw error;
 
-      const allContacts: Contact[] = [];
+      const mapped: Contact[] = (data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name || 'Unknown',
+        role: row.role,
+        avatar_url: row.avatar_url || undefined,
+        email: row.email || undefined,
+        class_name: row.class_name || undefined,
+        is_online: false,
+      }));
 
-      // Load teachers and staff from the same preschool
-      const { data: teachersData, error: teachersError } = await supabase
-        .from('users')
-        .select(`
-          id,
-          name,
-          role,
-          avatar_url,
-          email,
-          classes (
-            name
-          )
-        `)
-        .eq('preschool_id', profile.preschool_id)
-        .in('role', ['teacher', 'admin', 'principal', 'preschool_admin'])
-        .or('is_active.is.null,is_active.eq.true')
-        .neq('id', parentProfile.id);
-
-      if (!teachersError && teachersData) {
-        teachersData.forEach((teacher: any) => {
-          allContacts.push({
-            id: teacher.id,
-            name: teacher.name || 'Unknown',
-            role: teacher.role,
-            avatar_url: teacher.avatar_url,
-            email: teacher.email,
-            class_name: teacher.classes?.name,
-  // TODO: Replace with real presence status
-  is_online: false,
-          });
-        });
-      }
-
-      // Load other parents with children in the same classes
-      if (safeChildrenList.length > 0) {
-        const classIds = safeChildrenList.map(child => child.class_id).filter(Boolean);
-        if (classIds.length > 0) {
-          // Step 1: fetch parent IDs per class
-          const { data: studentsSimple, error: parentsError } = await supabase
-            .from('students')
-            .select('parent_id, class_id')
-            .in('class_id', classIds)
-            .neq('parent_id', parentProfile.id);
-
-          if (!parentsError && studentsSimple) {
-            const parentIds = Array.from(new Set((studentsSimple || []).map((s: any) => s.parent_id).filter(Boolean)));
-            let classNameById: Record<string, string> = {};
-            try {
-              const { data: classRows } = await supabase
-                .from('classes')
-                .select('id, name')
-                .in('id', classIds);
-              (classRows || []).forEach((c: any) => { classNameById[c.id] = c.name; });
-            } catch {}
-
-            if (parentIds.length > 0) {
-              const { data: parentUsers } = await supabase
-                .from('users')
-                .select('id, name, avatar_url, email')
-                .in('id', parentIds);
-              const firstClassForParent: Record<string, string | undefined> = {};
-              (studentsSimple || []).forEach((s: any) => {
-                if (!firstClassForParent[s.parent_id]) firstClassForParent[s.parent_id] = s.class_id;
-              });
-              (parentUsers || []).forEach((u: any) => {
-                allContacts.push({
-                  id: u.id,
-                  name: u.name || 'Unknown Parent',
-                  role: 'parent',
-                  avatar_url: u.avatar_url,
-                  email: u.email,
-                  class_name: classNameById[firstClassForParent[u.id] || '']
-                  ,
-  // TODO: Replace with real presence status
-  is_online: false,
-                });
-              });
-            }
-          }
-        }
-      }
-
-      setContacts(allContacts);
+      setContacts(mapped);
     } catch (error) {
-      // Removed debug statement: console.error('Error loading contacts:', error);
       Alert.alert('Error', 'Failed to load contacts');
     } finally {
       setLoading(false);
