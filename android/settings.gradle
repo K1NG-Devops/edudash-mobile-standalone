@@ -1,6 +1,27 @@
 pluginManagement {
   // Ensure Gradle can find Node even when Android Studio's environment lacks PATH
-  def nodeExecutable = System.getenv('NODE_BINARY') ?: System.getenv('NODE') ?: '/usr/bin/node'
+  // Resolve Node executable robustly across environments (EAS, Android Studio, CI)
+  def resolveNodeExecutable = {
+    def candidates = []
+    if (System.getenv('NODE_BINARY')) candidates << System.getenv('NODE_BINARY')
+    if (System.getenv('NODE')) candidates << System.getenv('NODE')
+    // Common install locations on Linux/macOS
+    candidates += ['/usr/local/bin/node', '/opt/homebrew/bin/node', '/usr/bin/node']
+    // Fallback to PATH resolution
+    candidates << 'node'
+
+    for (c in candidates) {
+      if (!c) continue
+      if (c == 'node') return c
+      try {
+        if (new File(c).canExecute()) return c
+      } catch (Throwable ignored) {
+        // ignore
+      }
+    }
+    return 'node'
+  }
+  def nodeExecutable = resolveNodeExecutable()
 
   def reactNativeGradlePlugin = new File(
     providers.exec {
