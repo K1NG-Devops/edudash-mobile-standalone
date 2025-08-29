@@ -1,0 +1,62 @@
+# Development files
+node_modules/
+.expo/
+.git/
+.vercel/
+
+# Build artifacts not needed for deployment
+android/
+ios/
+*.jks
+*.p8
+*.p12
+
+# Cache and temp files
+.tmp-bundle/
+tsconfig.tsbuildinfo
+logs/
+
+# IDE files
+.idea/
+.vscode/
+.cursor/
+
+# Test files
+__tests__/
+*.test.*
+
+# Documentation
+docs/
+README.md
+*.md
+
+# Scripts and development tools
+scripts/
+project-scripts/
+Makefile
+*.sh
+
+# Backup files
+*.backup
+.git-backup/
+
+# Environment files (use Vercel env vars instead)
+.env
+.env.local
+.env.example
+
+# Database files
+database/
+supabase/
+database-migrations/
+*.sql
+*.js
+
+# Large assets not needed for web
+public/
+assets/icons/
+assets/splash/
+
+# Legacy files
+legacy/
+src/

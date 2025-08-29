@@ -2,25 +2,52 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "EduDash Pro Mobile",
-    slug: "edudash-pro-mobile",
+    name: "EduDash Pro",
+    slug: "edudashpro-app",
     version: "1.0.0",
+    runtimeVersion: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "edudashpro",
     userInterfaceStyle: "automatic",
-    owner: "k1ng-devops",
+    newArchEnabled: false,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.edudashpro.mobile"
+      bundleIdentifier: "com.edudashpro.app",
+      // Enable Universal Links for password reset and invitations
+      associatedDomains: [
+        "applinks:www.edudashpro.org.za"
+      ]
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
+      package: "com.edudashpro.app",
+      permissions: [
+        "INTERNET",
+        "CAMERA",
+        // Android 13+ runtime permission for notifications
+        "POST_NOTIFICATIONS"
+      ],
+      // If you add your Firebase config, point to it here (required for background push on Android)
+      googleServicesFile: "./android/app/google-services.json",
       edgeToEdgeEnabled: true,
-      package: "com.edudashpro.mobile"
+      // Enable Android App Links so https://www.edudashpro.org.za/open in the app
+      intentFilters: [
+        {
+          action: "VIEW",
+          data: [
+            {
+              scheme: "https",
+              host: "www.edudashpro.org.za",
+              pathPrefix: "/"
+            }
+          ],
+          category: ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     web: {
       bundler: "metro",
@@ -29,6 +56,9 @@ export default {
     },
     plugins: [
       "expo-router",
+      "expo-dev-client",
+      "expo-secure-store",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {
@@ -37,25 +67,41 @@ export default {
           resizeMode: "contain",
           backgroundColor: "#ffffff"
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          // Use correct camelCase keys expected by the plugin
+          androidAppId: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713",
+          iosAppId: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID || "ca-app-pub-3940256099942544~1458002511"
+        }
       ]
     ],
+    // Some libraries read from this key in app.json/config (kept for compatibility)
+    "react-native-google-mobile-ads": {
+      android_app_id: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713",
+      ios_app_id: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID || "ca-app-pub-3940256099942544~1458002511"
+    },
     experiments: {
       typedRoutes: true
+    },
+    developmentClient: {
+      silentLaunch: true,
+      // Disable development overlay in production builds
+      launcher: process.env.NODE_ENV === 'production' ? 'disable' : 'auto'
     },
     extra: {
       router: {},
       eas: {
-        projectId: "09b1f081-3817-49b2-882f-ca873dc2e9ec"
+        projectId: "b1fd3356-08ed-4331-92b5-52a7be4cd4bc"
       },
-      // Expose environment variables through extra
-      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-    },
-    runtimeVersion: {
-      policy: "appVersion"
+      revenuecat: {
+        iosSdkKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_SDK_KEY || null,
+        androidSdkKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_SDK_KEY || null
+      }
     },
     updates: {
-      url: "https://u.expo.dev/33a263ac-0d01-480c-bc1b-384873cd2b47"
+      url: "https://u.expo.dev/b1fd3356-08ed-4331-92b5-52a7be4cd4bc"
     }
   }
 };

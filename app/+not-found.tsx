@@ -1,20 +1,22 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
-
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
 export default function NotFoundScreen() {
   return (
-    <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
-      <ThemedView style={styles.container}>
-        <ThemedText type="title">This screen does not exist.</ThemedText>
-        <Link href="/" style={styles.link}>
-          <ThemedText type="link">Go to home screen!</ThemedText>
-        </Link>
-      </ThemedView>
-    </>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.emoji}>🔎</Text>
+        <Text style={styles.title}>Page Not Found</Text>
+        <Text style={styles.message}>
+          The page you are looking for doesn’t exist or may have moved.
+        </Text>
+        <TouchableOpacity style={styles.button} onPress={() => router.replace('/')}>
+          <Text style={styles.buttonText}>Go Home</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -23,10 +25,38 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: 24,
+    backgroundColor: '#0a0a0f',
   },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
+  content: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  emoji: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  message: {
+    fontSize: 14,
+    color: '#9aa0a6',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  button: {
+    marginTop: 16,
+    backgroundColor: '#00f5ff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  buttonText: {
+    color: '#000',
+    fontWeight: '700',
   },
 });
+

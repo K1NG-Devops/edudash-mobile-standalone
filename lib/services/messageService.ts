@@ -1,15 +1,25 @@
 import { supabase } from '@/lib/supabase';
-import { 
-  Message, 
-  MessageRecipient, 
-  MessageDraft, 
-  MessageNotification,
-  MessageType,
-  MessageRecipientType 
+import { createLogger } from '@/lib/utils/logger';
+import {
+  MessageRecipientType,
+  MessageType
 } from '@/types/types';
+const log = createLogger('message');
 
 export class MessageService {
-  // Get user's messages (inbox)
+  // Subscribe to new messages for a user via Realtime channel
+  static subscribeToUserMessages(userId: string, preschoolId: string, callback: (payload: any) => void) {
+    const channel = (supabase as any).channel(`messages_user_${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_recipients', filter: `recipient_id=eq.${userId}` }, (payload: any) => {
+        callback(payload.new);
+      })
+      .subscribe();
+
+    return () => {
+      try { (supabase as any).removeChannel(channel); } catch { }
+    };
+  }
+
   static async getUserMessages(userId: string, preschoolId: string, limit = 50, offset = 0) {
     try {
       const { data, error } = await supabase
@@ -23,19 +33,32 @@ export class MessageService {
           )
         `)
         .or(`recipient_id.eq.${userId},recipient_id.eq.${preschoolId}`)
-        .eq('message.preschool_id', preschoolId)
+        // Filter on the joined messages table (PostgREST expects the table name, not the alias)
+        .eq('messages.preschool_id', preschoolId)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching user messages:', error);
+      log.error('Error fetching user messages:', error);
       return { data: null, error };
     }
   }
 
-  // Get user's sent messages
+  // Subscribe to sent messages by a user via Realtime channel
+  static subscribeToSentMessages(userId: string, preschoolId: string, callback: (message: any) => void) {
+    const channel = (supabase as any).channel(`messages_sent_${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${userId}` }, (payload: any) => {
+        callback(payload.new);
+      })
+      .subscribe();
+
+    return () => {
+      try { (supabase as any).removeChannel(channel); } catch { }
+    };
+  }
+
   static async getSentMessages(userId: string, preschoolId: string, limit = 50, offset = 0) {
     try {
       const { data, error } = await supabase
@@ -54,7 +77,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching sent messages:', error);
+      log.error('Error fetching sent messages:', error);
       return { data: null, error };
     }
   }
@@ -66,7 +89,7 @@ export class MessageService {
     subject: string,
     content: string,
     messageType: MessageType,
-    recipients: Array<{ type: MessageRecipientType; id: string }>,
+    recipients: { type: MessageRecipientType; id: string }[],
     options?: {
       priority?: 'low' | 'normal' | 'high' | 'urgent';
       attachmentUrls?: string[];
@@ -86,7 +109,7 @@ export class MessageService {
           subject,
           content,
           message_type: messageType,
-          priority: options?.priority || 'normal',
+          priority: (options?.priority as 'low' | 'normal' | 'high' | 'urgent' | undefined) ?? 'normal',
           attachment_urls: options?.attachmentUrls || null,
           scheduled_send_at: options?.scheduledSendAt || null,
           expires_at: options?.expiresAt || null,
@@ -116,7 +139,7 @@ export class MessageService {
 
       return { data: message, error: null };
     } catch (error) {
-      console.error('Error sending message:', error);
+      log.error('Error sending message:', error);
       return { data: null, error };
     }
   }
@@ -143,8 +166,8 @@ export class MessageService {
       if (fetchError) throw fetchError;
 
       // Create reply subject
-      const replySubject = originalMessage.subject.startsWith('Re: ') 
-        ? originalMessage.subject 
+      const replySubject = (originalMessage.subject || '').startsWith('Re: ')
+        ? originalMessage.subject
         : `Re: ${originalMessage.subject}`;
 
       // Get original recipients (excluding the current sender)
@@ -163,15 +186,15 @@ export class MessageService {
         preschoolId,
         replySubject,
         content,
-        originalMessage.message_type,
+        (originalMessage.message_type as any) ?? 'general',
         recipients,
         {
           attachmentUrls,
-          priority: originalMessage.priority,
+          priority: (originalMessage.priority ?? undefined) as 'low' | 'normal' | 'high' | 'urgent' | undefined,
         }
       );
     } catch (error) {
-      console.error('Error replying to message:', error);
+      log.error('Error replying to message:', error);
       return { data: null, error };
     }
   }
@@ -181,9 +204,9 @@ export class MessageService {
     try {
       const { error } = await supabase
         .from('message_recipients')
-        .update({ 
-          is_read: true, 
-          read_at: new Date().toISOString() 
+        .update({
+          is_read: true,
+          read_at: new Date().toISOString()
         })
         .eq('message_id', messageId)
         .eq('recipient_id', userId);
@@ -191,7 +214,7 @@ export class MessageService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error marking message as read:', error);
+      log.error('Error marking message as read:', error);
       return { error };
     }
   }
@@ -201,7 +224,7 @@ export class MessageService {
     try {
       const { error } = await supabase
         .from('message_recipients')
-        .update({ 
+        .update({
           is_archived: archived,
           archived_at: archived ? new Date().toISOString() : null
         })
@@ -211,7 +234,7 @@ export class MessageService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error toggling message archive:', error);
+      log.error('Error toggling message archive:', error);
       return { error };
     }
   }
@@ -229,36 +252,37 @@ export class MessageService {
       if (error) throw error;
       return { count, error: null };
     } catch (error) {
-      console.error('Error getting unread count:', error);
+      log.error('Error getting unread count:', error);
       return { count: 0, error };
     }
   }
 
   // Search messages
   static async searchMessages(
-    userId: string, 
-    preschoolId: string, 
-    query: string, 
+    userId: string,
+    preschoolId: string,
+    query: string,
     limit = 20
   ) {
     try {
+      const term = `%${query}%`;
       const { data, error } = await supabase
-        .from('message_recipients')
+        .from('messages')
         .select(`
           *,
-          message:messages(
-            *,
-            sender:users!messages_sender_id_fkey(id, name, avatar_url, role)
-          )
+          sender:users!messages_sender_id_fkey(id, name, avatar_url, role),
+          message_recipients!inner(recipient_id)
         `)
-        .eq('recipient_id', userId)
-        .textSearch('message.subject', query)
+        .eq('preschool_id', preschoolId)
+        .eq('message_recipients.recipient_id', userId)
+        .or(`subject.ilike.${term},content.ilike.${term}`)
+        .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error searching messages:', error);
+      log.error('Error searching messages:', error);
       return { data: null, error };
     }
   }
@@ -293,7 +317,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error saving draft:', error);
+      log.error('Error saving draft:', error);
       return { data: null, error };
     }
   }
@@ -311,7 +335,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching drafts:', error);
+      log.error('Error fetching drafts:', error);
       return { data: null, error };
     }
   }
@@ -328,7 +352,7 @@ export class MessageService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error deleting draft:', error);
+      log.error('Error deleting draft:', error);
       return { error };
     }
   }
@@ -336,30 +360,32 @@ export class MessageService {
   // Create notifications for message recipients
   private static async createNotifications(
     messageId: string,
-    recipients: Array<{ type: MessageRecipientType; id: string }>,
+    recipients: { type: MessageRecipientType; id: string }[],
     messageType: MessageType
   ) {
     try {
       const notificationType = this.getNotificationType(messageType);
-      
+
       // Only create notifications for user recipients
       const userRecipients = recipients.filter(r => r.type === 'user');
-      
+
       if (userRecipients.length === 0) return;
 
       const notifications = userRecipients.map(recipient => ({
         user_id: recipient.id,
-        message_id: messageId,
-        notification_type: notificationType,
+        title: 'New Message',
+        message: `You have a new ${messageType} message`,
+        type: notificationType,
+        action_url: `/messages/${messageId}`,
       }));
 
       const { error } = await supabase
-        .from('message_notifications')
+        .from('notifications')
         .insert(notifications);
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error creating notifications:', error);
+      log.error('Error creating notifications:', error);
     }
   }
 
@@ -379,7 +405,7 @@ export class MessageService {
   // Get possible recipients for a user (based on their role and preschool)
   static async getPossibleRecipients(userId: string, preschoolId: string, userRole: string) {
     try {
-      let query = supabase
+      let query: any = supabase
         .from('users')
         .select('id, name, email, role, avatar_url')
         .eq('preschool_id', preschoolId)
@@ -413,7 +439,7 @@ export class MessageService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching possible recipients:', error);
+      log.error('Error fetching possible recipients:', error);
       return { data: null, error };
     }
   }

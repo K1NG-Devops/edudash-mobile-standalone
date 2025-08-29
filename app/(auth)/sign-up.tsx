@@ -1,358 +1,223 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { createOnboardingRequest } from '@/lib/services/onboardingService';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/contexts/NoHooksAuthContext';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
 
-export default function SignUpScreen() {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    fullName: '',
-    role: 'teacher' as 'principal' | 'teacher',
-  });
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signUp } = useAuth();
+export default function SignUp() {
+    const params = useLocalSearchParams();
+    const presetType = (params?.type as string) || '';
+    const presetRole = (params?.role as string) || '';
 
-  const handleSignUp = async () => {
-    if (!formData.email.trim() || !formData.password.trim() || !formData.fullName.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      return;
-    }
+    const isSchoolFlow = presetType === 'school' || presetRole === 'principal' || presetRole === 'admin';
 
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      return;
-    }
+    // School registration fields
+    const [schoolName, setSchoolName] = useState('');
+    const [adminName, setAdminName] = useState('');
+    const [adminEmail, setAdminEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [address, setAddress] = useState('');
+    const [numStudents, setNumStudents] = useState('');
+    const [numTeachers, setNumTeachers] = useState('');
+    const [message, setMessage] = useState('');
 
-    if (formData.password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      return;
-    }
+    // Individual sign-up fields
+    const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
 
-    setLoading(true);
-    
-    try {
-      const { error } = await signUp(formData.email.trim(), formData.password, {
-        full_name: formData.fullName.trim(),
-        role: formData.role,
-      });
-      
-      if (error) {
-        Alert.alert('Sign Up Failed', error);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Success', 'Account created successfully! Please sign in.');
-        router.replace('/(auth)/sign-in');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const [submitting, setSubmitting] = useState(false);
+    const { signUp, signIn } = useAuth();
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join EduDash Pro as an educator</Text>
-          </View>
+    const handleSubmit = async () => {
+        if (isSchoolFlow) {
+            if (!schoolName.trim() || !adminName.trim() || !adminEmail.trim()) {
+                Alert.alert('Missing info', 'Please complete School, Admin Name and Admin Email.');
+                return;
+            }
+            try {
+                setSubmitting(true);
+                await createOnboardingRequest({
+                    preschoolName: schoolName.trim(),
+                    adminName: adminName.trim(),
+                    adminEmail: adminEmail.trim(),
+                    phone: phone.trim() || undefined,
+                    address: address.trim() || undefined,
+                    numberOfStudents: numStudents.trim() || undefined,
+                    numberOfTeachers: numTeachers.trim() || undefined,
+                    message: message.trim() || undefined,
+                });
+                Alert.alert('Submitted', 'Your school registration request was sent for approval.');
+                router.replace('/(auth)/sign-in');
+            } catch (e: any) {
+                Alert.alert('Error', e?.message || 'Failed to submit.');
+            } finally {
+                setSubmitting(false);
+            }
+            return;
+        }
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Full Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.fullName}
-                onChangeText={(text) => setFormData({ ...formData, fullName: text })}
-                placeholder="Enter your full name"
-                autoCapitalize="words"
-                editable={!loading}
-              />
-            </View>
+        // Individual user sign-up and subscription flow
+        if (!fullName.trim() || !email.trim() || !password.trim()) {
+            Alert.alert('Missing info', 'Please enter your name, email and password.');
+            return;
+        }
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email Address *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.email}
-                onChangeText={(text) => setFormData({ ...formData, email: text })}
-                placeholder="Enter your email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-              />
-            </View>
+        const plan = params?.plan as string | undefined;
+        const role = (params?.role as string | undefined) || presetRole || 'parent';
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Role *</Text>
-              <View style={styles.roleContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.roleButton,
-                    formData.role === 'principal' && styles.roleButtonActive
-                  ]}
-                  onPress={() => setFormData({ ...formData, role: 'principal' })}
-                  disabled={loading}
-                >
-                  <Text style={[
-                    styles.roleButtonText,
-                    formData.role === 'principal' && styles.roleButtonTextActive
-                  ]}>
-                    Principal
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.roleButton,
-                    formData.role === 'teacher' && styles.roleButtonActive
-                  ]}
-                  onPress={() => setFormData({ ...formData, role: 'teacher' })}
-                  disabled={loading}
-                >
-                  <Text style={[
-                    styles.roleButtonText,
-                    formData.role === 'teacher' && styles.roleButtonTextActive
-                  ]}>
-                    Teacher
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+        try {
+            setSubmitting(true);
+            // 1) Create auth account
+            const res = await signUp(email.trim().toLowerCase(), password, { name: fullName.trim(), role });
+            if (res?.error) {
+                Alert.alert('Sign up failed', res.error);
+                setSubmitting(false);
+                return;
+            }
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password *</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.inputWithIcon}
-                  value={formData.password}
-                  onChangeText={(text) => setFormData({ ...formData, password: text })}
-                  placeholder="Enter your password"
-                  secureTextEntry={!showPassword}
-                  editable={!loading}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  disabled={loading}
-                  style={styles.eyeButton}
-                >
-                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-            </View>
+            // 2) Try to sign the user in (in case email confirmation is not enforced)
+            const signInRes = await signIn(email.trim().toLowerCase(), password);
+            if (signInRes?.error) {
+                // If sign in failed, likely email confirmation required
+                Alert.alert(
+                    'Confirm your email',
+                    'We sent you a confirmation link. Please confirm your email, then sign in to continue.'
+                );
+                router.replace('/(auth)/sign-in');
+                setSubmitting(false);
+                return;
+            }
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirm Password *</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.inputWithIcon}
-                  value={formData.confirmPassword}
-                  onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-                  placeholder="Confirm your password"
-                  secureTextEntry={!showConfirmPassword}
-                  editable={!loading}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={loading}
-                  style={styles.eyeButton}
-                >
-                  <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-            </View>
+            // 3) Route to subscription completion if plan selected, else dashboard
+            if (plan && role) {
+                router.replace(`/(auth)/sign-up-complete?plan=${plan}&role=${role}`);
+            } else {
+                router.replace('/(tabs)/dashboard');
+            }
+        } catch (e: any) {
+            Alert.alert('Error', e?.message || 'Unexpected error occurred.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
-            <TouchableOpacity
-              style={[styles.signUpButton, loading && styles.disabledButton]}
-              onPress={handleSignUp}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.signUpButtonText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
+    return (
+        <>
+            <StatusBar barStyle="light-content" />
+            <LinearGradient colors={['#1e3c72', '#2a5298']} style={styles.container}>
+                <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                    <SafeAreaView style={styles.flex}>
+                        <View style={styles.header}>
+                            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                                <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
+                            </TouchableOpacity>
+                            <Text style={styles.title}>{isSchoolFlow ? 'Register Your School' : 'Create Account'}</Text>
+                        </View>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
+                        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                            {isSchoolFlow ? (
+                                <>
+                                    <Text style={styles.subtitle}>Submit your school for Super Admin approval</Text>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="building.2" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="School Name" placeholderTextColor="#FFFFFF80" value={schoolName} onChangeText={setSchoolName} />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="person.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Admin Full Name" placeholderTextColor="#FFFFFF80" value={adminName} onChangeText={setAdminName} />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="envelope.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Admin Email" placeholderTextColor="#FFFFFF80" value={adminEmail} onChangeText={setAdminEmail} autoCapitalize="none" keyboardType="email-address" />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="phone.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Phone (optional)" placeholderTextColor="#FFFFFF80" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="location.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Address (optional)" placeholderTextColor="#FFFFFF80" value={address} onChangeText={setAddress} />
+                                    </View>
+                                    <View style={styles.rowInputs}>
+                                        <View style={[styles.inputContainer, styles.rowItem]}>
+                                            <IconSymbol name="graduationcap.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                            <TextInput style={styles.input} placeholder="# Students" placeholderTextColor="#FFFFFF80" value={numStudents} onChangeText={setNumStudents} keyboardType="number-pad" />
+                                        </View>
+                                        <View style={[styles.inputContainer, styles.rowItem]}>
+                                            <IconSymbol name="person.3" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                            <TextInput style={styles.input} placeholder="# Teachers" placeholderTextColor="#FFFFFF80" value={numTeachers} onChangeText={setNumTeachers} keyboardType="number-pad" />
+                                        </View>
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="doc.text.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Message (optional)" placeholderTextColor="#FFFFFF80" value={message} onChangeText={setMessage} />
+                                    </View>
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={styles.subtitle}>Create your EduDash Pro account</Text>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="person.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Full Name" placeholderTextColor="#FFFFFF80" value={fullName} onChangeText={setFullName} />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="envelope.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#FFFFFF80" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <IconSymbol name="lock.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#FFFFFF80" value={password} onChangeText={setPassword} secureTextEntry />
+                                    </View>
+                                </>
+                            )}
 
-            <TouchableOpacity
-              style={styles.signInButton}
-              onPress={() => router.push('/(auth)/sign-in')}
-              disabled={loading}
-            >
-              <Text style={styles.signInText}>Already have an account? Sign In</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+                            <TouchableOpacity style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={submitting} activeOpacity={0.8}>
+                                <Text style={styles.buttonText}>{isSchoolFlow ? 'Submit for Approval' : 'Create Account'}</Text>
+                            </TouchableOpacity>
+
+                            {!isSchoolFlow && (
+                              <TouchableOpacity style={[styles.altButton]} onPress={() => router.push('/(auth)/join-with-code')}>
+                                <Text style={styles.altButtonText}>Have a code? Join with code</Text>
+                              </TouchableOpacity>
+                            )}
+                        </ScrollView>
+                    </SafeAreaView>
+                </KeyboardAvoidingView>
+            </LinearGradient>
+        </>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-  },
-  header: {
-    alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  form: {
-    flex: 1,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 16,
-  },
-  inputWithIcon: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#374151',
-  },
-  eyeButton: {
-    padding: 4,
-  },
-  roleContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  roleButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  roleButtonActive: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#EBF4FF',
-  },
-  roleButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  roleButtonTextActive: {
-    color: '#3B82F6',
-    fontWeight: '600',
-  },
-  signUpButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 24,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  signUpButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    color: '#6B7280',
-    marginHorizontal: 16,
-    fontSize: 14,
-  },
-  signInButton: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  signInText: {
-    color: '#3B82F6',
-    fontSize: 16,
-    fontWeight: '500',
-  },
+    flex: { flex: 1 },
+    container: { flex: 1 },
+    header: { paddingTop: 20, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+    backButton: { position: 'absolute', left: 20, top: 20, padding: 8 },
+    title: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'center' },
+    content: { padding: 24 },
+    subtitle: { fontSize: 14, color: '#FFFFFFA0', textAlign: 'center', marginBottom: 16 },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF20', borderRadius: 12, marginBottom: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: '#FFFFFF30' },
+    inputIcon: { marginRight: 10 },
+    input: { flex: 1, height: 48, color: '#FFFFFF', fontSize: 16 },
+    rowInputs: { flexDirection: 'row', gap: 10 },
+    rowItem: { flex: 1 },
+    button: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 10 },
+    buttonDisabled: { backgroundColor: '#FFFFFF90' },
+    buttonText: { color: '#1e3c72', fontSize: 16, fontWeight: 'bold' },
+    altButton: { padding: 12, alignItems: 'center' },
+    altButtonText: { color: '#FFFFFF', fontSize: 15, textDecorationLine: 'underline' },
 });
+
+
+
+
+
+
+
+
+
+

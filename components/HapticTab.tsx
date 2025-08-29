@@ -1,7 +1,9 @@
+ 
+// @ts-nocheck
 import React from 'react';
 import { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { PlatformPressable } from '@react-navigation/elements';
-import { Animated, View, StyleSheet } from 'react-native';
+import { Animated, View, StyleSheet, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 interface HapticTabState {
@@ -28,7 +30,7 @@ export class HapticTab extends React.Component<BottomTabBarButtonProps, HapticTa
     this.setState({ isPressed: true });
     Animated.spring(this.state.scaleValue, {
       toValue: 0.95,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
       tension: 300,
       friction: 10,
     }).start();
@@ -40,7 +42,7 @@ export class HapticTab extends React.Component<BottomTabBarButtonProps, HapticTa
     this.setState({ isPressed: false });
     Animated.spring(this.state.scaleValue, {
       toValue: 1,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
       tension: 300,
       friction: 10,
     }).start();

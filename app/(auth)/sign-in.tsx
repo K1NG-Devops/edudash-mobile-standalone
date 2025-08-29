@@ -1,466 +1,364 @@
-import React from 'react';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { supabase } from '@/lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
-interface SignInState {
-  email: string;
-  password: string;
-  loading: boolean;
-  showPassword: boolean;
-}
+export default function SignIn() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const { signIn } = useAuth();
+  const params = useLocalSearchParams();
 
-class SignInScreen extends React.Component<{}, SignInState> {
-  constructor(props: {}) {
-    super(props);
-    this.state = {
-      email: '',
-      password: '',
-      loading: false,
-      showPassword: false,
-    };
-  }
+  // Check for password reset success parameter
+  useEffect(() => {
+    if (params.passwordReset === 'success') {
+      setShowSuccessMessage(true);
+      // Auto-hide success message after 5 seconds
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 5000);
 
-  handleSignIn = async (signIn: (email: string, password: string) => Promise<{ error?: string }>) => {
-    const { email, password } = this.state;
-    
+      return () => clearTimeout(timer);
+    }
+  }, [params.passwordReset]);
+
+  const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
-    this.setState({ loading: true });
-    
+    setLoading(true);
     try {
-      const { error } = await signIn(email.trim(), password);
-      
-      if (error) {
-        Alert.alert('Sign In Failed', error);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const result = await signIn(email.trim(), password);
+      if (result.error) {
+        Alert.alert('Sign In Failed', result.error);
       } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/(tabs)');
+        // After sign-in, decide destination by role and check if password reset is needed
+        // Wait briefly for profile to be available to avoid race with auth listener/RLS
+        try {
+          const { data: userResult } = await supabase.auth.getUser();
+          const authId = userResult.user?.id;
+
+          const waitForProfile = async (
+            id: string,
+            attempts = 8,
+            delayMs = 200
+          ): Promise<{ role: string; passwordResetRequired: boolean } | null> => {
+            for (let i = 0; i < attempts; i++) {
+              const { data: profile, error: roleErr } = await supabase
+                .from('users')
+                .select('role, password_reset_required')
+                .eq('auth_user_id', id)
+                .single();
+              if (!roleErr && profile?.role) {
+                return {
+                  role: profile.role as string,
+                  passwordResetRequired: profile.password_reset_required || false
+                };
+              }
+              await new Promise((r) => setTimeout(r, delayMs));
+            }
+            return null;
+          };
+
+          if (authId) {
+            const profileData = await waitForProfile(authId);
+
+            // Check if user needs to reset their password
+            if (profileData?.passwordResetRequired) {
+              Alert.alert(
+                'Password Reset Required',
+                'Please set a new password to continue.',
+                [
+                  {
+                    text: 'Set New Password',
+                    onPress: () => router.replace('/reset-password')
+                  }
+                ]
+              );
+              return;
+            }
+
+            if (profileData?.role === 'superadmin') {
+              router.replace('/screens/super-admin-dashboard');
+              return;
+            }
+          }
+        } catch { }
+        // Fallback route for non-superadmin or if lookup fails
+        router.replace('/(tabs)/dashboard');
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
-      this.setState({ loading: false });
+      setLoading(false);
     }
   };
 
-  renderContent = (auth: any) => {
-    const { signIn } = auth;
-    const { email, password, loading } = this.state;
-
-    if (loading) {
-      return <LoadingSpinner message="Signing you in..." showGradient={true} />;
-    }
-
-    return (
-      <SafeAreaView style={styles.container}>
-        <LinearGradient
-          colors={['#667eea', '#764ba2']}
-          style={styles.gradient}
+  return (
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <LinearGradient
+        colors={['#1e3c72', '#2a5298']}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.keyboardView}
-          >
-            <ScrollView 
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Header with Back Button */}
-              <View style={styles.headerRow}>
-                <TouchableOpacity 
-                  style={styles.backButton}
-                  onPress={() => router.back()}
-                >
-                  <Ionicons name="arrow-back" size={24} color="white" />
-                </TouchableOpacity>
-                <View style={styles.logoContainer}>
-                  <Ionicons name="school" size={32} color="white" />
-                </View>
-                <View style={styles.placeholder} />
-              </View>
+          <SafeAreaView style={styles.flex}>
+            <View style={styles.header}>
+              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Text style={styles.title}>Welcome Back</Text>
+            </View>
 
-              <View style={styles.header}>
-                <Text style={styles.title}>Welcome Back</Text>
-                <Text style={styles.subtitle}>Sign in to continue your educational journey</Text>
-              </View>
+            <View style={styles.content}>
+              <Text style={styles.subtitle}>Sign in to your EduDash Pro account</Text>
 
-              {/* Form Card */}
-              <View style={styles.formCard}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Email Address</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="mail-outline" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      value={email}
-                      onChangeText={(text) => this.setState({ email: text })}
-                      placeholder="Enter your email"
-                      placeholderTextColor="#94a3b8"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      editable={!loading}
-                    />
+              {/* Success Message Banner */}
+              {showSuccessMessage && (
+                <View style={styles.successBanner}>
+                  <View style={styles.successContent}>
+                    <IconSymbol name="checkmark.circle.fill" size={24} color="#10b981" />
+                    <View style={styles.successTextContainer}>
+                      <Text style={styles.successTitle}>Password Updated! 🎉</Text>
+                      <Text style={styles.successMessage}>
+                        Your password has been successfully updated. You can now sign in with your new password.
+                      </Text>
+                    </View>
                   </View>
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Password</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="lock-closed-outline" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      value={password}
-                      onChangeText={(text) => this.setState({ password: text })}
-                      placeholder="Enter your password"
-                      placeholderTextColor="#94a3b8"
-                      secureTextEntry={!this.state.showPassword}
-                      editable={!loading}
-                    />
-                    <TouchableOpacity
-                      onPress={() => this.setState({ showPassword: !this.state.showPassword })}
-                      disabled={loading}
-                      style={styles.eyeButton}
-                    >
-                      <Ionicons name={this.state.showPassword ? 'eye-off' : 'eye'} size={20} color="#64748b" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.forgotPasswordButton}
-                  onPress={() => router.push('/(auth)/forgot-password')}
-                  disabled={loading}
-                >
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.signInButton, loading && styles.disabledButton]}
-                  onPress={() => this.handleSignIn(signIn)}
-                  disabled={loading}
-                >
-                  <LinearGradient
-                    colors={['#667eea', '#764ba2']}
-                    style={styles.signInButtonGradient}
+                  <TouchableOpacity
+                    style={styles.dismissButton}
+                    onPress={() => setShowSuccessMessage(false)}
                   >
-                    {loading ? (
-                      <ActivityIndicator color="white" size="small" />
-                    ) : (
-                      <>
-                        <Text style={styles.signInButtonText}>Sign In</Text>
-                        <Ionicons name="arrow-forward" size={20} color="white" style={styles.buttonIcon} />
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or continue with</Text>
-                  <View style={styles.dividerLine} />
+                    <IconSymbol name="xmark" size={18} color="#6b7280" />
+                  </TouchableOpacity>
                 </View>
+              )}
 
-                <TouchableOpacity
-                  style={styles.createAccountButton}
-                  onPress={() => router.push('/(auth)/sign-up')}
-                  disabled={loading}
-                >
-                  <Text style={styles.createAccountText}>Create New Account</Text>
-                  <Ionicons name="person-add-outline" size={20} color="#667eea" style={styles.buttonIcon} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.parentSignupButton}
-                  onPress={() => router.push('/(auth)/parent-signup')}
-                  disabled={loading}
-                >
-                  <Text style={styles.parentSignupText}>Join as Parent</Text>
-                  <Ionicons name="heart-outline" size={16} color="#64748b" style={styles.parentIcon} />
-                </TouchableOpacity>
-
-                {/* Quick Demo Access */}
-                <View style={styles.demoSection}>
-                  <Text style={styles.demoTitle}>Quick Demo Access</Text>
-                  <View style={styles.demoCredentials}>
-                    <View style={styles.demoItem}>
-                      <Text style={styles.demoLabel}>Principal:</Text>
-                      <Text style={styles.demoValue}>admin@school.edu</Text>
-                    </View>
-                    <View style={styles.demoItem}>
-                      <Text style={styles.demoLabel}>Password:</Text>
-                      <Text style={styles.demoValue}>demo123</Text>
-                    </View>
-                  </View>
-                </View>
+              <View style={styles.inputContainer}>
+                <IconSymbol name="envelope.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email Address"
+                  placeholderTextColor="#FFFFFF80"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
               </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
-        </LinearGradient>
-      </SafeAreaView>
-    );
-  };
 
-  render() {
-    return (
-      <AuthConsumer>
-        {(auth) => this.renderContent(auth)}
-      </AuthConsumer>
-    );
-  }
+              <View style={styles.inputContainer}>
+                <IconSymbol name="lock.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor="#FFFFFF80"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
+                  <Text style={styles.toggleText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={styles.forgotPasswordButton} onPress={() => router.push('/(auth)/forgot-password')}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleSignIn}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#1e3c72" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>Sign In</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.linkText}>Contact your administrator for account setup</Text>
+            </View>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  gradient: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  
-  // Header Section
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-  },
-  placeholder: {
-    width: 44,
   },
   header: {
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 40,
+    justifyContent: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 20,
+    padding: 8,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
     textAlign: 'center',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#FFFFFF90',
     textAlign: 'center',
-    fontWeight: '400',
-  },
-  
-  // Form Card
-  formCard: {
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 24,
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    marginBottom: 40,
   },
   inputContainer: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
-  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    backgroundColor: '#FFFFFF20',
     borderRadius: 12,
-    backgroundColor: '#f8fafc',
+    marginBottom: 16,
     paddingHorizontal: 16,
-    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#FFFFFF30',
   },
   inputIcon: {
     marginRight: 12,
   },
   input: {
     flex: 1,
-    paddingVertical: 16,
+    height: 50,
+    color: '#FFFFFF',
     fontSize: 16,
-    color: '#1e293b',
   },
-  eyeButton: {
-    padding: 4,
+  toggleText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',
-    marginBottom: 32,
-    paddingVertical: 4,
+    marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#667eea',
+    color: '#FFFFFF90',
     fontSize: 14,
-    fontWeight: '500',
   },
-  signInButton: {
-    marginBottom: 24,
+  button: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    shadowColor: '#667eea',
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowRadius: 8,
     elevation: 8,
   },
-  signInButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+  buttonDisabled: {
+    backgroundColor: '#FFFFFF80',
   },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  signInButtonText: {
-    color: 'white',
+  buttonText: {
+    color: '#1e3c72',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
-  buttonIcon: {
-    marginLeft: 8,
-  },
-  divider: {
-    flexDirection: 'row',
+  footer: {
+    paddingBottom: 40,
     alignItems: 'center',
-    marginVertical: 24,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e2e8f0',
-  },
-  dividerText: {
-    color: '#64748b',
-    marginHorizontal: 16,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  createAccountButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#667eea',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    marginBottom: 16,
-    backgroundColor: 'transparent',
-  },
-  createAccountText: {
-    color: '#667eea',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  parentSignupButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    marginBottom: 24,
-  },
-  parentSignupText: {
-    color: '#64748b',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  parentIcon: {
-    marginLeft: 8,
-  },
-  
-  // Demo Section
-  demoSection: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  demoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 12,
+  linkText: {
     textAlign: 'center',
+    color: '#FFFFFF90',
+    fontSize: 14,
   },
-  demoCredentials: {
-    gap: 8,
+  boldLink: {
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
-  demoItem: {
+  successBanner: {
+    backgroundColor: '#ecfdf5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+    shadowColor: '#10b981',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  successContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  demoLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#64748b',
+  successTextContainer: {
+    flex: 1,
+    marginLeft: 12,
   },
-  demoValue: {
-    fontSize: 13,
+  successTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: '#047857',
+    marginBottom: 4,
+  },
+  successMessage: {
+    fontSize: 14,
+    color: '#065f46',
+    lineHeight: 20,
+  },
+  dismissButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 8,
   },
 });
-
-export default SignInScreen;

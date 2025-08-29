@@ -1,108 +1,165 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Platform,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Colors, getRoleColors } from '@/constants/Colors';
+import { getRoleColors } from '@/constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import {
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+, AppState , Appearance, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MobileSidebar } from './MobileSidebar';
+import { NotificationService } from '@/lib/services/notificationService';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface MobileHeaderProps {
   user: {
+    id?: string; // optional user id for fetching unread count
     name: string;
     role: string;
     avatar?: string;
   };
+  schoolName?: string; // Add school name prop
   onNotificationsPress?: () => void;
-  onSearchPress?: () => void;
   onNavigate?: (route: string) => void;
   onSignOut?: () => void;
-  notificationCount?: number;
+  notificationCount?: number; // if provided, overrides internal fetch
 }
 
 interface MobileHeaderState {
   colorScheme: 'light' | 'dark';
   sidebarVisible: boolean;
+  internalUnreadCount: number;
 }
 
-export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeaderState> {
-  state: MobileHeaderState = {
-    colorScheme: 'light',
-    sidebarVisible: false,
-  };
+export const MobileHeader: React.FC<MobileHeaderProps> = ({
+  user,
+  schoolName,
+  onNotificationsPress,
+  onNavigate,
+  onSignOut,
+  notificationCount,
+}) => {
+  const { colorScheme, toggle: toggleGlobalTheme } = useTheme();
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [internalUnreadCount, setInternalUnreadCount] = useState(0);
 
-  private getRoleTitle = (role: string) => {
+  const getRoleTitle = (role: string): string => {
+    // If we have a school name, prioritize showing it for school roles
+    if (schoolName && (role === 'preschool_admin' || role === 'principal' || role === 'teacher')) {
+      return schoolName;
+    }
+    
     switch (role) {
       case 'superadmin':
         return 'Platform Admin';
+      case 'preschool_admin':
+        return 'School Principal';
       case 'principal':
         return 'School Principal';
       case 'teacher':
         return 'Teacher';
       case 'parent':
-        return 'Parent';
+        return schoolName || 'Parent Dashboard';
       default:
         return 'EduDash Pro';
     }
   };
 
-  private getGreeting = () => {
+  const getGreeting = (): string => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
   };
 
-  private toggleSidebar = () => {
-    this.setState({ sidebarVisible: !this.state.sidebarVisible });
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible);
   };
 
-  private closeSidebar = () => {
-    this.setState({ sidebarVisible: false });
+  const closeSidebar = () => {
+    setSidebarVisible(false);
   };
 
-  private handleNavigate = (route: string) => {
-    this.closeSidebar();
-    if (this.props.onNavigate) {
-      this.props.onNavigate(route);
+  const handleNavigate = (route: string) => {
+    closeSidebar();
+    if (onNavigate) {
+      onNavigate(route);
     }
   };
 
-  private handleSignOut = () => {
-    this.closeSidebar();
-    if (this.props.onSignOut) {
-      this.props.onSignOut();
+  const handleSignOut = () => {
+    closeSidebar();
+    if (onSignOut) {
+      onSignOut();
     }
   };
 
-  private toggleTheme = () => {
-    this.setState({
-      colorScheme: this.state.colorScheme === 'light' ? 'dark' : 'light'
-    });
+  const fetchUnreadCount = async () => {
+    try {
+      const userId = user?.id;
+      if (!userId) return;
+      const count = await NotificationService.getUnreadCount(userId);
+      setInternalUnreadCount(count || 0);
+    } catch {
+      // silently ignore in UI
+    }
   };
 
-  render() {
-    const { user, onNotificationsPress, onSearchPress, notificationCount } = this.props;
-    const { sidebarVisible } = this.state;
-    const roleColors = getRoleColors(user?.role || 'default', this.state.colorScheme);
-    const firstName = user?.name?.split(' ')[0] || 'User';
+  const onAppStateChange = (state: string) => {
+    if (state === 'active') {
+      fetchUnreadCount();
+    }
+  };
+
+  useEffect(() => {
+    // Initial fetch if we can resolve a user id
+    fetchUnreadCount();
+    // Poll periodically to keep badge fresh
+    const unreadTimer = setInterval(fetchUnreadCount, 15000);
+
+    // Refresh when app becomes active
+    let appStateSub: any = null;
+    try {
+      appStateSub = AppState.addEventListener('change', onAppStateChange);
+    } catch {}
+    
+    // Refresh on window focus (web)
+    const handleFocus = () => fetchUnreadCount();
+    try {
+      if (typeof window !== 'undefined' && window.addEventListener) {
+        window.addEventListener('focus', handleFocus);
+      }
+    } catch {}
+
+    // Cleanup
+    return () => {
+      clearInterval(unreadTimer);
+      try { appStateSub?.remove?.(); } catch {}
+      try {
+        if (typeof window !== 'undefined' && window.removeEventListener) {
+          window.removeEventListener('focus', handleFocus);
+        }
+      } catch {}
+    };
+  }, [user?.id]);
+
+  const badgeCount = typeof notificationCount === 'number' ? notificationCount : internalUnreadCount;
+  const roleColors = getRoleColors(user?.role || 'default', colorScheme);
+  const firstName = user?.name?.split(' ')[0] || 'User';
 
     return (
       <>
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: roleColors.gradient[0] }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: roleColors.gradient[0] }]} edges={['top', 'left', 'right']}>
           <StatusBar 
             barStyle="light-content"
             backgroundColor={roleColors.gradient[0]}
             translucent={false}
           />
           <LinearGradient
-            colors={[...roleColors.gradient, 'rgba(0,0,0,0.1)']}
+            colors={[roleColors.gradient[0], roleColors.gradient[1], 'rgba(0,0,0,0.1)']}
             style={styles.header}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -111,11 +168,11 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
             <View style={styles.glassOverlay} />
             
             <View style={styles.headerContent}>
-              {/* Left side - Avatar & Greeting */}
+              {/* Left side - Avatar & User Info */}
               <View style={styles.leftSection}>
                 <TouchableOpacity
                   style={styles.avatarButton}
-                  onPress={this.toggleSidebar}
+                  onPress={toggleSidebar}
                   activeOpacity={0.8}
                 >
                   <View style={styles.avatarContainer}>
@@ -127,10 +184,29 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                 </TouchableOpacity>
                 
                 <View style={styles.greetingSection}>
-                  <Text style={styles.userName}>{firstName}</Text>
-                  <View style={styles.roleContainer}>
-                    <View style={styles.roleBadge}>
-                      <Text style={styles.roleTitle}>{this.getRoleTitle(user?.role)}</Text>
+                  {/* Show EduDash Pro for superadmin, otherwise school name */}
+                  {user?.role === 'superadmin' ? (
+                    <Text style={styles.brandName}>EduDash Pro</Text>
+                  ) : (
+                    <Text style={styles.schoolName}>
+                      {schoolName || 'EduDash Pro'}
+                    </Text>
+                  )}
+                  
+                  {/* User info below */}
+                  <View style={styles.userInfoRow}>
+                    <Text style={styles.userName}>{firstName}</Text>
+                    <View style={styles.roleContainer}>
+                      <View style={styles.roleBadge}>
+                        <Text style={styles.roleTitle}>
+                          {user?.role === 'preschool_admin' ? 'Principal' : 
+                           user?.role === 'principal' ? 'Principal' :
+                           user?.role === 'school_admin' ? 'School Admin' :
+                           user?.role === 'teacher' ? 'Teacher' :
+                           user?.role === 'parent' ? 'Parent' :
+                           user?.role === 'superadmin' ? 'Platform Admin' : 'User'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -141,24 +217,24 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                 {/* Theme Toggle Button */}
                 <TouchableOpacity
                   style={styles.modernActionButton}
-                  onPress={this.toggleTheme}
+                  onPress={toggleGlobalTheme}
                   activeOpacity={0.7}
                 >
                   <IconSymbol 
-                    name={this.state.colorScheme === 'light' ? 'moon.fill' : 'sun.max.fill'} 
+                    name={colorScheme === 'light' ? 'moon.fill' : 'sun.max.fill'} 
                     size={18} 
                     color="#FFFFFF" 
                   />
                 </TouchableOpacity>
-                
-                {/* Search Button */}
-                {onSearchPress && (
+
+                {/* Manage Subscription Button */}
+                {onNavigate && (
                   <TouchableOpacity
                     style={styles.modernActionButton}
-                    onPress={onSearchPress}
+                    onPress={() => onNavigate('/pricing')}
                     activeOpacity={0.7}
                   >
-                    <IconSymbol name="magnifyingglass" size={18} color="#FFFFFF" />
+                    <IconSymbol name="creditcard.fill" size={18} color="#FFFFFF" />
                   </TouchableOpacity>
                 )}
 
@@ -170,10 +246,10 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
                     activeOpacity={0.7}
                   >
                     <IconSymbol name="bell" size={18} color="#FFFFFF" />
-                    {notificationCount && notificationCount > 0 && (
+                    {badgeCount > 0 && (
                       <View style={styles.modernNotificationBadge}>
                         <Text style={styles.notificationBadgeText}>
-                          {notificationCount > 99 ? '99+' : notificationCount.toString()}
+                          {badgeCount > 99 ? '99+' : badgeCount.toString()}
                         </Text>
                       </View>
                     )}
@@ -187,15 +263,14 @@ export class MobileHeader extends React.Component<MobileHeaderProps, MobileHeade
         {/* Mobile Sidebar */}
         <MobileSidebar
           isVisible={sidebarVisible}
-          onClose={this.closeSidebar}
+          onClose={closeSidebar}
           userProfile={user}
-          onSignOut={this.handleSignOut}
-          onNavigate={this.handleNavigate}
+          onSignOut={handleSignOut}
+          onNavigate={handleNavigate}
         />
       </>
     );
-  }
-}
+};
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -204,8 +279,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 8,
     paddingVertical: 16,
-    paddingTop: 32,
-    minHeight: 105,
+    minHeight: 85,
   },
 headerContent: {
     flexDirection: 'row',
@@ -357,5 +431,23 @@ userName: {
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#FFFFFF',
+  },
+  // New styles for redesigned header
+  schoolName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  brandName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  userInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });

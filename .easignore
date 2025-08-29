@@ -1,12 +1,19 @@
 # .easignore - Exclude unnecessary files from EAS builds
 
-# Dependencies (will be installed on EAS servers)
+# Dependencies (will be installed on EAS servers; keep lockfiles for reproducible installs)
 node_modules/
-*.lock
-yarn.lock
-package-lock.json
 .npm/
 .yarn/
+
+# Android native build outputs (exclude heavy caches and build artifacts)
+android/app/build/
+android/build/
+android/.gradle/
+android/.cxx/
+android/app/.cxx/
+android/.externalNativeBuild/
+android/wrapper/
+android/local.properties
 
 # Development and build artifacts
 .expo/
@@ -82,19 +89,24 @@ jspm_packages/
 .yarn-integrity
 
 # dotenv environment variables file
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.server.local.example
 
 # Temporary folders
 tmp/
 temp/
 
-# Development monitoring
+# Development monitoring and local scripts
 monitor-server.sh
+start-development.sh
+build-local.sh
+scripts/*.js
+scripts/**/*.js
 
-# Test files
+# Test files and scripts
 __tests__/
 *.test.js
 *.test.ts
@@ -102,11 +114,32 @@ __tests__/
 *.spec.js
 *.spec.ts
 *.spec.tsx
+scripts/*.js
+scripts/**/*.js
 
-# Documentation
-README.md
-FIXES_APPLIED.md
+# Documentation (exclude markdown except key project docs)
+*.md
+!README.md
+!PRODUCTION_READY_CHECKLIST.md
+!ENV_VALIDATION.md
+!PRODUCTION-SETUP.md
+!MANUAL_DATABASE_SETUP.md
+
 docs/
+
+# Local backups or archives (keep out of build uploads)
+archive/
+backups/
+design/
+screenshots/
+*.psd
+*.sketch
+*.fig
+*.ai
+*.xd
+*.zip
+*.tar
+*.tar.gz
 
 # Git
 .git/
@@ -115,6 +148,10 @@ docs/
 
 # Validation scripts
 validate-setup.js
+
+# Server-side code not needed for mobile build
+supabase/**
+functions/**
 
 # Large asset files that should be optimized
 # (uncomment if you have large assets)
@@ -136,3 +173,6 @@ validate-setup.js
 ../.next/
 ../.vercel/
 ../build/
+
+# Project scripts and documentation (development only)
+project-scripts/

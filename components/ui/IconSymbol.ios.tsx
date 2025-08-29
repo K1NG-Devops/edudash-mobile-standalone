@@ -1,6 +1,12 @@
 import { SymbolView, SymbolViewProps, SymbolWeight } from 'expo-symbols';
 import { StyleProp, ViewStyle } from 'react-native';
 
+// Minimal aliasing for inputs that aren't valid SF Symbol names
+const IOS_ALIAS: Record<string, SymbolViewProps['name']> = {
+  // Map generic 'brain' to a valid SF Symbol
+  brain: 'brain.head.profile',
+};
+
 export function IconSymbol({
   name,
   size = 24,
@@ -14,12 +20,13 @@ export function IconSymbol({
   style?: StyleProp<ViewStyle>;
   weight?: SymbolWeight;
 }) {
+  const resolvedName = IOS_ALIAS[String(name)] ?? name;
   return (
     <SymbolView
       weight={weight}
       tintColor={color}
       resizeMode="scaleAspectFit"
-      name={name}
+      name={resolvedName}
       style={[
         {
           width: size,

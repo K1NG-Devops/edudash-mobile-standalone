@@ -1,20 +1,24 @@
-import React from 'react';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { getRoleColors } from '@/constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
+  Animated,
   Dimensions,
   Image,
   Modal,
+  ScrollView,
   StatusBar,
-  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Colors, getRoleColors } from '@/constants/Colors';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
+import { router } from 'expo-router';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -22,7 +26,7 @@ interface MenuItem {
   id: string;
   title: string;
   subtitle?: string;
-  icon: string;
+  icon?: string;
   route?: string;
   action?: () => void;
   badge?: number;
@@ -38,42 +42,33 @@ interface MobileSidebarProps {
   onNavigate?: (route: string) => void;
 }
 
-interface MobileSidebarState {
-  colorScheme: 'light' | 'dark';
-  slideAnimation: Animated.Value;
-}
+export const MobileSidebar: React.FC<MobileSidebarProps> = ({
+  isVisible,
+  onClose,
+  userProfile,
+  onSignOut,
+  onNavigate,
+}) => {
+  const { colorScheme } = useTheme();
+  const slideAnimation = useRef(new Animated.Value(-screenWidth)).current;
 
-export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSidebarState> {
-  constructor(props: MobileSidebarProps) {
-    super(props);
-    this.state = {
-      colorScheme: 'light',
-      slideAnimation: new Animated.Value(-screenWidth),
-    };
-  }
-
-  componentDidUpdate(prevProps: MobileSidebarProps) {
-    if (prevProps.isVisible !== this.props.isVisible) {
-      this.animateSlider();
-    }
-  }
-
-  private animateSlider = () => {
-    Animated.timing(this.state.slideAnimation, {
-      toValue: this.props.isVisible ? 0 : -screenWidth,
+  useEffect(() => {
+    Animated.timing(slideAnimation, {
+      toValue: isVisible ? 0 : -screenWidth,
       duration: 300,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
-  };
+  }, [isVisible, slideAnimation]);
 
-  private getMenuItems = (role?: string): MenuItem[] => {
+  const getMenuItems = (role?: string): MenuItem[] => {
+
     const commonItems: MenuItem[] = [
       {
         id: 'profile',
         title: 'Profile Settings',
         subtitle: 'Manage your account',
         icon: 'person.circle.fill',
-        route: '/profile',
+        route: '/screens/profile',
         color: '#6366F1',
       },
       {
@@ -81,8 +76,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
         title: 'Notifications',
         subtitle: 'Manage alerts & updates',
         icon: 'bell.fill',
-        route: '/notifications',
-        badge: 5,
+        route: '/screens/notifications',
         color: '#8B5CF6',
       },
     ];
@@ -91,11 +85,19 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
       case 'superadmin':
         return [
           {
+            id: 'dashboard',
+            title: 'Super Admin Dashboard',
+            subtitle: 'Platform overview & management',
+            icon: 'rectangle.3.group.fill',
+            route: '/screens/super-admin-dashboard',
+            color: '#DC2626',
+          },
+          {
             id: 'analytics',
             title: 'Platform Analytics',
-            subtitle: 'Usage & revenue insights',
-            icon: 'chart.line.uptrend.xyaxis',
-            route: '/analytics',
+            subtitle: 'Growth metrics & insights',
+            icon: 'chart.bar.fill',
+            route: '/screens/super-admin-dashboard?tab=activity',
             color: '#DC2626',
           },
           {
@@ -103,15 +105,15 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'User Management',
             subtitle: 'Manage all platform users',
             icon: 'person.3.fill',
-            route: '/users',
+            route: '/screens/super-admin-dashboard?tab=users',
             color: '#DC2626',
           },
           {
-            id: 'billing',
-            title: 'Billing & Revenue',
-            subtitle: 'Financial dashboard',
-            icon: 'creditcard.fill',
-            route: '/billing',
+            id: 'onboarding',
+            title: 'Onboarding Requests',
+            subtitle: 'Approve or reject schools',
+            icon: 'person.badge.plus',
+            route: '/screens/super-admin-dashboard?tab=onboarding',
             color: '#DC2626',
           },
           {
@@ -119,8 +121,63 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Platform Settings',
             subtitle: 'Global configuration',
             icon: 'gearshape.fill',
-            route: '/settings',
+            route: '/screens/super-admin-dashboard?tab=system',
             color: '#DC2626',
+          },
+          { id: 'divider1', title: '', divider: true },
+          ...commonItems,
+          { id: 'divider2', title: '', divider: true },
+        ];
+
+      case 'preschool_admin':
+        return [
+          {
+            id: 'dashboard',
+            title: 'Principal Dashboard',
+            subtitle: 'School overview & management',
+            icon: 'rectangle.3.group.fill',
+            route: '/screens/principal-dashboard',
+            color: '#059669',
+          },
+          {
+            id: 'parents',
+            title: 'Parent Directory',
+            subtitle: 'Parent engagement & communication',
+            icon: 'person.3.fill',
+            route: '/screens/parents',
+            color: '#059669',
+          },
+          {
+            id: 'reports',
+            title: 'School Reports',
+            subtitle: 'Performance analytics',
+            icon: 'doc.text.fill',
+            route: '/screens/principal-reports',
+            color: '#059669',
+          },
+          {
+            id: 'activities',
+            title: 'Activities & Events',
+            subtitle: 'School activities',
+            icon: 'figure.run',
+            route: '/(tabs)/activities',
+            color: '#059669',
+          },
+          {
+            id: 'setup',
+            title: 'School Setup',
+            subtitle: 'Classes & assignments',
+            icon: 'rectangle.and.pencil.and.ellipsis',
+            route: '/screens/school-setup',
+            color: '#059669',
+          },
+          {
+            id: 'settings',
+            title: 'School Settings',
+            subtitle: 'Configure school',
+            icon: 'gearshape.fill',
+            route: '/screens/settings',
+            color: '#059669',
           },
           { id: 'divider1', title: '', divider: true },
           ...commonItems,
@@ -134,7 +191,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Teacher Management',
             subtitle: 'Manage teaching staff',
             icon: 'person.2.fill',
-            route: '/teachers',
+            route: '/screens/teachers',
             color: '#059669',
           },
           {
@@ -142,7 +199,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Student Directory',
             subtitle: 'All student information',
             icon: 'graduationcap.fill',
-            route: '/students',
+            route: '/screens/students',
             color: '#059669',
           },
           {
@@ -150,8 +207,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Parent Communications',
             subtitle: 'Parent engagement tools',
             icon: 'person.3.fill',
-            route: '/parents',
-            badge: 8,
+            route: '/screens/parents',
             color: '#059669',
           },
           {
@@ -159,7 +215,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'School Reports',
             subtitle: 'Performance analytics',
             icon: 'doc.text.fill',
-            route: '/reports',
+            route: '/screens/principal-reports',
             color: '#059669',
           },
           {
@@ -167,7 +223,15 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'School Calendar',
             subtitle: 'Events & schedules',
             icon: 'calendar',
-            route: '/calendar',
+            route: '/(tabs)/lessons',
+            color: '#059669',
+          },
+          {
+            id: 'activities',
+            title: 'School Reports',
+            subtitle: 'Academic reports & analytics',
+            icon: 'figure.run',
+            route: '/(tabs)/activities',
             color: '#059669',
           },
           {
@@ -175,7 +239,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'School Settings',
             subtitle: 'Configure school',
             icon: 'gearshape.fill',
-            route: '/settings',
+            route: '/screens/settings',
             color: '#059669',
           },
           { id: 'divider1', title: '', divider: true },
@@ -186,47 +250,46 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
       case 'teacher':
         return [
           {
-            id: 'students',
-            title: 'My Students',
-            subtitle: 'Class roster & details',
-            icon: 'graduationcap.fill',
-            route: '/students',
+            id: 'dashboard',
+            title: 'Dashboard',
+            subtitle: 'Overview & quick actions',
+            icon: 'rectangle.3.group.fill',
+            route: '/(tabs)/dashboard',
             color: '#7C3AED',
           },
           {
-            id: 'assignments',
-            title: 'Assignments',
-            subtitle: 'Create & manage tasks',
-            icon: 'doc.text.fill',
-            route: '/assignments',
-            badge: 12,
+            id: 'lessons',
+            title: 'All Lessons',
+            subtitle: 'View & manage lessons',
+            icon: 'book.fill',
+            route: '/screens/lessons',
             color: '#7C3AED',
           },
           {
-            id: 'gradebook',
-            title: 'Grade Book',
-            subtitle: 'Student progress tracking',
-            icon: 'chart.bar.fill',
-            route: '/gradebook',
+            id: 'activities',
+            title: 'Activities & Events',
+            subtitle: 'Class activities & programs',
+            icon: 'figure.run',
+            route: '/(tabs)/activities',
             color: '#7C3AED',
           },
           {
-            id: 'resources',
-            title: 'Teaching Resources',
-            subtitle: 'Lesson materials & tools',
-            icon: 'folder.fill',
-            route: '/resources',
-            color: '#7C3AED',
-          },
-          {
-            id: 'calendar',
-            title: 'Class Schedule',
-            subtitle: 'Daily teaching schedule',
-            icon: 'calendar',
-            route: '/schedule',
+            id: 'messages',
+            title: 'Messages',
+            subtitle: 'Communication with parents',
+            icon: 'message.fill',
+            route: '/(tabs)/messages',
             color: '#7C3AED',
           },
           { id: 'divider1', title: '', divider: true },
+          {
+            id: 'settings',
+            title: 'Settings',
+            subtitle: 'App preferences & config',
+            icon: 'gearshape.fill',
+            route: '/(tabs)/settings_new',
+            color: '#6366F1',
+          },
           ...commonItems,
           { id: 'divider2', title: '', divider: true },
         ];
@@ -234,60 +297,27 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
       case 'parent':
         return [
           {
-            id: 'homework',
-            title: 'Homework & Tasks',
-            subtitle: 'View & submit assignments',
-            icon: 'doc.text.fill',
-            route: '/homework',
-            badge: 3,
-            color: '#2563EB',
-          },
-          {
-            id: 'progress',
-            title: 'Progress Reports',
-            subtitle: 'Academic progress tracking',
-            icon: 'chart.line.uptrend.xyaxis',
-            route: '/progress',
-            color: '#2563EB',
-          },
-          {
-            id: 'attendance',
-            title: 'Attendance',
-            subtitle: 'Daily attendance records',
-            icon: 'checkmark.circle.fill',
-            route: '/attendance',
-            color: '#2563EB',
-          },
-          {
-            id: 'calendar',
-            title: 'School Calendar',
-            subtitle: 'Events & important dates',
-            icon: 'calendar',
-            route: '/calendar',
-            color: '#2563EB',
-          },
-          {
-            id: 'payments',
-            title: 'Payments  Fees',
-            subtitle: 'School billing  payments',
-            icon: 'creditcard.fill',
-            route: '/payments',
-            color: '#2563EB',
-          },
-          {
-            id: 'videocalls',
-            title: 'Video Calls',
-            subtitle: 'Schedule  join meetings',
-            icon: 'video.fill',
-            route: '/(tabs)/videocalls',
+            id: 'dashboard',
+            title: 'Dashboard',
+            subtitle: 'Child overview & progress',
+            icon: 'rectangle.3.group.fill',
+            route: '/(tabs)/dashboard',
             color: '#2563EB',
           },
           {
             id: 'activities',
             title: 'Activities & Events',
-            subtitle: 'Extracurricular programs',
+            subtitle: 'View child activities',
             icon: 'figure.run',
-            route: '/activities',
+            route: '/(tabs)/activities',
+            color: '#2563EB',
+          },
+          {
+            id: 'messages',
+            title: 'Messages',
+            subtitle: 'Communication with teachers',
+            icon: 'message.fill',
+            route: '/(tabs)/messages',
             color: '#2563EB',
           },
           { id: 'divider1', title: '', divider: true },
@@ -296,7 +326,7 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
             title: 'Settings',
             subtitle: 'App preferences & config',
             icon: 'gearshape.fill',
-            route: '/(tabs)/settings',
+            route: '/(tabs)/settings_new',
             color: '#6366F1',
           },
           ...commonItems,
@@ -310,35 +340,35 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
     }
   };
 
-  private handleItemPress = (item: MenuItem) => {
+  const handleItemPress = (item: MenuItem) => {
     if (item.action) {
       item.action();
-    } else if (item.route && this.props.onNavigate) {
-      this.props.onNavigate(item.route);
+    } else if (item.route && onNavigate) {
+      onNavigate(item.route);
     }
-    this.props.onClose();
+    onClose();
   };
 
-  private renderMenuItem = (item: MenuItem) => {
+  const renderMenuItem = (item: MenuItem) => {
     if (item.divider) {
-      return <View key={item.id} style={styles.divider} />;
+      return <View key={item.id} style={[styles.divider, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB' }]} />;
     }
 
     return (
       <TouchableOpacity
         key={item.id}
         style={styles.menuItem}
-        onPress={() => this.handleItemPress(item)}
+        onPress={() => handleItemPress(item)}
         activeOpacity={0.7}
       >
-        <View style={[styles.menuIcon, { backgroundColor: item.color + '15' }]}>
+        <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
           <IconSymbol name={item.icon as any} size={22} color={item.color || '#6B7280'} />
         </View>
         <View style={styles.menuContent}>
           <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>{item.title}</Text>
+            <Text style={[styles.menuTitle, { color: colorScheme === 'dark' ? '#F9FAFB' : '#1F2937' }]}>{item.title}</Text>
             {item.subtitle && (
-              <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+              <Text style={[styles.menuSubtitle, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>{item.subtitle}</Text>
             )}
           </View>
           <View style={styles.menuAction}>
@@ -349,105 +379,134 @@ export class MobileSidebar extends React.Component<MobileSidebarProps, MobileSid
                 </Text>
               </View>
             )}
-            <IconSymbol name="chevron.right" size={14} color="#9CA3AF" />
+            <IconSymbol name="chevron.right" size={14} color={colorScheme === 'dark' ? '#6B7280' : '#9CA3AF'} />
           </View>
         </View>
       </TouchableOpacity>
     );
   };
 
-  private renderHeader = () => {
-    const { userProfile } = this.props;
-    const roleColors = getRoleColors(userProfile?.role || 'default', this.state.colorScheme);
-    
+  const renderHeader = () => {
+    const roleColors = getRoleColors(userProfile?.role || 'default', colorScheme);
+
     return (
-      <LinearGradient
-        colors={roleColors.gradient}
-        style={styles.sidebarHeader}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <TouchableOpacity style={styles.closeButton} onPress={this.props.onClose}>
-          <IconSymbol name="xmark" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
-        
-        <View style={styles.userInfo}>
-          <View style={styles.userAvatar}>
-            <Image
-              source={{ uri: userProfile?.avatar || 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=User' }}
-              style={styles.avatarImage}
-            />
-          </View>
-          <Text style={styles.userName}>{userProfile?.name || 'User'}</Text>
-          <Text style={styles.userRole}>
-            {userProfile?.role ? userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1) : 'User'}
-          </Text>
-        </View>
-      </LinearGradient>
+      <SafeAreaInsetsContext.Consumer>
+        {(insets) => (
+          <LinearGradient
+            colors={roleColors.gradient}
+            style={[styles.sidebarHeader, { paddingTop: (insets?.top || 0) + 20 }]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <IconSymbol name="xmark" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <View style={styles.userInfo}>
+              <View style={styles.userAvatar}>
+                <Image
+                  source={{ uri: userProfile?.avatar || 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=User' }}
+                  style={styles.avatarImage}
+                />
+              </View>
+              <Text style={styles.userName}>{userProfile?.name || 'User'}</Text>
+              <Text style={styles.userRole}>
+                {userProfile?.role ? userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1) : 'User'}
+              </Text>
+            </View>
+          </LinearGradient>
+        )}
+      </SafeAreaInsetsContext.Consumer>
     );
   };
 
-  render() {
-    if (!this.props.isVisible) return null;
+  if (!isVisible) return null;
 
-    const menuItems = this.getMenuItems(this.props.userProfile?.role);
+  const menuItems = getMenuItems(userProfile?.role);
+  const isDark = colorScheme === 'dark';
 
-    return (
-      <Modal
-        visible={this.props.isVisible}
-        transparent={true}
-        animationType="none"
-        onRequestClose={this.props.onClose}
-      >
-        <View style={styles.overlay}>
-          <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.5)" />
-          
-          {/* Backdrop */}
-          <TouchableOpacity
-            style={styles.backdrop}
-            activeOpacity={1}
-            onPress={this.props.onClose}
-          />
-          
-          {/* Sidebar */}
-          <Animated.View
-            style={[
-              styles.sidebar,
-              {
-                transform: [{ translateX: this.state.slideAnimation }],
-              },
-            ]}
-          >
-            {this.renderHeader()}
-            
-            <ScrollView 
-              style={styles.menuScrollView} 
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.menuContainer}
-            >
-              {menuItems.map(this.renderMenuItem)}
-            </ScrollView>
+  return (
+    <Modal
+      visible={isVisible}
+      transparent={true}
+      animationType="none"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.5)" />
 
-            {/* Sign Out Button */}
-            <TouchableOpacity
-              style={styles.signOutButton}
-              onPress={this.props.onSignOut}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIcon, { backgroundColor: '#EF444415' }]}>
-                <IconSymbol name="rectangle.portrait.and.arrow.right" size={22} color="#EF4444" />
+        {/* Backdrop */}
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+
+        {/* Sidebar */}
+        <Animated.View
+          style={[
+            styles.sidebar,
+            {
+              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+              transform: [{ translateX: slideAnimation }],
+            },
+          ]}
+        >
+          {renderHeader()}
+
+          <SafeAreaInsetsContext.Consumer>
+            {(insets) => (
+              <View style={styles.menuWrapper}>
+                <ScrollView
+                  style={styles.menuScrollView}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={[styles.menuContainer, { paddingBottom: 16 }]}
+                >
+                  {menuItems.map(renderMenuItem)}
+                </ScrollView>
+
+                {/* Sticky Sign Out Footer (non-overlapping) */}
+                <View style={[styles.signOutContainer, { paddingBottom: (insets?.bottom || 0) + 8, backgroundColor: isDark ? '#111827' : '#FFFFFF', borderTopColor: isDark ? '#374151' : '#E5E7EB' }]}> 
+                  <TouchableOpacity
+                    onPress={async () => {
+                      try {
+                        if (onSignOut) {
+                          await onSignOut();
+                        } else {
+                          // Fallback route if signOut not provided
+                          router.replace('/');
+                        }
+                      } finally {
+                        onClose?.();
+                      }
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <LinearGradient
+                      colors={isDark ? ['#374151', '#4B5563'] : ['#FEE2E2', '#FECACA']}
+                      style={styles.signOutGradient}
+                    >
+                      <View style={[styles.menuIcon, { backgroundColor: '#EF444420' }]}>
+                        <IconSymbol name="rectangle.portrait.and.arrow.right" size={24} color="#DC2626" />
+                      </View>
+                      <View style={styles.menuContent}>
+                        <Text style={[styles.menuTitle, { color: '#DC2626', fontWeight: '700' }]}>Sign Out</Text>
+                        <Text style={[styles.menuSubtitle, { color: '#991B1B' }]}>Exit your account</Text>
+                      </View>
+                      <View style={styles.signOutArrow}>
+                        <IconSymbol name="chevron.right" size={16} color="#DC2626" />
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.menuContent}>
-                <Text style={[styles.menuTitle, { color: '#EF4444' }]}>Sign Out</Text>
-                <Text style={styles.menuSubtitle}>Exit your account</Text>
-              </View>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-      </Modal>
-    );
-  }
-}
+            )}
+          </SafeAreaInsetsContext.Consumer>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
 
 const styles = StyleSheet.create({
   overlay: {
@@ -465,7 +524,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: Math.min(320, screenWidth * 0.78), // Cap at 320px or 78% of screen width
+    width: Math.min(280, screenWidth * 0.72), // Narrower: cap at 280px or 72% of screen width
     height: screenHeight,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
@@ -478,14 +537,14 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   sidebarHeader: {
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 30,
     paddingHorizontal: 24,
     position: 'relative',
   },
   closeButton: {
     position: 'absolute',
-    top: 50,
+    top: 10,
     right: 20,
     width: 36,
     height: 36,
@@ -523,13 +582,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.8)',
   },
+  menuWrapper: {
+    flex: 1,
+  },
   menuScrollView: {
     flex: 1,
   },
   menuContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 80, // Extra padding to ensure space above sign out button
   },
   menuItem: {
     flexDirection: 'row',
@@ -588,17 +649,20 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     marginLeft: 60,
   },
-  signOutButton: {
+  signOutContainer: {
+    borderTopWidth: 1,
+    paddingHorizontal: 0,
+  },
+  signOutGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 20,
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    paddingBottom: 36,
+    borderTopWidth: 2,
+    borderTopColor: '#FCA5A5',
+  },
+  signOutArrow: {
+    marginLeft: 8,
   },
 });

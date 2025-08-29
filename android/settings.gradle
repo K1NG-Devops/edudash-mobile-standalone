@@ -1,0 +1,78 @@
+pluginManagement {
+  // Ensure Gradle can find Node even when Android Studio's environment lacks PATH
+  // Resolve Node executable robustly across environments (EAS, Android Studio, CI)
+  def resolveNodeExecutable = {
+    def candidates = []
+    if (System.getenv('NODE_BINARY')) candidates << System.getenv('NODE_BINARY')
+    if (System.getenv('NODE')) candidates << System.getenv('NODE')
+    // Common install locations on Linux/macOS
+    candidates += ['/usr/local/bin/node', '/opt/homebrew/bin/node', '/usr/bin/node']
+    // Fallback to PATH resolution
+    candidates << 'node'
+
+    for (c in candidates) {
+      if (!c) continue
+      if (c == 'node') return c
+      try {
+        if (new File(c).canExecute()) return c
+      } catch (Throwable ignored) {
+        // ignore
+      }
+    }
+    return 'node'
+  }
+  def nodeExecutable = resolveNodeExecutable()
+
+  def reactNativeGradlePlugin = new File(
+    providers.exec {
+      workingDir(rootDir)
+      commandLine(nodeExecutable, "--print", "require.resolve('@react-native/gradle-plugin/package.json', { paths: [require.resolve('react-native/package.json')] })")
+    }.standardOutput.asText.get().trim()
+  ).getParentFile().absolutePath
+  includeBuild(reactNativeGradlePlugin)
+  
+  def expoPluginsPath = new File(
+    providers.exec {
+      workingDir(rootDir)
+      commandLine(nodeExecutable, "--print", "require.resolve('expo-modules-autolinking/package.json', { paths: [require.resolve('expo/package.json')] })")
+    }.standardOutput.asText.get().trim(),
+    "../android/expo-gradle-plugin"
+  ).absolutePath
+  includeBuild(expoPluginsPath)
+
+  // Force Android Gradle Plugin to a Studio-compatible version for all builds (including included builds)
+  resolutionStrategy {
+    eachPlugin {
+      if (requested.id.id in [
+        'com.android.application',
+        'com.android.library',
+        'com.android.test',
+        'com.android.asset-pack',
+        'com.android.dynamic-feature'
+      ]) {
+        useVersion('8.7.3')
+      }
+    }
+  }
+}
+
+plugins {
+  id("com.facebook.react.settings")
+  id("expo-autolinking-settings")
+}
+
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+  if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
+    ex.autolinkLibrariesFromCommand()
+  } else {
+    ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
+  }
+}
+expoAutolinking.useExpoModules()
+
+rootProject.name = 'EduDash Pro'
+
+expoAutolinking.useExpoVersionCatalog()
+
+include ':app'
+includeBuild(expoAutolinking.reactNativeGradlePlugin)

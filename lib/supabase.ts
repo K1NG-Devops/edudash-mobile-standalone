@@ -1,34 +1,55 @@
-import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
-import { createClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+import { createLogger } from '@/lib/utils/logger';
 import { Database } from '@/types/database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import 'react-native-url-polyfill/auto';
 
-// Debug environment variables
-console.log('🔧 Supabase Config Debug:');
-console.log('- EXPO_PUBLIC_SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Found' : '❌ Missing');
-console.log('- EXPO_PUBLIC_SUPABASE_ANON_KEY:', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? '✅ Found' : '❌ Missing');
+// Debug environment variables (gated behind debug flag)
+const DEBUG_SUPABASE = process.env.EXPO_PUBLIC_DEBUG_SUPABASE === 'true';
+// Create a robust logger that survives Jest auto-mocks (which return undefined)
+const _loggerCandidate = (typeof createLogger === 'function' ? (createLogger as any)('supabase') : null);
+const log = (_loggerCandidate && typeof (_loggerCandidate as any).error === 'function') ? _loggerCandidate : (console as any);
+if (DEBUG_SUPABASE) {
+  log.debug('🔧 Supabase Config Debug:');
+  log.debug('- EXPO_PUBLIC_SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Found' : '❌ Missing');
+  log.debug('- EXPO_PUBLIC_SUPABASE_ANON_KEY:', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? '✅ Found' : '❌ Missing');
+  log.debug('- EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY:', process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ? '✅ Found' : '❌ Missing');
+}
 
-// Set to true for local development testing
-const USE_LOCAL_DB = false;
+// Use local database settings when running tests to avoid env requirements
+const IS_TEST = process.env.JEST_WORKER_ID !== undefined || process.env.NODE_ENV === 'test';
+// Default to local DB in tests; otherwise production unless explicitly overridden
+const USE_LOCAL_DB = IS_TEST ? true : false;
 
-const supabaseUrl = USE_LOCAL_DB 
-  ? 'http://127.0.0.1:54321'  // Local Supabase
-  : (process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://lvvvjywrmpcqrpvuptdi.supabase.co');
+// Log current configuration for debugging (only when debug flag is enabled)
+if (DEBUG_SUPABASE && (log as any)?.info) {
+  (log as any).info('🔧 Supabase Configuration:', {
+    USE_LOCAL_DB,
+    url: USE_LOCAL_DB ? 'LOCAL' : 'PRODUCTION',
+    hasEnvUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
+    hasEnvKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+  });
+}
 
-const supabaseAnonKey = USE_LOCAL_DB
-  ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'  // Local anon key
-  : (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2dnZqeXdybXBjcXJwdnVwdGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwMzc4MzgsImV4cCI6MjA2ODYxMzgzOH0.mjXejyRHPzEJfMlhW46TlYI0qw9mtoSRJZhGsCkuvd8');
+// Sanitize Supabase URL to avoid common mistakes (e.g., trailing slash, www.)
+const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || (USE_LOCAL_DB ? 'http://127.0.0.1:54321' : '');
+const supabaseUrl = rawUrl
+  ? rawUrl.trim().replace(/\/$/, '').replace(/^https:\/\/www\./, 'https://')
+  : '';
+
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || (USE_LOCAL_DB ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' : '');
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Supabase configuration missing!');
-  console.error('URL:', supabaseUrl);
-  console.error('Key available:', !!supabaseAnonKey);
-} else {
-  console.log('✅ Supabase configuration loaded');
-  console.log('URL:', supabaseUrl);
+  log.error('❌ Supabase configuration missing!');
+  if (DEBUG_SUPABASE) {
+    log.error('URL:', supabaseUrl);
+    log.error('Key available:', !!supabaseAnonKey);
+  }
+} else if (DEBUG_SUPABASE) {
+  log.debug('✅ Supabase configuration loaded');
+  log.debug('URL:', supabaseUrl);
 }
 
 // Enhanced AsyncStorage for Expo with SecureStore for sensitive data
@@ -42,7 +63,7 @@ const ExpoSecureStoreAdapter = {
       }
       return Promise.resolve(null);
     }
-    
+
     // On mobile, use SecureStore for sensitive data, AsyncStorage for others
     if (key.includes('supabase.auth.token')) {
       return SecureStore.getItemAsync(key);
@@ -58,7 +79,7 @@ const ExpoSecureStoreAdapter = {
       }
       return Promise.resolve();
     }
-    
+
     // On mobile, use SecureStore for sensitive data, AsyncStorage for others
     if (key.includes('supabase.auth.token')) {
       return SecureStore.setItemAsync(key, value);
@@ -74,7 +95,7 @@ const ExpoSecureStoreAdapter = {
       }
       return Promise.resolve();
     }
-    
+
     // On mobile, use SecureStore for sensitive data, AsyncStorage for others
     if (key.includes('supabase.auth.token')) {
       return SecureStore.deleteItemAsync(key);
@@ -88,14 +109,50 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
+    storageKey: 'supabase_auth_client',
   },
 });
+
+// Admin client for service role operations (development-only)
+// IMPORTANT SECURITY NOTE:
+// - Never include service role keys in production builds or public runtime.
+// - Only enable the admin client when explicitly allowed AND not in production.
+const ENABLE_ADMIN_CLIENT = (process.env.EXPO_PUBLIC_ENABLE_ADMIN_CLIENT === 'true') && (process.env.NODE_ENV !== 'production');
+
+// Only read a service role key when explicitly enabled for local development.
+// Prefer a non-public env var if available; DO NOT use EXPO_PUBLIC_* in production.
+const supabaseServiceRoleKey = ENABLE_ADMIN_CLIENT
+  ? (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || (USE_LOCAL_DB
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+    : undefined))
+  : undefined;
+
+export const supabaseAdmin = (ENABLE_ADMIN_CLIENT && supabaseServiceRoleKey)
+  ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      storageKey: 'supabase_auth_admin',
+    },
+  })
+  : null;
+
+if (DEBUG_SUPABASE) {
+  if (!ENABLE_ADMIN_CLIENT) {
+    log.debug('ℹ️ Admin client disabled. Set EXPO_PUBLIC_ENABLE_ADMIN_CLIENT=true for local dev only.');
+  } else if (supabaseServiceRoleKey) {
+    log.debug('✅ Admin client enabled for local development');
+  } else {
+    log.warn('⚠️ Admin client requested but no service role key found (expected SUPABASE_SERVICE_ROLE_KEY in local env)');
+    log.debug('🔍 Available env vars:', Object.keys(process.env).filter(key => key.includes('SUPABASE')));
+  }
+}
 
 // Helper function to get current user with role
 export const getCurrentUserWithRole = async () => {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
+
   if (authError || !user) {
     return { user: null, profile: null, error: authError };
   }
@@ -106,10 +163,10 @@ export const getCurrentUserWithRole = async () => {
     .eq('auth_user_id', user.id)
     .single();
 
-  return { 
-    user, 
-    profile, 
-    error: profileError 
+  return {
+    user,
+    profile,
+    error: profileError
   };
 };
 
@@ -118,7 +175,34 @@ export const hasRole = (profile: any, role: string): boolean => {
   return profile?.role === role;
 };
 
-// Helper function to get user's school
+// Helper function to get user's school (preschool_id per schema)
 export const getUserSchool = (profile: any) => {
-  return profile?.schools;
+  return profile?.preschool_id;
 };
+
+// Sign out helper to ensure tokens are fully cleared across platforms
+export const safeSignOut = async () => {
+  try {
+    await supabase.auth.signOut();
+  } finally {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem('supabase_auth_client');
+        }
+      } else {
+        await SecureStore.deleteItemAsync('supabase_auth_client');
+      }
+    } catch (_) { }
+  }
+};
+
+// Expose clients globally for debugging (development only)
+if (typeof window !== 'undefined' && DEBUG_SUPABASE) {
+  (window as any).supabaseClients = {
+    supabase,
+    // Only expose admin client if explicitly enabled for dev
+    supabaseAdmin: ENABLE_ADMIN_CLIENT ? supabaseAdmin : null,
+  };
+  log.info('🔧 [Debug] Supabase clients exposed globally for debugging');
+}

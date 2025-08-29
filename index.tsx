@@ -1,10 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Animated, Dimensions } from 'react-native';
-import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import React from 'react';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
@@ -18,9 +17,14 @@ class WelcomeScreen extends React.Component {
     const { user, loading } = auth;
 
     // Auto-redirect if user is logged in
+    // Do not hardcode tabs; let the app-level index handle role-based routing
     if (user && !loading) {
-      router.replace('/(tabs)');
-      return null;
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.loadingText}>Preparing your dashboard...</Text>
+        </View>
+      );
     }
 
     if (loading) {
@@ -74,7 +78,7 @@ class WelcomeScreen extends React.Component {
 
               <TouchableOpacity
                 style={styles.parentSignupButton}
-                onPress={() => router.push('/(auth)/parent-signup')}
+                onPress={() => router.push('/(auth)/sign-up?role=parent&flow_type=individual_family' as any)}
               >
                 <Text style={styles.parentSignupText}>Join as Parent →</Text>
               </TouchableOpacity>

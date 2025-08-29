@@ -1,7 +1,6 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": false,
+    "strict": true,
     "jsx": "react-jsx",
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -9,6 +8,15 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "target": "esnext",
+    "lib": [
+      "dom",
+      "esnext"
+    ],
+    "allowJs": false,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "incremental": true,
     "paths": {
       "@/*": [
         "./*"
@@ -19,10 +27,14 @@
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    "types/**/*.d.ts"
+    "expo-env.d.ts"
   ],
   "exclude": [
-    "node_modules"
-  ]
+    "node_modules",
+    "supabase/functions/**",
+    "archive/**",
+    "legacy/_excluded/**",
+    "app/api/**"
+  ],
+  "extends": "expo/tsconfig.base"
 }

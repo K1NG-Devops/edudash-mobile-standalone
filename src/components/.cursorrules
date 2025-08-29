@@ -1,0 +1,76 @@
+# Component Development Rules
+
+## Component Standards for EduDash Pro
+
+### Component Structure
+- Use functional components with TypeScript
+- Export components as default exports
+- Include prop interfaces with JSDoc comments
+- Use forwardRef for components that need DOM access
+
+### Naming Conventions
+- PascalCase for component names and files
+- Use descriptive names that indicate purpose (e.g., `StudentSubmissionCard`, `TeacherLessonBuilder`)
+- Prefix components with role context when needed (e.g., `AdminUserTable`, `ParentDashboardHeader`)
+
+### Props and State
+- Always define TypeScript interfaces for props
+- Use optional props with default values when appropriate
+- Prefer controlled components over uncontrolled
+- Use React.memo for performance optimization when needed
+
+### Styling Guidelines
+- Use Tailwind CSS classes exclusively
+- Create responsive designs with mobile-first approach
+- Use consistent spacing scale (space-x-*, space-y-*)
+- Implement dark mode support using Tailwind's dark: prefix
+
+### Accessibility
+- Include proper ARIA labels and roles
+- Ensure keyboard navigation works properly
+- Use semantic HTML elements
+- Test with screen readers
+
+### Mobile-Specific Rules
+- Design for touch interactions (minimum 44px touch targets)
+- Use proper viewport meta tags
+- Implement swipe gestures where appropriate
+- Test on real mobile devices
+
+### Component Types to Create
+- **Layout Components**: Headers, sidebars, navigation
+- **Data Display**: Tables, cards, charts for different user roles
+- **Form Components**: Input fields, validation, submission forms
+- **Interactive Elements**: Buttons, modals, dropdowns optimized for mobile
+- **Media Components**: Image/video uploads, audio recording interfaces
+- **AI Components**: Lesson generators, grading interfaces, chat components
+
+### Example Component Template
+```tsx
+import React, { forwardRef } from 'react';
+
+interface ComponentNameProps {
+  /** Description of the prop */
+  propName: string;
+  /** Optional prop with default */
+  optionalProp?: boolean;
+}
+
+/**
+ * Component description
+ * @param props - The component props
+ */
+const ComponentName = forwardRef<HTMLDivElement, ComponentNameProps>(
+  ({ propName, optionalProp = false }, ref) => {
+    return (
+      <div ref={ref} className="mobile-first-classes">
+        {/* Component content */}
+      </div>
+    );
+  }
+);
+
+ComponentName.displayName = 'ComponentName';
+
+export default ComponentName;
+```

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger as log } from '@/lib/utils/logger';
 
 export interface Student {
   id: string;
@@ -26,14 +27,25 @@ export class StudentsService {
     try {
       const { data, error } = await supabase
         .from('students')
-        .select('*')
+        .select(`
+          *,
+          parent:users!students_parent_id_fkey(name, email, phone),
+          class:classes!students_class_id_fkey(
+            id,
+            name,
+            room_number,
+            teacher:users!classes_teacher_id_fkey(id, name, email)
+          )
+        `)
         .eq('preschool_id', preschoolId)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('class.teacher_id', teacherId)
+        .order('first_name');
 
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching students by teacher:', error);
+      log.error('Error fetching students by teacher:', error);
       return { data: null, error };
     }
   }
@@ -50,7 +62,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching student by ID:', error);
+      log.error('Error fetching student by ID:', error);
       return { data: null, error };
     }
   }
@@ -68,7 +80,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching students by parent:', error);
+      log.error('Error fetching students by parent:', error);
       return { data: null, error };
     }
   }
@@ -90,7 +102,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching students by preschool:', error);
+      log.error('Error fetching students by preschool:', error);
       return { data: null, error };
     }
   }
@@ -100,14 +112,14 @@ export class StudentsService {
     try {
       const { data, error } = await supabase
         .from('students')
-        .insert(studentData)
+        .insert(studentData as any)
         .select()
         .single();
 
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error creating student:', error);
+      log.error('Error creating student:', error);
       return { data: null, error };
     }
   }
@@ -128,7 +140,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error updating student:', error);
+      log.error('Error updating student:', error);
       return { data: null, error };
     }
   }
@@ -149,7 +161,7 @@ export class StudentsService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error deleting student:', error);
+      log.error('Error deleting student:', error);
       return { data: null, error };
     }
   }
@@ -188,7 +200,7 @@ export class StudentsService {
         error: null
       };
     } catch (error) {
-      console.error('Error fetching student stats:', error);
+      log.error('Error fetching student stats:', error);
       return { data: null, error };
     }
   }

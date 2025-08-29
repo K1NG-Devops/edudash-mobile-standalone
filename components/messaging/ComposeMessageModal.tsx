@@ -18,11 +18,13 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { MediaService } from '@/lib/services/mediaService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 
 interface Contact {
   id: string;
   name: string;
-  role: 'teacher' | 'admin' | 'parent';
+  role: 'teacher' | 'admin' | 'parent' | 'principal' | 'preschool_admin';
   avatar_url?: string;
   email?: string;
   class_name?: string;
@@ -45,6 +47,11 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   childrenList,
   onMessageSent,
 }) => {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
+  const placeholderColor = isDark ? '#94A3B8' : '#9CA3AF';
+  const selectionBg = isDark ? 'rgba(59,130,246,0.15)' : '#EBF4FF';
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
@@ -53,12 +60,12 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   const [messageContent, setMessageContent] = useState('');
   const [sending, setSending] = useState(false);
   const [activeTab, setActiveTab] = useState<'teachers' | 'parents' | 'admin'>('teachers');
-  const [attachedMedia, setAttachedMedia] = useState<Array<{
+  const [attachedMedia, setAttachedMedia] = useState<{
     uri: string;
     type: string;
     fileName: string;
     fileSize?: number;
-  }>>([]);
+  }[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
   useEffect(() => {
@@ -71,102 +78,49 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
     filterContacts();
   }, [searchQuery, contacts, activeTab]);
 
+  // Defensive default for children list
+  const safeChildrenList = Array.isArray(childrenList) ? childrenList : [];
+
+  const waitForAuthSession = async (timeoutMs = 3000) => {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.access_token) return true;
+      } catch {}
+      await new Promise(r => setTimeout(r, 150));
+    }
+    return false;
+  };
+
   const loadContacts = async () => {
     if (!profile?.preschool_id) return;
 
     try {
       setLoading(true);
+      await waitForAuthSession();
 
-      // Get parent's internal ID
-      const { data: parentProfile, error: parentError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', profile.auth_user_id)
-        .single();
+      // Fetch contacts via SECURITY DEFINER RPC (scoped to same preschool)
+      const { data, error } = await supabase.rpc('get_messaging_contacts', {
+        p_include_staff: true,
+        p_include_parents: true,
+        p_limit: 500,
+      });
 
-      if (parentError || !parentProfile) {
-        throw new Error('Parent profile not found');
-      }
+      if (error) throw error;
 
-      const allContacts: Contact[] = [];
+      const mapped: Contact[] = (data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name || 'Unknown',
+        role: row.role,
+        avatar_url: row.avatar_url || undefined,
+        email: row.email || undefined,
+        class_name: row.class_name || undefined,
+        is_online: false,
+      }));
 
-      // Load teachers and staff from the same preschool
-      const { data: teachersData, error: teachersError } = await supabase
-        .from('users')
-        .select(`
-          id,
-          name,
-          role,
-          avatar_url,
-          email,
-          classes (
-            name
-          )
-        `)
-        .eq('preschool_id', profile.preschool_id)
-        .in('role', ['teacher', 'admin'])
-        .neq('id', parentProfile.id);
-
-      if (!teachersError && teachersData) {
-        teachersData.forEach((teacher: any) => {
-          allContacts.push({
-            id: teacher.id,
-            name: teacher.name || 'Unknown',
-            role: teacher.role,
-            avatar_url: teacher.avatar_url,
-            email: teacher.email,
-            class_name: teacher.classes?.name,
-            is_online: Math.random() > 0.5, // Mock online status
-          });
-        });
-      }
-
-      // Load other parents with children in the same classes
-      if (childrenList.length > 0) {
-        const classIds = childrenList.map(child => child.class_id).filter(Boolean);
-        
-        if (classIds.length > 0) {
-          const { data: classParentsData, error: parentsError } = await supabase
-            .from('students')
-            .select(`
-              parent_id,
-              classes (
-                name
-              ),
-              users!students_parent_id_fkey (
-                id,
-                name,
-                avatar_url,
-                email
-              )
-            `)
-            .in('class_id', classIds)
-            .neq('parent_id', parentProfile.id);
-
-          if (!parentsError && classParentsData) {
-            const seenParents = new Set<string>();
-            
-            classParentsData.forEach((student: any) => {
-              if (student.users && !seenParents.has(student.users.id)) {
-                seenParents.add(student.users.id);
-                allContacts.push({
-                  id: student.users.id,
-                  name: student.users.name || 'Unknown Parent',
-                  role: 'parent',
-                  avatar_url: student.users.avatar_url,
-                  email: student.users.email,
-                  class_name: student.classes?.name,
-                  is_online: Math.random() > 0.5, // Mock online status
-                });
-              }
-            });
-          }
-        }
-      }
-
-      setContacts(allContacts);
+      setContacts(mapped);
     } catch (error) {
-      console.error('Error loading contacts:', error);
       Alert.alert('Error', 'Failed to load contacts');
     } finally {
       setLoading(false);
@@ -176,11 +130,12 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   const filterContacts = () => {
     let filtered = contacts.filter(contact => {
       const matchesSearch = searchQuery === '' || 
-        contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (contact.name && contact.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (contact.email && contact.email.toLowerCase().includes(searchQuery.toLowerCase()));
       
+      const isStaff = contact.role === 'admin' || contact.role === 'principal' || contact.role === 'preschool_admin';
       const matchesTab = activeTab === 'teachers' ? contact.role === 'teacher' :
-                        activeTab === 'admin' ? contact.role === 'admin' :
+                        activeTab === 'admin' ? isStaff :
                         contact.role === 'parent';
       
       return matchesSearch && matchesTab;
@@ -203,6 +158,8 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
     try {
       setSending(true);
 
+      await waitForAuthSession();
+
       // Get parent's internal ID
       const { data: parentProfile, error: parentError } = await supabase
         .from('users')
@@ -214,36 +171,31 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         throw new Error('Parent profile not found');
       }
 
-      // Create the message first
-      const { data: messageData, error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          content: messageContent.trim() || (attachedMedia.length > 0 ? '📷 Photo message' : ''),
-          sender_id: parentProfile.id,
-          receiver_id: selectedContact.id,
-          sender_type: 'parent',
-          receiver_type: selectedContact.role,
-          message_type: attachedMedia.length > 0 ? 'image' : 'text',
-          is_read: false,
-        })
-        .select()
-        .single();
+      // Atomic server-side send to satisfy RLS via SECURITY DEFINER RPC
+      const { data: newMessageId, error: rpcError } = await supabase.rpc('send_direct_message', {
+        p_recipient_user_id: selectedContact.id,
+        p_content: messageContent.trim() || (attachedMedia.length > 0 ? '📷 Photo message' : ''),
+        p_subject: '',
+        p_message_type: 'direct',
+      });
 
-      if (messageError) {
-        throw messageError;
+      if (rpcError || !newMessageId) {
+        throw rpcError || new Error('send_direct_message failed');
       }
+
+      const messageId = typeof newMessageId === 'string' ? newMessageId : (newMessageId as any);
 
       // Upload attached media if any
       if (attachedMedia.length > 0) {
         const uploadPromises = attachedMedia.map(async (media, index) => {
-          const fileName = media.fileName || `message_${messageData.id}_${index}_${Date.now()}.jpg`;
+          const fileName = media.fileName || `message_${messageId}_${index}_${Date.now()}.jpg`;
           return MediaService.uploadMedia(
             media.uri,
             fileName,
             'image/jpeg', // Assuming images for now
             parentProfile.id,
             profile.preschool_id!,
-            { messageId: messageData.id }
+            { messageId }
           );
         });
 
@@ -251,7 +203,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         const failedUploads = uploadResults.filter(result => result.error);
         
         if (failedUploads.length > 0) {
-          console.warn('Some media uploads failed:', failedUploads);
+          // Removed debug statement: console.warn('Some media uploads failed:', failedUploads);
         }
       }
 
@@ -263,14 +215,20 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       onMessageSent();
       onClose();
     } catch (error) {
-      console.error('Error sending message:', error);
+      // Removed debug statement: console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message');
     } finally {
       setSending(false);
     }
   };
 
-  const handleAddPhoto = () => {
+const handleAddPhoto = () => {
+    // RN Web doesn't support multi-button Alert reliably; open gallery directly
+    if (Platform.OS === 'web') {
+      pickImageFromGallery();
+      return;
+    }
+
     const options = [
       'Take Photo',
       'Choose from Gallery',
@@ -317,7 +275,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         }]);
       }
     } catch (error) {
-      console.error('Error picking image from camera:', error);
+      // Removed debug statement: console.error('Error picking image from camera:', error);
       Alert.alert('Error', 'Failed to take photo. Please check camera permissions.');
     } finally {
       setUploadingMedia(false);
@@ -337,7 +295,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         }]);
       }
     } catch (error) {
-      console.error('Error picking image from gallery:', error);
+      // Removed debug statement: console.error('Error picking image from gallery:', error);
       Alert.alert('Error', 'Failed to select photo. Please check gallery permissions.');
     } finally {
       setUploadingMedia(false);
@@ -353,7 +311,8 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       key={contact.id}
       style={[
         styles.contactItem,
-        selectedContact?.id === contact.id && styles.selectedContact
+        { backgroundColor: palette.surface, borderBottomColor: palette.outline },
+        selectedContact?.id === contact.id && { backgroundColor: selectionBg }
       ]}
       onPress={() => setSelectedContact(contact)}
     >
@@ -361,8 +320,8 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         {contact.avatar_url ? (
           <Image source={{ uri: contact.avatar_url }} style={styles.avatar} />
         ) : (
-          <View style={styles.defaultAvatar}>
-            <Text style={styles.avatarText}>
+          <View style={[styles.defaultAvatar, { backgroundColor: isDark ? '#334155' : '#E5E7EB' }]}>
+            <Text style={[styles.avatarText, { color: isDark ? '#CBD5E1' : '#6B7280' }]}>
               {contact.name.charAt(0).toUpperCase()}
             </Text>
           </View>
@@ -371,14 +330,14 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       </View>
 
       <View style={styles.contactInfo}>
-        <Text style={styles.contactName}>{contact.name}</Text>
-        <Text style={styles.contactRole}>
+        <Text style={[styles.contactName, { color: palette.text }]}>{contact.name}</Text>
+        <Text style={[styles.contactRole, { color: palette.textSecondary }]}>
           {contact.role === 'teacher' ? '👩‍🏫 Teacher' :
-           contact.role === 'admin' ? '👨‍💼 Admin' : '👨‍👩‍👧‍👦 Parent'}
+           (contact.role === 'admin' || contact.role === 'principal' || contact.role === 'preschool_admin') ? '👨‍💼 Admin' : '👨‍👩‍👧‍👦 Parent'}
           {contact.class_name && ` • ${contact.class_name}`}
         </Text>
         {contact.email && (
-          <Text style={styles.contactEmail}>{contact.email}</Text>
+          <Text style={[styles.contactEmail, { color: palette.textSecondary }]}>{contact.email}</Text>
         )}
       </View>
 
@@ -389,54 +348,54 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   );
 
   const renderMessageComposer = () => (
-    <View style={styles.composerContainer}>
-      <View style={styles.selectedContactHeader}>
+    <View style={[styles.composerContainer, { backgroundColor: 'transparent' }]}>
+      <View style={[styles.selectedContactHeader, { backgroundColor: palette.surface }]}>
         <View style={styles.selectedContactInfo}>
-          <Text style={styles.composerTitle}>Send message to:</Text>
-          <Text style={styles.selectedContactName}>{selectedContact?.name}</Text>
-          <Text style={styles.selectedContactRole}>
+          <Text style={[styles.composerTitle, { color: palette.textSecondary }]}>Send message to:</Text>
+          <Text style={[styles.selectedContactName, { color: palette.text }]}>{selectedContact?.name}</Text>
+          <Text style={[styles.selectedContactRole, { color: palette.textSecondary }]}> 
             {selectedContact?.role === 'teacher' ? 'Teacher' :
-             selectedContact?.role === 'admin' ? 'Administrator' : 'Parent'}
+             (selectedContact?.role === 'admin' || selectedContact?.role === 'principal' || selectedContact?.role === 'preschool_admin') ? 'Administrator' : 'Parent'}
             {selectedContact?.class_name && ` • ${selectedContact.class_name}`}
           </Text>
         </View>
         <TouchableOpacity
-          style={styles.changeContactButton}
+          style={[styles.changeContactButton, { borderColor: palette.primary }]}
           onPress={() => setSelectedContact(null)}
         >
-          <Text style={styles.changeContactText}>Change</Text>
+          <Text style={[styles.changeContactText, { color: palette.primary }]}>Change</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.messageInputContainer}>
-        <Text style={styles.messageInputLabel}>Message</Text>
+      <View style={[styles.messageInputContainer, { backgroundColor: palette.surface }]}>
+        <Text style={[styles.messageInputLabel, { color: palette.textSecondary }]}>Message</Text>
         <TextInput
-          style={styles.messageInput}
+          style={[styles.messageInput, { borderColor: palette.outline, color: palette.text }]}
           value={messageContent}
           onChangeText={setMessageContent}
           placeholder="Type your message here..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={placeholderColor}
           multiline
           textAlignVertical="top"
           maxLength={1000}
         />
-        <Text style={styles.characterCount}>
+        <Text style={[styles.characterCount, { color: palette.textSecondary }]}>
           {messageContent.length}/1000
         </Text>
         
         {/* Media Attachment Controls */}
         <View style={styles.mediaControls}>
           <TouchableOpacity
-            style={styles.addPhotoButton}
+            style={[styles.addPhotoButton, { borderColor: palette.primary, backgroundColor: isDark ? 'rgba(59,130,246,0.12)' : '#EBF4FF' }]}
             onPress={handleAddPhoto}
             disabled={uploadingMedia}
           >
             {uploadingMedia ? (
-              <ActivityIndicator size="small" color="#3B82F6" />
+              <ActivityIndicator size="small" color={palette.primary} />
             ) : (
-              <IconSymbol name="camera.fill" size={20} color="#3B82F6" />
+              <IconSymbol name="camera.fill" size={20} color={palette.primary} />
             )}
-            <Text style={styles.addPhotoText}>
+            <Text style={[styles.addPhotoText, { color: palette.primary }]}>
               {uploadingMedia ? 'Adding...' : 'Add Photo'}
             </Text>
           </TouchableOpacity>
@@ -444,14 +403,14 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         
         {/* Attached Media Preview */}
         {attachedMedia.length > 0 && (
-          <View style={styles.attachedMediaContainer}>
-            <Text style={styles.attachedMediaLabel}>Attached Photos ({attachedMedia.length})</Text>
+          <View style={[styles.attachedMediaContainer, { borderTopColor: palette.outline }]}>
+            <Text style={[styles.attachedMediaLabel, { color: palette.text }]}>Attached Photos ({attachedMedia.length})</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaPreviewScroll}>
               {attachedMedia.map((media, index) => (
                 <View key={index} style={styles.mediaPreviewItem}>
-                  <Image source={{ uri: media.uri }} style={styles.mediaPreviewImage} />
+                  <Image source={{ uri: media.uri }} style={[styles.mediaPreviewImage, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]} />
                   <TouchableOpacity
-                    style={styles.removeMediaButton}
+                    style={[styles.removeMediaButton, { backgroundColor: isDark ? palette.surface : '#FFFFFF' }]}
                     onPress={() => removeMedia(index)}
                   >
                     <IconSymbol name="xmark.circle.fill" size={20} color="#EF4444" />
@@ -465,20 +424,21 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
 
       <View style={styles.composerActions}>
         <TouchableOpacity
-          style={styles.cancelButton}
+          style={[styles.cancelButton, { borderColor: palette.outline }]}
           onPress={() => {
             setSelectedContact(null);
             setMessageContent('');
             setAttachedMedia([]);
           }}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={[styles.cancelButtonText, { color: palette.textSecondary }]}>Cancel</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
           style={[
             styles.sendMessageButton,
-            ((!messageContent.trim() && attachedMedia.length === 0) || sending) && styles.sendButtonDisabled
+            { backgroundColor: palette.primary },
+            ((!messageContent.trim() && attachedMedia.length === 0) || sending) && { opacity: 0.6 }
           ]}
           onPress={sendMessage}
           disabled={(!messageContent.trim() && attachedMedia.length === 0) || sending}
@@ -503,14 +463,14 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: palette.background }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <IconSymbol name="xmark" size={20} color="#6B7280" />
+        <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.outline }]}>
+          <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]} onPress={onClose}>
+            <IconSymbol name="xmark" size={20} color={palette.textSecondary} />
           </TouchableOpacity>
           
-          <Text style={styles.headerTitle}>New Message</Text>
+          <Text style={[styles.headerTitle, { color: palette.text }]}>New Message</Text>
           
           <View style={styles.headerSpacer} />
         </View>
@@ -520,25 +480,26 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         ) : (
           <>
             {/* Search */}
-            <View style={styles.searchContainer}>
-              <IconSymbol name="magnifyingglass" size={16} color="#9CA3AF" />
+            <View style={[styles.searchContainer, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
+              <IconSymbol name="magnifyingglass" size={16} color={placeholderColor} />
               <TextInput
-                style={styles.searchInput}
+                style={[styles.searchInput, { color: palette.text }]}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="Search contacts..."
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={placeholderColor}
               />
             </View>
 
             {/* Tabs */}
-            <View style={styles.tabsContainer}>
+            <View style={[styles.tabsContainer, { backgroundColor: palette.surface }]}>
               <TouchableOpacity
-                style={[styles.tab, activeTab === 'teachers' && styles.activeTab]}
+                style={[styles.tab, activeTab === 'teachers' && [styles.activeTab, { backgroundColor: palette.primary }]]}
                 onPress={() => setActiveTab('teachers')}
               >
                 <Text style={[
                   styles.tabText,
+                  { color: palette.textSecondary },
                   activeTab === 'teachers' && styles.activeTabText
                 ]}>
                   Teachers
@@ -546,11 +507,12 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[styles.tab, activeTab === 'admin' && styles.activeTab]}
+                style={[styles.tab, activeTab === 'admin' && [styles.activeTab, { backgroundColor: palette.primary }]]}
                 onPress={() => setActiveTab('admin')}
               >
                 <Text style={[
                   styles.tabText,
+                  { color: palette.textSecondary },
                   activeTab === 'admin' && styles.activeTabText
                 ]}>
                   Staff
@@ -558,11 +520,12 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[styles.tab, activeTab === 'parents' && styles.activeTab]}
+                style={[styles.tab, activeTab === 'parents' && [styles.activeTab, { backgroundColor: palette.primary }]]}
                 onPress={() => setActiveTab('parents')}
               >
                 <Text style={[
                   styles.tabText,
+                  { color: palette.textSecondary },
                   activeTab === 'parents' && styles.activeTabText
                 ]}>
                   Parents
@@ -574,16 +537,16 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
             <ScrollView style={styles.contactsList}>
               {loading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#3B82F6" />
-                  <Text style={styles.loadingText}>Loading contacts...</Text>
+                  <ActivityIndicator size="large" color={palette.primary} />
+                  <Text style={[styles.loadingText, { color: palette.textSecondary }]}>Loading contacts...</Text>
                 </View>
               ) : filteredContacts.length > 0 ? (
                 filteredContacts.map(renderContactItem)
               ) : (
                 <View style={styles.emptyState}>
-                  <IconSymbol name="person.2" size={48} color="#9CA3AF" />
-                  <Text style={styles.emptyStateTitle}>No contacts found</Text>
-                  <Text style={styles.emptyStateText}>
+                  <IconSymbol name="person.2" size={48} color={placeholderColor} />
+                  <Text style={[styles.emptyStateTitle, { color: palette.text }]}>No contacts found</Text>
+                  <Text style={[styles.emptyStateText, { color: palette.textSecondary }]}>
                     {searchQuery ? 
                       'Try adjusting your search terms' : 
                       `No ${activeTab} available to message`

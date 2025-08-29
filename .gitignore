@@ -25,8 +25,18 @@ expo-env.d.ts
 *.keystore
 !debug.keystore
 ios/
-android/
+# Track Android native code so EAS uses our manifest/Gradle config
+# (remove this ignore)
+# android/
 .kotlin/
+
+# Android build cache files
+android/caches/
+android/daemon/
+android/native/
+android/wrapper/dists/
+android/.tmp/
+android/android/
 
 # Metro
 .metro-health-check*
@@ -39,6 +49,7 @@ android/
 .env.production.local
 .env*.local
 .env*.backup
+.env*.remote
 
 # Supabase
 .supabase/
@@ -154,3 +165,20 @@ app-example
 .cursor/
 .vscode/
 .warp/
+
+# Temporary build and development files
+.tmp-bundle/
+build-fixes.md
+
+# GitHub workflows (if local only)
+.github/workflows/
+
+# Temporary documentation
+*-temp.md
+*-draft.md
+
+# Project scripts and documentation (development only)
+project-scripts/
+.vercel
+.secrets.txt
+android/app/service-account.json

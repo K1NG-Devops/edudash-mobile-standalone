@@ -57,10 +57,10 @@ const MessagingButton: React.FC<MessagingButtonProps> = ({
         {
           event: '*',
           schema: 'public',
-          table: 'messages',
+          table: 'message_recipients',
         },
         (payload) => {
-          // Refresh unread count when messages are inserted, updated, or deleted
+          // Refresh unread count when message deliveries change
           loadUnreadCount();
         }
       )
@@ -88,10 +88,11 @@ const MessagingButton: React.FC<MessagingButtonProps> = ({
 
       // Count unread messages
       const { count, error } = await supabase
-        .from('messages')
+        .from('message_recipients')
         .select('*', { count: 'exact', head: true })
-        .eq('receiver_id', parentProfile.id)
-        .eq('is_read', false);
+        .eq('recipient_id', parentProfile.id)
+        .eq('is_read', false)
+        .eq('is_archived', false);
 
       if (error) {
         throw error;
@@ -99,7 +100,7 @@ const MessagingButton: React.FC<MessagingButtonProps> = ({
 
       setUnreadCount(count || 0);
     } catch (error) {
-      console.error('Error loading unread count:', error);
+      // Removed debug statement: console.error('Error loading unread count:', error);
     } finally {
       setLoading(false);
     }

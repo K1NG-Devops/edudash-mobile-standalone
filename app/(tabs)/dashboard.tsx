@@ -1,25 +1,25 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  RefreshControl, 
-  Dimensions, 
-  Image,
-  StatusBar 
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import EnhancedSubscriptionParentDashboard from '@/components/dashboard/EnhancedSubscriptionParentDashboard';
+import SchoolAdminDashboard from '@/components/dashboard/SchoolAdminDashboard';
+// SuperAdminDashboard now located at app/screens/super-admin-dashboard.tsx
 import { MobileHeader } from '@/components/navigation/MobileHeader';
-import { router } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import ThemedCard from '@/components/ui/ThemedCard';
+import { Colors } from '@/constants/Colors';
+import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-import EnhancedParentDashboard from '@/components/dashboard/EnhancedParentDashboard';
+import type { Href } from 'expo-router';
+import { router } from 'expo-router';
+import React from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { shadow } from '@/lib/ui/shadow';
 
-const { width: screenWidth } = Dimensions.get('window');
 
 interface Child {
   id: string;
@@ -67,7 +67,9 @@ interface UpcomingEvent {
   location?: string;
 }
 
-class DashboardScreen extends React.Component<{}, DashboardState> {
+type DashboardProps = { palette: any; isDark: boolean };
+
+class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
   state: DashboardState = {
     refreshing: false,
     selectedChildId: null,
@@ -96,28 +98,31 @@ class DashboardScreen extends React.Component<{}, DashboardState> {
     this.setState({ refreshing: false });
   };
 
-componentDidMount() {
+  componentDidMount() {
     // Initial load will be handled by the render method when profile is available
   }
 
   fetchTenantInfo = async (userProfile: UserProfile) => {
     try {
+
       if (userProfile.preschool_id) {
         const { data: tenant, error: tenantError } = await supabase
           .from('preschools')
-          .select('name')
+          .select('name, id')
           .eq('id', userProfile.preschool_id)
+          .limit(1)
           .single();
 
         if (!tenantError && tenant) {
-          this.setState({ 
+
+          this.setState({
             tenantName: tenant.name,
-            tenantSlug: tenant.slug 
+            tenantSlug: tenant.id || tenant.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown'
           });
         }
       }
-    } catch (error) {
-      console.log('Failed to fetch tenant info:', error);
+    } catch {
+      // Handle error silently
     }
   };
 
@@ -130,14 +135,15 @@ componentDidMount() {
         .from('users')
         .select('id, name, preschool_id')
         .eq('auth_user_id', parentUserId)
+        .limit(1)
         .single();
 
       if (parentError || !parentProfile) {
-        console.error('Error fetching parent profile:', parentError);
-        this.setState({ 
-          loading: false, 
+        // Removed debug statement: console.error('Error fetching parent profile:', parentError);
+        this.setState({
+          loading: false,
           error: 'Unable to fetch parent profile',
-          tenantSlug: null 
+          tenantSlug: null
         });
         return;
       }
@@ -150,14 +156,15 @@ componentDidMount() {
       if (parentProfile.preschool_id) {
         const { data: tenant, error: tenantError } = await supabase
           .from('preschools')
-          .select('name')
+          .select('name, id')
           .eq('id', parentProfile.preschool_id)
+          .limit(1)
           .single();
 
         if (!tenantError && tenant) {
-          this.setState({ 
+          this.setState({
             tenantName: tenant.name,
-            tenantSlug: tenant.slug 
+            tenantSlug: tenant.id || tenant.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown'
           });
         }
       }
@@ -183,10 +190,10 @@ componentDidMount() {
         .eq('is_active', true);
 
       if (error) {
-        console.error('Error fetching children:', error);
-        this.setState({ 
-          loading: false, 
-          error: 'Unable to fetch children data' 
+        // Removed debug statement: console.error('Error fetching children:', error);
+        this.setState({
+          loading: false,
+          error: 'Unable to fetch children data'
         });
         return;
       }
@@ -201,28 +208,28 @@ componentDidMount() {
           emoji: '👤', // Default emoji for students
           attendance: 0, // Will be calculated from actual attendance data
         }));
-        
+
         // Set the first child as selected if no selection exists
         if (!this.state.selectedChildId || !this.children.find(c => c.id === this.state.selectedChildId)) {
           this.setState({ selectedChildId: this.children[0].id });
         }
-        
+
         this.setState({ loading: false });
         this.forceUpdate();
       } else {
         // No children found
         this.children = [];
-        this.setState({ 
-          loading: false, 
+        this.setState({
+          loading: false,
           selectedChildId: null,
-          error: 'No children found for this parent' 
+          error: 'No children found for this parent'
         });
       }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      this.setState({ 
-        loading: false, 
-        error: 'An unexpected error occurred' 
+    } catch {
+      // Removed debug statement: console.error('Unexpected error:', error);
+      this.setState({
+        loading: false,
+        error: 'An unexpected error occurred'
       });
     }
   };
@@ -261,42 +268,51 @@ componentDidMount() {
     try {
       // This will be handled by AuthConsumer context
       router.replace('/(auth)/sign-in');
-    } catch (error) {
-      console.error('Sign out error:', error);
+    } catch {
+      // Removed debug statement: console.error('Sign out error:', error);
     }
   };
 
   private handleNavigate = (route: string) => {
-    console.log('Navigating to:', route);
-    // Handle navigation based on route
+
     if (route.startsWith('/(tabs)')) {
-      router.push(route as any);
+      // Handle tab routes directly
+      router.push(route as Href);
+    } else if (route.includes('?tab=')) {
+      // Handle routes with tab query parameters
+      router.push(route as Href);
+    } else if (route.startsWith('/screens/') || route.startsWith('screens/')) {
+      // Handle screen routes - normalize to ensure proper format
+      const cleanRoute = route.startsWith('/') ? route : `/${route}`;
+      router.push(cleanRoute as Href);
     } else if (route.startsWith('/')) {
-      // Handle screen routes
-      const screenName = route.substring(1);
-      router.push(`/screens/${screenName}` as any);
+      // Handle other absolute routes
+      router.push(route as Href);
+    } else {
+      // Handle relative routes by making them absolute
+      router.push(`/${route}` as Href);
     }
   };
 
   private handleQuickAction = (action: string) => {
     switch (action) {
       case 'home':
-        router.push('/(tabs)/index');
+        router.push('/(tabs)/dashboard' as Href);
         break;
       case 'homework':
-        router.push('/(tabs)/homework');
+        router.push('/screens/homework' as Href);
         break;
       case 'activities':
-        router.push('/(tabs)/activities');
+        router.push('/(tabs)/activities' as Href);
         break;
       case 'calendar':
-        router.push('/(tabs)/lessons');
+        router.push('/(tabs)/lessons' as Href);
         break;
       case 'messages':
-        router.push('/(tabs)/messages');
+        router.push('/(tabs)/messages' as Href);
         break;
       default:
-        console.log(`Quick action: ${action}`);
+
     }
   };
 
@@ -305,358 +321,67 @@ componentDidMount() {
   };
 
   private selectChild = (childId: string) => {
-    this.setState({ 
+    this.setState({
       selectedChildId: childId,
-      showChildSelector: false 
+      showChildSelector: false
     });
   };
 
   private renderParentDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
-    // Fetch children data when profile is available (only once)
-    if (profile?.auth_user_id && this.children.length === 0 && !this.state.loading && !this.state.error) {
-      this.fetchChildrenData(profile.auth_user_id);
+    // Always fetch tenant info for parent users if we have a profile and preschool_id
+    if (profile && profile.preschool_id && !this.state.tenantName) {
+
+      this.fetchTenantInfo(profile);
     }
-    
-    const selectedChild = this.getSelectedChild();
 
+    // Use the subscription-aware parent dashboard with upgrade prompts
     return (
-      <View style={styles.container}>
-        {/* Mobile Header */}
-        <MobileHeader
-          user={{
-            name: profile?.name || 'Parent',
-            role: 'parent',
-            avatar: profile?.avatar_url,
-          }}
-          onNotificationsPress={() => console.log('Notifications')}
-          onSearchPress={() => console.log('Search')}
-          onSignOut={signOut}
-          onNavigate={this.handleNavigate}
-          notificationCount={3}
-        />
-
-        <ScrollView
-          style={styles.scrollView}
-          refreshControl={
-            <RefreshControl 
-              refreshing={this.state.refreshing} 
-              onRefresh={() => this.onRefresh(profile?.auth_user_id)} 
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* Header Text */}
-          <View style={styles.headerTextSection}>
-            <Text style={styles.greeting}>{this.getGreeting()} 👋</Text>
-            <Text style={styles.subtitle}>
-              {selectedChild ? `Let&apos;s see how ${selectedChild.name.split(' ')[0]} is doing today` : 'Welcome to your dashboard'}
-            </Text>
-            {this.state.tenantName && (
-              <View style={styles.tenantInfo}>
-                <Text style={styles.tenantLabel}>🏫 {this.state.tenantName}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Child Selector Card or Empty State */}
-          {selectedChild ? (
-            <TouchableOpacity 
-              style={styles.childSelectorCard}
-              onPress={this.toggleChildSelector}
-            >
-              <LinearGradient
-                colors={['#8B5CF6', '#A855F7', '#C084FC']}
-                style={styles.childCard}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.childCardHeader}>
-                  <View style={styles.childInfo}>
-                    <View style={styles.childNameRow}>
-                      <Text style={styles.childName}>{selectedChild.name}</Text>
-                      {this.children.length > 1 && (
-                        <IconSymbol 
-                          name="chevron.down" 
-                          size={20} 
-                          color="rgba(255, 255, 255, 0.8)" 
-                        />
-                      )}
-                    </View>
-                    <Text style={styles.childDetails}>
-                      🎂 {selectedChild.age} years old
-                    </Text>
-                    <Text style={styles.childDetails}>
-                      👩‍🏫 {selectedChild.teacher}
-                    </Text>
-                  </View>
-                  <View style={styles.childEmoji}>
-                    <Text style={styles.emojiLarge}>{selectedChild.emoji}</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.childCardFooter}>
-                  <View style={styles.childBadge}>
-                    <Text style={styles.childBadgeText}>{selectedChild.grade}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.attendanceButton}>
-                    <Text style={styles.attendanceText}>Attendance: {selectedChild.attendance}%</Text>
-                  </TouchableOpacity>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.emptyStateCard}>
-              <LinearGradient
-                colors={['#F3F4F6', '#E5E7EB', '#D1D5DB']}
-                style={styles.childCard}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.emptyStateContent}>
-                  {this.state.loading ? (
-                    <>
-                      <Text style={styles.emptyStateTitle}>Loading...</Text>
-                      <Text style={styles.emptyStateText}>Fetching your child&apos;s information</Text>
-                    </>
-                  ) : this.state.error ? (
-                    <>
-                      <Text style={styles.emptyStateTitle}>No Data Available</Text>
-                      <Text style={styles.emptyStateText}>{this.state.error}</Text>
-                      <Text style={styles.emptyStateText}>Pull down to refresh</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.emptyStateTitle}>Welcome!</Text>
-                      <Text style={styles.emptyStateText}>Setting up your dashboard...</Text>
-                    </>
-                  )}
-                </View>
-              </LinearGradient>
-            </View>
-          )}
-
-          {/* Child Selector Dropdown */}
-          {this.state.showChildSelector && this.children.length > 1 && (
-            <View style={styles.childDropdown}>
-              {this.children.map((child) => (
-                <TouchableOpacity
-                  key={child.id}
-                  style={[
-                    styles.childDropdownItem,
-                    child.id === this.state.selectedChildId && styles.childDropdownItemSelected
-                  ]}
-                  onPress={() => this.selectChild(child.id)}
-                >
-                  <View style={styles.childDropdownEmoji}>
-                    <Text style={styles.childDropdownEmojiText}>{child.emoji}</Text>
-                  </View>
-                  <View style={styles.childDropdownInfo}>
-                    <Text style={styles.childDropdownName}>{child.name}</Text>
-                    <Text style={styles.childDropdownDetails}>
-                      {child.age} years • {child.grade} • {child.teacher}
-                    </Text>
-                  </View>
-                  {child.id === this.state.selectedChildId && (
-                    <IconSymbol name="checkmark" size={16} color="#10B981" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Quick Actions */}
-          <View style={styles.quickActions}>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('home')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="house.fill" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Home
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('homework')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="doc.text.fill" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Homework
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('activities')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="location.fill" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Activities
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('calendar')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="calendar" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Lessons
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => this.handleQuickAction('messages')}
-            >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="message.fill" size={24} color="#6B7280" />
-              </View>
-              <Text style={styles.quickActionLabel}>
-                Messages
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Key Metrics Section */}
-          <View style={styles.metricsSection}>
-            <View style={styles.metricsRow}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricValue}>{this.state.skillsGained}</Text>
-                <Text style={styles.metricTitle}>Skills Gained</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricValue}>{this.state.activitiesCompleted}</Text>
-                <Text style={styles.metricTitle}>Activities</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricValue}>{this.state.attendanceRate}%</Text>
-                <Text style={styles.metricTitle}>Attendance</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Recent Achievements */}
-          <View style={styles.achievementsSection}>
-            <Text style={styles.sectionTitle}>🏆 Recent Achievements</Text>
-            <View style={styles.achievementsList}>
-              {this.state.recentAchievements.map((achievement, index) => (
-                <View key={index} style={styles.achievementBadge}>
-                  <Text style={styles.achievementText}>{achievement}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Recent Updates */}
-          <View style={styles.updatesSection}>
-            <Text style={styles.sectionTitle}>📢 Recent Updates</Text>
-            {this.state.recentUpdates.slice(0, 3).map((update) => (
-              <TouchableOpacity key={update.id} style={styles.updateItem}>
-                <View style={styles.updateIcon}>
-                  <IconSymbol name={update.icon} size={16} color="#3B82F6" />
-                </View>
-                <View style={styles.updateContent}>
-                  <Text style={styles.updateTitle}>{update.title}</Text>
-                  <Text style={styles.updateDescription}>{update.description}</Text>
-                  <Text style={styles.updateTimestamp}>{update.timestamp}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Upcoming Events */}
-          <View style={styles.eventsSection}>
-            <Text style={styles.sectionTitle}>📅 Upcoming Events</Text>
-            {this.state.upcomingEvents.slice(0, 3).map((event) => (
-              <TouchableOpacity key={event.id} style={styles.eventItem}>
-                <View style={styles.eventDate}>
-                  <Text style={styles.eventDateText}>{event.date}</Text>
-                  <Text style={styles.eventTimeText}>{event.time}</Text>
-                </View>
-                <View style={styles.eventContent}>
-                  <Text style={styles.eventTitle}>{event.title}</Text>
-                  {event.location && (
-                    <Text style={styles.eventLocation}>📍 {event.location}</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-
-          {/* Today's Mood Card */}
-          <View style={styles.moodCard}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Today&apos;s Mood</Text>
-              <TouchableOpacity>
-                <IconSymbol name="heart.fill" size={20} color="#EF4444" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.starsContainer}>
-              {this.renderStars(this.state.todaysMood)}
-            </View>
-          </View>
-
-          {/* Weekly Progress Card */}
-          <View style={styles.progressCard}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Weekly Progress</Text>
-              <View style={styles.progressTrend}>
-                <IconSymbol name="arrow.up.right" size={16} color="#10B981" />
-                <Text style={styles.progressPercentage}>{this.state.weeklyProgress}%</Text>
-              </View>
-            </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${this.state.weeklyProgress}%` }]} />
-            </View>
-          </View>
-
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
-      </View>
+      <EnhancedSubscriptionParentDashboard
+        userId={profile?.auth_user_id || ''}
+        userProfile={{
+          name: profile?.name || 'Parent',
+          role: 'parent',
+          avatar: profile?.avatar_url || undefined,
+        }}
+        tenantName={this.state.tenantName || undefined}
+        onSignOut={signOut}
+      />
     );
   };
 
   // Method to render admin/teacher dashboard
   private renderAdminDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
-    // Fetch tenant info for admin/teacher users if not already loaded
-    if (profile && !this.state.tenantName && !this.state.loading) {
+    // Always fetch tenant info for admin/teacher users if we have a profile and preschool_id
+    if (profile && profile.preschool_id && !this.state.tenantName) {
+
       this.fetchTenantInfo(profile);
     }
 
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: this.props.palette.background }]} >
         {/* Mobile Header */}
         <MobileHeader
           user={{
             name: profile?.name || 'Admin',
             role: profile?.role || 'admin',
-            avatar: profile?.avatar_url,
+            avatar: profile?.avatar_url || undefined,
           }}
-          onNotificationsPress={() => console.log('Notifications')}
-          onSearchPress={() => console.log('Search')}
+          schoolName={this.state.tenantName || undefined}
+          onNotificationsPress={() => {/* TODO: Implement notifications */ }}
           onSignOut={signOut}
           onNavigate={this.handleNavigate}
           notificationCount={3}
         />
 
         <ScrollView
-          style={styles.scrollView}
+          style={[styles.scrollView, { marginBottom: 56 }]}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
           {/* Header Text */}
           <View style={styles.headerTextSection}>
-            <Text style={styles.greeting}>{this.getGreeting()} 👋</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.greeting, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>{this.getGreeting()} 👋</Text>
+            <Text style={[styles.subtitle, { color: this.props.isDark ? this.props.palette.textSecondary : '#6B7280' }]}>
               Welcome to your {profile?.role || 'admin'} dashboard
             </Text>
           </View>
@@ -668,84 +393,108 @@ componentDidMount() {
                 <Text style={styles.tenantLabel}>🏫 Managing {this.state.tenantName}</Text>
               </View>
             )}
-            <Text style={styles.adminTitle}>
+            <Text style={[styles.adminTitle, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>
               {profile?.role === 'teacher' ? '👩‍🏫 Teacher Dashboard' : '👨‍💼 Admin Dashboard'}
             </Text>
-            
+
             {/* Quick Actions Grid */}
             <View style={styles.teacherQuickActions}>
               {profile?.role === 'teacher' && (
                 <>
-                  <TouchableOpacity 
-                    style={styles.teacherActionCard}
-                    onPress={() => router.push('/(teacher)/reports')}
-                  >
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="doc.text.fill" size={24} color="#3B82F6" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Child Evaluations</Text>
-                    <Text style={styles.teacherActionSubtitle}>Reports & assessments for students</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={styles.teacherActionCard}
-                    onPress={() => router.push('/(tabs)/videocalls')}
-                  >
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="video.fill" size={24} color="#10B981" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Video Calls</Text>
-                    <Text style={styles.teacherActionSubtitle}>Schedule parent meetings</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={styles.teacherActionCard}
-                    onPress={() => router.push('/(tabs)/messages')}
-                  >
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="message.fill" size={24} color="#F59E0B" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Messages</Text>
-                    <Text style={styles.teacherActionSubtitle}>Communicate with parents</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={styles.teacherActionCard}
-                    onPress={() => console.log('Class Management')}
-                  >
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="person.3.fill" size={24} color="#8B5CF6" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>My Classes</Text>
-                    <Text style={styles.teacherActionSubtitle}>Manage students & activities</Text>
-                  </TouchableOpacity>
+                  <ThemedCard>
+                    <TouchableOpacity
+                      style={styles.teacherActionRow}
+                      onPress={() => router.push('/(teacher)/reports' as Href)}
+                    >
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="doc.text.fill" size={24} color="#3B82F6" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Child Evaluations</Text>
+                        <Text style={styles.teacherActionSubtitle}>Reports & assessments for students</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
+
+                  <ThemedCard>
+                    <TouchableOpacity
+                      style={styles.teacherActionRow}
+                      onPress={() => router.push('/(tabs)/videocalls' as Href)}
+                    >
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="video.fill" size={24} color="#10B981" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Video Calls</Text>
+                        <Text style={styles.teacherActionSubtitle}>Schedule parent meetings</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
+
+                  <ThemedCard>
+                    <TouchableOpacity
+                      style={styles.teacherActionRow}
+                      onPress={() => router.push('/(tabs)/messages' as Href)}
+                    >
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="message.fill" size={24} color="#F59E0B" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Messages</Text>
+                        <Text style={styles.teacherActionSubtitle}>Communicate with parents</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
+
+                  <ThemedCard>
+                    <TouchableOpacity
+                      style={styles.teacherActionRow}
+                      onPress={() => {/* TODO: Navigate to classes */ }}
+                    >
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="person.3.fill" size={24} color="#8B5CF6" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>My Classes</Text>
+                        <Text style={styles.teacherActionSubtitle}>Manage students & activities</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
                 </>
               )}
-              
+
               {profile?.role !== 'teacher' && (
                 <>
-                  <TouchableOpacity style={styles.teacherActionCard}>
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="gear" size={24} color="#6B7280" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Settings</Text>
-                    <Text style={styles.teacherActionSubtitle}>System configuration</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity style={styles.teacherActionCard}>
-                    <View style={styles.teacherActionIcon}>
-                      <IconSymbol name="person.2.fill" size={24} color="#6B7280" />
-                    </View>
-                    <Text style={styles.teacherActionTitle}>Users</Text>
-                    <Text style={styles.teacherActionSubtitle}>Manage teachers & parents</Text>
-                  </TouchableOpacity>
+                  <ThemedCard>
+                    <TouchableOpacity style={styles.teacherActionRow}>
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="gear" size={24} color="#6B7280" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Settings</Text>
+                        <Text style={styles.teacherActionSubtitle}>System configuration</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
+
+                  <ThemedCard>
+                    <TouchableOpacity style={styles.teacherActionRow}>
+                      <View style={styles.teacherActionIcon}>
+                        <IconSymbol name="person.2.fill" size={24} color="#6B7280" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teacherActionTitle}>Users</Text>
+                        <Text style={styles.teacherActionSubtitle}>Manage teachers & parents</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ThemedCard>
                 </>
               )}
             </View>
-            
+
             {/* Today's Summary for Teachers */}
             {profile?.role === 'teacher' && (
-              <View style={styles.teacherSummaryCard}>
+              <ThemedCard>
                 <Text style={styles.teacherSummaryTitle}>📊 Today&apos;s Overview</Text>
                 <View style={styles.teacherSummaryRow}>
                   <View style={styles.teacherSummaryItem}>
@@ -761,21 +510,83 @@ componentDidMount() {
                     <Text style={styles.teacherSummaryLabel}>Video Calls</Text>
                   </View>
                 </View>
-              </View>
+              </ThemedCard>
             )}
-            
+
             {/* Recent Activity */}
-            <View style={styles.adminCard}>
-              <Text style={styles.adminCardTitle}>Recent Activity</Text>
-              <Text style={styles.adminCardText}>
-                {profile?.role === 'teacher' 
+            <ThemedCard>
+              <Text style={[styles.adminCardTitle, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>Recent Activity</Text>
+              <Text style={[styles.adminCardText, { color: this.props.isDark ? this.props.palette.textSecondary : '#6B7280' }]}>
+                {profile?.role === 'teacher'
                   ? 'Your recent reports, messages, and student interactions will appear here.'
                   : 'System activity and user management updates will be shown here.'
                 }
               </Text>
-            </View>
+            </ThemedCard>
           </View>
         </ScrollView>
+      </View>
+    );
+  };
+
+  // Method to render Principal dashboard with school isolation
+  private renderPrincipalDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
+    // Always fetch tenant info for principal users if we have a profile and preschool_id
+    if (profile && profile.preschool_id && !this.state.tenantName) {
+      this.fetchTenantInfo(profile);
+    }
+
+    return (
+      <SchoolAdminDashboard
+        userId={profile?.auth_user_id || ''}
+        userProfile={{
+          name: profile?.name || 'Principal',
+          role: 'preschool_admin',
+          avatar: profile?.avatar_url || undefined,
+        }}
+        schoolName={this.state.tenantName || undefined}
+        onSignOut={signOut}
+      />
+    );
+  };
+
+  // Method to render Teacher dashboard with school isolation
+  private renderTeacherDashboard = (profile: UserProfile | null, signOut: () => Promise<void>) => {
+    // Always fetch tenant info for teacher users if we have a profile and preschool_id
+    if (profile && profile.preschool_id && !this.state.tenantName) {
+      this.fetchTenantInfo(profile);
+    }
+
+    // Render the teacher dashboard inline to avoid cross-stack redirects
+    try {
+      // Dynamically require to avoid potential circular import issues during bundling
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const TeacherModule = require('../screens/teacher-dashboard-functional');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const SubscriptionModule = require('../../contexts/SubscriptionContext');
+
+      const TeacherDashboard = TeacherModule?.TeacherDashboard || TeacherModule?.default;
+      const SubscriptionProvider = SubscriptionModule?.SubscriptionProvider;
+
+      if (TeacherDashboard && SubscriptionProvider) {
+        return (
+          <SubscriptionProvider userId={profile?.auth_user_id}>
+            <View style={{ flex: 1 }}>
+              <TeacherDashboard profile={profile} />
+            </View>
+          </SubscriptionProvider>
+        );
+      }
+    } catch (error) {
+      console.error('Error loading teacher dashboard:', error);
+      // Fallback UI if the module fails to load
+    }
+
+    // As a last resort, show a lightweight teacher welcome
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: this.props.palette.background }]} >
+        <Text style={styles.loadingText}>Loading Teacher Dashboard…</Text>
       </View>
     );
   };
@@ -784,23 +595,66 @@ componentDidMount() {
     return (
       <AuthConsumer>
         {({ profile, signOut }) => {
-          // Add debugging
-          console.log('🎭 Dashboard Role Check:', profile?.role);
-          
-          // Route based on user role
-          switch (profile?.role) {
+          // Verify user has required data for school isolation
+          if (!profile) {
+            return (
+              <View style={[styles.loadingContainer, { backgroundColor: this.props.palette.background }]} >
+                <Text style={styles.loadingText}>Loading your dashboard...</Text>
+              </View>
+            );
+          }
+
+          // Verify school assignment for non-superadmin users
+          if (profile.role !== 'superadmin' && !profile.preschool_id) {
+            return (
+              <View style={[styles.errorContainer, { backgroundColor: this.props.palette.background }]} >
+                <Text style={styles.errorText}>
+                  Account not assigned to a school. Please contact your administrator.
+                </Text>
+              </View>
+            );
+          }
+
+          // Route based on user role with proper school isolation
+          const normalizedRole = (String(profile?.role) === 'principal') ? 'preschool_admin' : profile?.role as any;
+          switch (normalizedRole) {
             case 'parent':
-              return <EnhancedParentDashboard profile={profile} onSignOut={signOut} />;
-            case 'teacher':
-            case 'admin':
+              return this.renderParentDashboard(profile, signOut);
+
             case 'superadmin':
-            case 'principal':
+              // Schedule navigation after render to avoid setState during render warnings
+              setTimeout(() => {
+                try { router.replace('/screens/super-admin-dashboard' as Href); } catch { }
+              }, 0);
+              return (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Redirecting to Super Admin…</Text>
+                </View>
+              );
+
             case 'preschool_admin':
-              return this.renderAdminDashboard(profile, signOut);
+              // Schedule navigation after render to avoid setState during render warnings
+              setTimeout(() => {
+                try { router.replace('/screens/principal-dashboard' as Href); } catch { }
+              }, 0);
+              return (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Redirecting to Principal Dashboard…</Text>
+                </View>
+              );
+
+            case 'teacher':
+              return this.renderTeacherDashboard(profile, signOut);
+
             default:
-              // If no role or unknown role, show enhanced parent dashboard as fallback
-              console.log('⚠️ Unknown role, showing enhanced parent dashboard as fallback');
-              return <EnhancedParentDashboard profile={profile} onSignOut={signOut} />;
+              // Unknown role - show error
+              return (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>
+                    Invalid user role: {profile?.role || 'None'}. Please contact support.
+                  </Text>
+                </View>
+              );
           }
         }}
       </AuthConsumer>
@@ -918,14 +772,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   moodCard: {
     backgroundColor: '#FFFFFF',
@@ -933,14 +780,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   progressCard: {
     backgroundColor: '#FFFFFF',
@@ -948,14 +788,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1012,14 +845,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   metricValue: {
     fontSize: 24,
@@ -1071,14 +897,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   updateIcon: {
     width: 32,
@@ -1118,14 +937,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadow(2),
   },
   eventDate: {
     width: 80,
@@ -1161,14 +973,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   childDropdownItem: {
     flexDirection: 'row',
@@ -1256,14 +1061,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   adminCardTitle: {
     fontSize: 18,
@@ -1305,14 +1103,7 @@ const styles = StyleSheet.create({
     width: '48%',
     alignItems: 'center',
     minHeight: 120,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   teacherActionIcon: {
     width: 48,
@@ -1336,19 +1127,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
+  teacherActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   teacherSummaryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow(3),
   },
   teacherSummaryTitle: {
     fontSize: 18,
@@ -1375,6 +1164,35 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
 });
 
-export default DashboardScreen;
+export default function DashboardTabWrapper() {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
+  return <DashboardScreen palette={palette} isDark={colorScheme === 'dark'} />;
+}

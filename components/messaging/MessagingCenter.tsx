@@ -1,41 +1,39 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  RefreshControl,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useConversationMessages } from '@/lib/hooks/useConversationMessages';
+import { useConversationRealtime } from '@/lib/hooks/useConversationRealtime';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Modal,
+} from 'react-native';
 import ComposeMessageModal from './ComposeMessageModal';
+import { ConversationService, type Conversation as RoomConversation } from '@/lib/services/conversationService';
+import { router } from 'expo-router';
 
 interface Message {
   id: string;
   content: string;
   sender_id: string;
-  receiver_id: string;
-  sender_type: 'parent' | 'teacher' | 'admin';
-  receiver_type: 'parent' | 'teacher' | 'admin';
-  message_type: 'text' | 'image' | 'file' | 'announcement';
-  child_id?: string;
-  thread_id?: string;
-  is_read: boolean;
+  message_type: 'text' | 'image' | 'file' | 'announcement' | 'system' | 'general';
   created_at: string;
-  updated_at: string;
+  updated_at?: string | null;
   sender_name?: string;
-  sender_avatar?: string;
-  attachments?: MessageAttachment[];
+  sender_avatar?: string | null;
 }
 
 interface MessageAttachment {
@@ -49,7 +47,7 @@ interface MessageAttachment {
 interface Conversation {
   id: string;
   participant_name: string;
-  participant_avatar?: string;
+  participant_avatar?: string | null;
   participant_role: string;
   child_name?: string;
   last_message: string;
@@ -62,33 +60,74 @@ interface MessagingCenterProps {
   profile: UserProfile | null;
   childrenList: any[];
   onClose: () => void;
+  showHeader?: boolean;
 }
 
 const MessagingCenter: React.FC<MessagingCenterProps> = ({
   profile,
   childrenList,
   onClose,
+  showHeader = true,
 }) => {
+  const { colorScheme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const NAV_OFFSET = 64; // approximate bottom nav height
+  const navPad = insets.bottom + NAV_OFFSET;
+  const isDark = colorScheme === 'dark';
+  const colors = {
+    bg: isDark ? '#0B1220' : '#F8FAFC',
+    card: isDark ? '#0F172A' : '#FFFFFF',
+    border: isDark ? '#334155' : '#E5E7EB',
+    text: isDark ? '#F1F5F9' : '#1F2937',
+    muted: isDark ? '#94A3B8' : '#6B7280',
+    sub: isDark ? '#CBD5E1' : '#4B5563',
+  };
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null); // DM user id
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null); // group/announcement conversation id
   const [messages, setMessages] = useState<Message[]>([]);
+  const [rooms, setRooms] = useState<RoomConversation[]>([]);
+  const [roomSettings, setRoomSettings] = useState<{ admins_only?: boolean; locked?: boolean; allow_member_posting?: boolean } | null>(null);
+  const [myRoomRole, setMyRoomRole] = useState<'owner' | 'admin' | 'member' | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  // Draft state for Direct Messages (DM). We store one draft per DM target.
+  const [dmDraftId, setDmDraftId] = useState<string | null>(null);
+  const draftTimerRef = useRef<any>(null);
   const [activeTab, setActiveTab] = useState<'conversations' | 'announcements'>('conversations');
   const [announcements, setAnnouncements] = useState<Message[]>([]);
   const [showComposeModal, setShowComposeModal] = useState(false);
-  
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [parentUserId, setParentUserId] = useState<string | null>(null);
+
   const scrollViewRef = useRef<ScrollView>(null);
   const messageSubscription = useRef<any>(null);
 
+  // Query-backed room messages and realtime bridge
+  const selectedRoom = selectedRoomId ? rooms.find((r: any) => r.id === selectedRoomId) : null;
+  const roomMessagesQuery = useConversationMessages(
+    selectedRoomId || undefined,
+    (profile as any)?.preschool_id || undefined,
+    String(profile?.role || '')
+  );
+  useConversationRealtime({
+    conversationId: selectedRoomId || undefined,
+    conversationType: (selectedRoom as any)?.type,
+    preschoolId: (profile as any)?.preschool_id || undefined,
+    role: String(profile?.role || ''),
+    autoScroll: () => scrollToBottom(),
+  });
+
   useEffect(() => {
-    if (profile) {
-      loadConversations();
-      loadAnnouncements();
-      setupRealtimeSubscription();
-    }
+    const init = async () => {
+      if (!profile) return;
+      await waitForAuthSession();
+      await Promise.all([loadConversations(), loadAnnouncements(), loadRooms()]);
+      await setupRealtimeSubscription();
+    };
+    init();
 
     return () => {
       if (messageSubscription.current) {
@@ -97,28 +136,97 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     };
   }, [profile]);
 
-  const setupRealtimeSubscription = () => {
-    if (!profile?.auth_user_id) return;
+  const waitForAuthSession = async (timeoutMs = 3000) => {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.access_token) return true;
+      } catch {}
+      await new Promise(r => setTimeout(r, 150));
+    }
+    return false;
+  };
 
-    // Subscribe to new messages
-    messageSubscription.current = supabase
-      .channel('messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${profile.auth_user_id}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
-          loadConversations(); // Refresh conversations to update last message
-          scrollToBottom();
-        }
-      )
-      .subscribe();
+  const setupRealtimeSubscription = async () => {
+    // Subscribe to new message deliveries for this user
+    try {
+      const { data: parentProfile } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', profile?.auth_user_id || '')
+        .single();
+      if (!parentProfile) return;
+      setParentUserId(parentProfile.id);
+
+      messageSubscription.current = (supabase as any)
+        .channel(`message_recipients_user_${parentProfile.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'message_recipients', filter: `recipient_id=eq.${parentProfile.id}` },
+          async (payload: any) => {
+            const recipientRow = payload.new as { message_id: string };
+            const { data: msg } = await supabase
+              .from('messages')
+              .select('id, content, created_at, sender_id')
+              .eq('id', recipientRow.message_id)
+              .single();
+            if (msg) {
+              setMessages(prev => [...prev, { id: msg.id, content: msg.content, created_at: msg.created_at || new Date().toISOString(), sender_id: msg.sender_id || '', message_type: 'general' }]);
+              loadConversations();
+              scrollToBottom();
+            }
+          }
+        )
+        .subscribe();
+    } catch { }
+  };
+
+  // Load contacts for teachers - shows other school staff and parents
+  const loadSchoolContacts = async (userProfile: any) => {
+    try {
+      // Get all users in the same school (principals, other teachers, parents)
+      const { data: schoolUsers, error: schoolError } = await supabase
+        .from('users')
+        .select('id, name, avatar_url, role, email')
+        .eq('preschool_id', userProfile.preschool_id)
+        .neq('id', userProfile.id) // Exclude self
+        // Accept active users and users with null is_active to avoid hiding contacts
+        .or('is_active.is.null,is_active.eq.true')
+        // Include principal alias in addition to preschool_admin
+        .in('role', ['preschool_admin', 'principal', 'teacher', 'parent'])
+        .order('role', { ascending: true }) // Admins first, then teachers, then parents
+        .order('name', { ascending: true });
+
+      if (schoolError) throw schoolError;
+
+      // Convert to conversation format
+      const schoolContacts: Conversation[] = ((schoolUsers || []) as any[]).map((user: any) => ({
+        id: user.id,
+        participant_name: user.name || user.email || 'Unknown User',
+        participant_avatar: user.avatar_url,
+        participant_role: user.role,
+        last_message: `Start a conversation with ${user.name || 'this user'}`,
+        last_message_time: '',
+        unread_count: 0,
+        is_online: false,
+      }));
+
+      setConversations(schoolContacts);
+    } catch (error) {
+      console.error('Error loading school contacts:', error);
+      Alert.alert('Error', 'Failed to load school contacts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadRooms = async () => {
+    if (!profile?.auth_user_id) return;
+    try {
+      const data = await ConversationService.listMyConversations(profile.auth_user_id);
+      setRooms(data || []);
+    } catch {}
   };
 
   const loadConversations = async () => {
@@ -127,67 +235,155 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     try {
       setLoading(true);
 
-      // Get parent's internal ID
-      const { data: parentProfile, error: parentError } = await supabase
+      // Get user's internal ID
+      const { data: userProfile, error: userError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, role, preschool_id')
         .eq('auth_user_id', profile.auth_user_id)
         .single();
 
-      if (parentError || !parentProfile) {
-        throw new Error('Parent profile not found');
+      if (userError || !userProfile) {
+        throw new Error('User profile not found');
+      }
+      setParentUserId(userProfile.id);
+
+      // If user is a teacher or principal, show other school staff and parents
+      if ((userProfile.role === 'teacher' || userProfile.role === 'principal' || userProfile.role === 'preschool_admin')) {
+        if (userProfile.preschool_id) {
+          await loadSchoolContacts(userProfile);
+          return;
+        }
+        // Fallback: try infer preschool_id from invitations
+        try {
+          // teacher_invitations invited_by
+          const { data: tInvite } = await supabase
+            .from('teacher_invitations')
+            .select('preschool_id, created_at')
+            .eq('invited_by', userProfile.id)
+            .not('preschool_id', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          let fallbackSchool = tInvite?.preschool_id as string | null;
+          if (!fallbackSchool) {
+            const { data: inviteCode } = await supabase
+              .from('invitation_codes')
+              .select('preschool_id, created_at, is_active')
+              .eq('invited_by', userProfile.id)
+              .eq('is_active', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            fallbackSchool = (inviteCode?.preschool_id as string | null) || null;
+          }
+          if (!fallbackSchool) {
+            const { data: schoolCode } = await supabase
+              .from('school_invitation_codes')
+              .select('preschool_id, created_at, is_active')
+              .eq('invited_by', userProfile.id)
+              .eq('is_active', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            fallbackSchool = (schoolCode?.preschool_id as string | null) || null;
+          }
+          if (fallbackSchool) {
+            await loadSchoolContacts({ ...userProfile, preschool_id: fallbackSchool });
+            return;
+          }
+        } catch {}
       }
 
-      // Fetch conversations with teachers and staff
-      const { data: conversationsData, error: conversationsError } = await supabase
+      // 1) Incoming messages to parent
+      const { data: incoming, error: incomingError } = await supabase
+        .from('message_recipients')
+        .select(`
+          read_at,
+          created_at,
+          message:messages(
+            id,
+            content,
+            created_at,
+            sender_id,
+            sender:users(name, avatar_url, role)
+          )
+        `)
+        .eq('recipient_id', userProfile.id)
+        .order('created_at', { ascending: false });
+      if (incomingError) throw incomingError;
+
+      // 2) Outgoing messages from parent (to build conversations)
+      const { data: outgoing, error: outgoingError } = await supabase
         .from('messages')
         .select(`
           id,
-          sender_id,
-          receiver_id,
-          sender_type,
-          receiver_type,
           content,
           created_at,
-          is_read,
-          child_id,
-          sender:users!messages_sender_id_fkey(name, avatar_url, role),
-          receiver:users!messages_receiver_id_fkey(name, avatar_url, role),
-          child:students(first_name, last_name)
+          sender_id,
+          message_recipients(recipient_id)
         `)
-        .or(`sender_id.eq.${parentProfile.id},receiver_id.eq.${parentProfile.id}`)
+        .eq('sender_id', userProfile.id)
         .order('created_at', { ascending: false });
+      if (outgoingError) throw outgoingError;
 
-      if (conversationsError) {
-        throw conversationsError;
+      // Collect recipient user ids from outgoing to backfill names
+      const recipientIds = new Set<string>();
+      outgoing?.forEach((m: any) => m.message_recipients?.forEach((r: any) => recipientIds.add(r.recipient_id)));
+      const missingIds = Array.from(recipientIds);
+      let recipientsById: Record<string, { name: string; avatar_url: string | null; role: string | null }> = {};
+      if (missingIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, name, avatar_url, role')
+          .in('id', missingIds);
+        (usersData || []).forEach((u: any) => { recipientsById[u.id] = { name: u.name, avatar_url: u.avatar_url, role: u.role }; });
       }
 
-      // Group messages by conversation participants
       const conversationMap = new Map<string, Conversation>();
-      
-      conversationsData?.forEach((msg: any) => {
-        const isFromParent = msg.sender_id === parentProfile.id;
-        const otherParticipant = isFromParent ? msg.receiver : msg.sender;
-        const conversationKey = isFromParent ? msg.receiver_id : msg.sender_id;
-        
-        if (!conversationMap.has(conversationKey)) {
-          conversationMap.set(conversationKey, {
-            id: conversationKey,
-            participant_name: otherParticipant?.name || 'Unknown',
-            participant_avatar: otherParticipant?.avatar_url,
-            participant_role: otherParticipant?.role || 'teacher',
-            child_name: msg.child ? `${msg.child.first_name} ${msg.child.last_name}` : undefined,
+
+      // Build from incoming
+      incoming?.forEach((row: any) => {
+        const msg = row.message;
+        if (!msg) return;
+        const otherId = msg.sender_id;
+        if (!conversationMap.has(otherId)) {
+          conversationMap.set(otherId, {
+            id: otherId,
+            participant_name: msg.sender?.name || 'Unknown',
+            participant_avatar: msg.sender?.avatar_url || null,
+            participant_role: msg.sender?.role || 'teacher',
             last_message: msg.content,
             last_message_time: formatMessageTime(msg.created_at),
-            unread_count: isFromParent ? 0 : (msg.is_read ? 0 : 1),
-            is_online: Math.random() > 0.5, // Mock online status
+            unread_count: row.read_at ? 0 : 1,
+            is_online: false,
           });
         }
       });
 
+      // Build from outgoing
+      outgoing?.forEach((msg: any) => {
+        const recipients = msg.message_recipients || [];
+        recipients.forEach((r: any) => {
+          const otherId = r.recipient_id;
+          if (!conversationMap.has(otherId)) {
+            const recipient = recipientsById[otherId];
+            conversationMap.set(otherId, {
+              id: otherId,
+              participant_name: recipient?.name || 'Unknown',
+              participant_avatar: recipient?.avatar_url || null,
+              participant_role: recipient?.role || 'teacher',
+              last_message: msg.content,
+              last_message_time: formatMessageTime(msg.created_at),
+              unread_count: 0,
+              is_online: false,
+            });
+          }
+        });
+      });
+
       setConversations(Array.from(conversationMap.values()));
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      // Removed debug statement: console.error('Error loading conversations:', error);
       Alert.alert('Error', 'Failed to load conversations');
     } finally {
       setLoading(false);
@@ -195,31 +391,81 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   };
 
   const loadAnnouncements = async () => {
-    if (!profile?.preschool_id) return;
+    if (!profile?.auth_user_id) return;
 
     try {
-      // Fetch school announcements
-      const { data: announcementsData, error } = await supabase
-        .from('messages')
-        .select(`
-          id,
-          content,
-          created_at,
-          sender:users!messages_sender_id_fkey(name, avatar_url, role)
-        `)
-        .eq('message_type', 'announcement')
-        .eq('receiver_type', 'parent')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      // Resolve current user id
+      const { data: parentProfile } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', profile.auth_user_id)
+        .single();
+      if (!parentProfile) return;
 
-      if (error) {
-        throw error;
+      // Fetch announcement message deliveries
+      const { data: recips, error: recErr } = await supabase
+        .from('message_recipients')
+        .select('message_id, read_at, created_at')
+        .eq('recipient_id', parentProfile.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (recErr) throw recErr;
+
+      const ids = Array.from(new Set((recips || []).map((r: any) => r.message_id)));
+      if (ids.length === 0) { setAnnouncements([]); return; }
+
+      const { data: msgs, error: msgErr } = await supabase
+        .from('messages')
+        .select('id, content, created_at, sender_id, message_type')
+        .in('id', ids)
+        .eq('message_type', 'announcement')
+        .order('created_at', { ascending: false });
+      if (msgErr) throw msgErr;
+
+      const senderIds = Array.from(new Set((msgs || []).map((m: any) => m.sender_id).filter(Boolean)));
+      let senders: Record<string, any> = {};
+      if (senderIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, name, avatar_url')
+          .in('id', senderIds);
+        (users || []).forEach((u: any) => { senders[u.id] = u; });
       }
 
-      setAnnouncements(announcementsData || []);
+      const mapped: Message[] = (msgs || []).map((m: any) => ({
+        id: m.id,
+        content: m.content,
+        created_at: m.created_at,
+        sender_id: m.sender_id,
+        message_type: (m.message_type as any) || 'announcement',
+        sender_name: senders[m.sender_id]?.name,
+        sender_avatar: senders[m.sender_id]?.avatar_url,
+      }));
+
+      setAnnouncements(mapped);
     } catch (error) {
-      console.error('Error loading announcements:', error);
+      // Removed debug statement: console.error('Error loading announcements:', error);
     }
+  };
+
+  const loadRoomContext = async (roomId: string) => {
+    try {
+      // Pull conversation row and my membership
+      const list = await ConversationService.listMyConversations(profile!.auth_user_id);
+      const found = (list || []).find((c: any) => c.id === roomId);
+      setRoomSettings(found?.settings || null);
+      // Find my role
+      const uid = await ConversationService.getCurrentUserId(profile!.auth_user_id);
+      if (uid) {
+        const { data } = await supabase
+          .from('conversation_members')
+          .select('role')
+          .eq('conversation_id', roomId)
+          .eq('user_id', uid)
+          .maybeSingle();
+        if (data?.role) setMyRoomRole(data.role);
+      }
+    } catch {}
   };
 
   const loadMessages = async (conversationId: string) => {
@@ -234,47 +480,169 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
       if (parentError || !parentProfile) return;
 
-      const { data: messagesData, error } = await supabase
+      // Build DM thread without embeds
+      const { data: recIncoming, error: incomingError } = await supabase
+        .from('message_recipients')
+        .select('message_id, read_at')
+        .eq('recipient_id', parentProfile.id);
+      if (incomingError) throw incomingError;
+
+      const incomingIds = (recIncoming || []).map((r: any) => r.message_id);
+
+      const { data: recOutgoing, error: outgoingError } = await supabase
+        .from('message_recipients')
+        .select('message_id')
+        .eq('recipient_id', conversationId);
+      if (outgoingError) throw outgoingError;
+
+      const outgoingIds = (recOutgoing || []).map((r: any) => r.message_id);
+
+      const allIds = Array.from(new Set([...incomingIds, ...outgoingIds]));
+      if (allIds.length === 0) { setMessages([]); return; }
+
+      const { data: msgsAll } = await supabase
         .from('messages')
-        .select(`
-          id,
-          content,
-          sender_id,
-          receiver_id,
-          sender_type,
-          message_type,
-          created_at,
-          is_read,
-          sender:users!messages_sender_id_fkey(name, avatar_url)
-        `)
-        .or(`and(sender_id.eq.${parentProfile.id},receiver_id.eq.${conversationId}),and(sender_id.eq.${conversationId},receiver_id.eq.${parentProfile.id})`)
+        .select('id, content, created_at, sender_id')
+        .in('id', allIds)
+        .or(`and(sender_id.eq.${conversationId}),and(sender_id.eq.${parentProfile.id})`)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        throw error;
-      }
+      const unified: Message[] = (msgsAll || [])
+        .map((m: any) => ({ id: m.id, content: m.content, created_at: m.created_at, sender_id: m.sender_id, message_type: 'general' }));
 
-      setMessages(messagesData || []);
-      
-      // Mark messages as read
+      setMessages(unified);
+
+      // Mark as read for any incoming unread
       await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('sender_id', conversationId)
-        .eq('receiver_id', parentProfile.id)
+        .from('message_recipients')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('recipient_id', parentProfile.id)
         .eq('is_read', false);
 
       scrollToBottom();
     } catch (error) {
-      console.error('Error loading messages:', error);
+      // Removed debug statement: console.error('Error loading messages:', error);
     }
   };
 
+  const canPostInRoom = () => {
+    if (!roomSettings) return true;
+    const isAdmin = myRoomRole === 'owner' || myRoomRole === 'admin';
+    if (roomSettings.locked) return isAdmin;
+    if (roomSettings.admins_only) return isAdmin;
+    if (roomSettings.allow_member_posting === false) return isAdmin;
+    return true;
+  };
+
+  // Load an existing draft for a DM target (recipient user id)
+  const loadDMDraft = async (recipientUserId: string) => {
+    try {
+      if (!profile?.auth_user_id) return;
+      // Resolve current user id (sender_id)
+      const { data: me } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', profile.auth_user_id)
+        .single();
+      if (!me) return;
+
+      const { data: draft } = await supabase
+        .from('message_drafts')
+        .select('id, subject, content, recipient_ids')
+        .eq('sender_id', me.id)
+        .contains('recipient_ids', [recipientUserId])
+        .maybeSingle();
+
+      if (draft) {
+        setDmDraftId(draft.id);
+        if (typeof draft.content === 'string') setNewMessage(draft.content);
+      } else {
+        setDmDraftId(null);
+        // do not overwrite newMessage here; user might have started typing
+      }
+    } catch {}
+  };
+
+  // Save or update current DM draft (debounced by effect below)
+  const saveDMDraftNow = async () => {
+    try {
+      if (!selectedConversation || !profile?.auth_user_id) return;
+      // resolve current user id
+      const { data: me } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', profile.auth_user_id)
+        .single();
+      if (!me) return;
+
+      if (!newMessage.trim()) {
+        // If there is an existing draft and content is empty, we keep it for now (user may continue typing)
+        return;
+      }
+
+      if (!dmDraftId) {
+        // Insert new draft
+        const { data: inserted, error: insErr } = await supabase
+          .from('message_drafts')
+          .insert({
+            sender_id: me.id,
+            subject: '',
+            content: newMessage,
+            recipient_ids: [selectedConversation],
+          })
+          .select('id')
+          .single();
+        if (!insErr && inserted?.id) setDmDraftId(inserted.id);
+      } else {
+        // Update existing draft
+        await supabase
+          .from('message_drafts')
+          .update({ content: newMessage })
+          .eq('id', dmDraftId);
+      }
+    } catch {}
+  };
+
+  const deleteDMDraft = async () => {
+    try {
+      if (dmDraftId) {
+        await supabase.from('message_drafts').delete().eq('id', dmDraftId);
+      }
+      setDmDraftId(null);
+    } catch {}
+  };
+
+  // Debounce saving drafts while typing for DMs only
+  useEffect(() => {
+    if (!selectedConversation) return; // only for DM
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      saveDMDraftNow();
+    }, 600);
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
+  }, [newMessage, selectedConversation]);
+
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation || !profile) return;
+    if (!newMessage.trim() || !profile) return;
 
     try {
       setSending(true);
+
+      // If room chat
+      if (selectedRoomId) {
+        const res = await ConversationService.sendMessage({
+          authUserId: profile!.auth_user_id,
+          conversationId: selectedRoomId,
+          content: newMessage.trim(),
+        });
+        if (res.error) throw new Error(res.error);
+        setNewMessage('');
+        // Room messages will update via Realtime + React Query; just scroll
+        scrollToBottom();
+        return;
+      }
 
       const { data: parentProfile, error: parentError } = await supabase
         .from('users')
@@ -286,27 +654,24 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         throw new Error('Parent profile not found');
       }
 
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          content: newMessage.trim(),
-          sender_id: parentProfile.id,
-          receiver_id: selectedConversation,
-          sender_type: 'parent',
-          receiver_type: 'teacher',
-          message_type: 'text',
-          is_read: false,
-        });
+      // Atomic server-side send via RPC (handles RLS)
+      const { data: messageId, error: rpcError } = await supabase.rpc('send_direct_message', {
+        p_recipient_user_id: selectedConversation,
+        p_content: newMessage.trim(),
+        p_subject: '',
+        p_message_type: 'direct',
+      });
 
-      if (error) {
-        throw error;
+      if (rpcError || !messageId) {
+        throw rpcError || new Error('send_direct_message failed');
       }
 
       setNewMessage('');
+      await deleteDMDraft();
       await loadMessages(selectedConversation);
       await loadConversations();
     } catch (error) {
-      console.error('Error sending message:', error);
+      // Removed debug statement: console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message');
     } finally {
       setSending(false);
@@ -349,16 +714,62 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       style={styles.conversationsList}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      {/* Group/Announcement Conversations */}
+      {rooms.map((room: any) => (
+        <TouchableOpacity
+          key={`room_${room.id}`}
+          style={[
+            styles.conversationItem,
+            { backgroundColor: colors.card, borderBottomColor: colors.border },
+            selectedRoomId === room.id && (isDark ? styles.selectedConversationDark : styles.selectedConversation)
+          ]}
+          onPress={async () => {
+            setSelectedConversation(null);
+            setSelectedRoomId(room.id);
+            await loadRoomContext(room.id);
+            // Messages will be loaded via React Query hook; Realtime will append incoming
+            scrollToBottom();
+          }}
+        >
+          <View style={styles.avatarContainer}>
+            <View style={[styles.defaultAvatar, isDark && { backgroundColor: '#334155' }]}>
+              <Text style={[styles.avatarText, { color: isDark ? '#CBD5E1' : '#6B7280' }]}>
+                {(room.name || 'Room').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.conversationInfo}>
+            <View style={styles.conversationHeader}>
+              <Text style={[styles.participantName, { color: colors.text }]}>{room.name || 'Group'}</Text>
+              <Text style={[styles.messageTime, { color: colors.muted }]}></Text>
+            </View>
+            <View style={styles.conversationDetails}>
+              <Text style={[styles.participantRole, { color: colors.muted }]}>
+                {room.type === 'announcement' ? '📣 Announcements' : '👥 Group Chat'}
+              </Text>
+            </View>
+            <Text style={[styles.lastMessage, { color: colors.muted }]} numberOfLines={1}>
+              {room.description || ' '}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ))}
+
+      {/* Direct Messages */}
       {conversations.map((conversation) => (
         <TouchableOpacity
           key={conversation.id}
           style={[
             styles.conversationItem,
-            selectedConversation === conversation.id && styles.selectedConversation
+            { backgroundColor: colors.card, borderBottomColor: colors.border },
+            selectedConversation === conversation.id && (isDark ? styles.selectedConversationDark : styles.selectedConversation)
           ]}
           onPress={() => {
             setSelectedConversation(conversation.id);
+            setSelectedRoomId(null);
             loadMessages(conversation.id);
+            // Load any existing draft for this DM
+            loadDMDraft(conversation.id);
           }}
         >
           <View style={styles.avatarContainer}>
@@ -368,8 +779,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
                 style={styles.avatar}
               />
             ) : (
-              <View style={styles.defaultAvatar}>
-                <Text style={styles.avatarText}>
+              <View style={[styles.defaultAvatar, isDark && { backgroundColor: '#334155' }]}>
+                <Text style={[styles.avatarText, { color: isDark ? '#CBD5E1' : '#6B7280' }]}>
                   {conversation.participant_name.charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -379,21 +790,24 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
           <View style={styles.conversationInfo}>
             <View style={styles.conversationHeader}>
-              <Text style={styles.participantName}>{conversation.participant_name}</Text>
-              <Text style={styles.messageTime}>{conversation.last_message_time}</Text>
+              <Text style={[styles.participantName, { color: colors.text }]}>{conversation.participant_name}</Text>
+              <Text style={[styles.messageTime, { color: colors.muted }]}>{conversation.last_message_time}</Text>
             </View>
-            
+
             <View style={styles.conversationDetails}>
-              <Text style={styles.participantRole}>
-                {conversation.participant_role === 'teacher' ? '👩‍🏫 Teacher' : '👨‍💼 Admin'}
-                {conversation.child_name && ` • ${conversation.child_name}`}
+              <Text style={[styles.participantRole, { color: colors.muted }]}>
+                {conversation.participant_role === 'teacher' && '👩‍🏫 Teacher'}
+                {(conversation.participant_role === 'preschool_admin' || conversation.participant_role === 'principal') && '👨‍💼 Principal'}
+                {conversation.participant_role === 'parent' && '👨‍👩‍👦 Parent'}
+                {!['teacher', 'preschool_admin', 'principal', 'parent'].includes(conversation.participant_role) && '👤 User'}
               </Text>
             </View>
 
             <Text
               style={[
                 styles.lastMessage,
-                conversation.unread_count > 0 && styles.unreadMessage
+                { color: colors.muted },
+                conversation.unread_count > 0 && { color: colors.text, fontWeight: '500' }
               ]}
               numberOfLines={1}
             >
@@ -414,12 +828,11 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           <View style={styles.emptyStateIcon}>
             <IconSymbol name="bubble.left.and.bubble.right" size={64} color="#3B82F6" />
           </View>
-          <Text style={styles.emptyStateTitle}>Start Your First Conversation</Text>
-          <Text style={styles.emptyStateText}>
-            Connect with your child&apos;s teachers, school staff, and other parents.
-            Tap the + button above to send your first message!
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>Start Your First Conversation</Text>
+          <Text style={[styles.emptyStateText, { color: colors.muted }]}>
+            {"Connect with your child's teachers, school staff, and other parents.\nTap the + button above to send your first message!"}
           </Text>
-          
+
           <TouchableOpacity
             style={styles.emptyStateButton}
             onPress={() => setShowComposeModal(true)}
@@ -427,19 +840,19 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
             <Text style={styles.emptyStateButtonText}>Start a Conversation</Text>
           </TouchableOpacity>
-          
-          <View style={styles.emptyStateFeatures}>
+
+          <View style={[styles.emptyStateFeatures, {}]}>
             <View style={styles.featureItem}>
               <IconSymbol name="person.2.fill" size={16} color="#10B981" />
-              <Text style={styles.featureText}>Connect with teachers</Text>
+              <Text style={[styles.featureText, { color: colors.muted }]}>Connect with teachers</Text>
             </View>
             <View style={styles.featureItem}>
               <IconSymbol name="bell.fill" size={16} color="#F59E0B" />
-              <Text style={styles.featureText}>Get real-time updates</Text>
+              <Text style={[styles.featureText, { color: colors.muted }]}>Get real-time updates</Text>
             </View>
             <View style={styles.featureItem}>
               <IconSymbol name="heart.fill" size={16} color="#EF4444" />
-              <Text style={styles.featureText}>Stay involved in learning</Text>
+              <Text style={[styles.featureText, { color: colors.muted }]}>Stay involved in learning</Text>
             </View>
           </View>
         </View>
@@ -452,34 +865,33 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       style={styles.announcementsList}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {announcements.map((announcement) => (
-        <View key={announcement.id} style={styles.announcementItem}>
-          <View style={styles.announcementHeader}>
-            <View style={styles.announcementSender}>
-              <IconSymbol name="megaphone.fill" size={20} color="#3B82F6" />
-              <Text style={styles.announcementSenderName}>
-                {announcement.sender_name || 'School Administration'}
-              </Text>
+      {announcements.map((a) => {
+        const timeStr = formatMessageTime(a.created_at);
+        const senderName = a.sender_name || 'School Administration';
+        return (
+          <View key={a.id} style={[styles.announcementItem, { backgroundColor: colors.card }]}>
+            <View style={styles.announcementHeader}>
+              <View style={styles.announcementSender}>
+                <IconSymbol name="megaphone.fill" size={20} color="#3B82F6" />
+                <Text style={[styles.announcementSenderName, { color: '#3B82F6' }]}>{senderName}</Text>
+              </View>
+              <Text style={[styles.announcementTime, { color: colors.muted }]}>{timeStr}</Text>
             </View>
-            <Text style={styles.announcementTime}>
-              {formatMessageTime(announcement.created_at)}
-            </Text>
+            <Text style={[styles.announcementContent, { color: colors.sub }]}>{a.content}</Text>
           </View>
-          <Text style={styles.announcementContent}>{announcement.content}</Text>
-        </View>
-      ))}
+        );
+      })}
 
       {announcements.length === 0 && !loading && (
         <View style={styles.emptyState}>
-          <View style={styles.emptyStateIcon}>
+          <View style={[styles.emptyStateIcon, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)' }]}>
             <IconSymbol name="megaphone.fill" size={64} color="#8B5CF6" />
           </View>
-          <Text style={styles.emptyStateTitle}>No Announcements Yet</Text>
-          <Text style={styles.emptyStateText}>
-            Important school updates, events, and news will appear here.
-            Stay tuned for the latest from your preschool!
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>No Announcements Yet</Text>
+          <Text style={[styles.emptyStateText, { color: colors.muted }]}>
+            {"Important school updates, events, and news will appear here.\nStay tuned for the latest from your preschool!"}
           </Text>
-          
+
           <View style={styles.emptyStateFeatures}>
             <View style={styles.featureItem}>
               <IconSymbol name="calendar" size={16} color="#3B82F6" />
@@ -500,25 +912,109 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   );
 
   const renderChatView = () => {
+    if (selectedRoomId) {
+      // Room conversation view
+      const room = rooms.find((r: any) => r.id === selectedRoomId);
+      if (!room) return null;
+      const isAdmin = myRoomRole === 'owner' || myRoomRole === 'admin';
+      const readOnly = (roomSettings?.locked || roomSettings?.admins_only) && !isAdmin || roomSettings?.allow_member_posting === false && !isAdmin;
+      return (
+        <View style={styles.chatContainer}>
+          <View style={[styles.chatHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+            <TouchableOpacity style={styles.backButton} onPress={() => { setSelectedRoomId(null); setMessages([]); }}>
+              <IconSymbol name="chevron.left" size={20} color="#3B82F6" />
+            </TouchableOpacity>
+            <View style={styles.chatHeaderInfo}>
+              <Text style={[styles.chatParticipantName, { color: colors.text }]}>{room?.name || 'Group'}</Text>
+              <Text style={[styles.chatParticipantRole, { color: colors.muted }]}>
+                {room?.type === 'announcement' ? 'Announcements' : 'Group Chat'}
+              </Text>
+            </View>
+            {(myRoomRole === 'owner' || myRoomRole === 'admin') && (
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={async () => {
+                  // Quick toggle cycle: admins_only -> locked -> allow_member_posting toggle
+                  const patch: any = {};
+                  if (!roomSettings?.admins_only) patch.admins_only = true; else if (!roomSettings?.locked) patch.locked = true; else patch.allow_member_posting = !(roomSettings?.allow_member_posting ?? true);
+                  await ConversationService.setSettings({ authUserId: profile!.auth_user_id, conversationId: room.id, patch });
+                  await loadRoomContext(room.id);
+                }}
+              >
+                <IconSymbol name="gearshape" size={20} color="#3B82F6" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {readOnly && (
+            <View style={[styles.warningContainer, { backgroundColor: 'rgba(245,158,11,0.1)' }]}>
+              <IconSymbol name="exclamationmark.triangle.fill" size={14} color="#F59E0B" />
+              <Text style={[styles.warningText, { color: colors.text }]}>
+                {roomSettings?.locked ? 'This conversation is locked' : 'Only admins can send messages'}
+              </Text>
+            </View>
+          )}
+
+          <ScrollView ref={scrollViewRef} style={[styles.messagesContainer, { backgroundColor: colors.bg }]} contentContainerStyle={[styles.messagesContent, { paddingBottom: navPad + 16 }]} onContentSizeChange={scrollToBottom}>
+            {(roomMessagesQuery.data || []).map((message: any) => {
+              const isFromParent = parentUserId ? message.sender_id === parentUserId : false;
+              return (
+                <View key={message.id} style={[styles.messageItem, isFromParent ? styles.sentMessage : styles.receivedMessage]}>
+                  <View style={[styles.messageBubble, isFromParent ? styles.sentBubble : [styles.receivedBubble, { backgroundColor: colors.card }]]}>
+                    <Text style={[styles.messageText, isFromParent ? styles.sentText : [styles.receivedText, { color: colors.text }]]}>{message.content}</Text>
+                    <Text style={[styles.messageTime, isFromParent ? styles.sentTime : [styles.receivedTime, { color: colors.muted }]]}>{formatMessageTime(message.created_at)}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.messageInputContainer, { backgroundColor: colors.card, borderTopColor: colors.border, marginBottom: navPad }]}>
+            <View style={styles.messageInputWrapper}>
+              <TextInput
+                style={[styles.messageInput, { borderColor: colors.border, color: colors.text, backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]}
+                value={newMessage}
+                onChangeText={setNewMessage}
+                placeholder={readOnly ? 'Read-only' : 'Type a message...'}
+                placeholderTextColor={isDark ? '#64748B' : '#9CA3AF'}
+                multiline
+                maxLength={1000}
+                editable={!readOnly}
+              />
+              <TouchableOpacity
+                style={[styles.sendButton, (!newMessage.trim() || sending || readOnly) && styles.sendButtonDisabled]}
+                onPress={sendMessage}
+                disabled={!newMessage.trim() || sending || readOnly}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Send"
+                accessibilityHint="Send message"
+              >
+                {sending ? <ActivityIndicator size="small" color="#FFFFFF" /> : <IconSymbol name="arrow.up" size={20} color="#FFFFFF" />}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      );
+    }
+
     const conversation = conversations.find(c => c.id === selectedConversation);
     if (!conversation) return null;
 
     return (
       <View style={styles.chatContainer}>
         {/* Chat Header */}
-        <View style={styles.chatHeader}>
+        <View style={[styles.chatHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => setSelectedConversation(null)}
           >
             <IconSymbol name="chevron.left" size={20} color="#3B82F6" />
           </TouchableOpacity>
-          
+
           <View style={styles.chatHeaderInfo}>
-            <Text style={styles.chatParticipantName}>{conversation.participant_name}</Text>
-            <Text style={styles.chatParticipantRole}>
-              {conversation.participant_role === 'teacher' ? 'Teacher' : 'Administrator'}
-              {conversation.child_name && ` • ${conversation.child_name}`}
+            <Text style={[styles.chatParticipantName, { color: colors.text }]}>{conversation.participant_name}</Text>
+            <Text style={[styles.chatParticipantRole, { color: colors.muted }]}>
+              {`${conversation.participant_role === 'teacher' ? 'Teacher' : 'Administrator'}${conversation.child_name ? ` • ${conversation.child_name}` : ''}`}
             </Text>
           </View>
 
@@ -535,12 +1031,12 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         {/* Messages */}
         <ScrollView
           ref={scrollViewRef}
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
+          style={[styles.messagesContainer, { backgroundColor: colors.bg }]}
+          contentContainerStyle={[styles.messagesContent, { paddingBottom: navPad + 16 }]}
           onContentSizeChange={scrollToBottom}
         >
           {messages.map((message) => {
-            const isFromParent = message.sender_type === 'parent';
+            const isFromParent = parentUserId ? message.sender_id === parentUserId : false;
             return (
               <View
                 key={message.id}
@@ -552,13 +1048,13 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
                 <View
                   style={[
                     styles.messageBubble,
-                    isFromParent ? styles.sentBubble : styles.receivedBubble
+                    isFromParent ? styles.sentBubble : [styles.receivedBubble, { backgroundColor: colors.card }]
                   ]}
                 >
                   <Text
                     style={[
                       styles.messageText,
-                      isFromParent ? styles.sentText : styles.receivedText
+                      isFromParent ? styles.sentText : [styles.receivedText, { color: colors.text }]
                     ]}
                   >
                     {message.content}
@@ -566,7 +1062,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
                   <Text
                     style={[
                       styles.messageTime,
-                      isFromParent ? styles.sentTime : styles.receivedTime
+                      isFromParent ? styles.sentTime : [styles.receivedTime, { color: colors.muted }]
                     ]}
                   >
                     {formatMessageTime(message.created_at)}
@@ -580,15 +1076,15 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         {/* Message Input */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.messageInputContainer}
+          style={[styles.messageInputContainer, { backgroundColor: colors.card, borderTopColor: colors.border, marginBottom: navPad }]}
         >
           <View style={styles.messageInputWrapper}>
             <TextInput
-              style={styles.messageInput}
+              style={[styles.messageInput, { borderColor: colors.border, color: colors.text, backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]}
               value={newMessage}
               onChangeText={setNewMessage}
               placeholder="Type a message..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={isDark ? '#64748B' : '#9CA3AF'}
               multiline
               maxLength={1000}
             />
@@ -599,6 +1095,9 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
               ]}
               onPress={sendMessage}
               disabled={!newMessage.trim() || sending}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Send"
+              accessibilityHint="Send message"
             >
               {sending ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -614,37 +1113,56 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.bg }]}>
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text style={styles.loadingText}>Loading messages...</Text>
+        <Text style={[styles.loadingText, { color: colors.muted }]}>Loading messages...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <IconSymbol name="xmark" size={20} color="#6B7280" />
-        </TouchableOpacity>
-        
-        <Text style={styles.headerTitle}>Messages</Text>
-        
-        <TouchableOpacity
-          style={styles.composeButton}
-          onPress={() => setShowComposeModal(true)}
-        >
-          <IconSymbol name="plus" size={20} color="#3B82F6" />
-        </TouchableOpacity>
-      </View>
+      {showHeader && (
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]} onPress={onClose}>
+            <IconSymbol name="xmark" size={20} color={colors.muted} />
+          </TouchableOpacity>
 
-      {selectedConversation ? (
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
+
+          <TouchableOpacity
+            style={[styles.composeButton, { backgroundColor: isDark ? '#1E293B' : '#EBF4FF' }]}
+            onPress={() => {
+              const role = String(profile?.role || '');
+              const isStaff = ['teacher','principal','preschool_admin','admin','superadmin'].includes(role);
+              if (isStaff) {
+                // Offer New Group or Direct Message
+                Alert.alert(
+                  'New Message',
+                  'Choose what to create',
+                  [
+                    { text: 'Direct Message', onPress: () => setShowComposeModal(true) },
+                    { text: 'New Group', onPress: () => router.push('/screens/new-group' as any) },
+                    { text: 'Cancel', style: 'cancel' }
+                  ]
+                );
+              } else {
+                setShowComposeModal(true);
+              }
+            }}
+          >
+            <IconSymbol name="plus" size={20} color="#3B82F6" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {(selectedConversation || selectedRoomId) ? (
         renderChatView()
       ) : (
         <>
           {/* Tabs */}
-          <View style={styles.tabsContainer}>
+          <View style={[styles.tabsContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
             <TouchableOpacity
               style={[
                 styles.tab,
@@ -689,9 +1207,48 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
           {/* Content */}
           {activeTab === 'conversations' ? renderConversationsList() : renderAnnouncementsList()}
+
+          {/* Floating Action Button */}
+          <TouchableOpacity
+            style={[styles.fab, { bottom: Math.max(24, navPad + 8) }]}
+            onPress={() => {
+              const role = String(profile?.role || '');
+              const isStaff = ['teacher','principal','preschool_admin','admin','superadmin'].includes(role);
+              if (isStaff) setShowActionSheet(true); else setShowComposeModal(true);
+            }}
+            accessibilityLabel="New"
+            accessibilityHint="Create a new message or group"
+          >
+            <IconSymbol name="plus" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          {/* Quick Action Sheet */}
+          <Modal visible={showActionSheet} transparent animationType="fade" onRequestClose={() => setShowActionSheet(false)}>
+            <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowActionSheet(false)}>
+              <View style={[styles.sheetContainer, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF', borderColor: colors.border }]}
+              >
+                <Text style={[styles.sheetTitle, { color: colors.text }]}>Start new</Text>
+                <TouchableOpacity style={styles.sheetItem} onPress={() => { setShowActionSheet(false); setShowComposeModal(true); }}>
+                  <IconSymbol name="bubble.left.and.bubble.right" size={18} color="#3B82F6" />
+                  <Text style={[styles.sheetItemText, { color: colors.text }]}>Direct message</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.sheetItem} onPress={() => { setShowActionSheet(false); router.push('/screens/new-group' as any); }}>
+                  <IconSymbol name="person.3.fill" size={18} color="#10B981" />
+                  <Text style={[styles.sheetItemText, { color: colors.text }]}>New group</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.sheetItem} onPress={() => { setShowActionSheet(false); setActiveTab('announcements'); }}>
+                  <IconSymbol name="megaphone.fill" size={18} color="#F59E0B" />
+                  <Text style={[styles.sheetItemText, { color: colors.text }]}>Announcements</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowActionSheet(false)}>
+                  <Text style={styles.sheetCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
         </>
       )}
-      
+
       {/* Compose Message Modal */}
       <ComposeMessageModal
         visible={showComposeModal}
@@ -809,6 +1366,9 @@ const styles = StyleSheet.create({
   },
   selectedConversation: {
     backgroundColor: '#EBF4FF',
+  },
+  selectedConversationDark: {
+    backgroundColor: 'rgba(59,130,246,0.15)',
   },
   avatarContainer: {
     position: 'relative',
@@ -1126,6 +1686,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  sheetContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+  },
+  sheetTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  sheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  sheetItemText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  sheetCancel: {
+    marginTop: 6,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  sheetCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#9CA3AF',
   },
 });
 
