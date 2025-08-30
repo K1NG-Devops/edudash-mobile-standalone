@@ -4,8 +4,8 @@ export default {
   expo: {
     name: "EduDash Pro",
     slug: "edudashpro-app",
-    version: "1.0.0",
-    runtimeVersion: "1.0.0",
+    version: "1.0.1",
+    runtimeVersion: { policy: "appVersion" },
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "edudashpro",
