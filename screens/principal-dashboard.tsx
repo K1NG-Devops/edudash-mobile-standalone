@@ -1,11 +1,12 @@
 import { SchoolCodeManager } from '@/components/admin/SchoolCodeManager';
 import { TeacherManagement } from '@/components/admin/TeacherManagement';
-import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { PrincipalService } from '@/lib/services/principalService';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
+import CreateAnnouncementModal from '@/components/announcements/CreateAnnouncementModal';
+import CreateEventModal from '@/components/events/CreateEventModal';
 import { DashboardSubscriptionCard } from '@/components/dashboard/DashboardSubscriptionCard';
 import { BillingHistoryCard } from '@/components/billing/BillingHistoryCard';
 import { router } from 'expo-router';
@@ -48,6 +49,8 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   const [refreshing, setRefreshing] = useState(false);
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
   const [showSchoolCodeManager, setShowSchoolCodeManager] = useState(false);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
   const queryClient = useQueryClient();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
@@ -227,18 +230,6 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]} edges={['bottom', 'left', 'right']}>
-      <MobileHeader
-        user={{
-          name: profile?.name || 'Principal',
-          role: profile?.role || 'preschool_admin',
-          avatar: profile?.avatar_url || undefined,
-        }}
-        schoolName={(schoolInfoQuery.data as any)?.name || 'Your Preschool'}
-        onNotificationsPress={() => handleNavigate('notifications')}
-        onSignOut={onSignOut}
-        onNavigate={handleNavigate}
-        notificationCount={statsQuery.data?.pendingPayments || 0}
-      />
 
       <ScrollView
         style={styles.scrollView}
@@ -325,6 +316,13 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               onPress={() => setShowTeacherManagement(true)}
             />
             <ActionCard
+              title="Create Event"
+              subtitle="Plan a school event"
+              icon="calendar.badge.plus"
+              color="#3B82F6"
+              onPress={() => setShowEventModal(true)}
+            />
+            <ActionCard
               title="School Code"
               subtitle="Parent invitation codes"
               icon="qrcode.viewfinder"
@@ -339,13 +337,6 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               onPress={() => handleNavigate('/screens/principal-reports')}
             />
             <ActionCard
-              title="Parent Communication"
-              subtitle="Send announcements"
-              icon="megaphone.fill"
-              color="#EA4335"
-              onPress={() => router.push('/(tabs)/messages')}
-            />
-            <ActionCard
               title="Diagnostics"
               subtitle="Verify counts & RLS"
               icon="stethoscope"
@@ -357,7 +348,14 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               subtitle="Performance insights"
               icon="chart.line.uptrend.xyaxis"
               color="#4285F4"
-              onPress={() => handleNavigate('analytics')}
+              onPress={() => handleNavigate('/screens/principal-reports')}
+            />
+            <ActionCard
+              title="Create Announcement"
+              subtitle="Notify all parents"
+              icon="megaphone.fill"
+              color="#10B981"
+              onPress={() => setShowAnnouncementModal(true)}
             />
             <ActionCard
               title="School Settings"
@@ -429,6 +427,24 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
       {/* Management Modals */}
       {activePreschoolId && profile?.id && (
         <>
+          <CreateAnnouncementModal
+            visible={showAnnouncementModal}
+            onClose={() => setShowAnnouncementModal(false)}
+            onPosted={() => {
+              // Optionally navigate to Messages announcements
+              try { router.push('/(tabs)/messages' as any); } catch {}
+            }}
+          />
+          <CreateEventModal
+            visible={showEventModal}
+            preschoolId={activePreschoolId}
+            createdByUserId={profile.id}
+            onClose={() => setShowEventModal(false)}
+            onCreated={() => {
+              // After creating an event, consider navigating to Activities->Events
+              try { router.push('/(tabs)/activities' as any); } catch {}
+            }}
+          />
           <TeacherManagement
             visible={showTeacherManagement}
             preschoolId={activePreschoolId}

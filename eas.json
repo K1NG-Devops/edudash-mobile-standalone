@@ -7,6 +7,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_ADS_INTERSTITIAL_EVERY_N": "3"
+      },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug"
@@ -22,6 +25,9 @@
       "distribution": "internal",
       "channel": "preview",
       "credentialsSource": "remote",
+      "env": {
+        "EXPO_PUBLIC_ADS_INTERSTITIAL_EVERY_N": "3"
+      },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
@@ -34,6 +40,9 @@
       "autoIncrement": true,
       "channel": "production",
       "credentialsSource": "remote",
+      "env": {
+        "EXPO_PUBLIC_ADS_INTERSTITIAL_EVERY_N": "3"
+      },
       "cache": {
         "disabled": false
       },
