@@ -17,6 +17,7 @@ import { HomeworkAssignment } from '@/types/homework-types';
 import { HomeworkService } from '@/lib/services/homeworkService';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { requestShowInterstitial } from '@/lib/ads/adEvents';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -91,6 +92,7 @@ ${result.uploadedFiles && result.uploadedFiles.length > 0 ? `🚀 ${result.uploa
       
       setSubmissionText('');
       setAttachments([]);
+      try { requestShowInterstitial({ reason: 'homework-submitted' }); } catch {}
       onSubmit();
       onClose();
     } catch (error) {

@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { InterstitialManager } from '@/lib/ads/interstitialManager';
 import { onShowInterstitial } from '@/lib/ads/adEvents';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { shouldShowForEvent } from '@/lib/ads/frequencyGate';
 
 // Mount once near the root of the app to initialize ads and wire interstitial events.
 const AdsBootstrapper: React.FC = () => {
@@ -40,7 +41,12 @@ const AdsBootstrapper: React.FC = () => {
       });
 
     // Wire event listener to show interstitials on demand
-    const off = onShowInterstitial(() => {
+    const off = onShowInterstitial(async (evt) => {
+      const rawN = process.env.EXPO_PUBLIC_ADS_INTERSTITIAL_EVERY_N;
+      const everyN = rawN ? parseInt(rawN, 10) || 3 : 3;
+      const reason = evt?.reason || 'general';
+      const allowed = await shouldShowForEvent(reason, everyN);
+      if (!allowed) return;
       InterstitialManager.showIfEligible(tier);
     });
 
