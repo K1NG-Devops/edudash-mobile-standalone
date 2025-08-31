@@ -16,7 +16,8 @@ interface TabItem {
 }
 
 export default function GlobalBottomNav() {
-  const pathname = usePathname?.() || '/';
+  // Always call hooks unconditionally to preserve hook order across renders
+  const pathname = usePathname();
   const { profile, loading } = useAuth();
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';

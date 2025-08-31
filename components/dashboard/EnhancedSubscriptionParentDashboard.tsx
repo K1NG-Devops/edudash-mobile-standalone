@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import ProofOfPaymentUpload, { ProofOfPaymentData } from '@/components/payments/ProofOfPaymentUpload';
+import { PaymentService } from '@/lib/services/paymentService';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
@@ -25,6 +27,7 @@ import { UsageTrackingService, UsageStats } from '@/lib/services/usageTrackingSe
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { Colors } from '@/constants/Colors';
+import { supabase } from '@/lib/supabase';
 
 interface EnhancedSubscriptionParentDashboardProps {
   userId: string;
@@ -57,9 +60,47 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPopModal, setShowPopModal] = useState(false);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
 
   const isFreeTier = !subscription || subscription.plan?.tier === 'free';
   const subscriptionTier = subscription?.plan?.tier || 'free';
+
+  // Load contacts for messaging
+  const loadContacts = async () => {
+    try {
+      setLoadingContacts(true);
+      
+      // Use the same RPC as messaging center to get contacts
+      const { data, error } = await supabase.rpc('get_messaging_contacts', {
+        p_include_staff: true,
+        p_include_parents: false, // Parents don't need to see other parents
+        p_limit: 100,
+      });
+      
+      if (error) {
+        console.warn('Could not load contacts:', error);
+        return;
+      }
+      
+      const mapped = (data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name || 'Unknown',
+        role: row.role,
+        avatar_url: row.avatar_url || undefined,
+        email: row.email || undefined,
+        class_name: row.class_name || undefined,
+        is_online: false,
+      }));
+      
+      setContacts(mapped);
+    } catch (error) {
+      console.warn('Error loading contacts:', error);
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
@@ -67,11 +108,14 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
       setLoading(true);
       setError(null);
 
-      // Fetch parent dashboard data and usage stats in parallel
+      // Fetch parent dashboard data, usage stats, and contacts in parallel
       const [data, stats] = await Promise.all([
         StudentDataService.getParentDashboardData(userId),
         UsageTrackingService.getUserUsageStats(userId)
       ]);
+      
+      // Load contacts separately (non-blocking)
+      loadContacts();
 
       setDashboardData(data);
       setUsageStats(stats);
@@ -109,7 +153,8 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
     setRefreshing(true);
     await Promise.all([
       fetchDashboardData(),
-      refreshSubscription()
+      refreshSubscription(),
+      loadContacts()
     ]);
   };
 
@@ -214,6 +259,12 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         break;
       case 'messages':
         router.push('/(tabs)/messages');
+        break;
+      case 'upload-pop':
+        setShowPopModal(true);
+        break;
+      case 'complete-profile':
+        router.push('/screens/complete-profile');
         break;
       case 'ai-lessons':
         router.push('/screens/ai-lessons' as any);
@@ -504,6 +555,28 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
               <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Messages</Text>
             </TouchableOpacity>
 
+            {/* Upload POP */}
+            <TouchableOpacity 
+              style={styles.quickAction}
+              onPress={() => handleQuickAction('upload-pop')}
+            >
+              <View style={styles.quickActionIcon}>
+                <IconSymbol name="doc.text.fill" size={24} color="#6B7280" />
+              </View>
+              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Upload POP</Text>
+            </TouchableOpacity>
+
+            {/* Complete Profile */}
+            <TouchableOpacity 
+              style={styles.quickAction}
+              onPress={() => handleQuickAction('complete-profile')}
+            >
+              <View style={styles.quickActionIcon}>
+                <IconSymbol name="person.circle" size={24} color="#6B7280" />
+              </View>
+              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Complete Profile</Text>
+            </TouchableOpacity>
+
             {/* AI-powered actions */}
             <TouchableOpacity 
               style={[styles.quickAction, styles.aiAction]}
@@ -635,6 +708,35 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* POP Upload Modal */}
+      {showPopModal && (
+        <ProofOfPaymentUpload
+          isVisible={showPopModal}
+          onClose={() => setShowPopModal(false)}
+          studentId={selectedChildId || ''}
+          childName={selectedChild?.full_name || selectedChild?.name || 'Child'}
+          amountPaid={subscription?.plan?.price || 0}
+          feeDescription={`${subscription?.plan?.name || 'Subscription'} Payment`}
+          onUploadSuccess={async (data: ProofOfPaymentData) => {
+            try {
+              await PaymentService.submitProofOfPayment(data);
+              Alert.alert(
+                'Success',
+                'Your proof of payment has been submitted successfully. We will review it and update your subscription shortly.',
+                [{ text: 'OK', onPress: () => setShowPopModal(false) }]
+              );
+              await refreshSubscription();
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                'Failed to submit proof of payment. Please try again.',
+                [{ text: 'OK' }]
+              );
+            }
+          }}
+        />
+      )}
     </View>
   );
 };

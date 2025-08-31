@@ -1039,7 +1039,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   billingButtonActive: {
-    backgroundColor: '#00f5ff',
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   billingButtonText: {
     fontSize: 14,
@@ -1047,7 +1047,7 @@ const styles = StyleSheet.create({
     color: DesignSystem.colors.text.secondary,
   },
   billingButtonTextActive: {
-    color: '#000000',
+    color: '#ffffff',
     fontWeight: '700',
   },
 
@@ -1067,7 +1067,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   toggleButtonActive: {
-    backgroundColor: DesignSystem.colors.primary,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   toggleButtonText: {
     fontSize: 14,
@@ -1075,7 +1075,7 @@ const styles = StyleSheet.create({
     color: DesignSystem.colors.text.secondary,
   },
   toggleButtonTextActive: {
-    color: '#000000',
+    color: '#ffffff',
   },
 
   // Role Selection Prompt
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 15,
     right: 15,
-    backgroundColor: '#ff0080',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: 15,
     paddingHorizontal: 12,
     paddingVertical: 6,

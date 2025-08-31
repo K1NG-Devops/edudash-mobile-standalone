@@ -10,20 +10,24 @@ import {
   ActivityIndicator,
   Image,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface ProofOfPaymentUploadProps {
-  visible: boolean;
+  isVisible: boolean;
   onClose: () => void;
-  onUpload: (proofData: ProofOfPaymentData) => Promise<void>;
+  onUploadSuccess: (proofData: ProofOfPaymentData) => Promise<void>;
+  studentId?: string;
+  amountPaid?: number;
   childName?: string;
   feeAmount?: string;
   feeDescription?: string;
-  studentId?: string;
 }
 
 export interface ProofOfPaymentData {
@@ -40,14 +44,17 @@ export interface ProofOfPaymentData {
 }
 
 const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
-  visible,
+  isVisible,
   onClose,
-  onUpload,
+  onUploadSuccess,
+  studentId,
+  amountPaid,
   childName,
   feeAmount,
   feeDescription,
-  studentId,
 }) => {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -147,7 +154,7 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
 
     try {
       setLoading(true);
-      await onUpload(formData);
+      await onUploadSuccess(formData);
       handleClose();
       Alert.alert('Success', 'Proof of payment uploaded successfully. It will be reviewed by the school administration.');
     } catch (error) {
@@ -183,77 +190,90 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
     setShowDatePicker(true);
   };
 
-  // Generate payment reference number
-  const generateReferenceNumber = (studentId?: string, childName?: string): string => {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    
-    // Use student ID if available, otherwise use initials from child name
-    let prefix = 'EDU';
-    if (studentId) {
-      prefix = studentId.slice(0, 8).toUpperCase();
-    } else if (childName) {
-      const names = childName.split(' ');
-      prefix = names.map(name => name.charAt(0).toUpperCase()).join('') + 'EDU';
+  // Helper functions for reference generation
+  const cleanChildName = (name?: string): string => {
+    if (!name) return 'Unknown';
+    // Clean and capitalize the name properly
+    return name
+      .trim()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join('');
+  };
+
+  const generateUniqueNumberForChild = (sid?: string, cname?: string): string => {
+    // Generate a consistent unique number based on child name and student ID
+    const combined = `${cname || 'unknown'}-${sid || 'no-id'}`;
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+      hash = Math.imul(31, hash) + combined.charCodeAt(i) | 0;
     }
-    
-    // Add timestamp to ensure uniqueness
-    const timestamp = Date.now().toString().slice(-4);
-    
-    return `${prefix}${year}${month}${day}${timestamp}`;
+    // Ensure we get a 4-digit number (1000-9999) for uniqueness
+    const uniqueNumber = 1000 + (Math.abs(hash >>> 0) % 9000);
+    return uniqueNumber.toString();
+  };
+
+  const generateDeterministicReference = (sid?: string, cname?: string): string => {
+    const cleanedName = cleanChildName(cname);
+    const uniqueNumber = generateUniqueNumberForChild(sid, cname);
+    return `${cleanedName}-${uniqueNumber}`;
   };
 
   // Pre-fill form when modal opens with data
   useEffect(() => {
-    if (visible && (childName || feeAmount || studentId)) {
-      const referenceNumber = generateReferenceNumber(studentId, childName);
+    if (isVisible && (childName || feeAmount || amountPaid || studentId)) {
+      const autoRef = generateDeterministicReference(studentId, childName);
       const notes = feeDescription ? `Payment for: ${feeDescription}${childName ? ` - ${childName}` : ''}` : '';
       
       setFormData(prev => ({
         ...prev,
-        referenceNumber,
-        amount: feeAmount || prev.amount,
+        referenceNumber: prev.referenceNumber?.trim() ? prev.referenceNumber : autoRef,
+        amount: amountPaid?.toString() || feeAmount || prev.amount,
         notes,
       }));
     }
-  }, [visible, childName, feeAmount, feeDescription, studentId]);
+  }, [isVisible, childName, feeAmount, feeDescription, studentId, amountPaid]);
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <View style={styles.container}>
-        <View style={styles.header}>
+    <Modal visible={isVisible} animationType="slide" presentationStyle="pageSheet">
+      <View style={[styles.container, { backgroundColor: palette.background }]}>
+        <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.outline }]}>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <IconSymbol name="xmark" size={24} color="#6B7280" />
+            <IconSymbol name="xmark" size={24} color={palette.textSecondary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Upload Proof of Payment</Text>
+          <Text style={[styles.headerTitle, { color: palette.text }]}>Upload Proof of Payment</Text>
           <View style={styles.placeholder} />
         </View>
 
-        <View style={styles.content}>
-          <Text style={styles.description}>
+        <ScrollView 
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={[styles.description, { color: palette.textSecondary }]}>
             Upload proof of payment for school fees. Your submission will be reviewed by the school administration.
           </Text>
 
           {/* Payment Reference */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Payment Reference Number *</Text>
+            <Text style={[styles.label, { color: palette.text }]}>Payment Reference Number *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: palette.surface, borderColor: palette.outline, color: palette.text }]}
               placeholder="Enter payment reference number"
+              placeholderTextColor={palette.textSecondary}
               value={formData.referenceNumber}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, referenceNumber: text }))}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, referenceNumber: text.toUpperCase() }))}
               autoCapitalize="characters"
             />
           </View>
 
           {/* Amount */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Amount Paid *</Text>
+            <Text style={[styles.label, { color: palette.text }]}>Amount Paid *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: palette.surface, borderColor: palette.outline, color: palette.text }]}
               placeholder="0.00"
+              placeholderTextColor={palette.textSecondary}
               value={formData.amount}
               onChangeText={(text) => setFormData(prev => ({ ...prev, amount: text }))}
               keyboardType="decimal-pad"
@@ -262,10 +282,10 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
 
           {/* Payment Date */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Payment Date *</Text>
-            <TouchableOpacity style={styles.datePickerButton} onPress={showDatePickerModal}>
-              <IconSymbol name="calendar" size={20} color="#6B7280" />
-              <Text style={styles.datePickerText}>
+            <Text style={[styles.label, { color: palette.text }]}>Payment Date *</Text>
+            <TouchableOpacity style={[styles.datePickerButton, { backgroundColor: palette.surface, borderColor: palette.outline }]} onPress={showDatePickerModal}>
+              <IconSymbol name="calendar" size={20} color={palette.textSecondary} />
+              <Text style={[styles.datePickerText, { color: formData.paymentDate ? palette.text : palette.textSecondary }]}>
                 {formData.paymentDate || 'Select payment date'}
               </Text>
             </TouchableOpacity>
@@ -303,7 +323,7 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
 
           {/* Payment Method */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Payment Method</Text>
+            <Text style={[styles.label, { color: palette.text }]}>Payment Method</Text>
             <View style={styles.methodButtons}>
               {[
                 { key: 'bank_transfer', label: 'Bank Transfer' },
@@ -315,6 +335,7 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
                   key={method.key}
                   style={[
                     styles.methodButton,
+                    { backgroundColor: palette.surface, borderColor: palette.outline },
                     formData.paymentMethod === method.key && styles.methodButtonActive,
                   ]}
                   onPress={() => setFormData(prev => ({ ...prev, paymentMethod: method.key }))}
@@ -322,6 +343,7 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
                   <Text
                     style={[
                       styles.methodButtonText,
+                      { color: palette.textSecondary },
                       formData.paymentMethod === method.key && styles.methodButtonTextActive,
                     ]}
                   >
@@ -334,10 +356,11 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
 
           {/* Notes */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Additional Notes</Text>
+            <Text style={[styles.label, { color: palette.text }]}>Additional Notes</Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: palette.surface, borderColor: palette.outline, color: palette.text }]}
               placeholder="Any additional information..."
+              placeholderTextColor={palette.textSecondary}
               value={formData.notes}
               onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
               multiline
@@ -347,28 +370,28 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
 
           {/* Attachment */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Attach Proof</Text>
-            <View style={styles.attachmentSection}>
+            <Text style={[styles.label, { color: palette.text }]}>Attach Proof</Text>
+            <View style={[styles.attachmentSection, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
               <View style={styles.attachmentButtons}>
-                <TouchableOpacity style={styles.attachButton} onPress={pickImage}>
-                  <IconSymbol name="camera.fill" size={20} color="#3B82F6" />
-                  <Text style={styles.attachButtonText}>Photo</Text>
+                <TouchableOpacity style={[styles.attachButton, { backgroundColor: palette.background }]} onPress={pickImage}>
+                  <IconSymbol name="camera.fill" size={20} color={palette.primary} />
+                  <Text style={[styles.attachButtonText, { color: palette.primary }]}>Photo</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.attachButton} onPress={pickDocument}>
-                  <IconSymbol name="doc.fill" size={20} color="#3B82F6" />
-                  <Text style={styles.attachButtonText}>Document</Text>
+                <TouchableOpacity style={[styles.attachButton, { backgroundColor: palette.background }]} onPress={pickDocument}>
+                  <IconSymbol name="doc.fill" size={20} color={palette.primary} />
+                  <Text style={[styles.attachButtonText, { color: palette.primary }]}>Document</Text>
                 </TouchableOpacity>
               </View>
 
               {formData.attachment && (
-                <View style={styles.attachmentPreview}>
+                <View style={[styles.attachmentPreview, { backgroundColor: colorScheme === 'dark' ? 'rgba(16, 185, 129, 0.1)' : '#F0FDF4' }]}>
                   <View style={styles.attachmentInfo}>
                     <IconSymbol 
                       name={formData.attachment.type.startsWith('image') ? "photo" : "doc.text"} 
                       size={24} 
                       color="#10B981" 
                     />
-                    <Text style={styles.attachmentName}>{formData.attachment.name}</Text>
+                    <Text style={[styles.attachmentName, { color: colorScheme === 'dark' ? '#10B981' : '#065F46' }]}>{formData.attachment.name}</Text>
                   </View>
                   <TouchableOpacity onPress={removeAttachment} style={styles.removeButton}>
                     <IconSymbol name="xmark.circle.fill" size={20} color="#EF4444" />
@@ -377,11 +400,11 @@ const ProofOfPaymentUpload: React.FC<ProofOfPaymentUploadProps> = ({
               )}
             </View>
           </View>
-        </View>
+        </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+        <View style={[styles.footer, { backgroundColor: palette.surface, borderTopColor: palette.outline }]}>
+          <TouchableOpacity style={[styles.cancelButton, { borderColor: palette.outline }]} onPress={handleClose}>
+            <Text style={[styles.cancelButtonText, { color: palette.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.submitButton, loading && styles.submitButtonDisabled]}

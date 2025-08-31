@@ -1,20 +1,4 @@
-[?25l
-    Select a project:                                                                                                 
-                                                                                                                      
-  >  1. bppuzibjlxgfwrujzfsz [name: youngeagles-education-platform, org: gvkxrwmmsesqlwwbvyxh, region: ap-southeast-1]
-    2. lvvvjywrmpcqrpvuptdi [name: EduDash-Pro, org: gvkxrwmmsesqlwwbvyxh, region: ap-southeast-1]                    
-                                                                                                                      
-                                                                                                                      
-    ↑/k up • ↓/j down • / filter • q quit • ? more                                                                    
-                                                                                                                      [0D[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[0D[2K
-    Select a project:                                                                                                
-                                                                                                                     
-    1. bppuzibjlxgfwrujzfsz [name: youngeagles-education-platform, org: gvkxrwmmsesqlwwbvyxh, region: ap-southeast-1]
-  >  2. lvvvjywrmpcqrpvuptdi [name: EduDash-Pro, org: gvkxrwmmsesqlwwbvyxh, region: ap-southeast-1]                  
-                                                                                                                     
-                                                                                                                     
-    ↑/k up • ↓/j down • / filter • q quit • ? more                                                                   
-                                                                                                                     [0D[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[0D[2K [0D[2K[?25h[?1002l[?1003l[?1006lexport type Json =
+export type Json =
   | string
   | number
   | boolean

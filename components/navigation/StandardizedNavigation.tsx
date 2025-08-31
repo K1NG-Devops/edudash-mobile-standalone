@@ -8,7 +8,8 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { getRoleColors } from '@/constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { BlurView } from 'expo-blur';
+import React, { useState } from 'react';
 import {
   Dimensions,
   SafeAreaView,
@@ -17,8 +18,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from 'react-native';
 import { MobileSidebar } from './MobileSidebar';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -35,6 +38,10 @@ interface StandardizedNavigationProps {
   notificationCount?: number;
   showBackButton?: boolean;
   onBackPress?: () => void;
+  rightActions?: React.ReactNode; // Custom actions on the right side
+  leftTrigger?: 'avatar' | 'hamburger'; // Control left trigger type
+  themeScheme?: 'light' | 'dark'; // Explicit theme override
+  showNotifications?: boolean; // Toggle notifications visibility
 }
 
 export function StandardizedNavigation({
@@ -46,9 +53,18 @@ export function StandardizedNavigation({
   notificationCount = 0,
   showBackButton = false,
   onBackPress,
+  rightActions,
+  leftTrigger = 'avatar',
+  themeScheme,
+  showNotifications = true,
 }: StandardizedNavigationProps) {
   const [sidebarVisible, setSidebarVisible] = useState(false);
-  const roleColors = getRoleColors(user?.role || 'default', 'light');
+  const systemColorScheme = useColorScheme();
+  const { theme } = useTheme();
+  
+  // Determine the effective color scheme
+  const effectiveScheme = themeScheme || theme?.colorScheme || systemColorScheme || 'light';
+  const roleColors = getRoleColors(user?.role || 'default', effectiveScheme);
 
   const getDisplayTitle = () => {
     if (title) return title;
@@ -109,7 +125,11 @@ export function StandardizedNavigation({
           end={{ x: 1, y: 1 }}
         >
           {/* Glass morphism overlay */}
-          <View style={styles.glassOverlay} />
+          <BlurView
+            style={styles.glassOverlay}
+            intensity={20}
+            tint={effectiveScheme === 'dark' ? 'dark' : 'light'}
+          />
 
           <View style={styles.headerContent}>
             {/* Left Section */}
@@ -122,7 +142,7 @@ export function StandardizedNavigation({
                 >
                   <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
-              ) : (
+              ) : leftTrigger === 'avatar' ? (
                 <TouchableOpacity
                   style={styles.avatarButton}
                   onPress={toggleSidebar}
@@ -134,6 +154,14 @@ export function StandardizedNavigation({
                     </Text>
                   </View>
                   <View style={styles.statusIndicator} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.hamburgerButton}
+                  onPress={toggleSidebar}
+                  activeOpacity={0.7}
+                >
+                  <IconSymbol name="line.horizontal.3" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
               )}
 
@@ -150,21 +178,30 @@ export function StandardizedNavigation({
 
             {/* Right Section */}
             <View style={styles.rightSection}>
+              {/* Custom Right Actions */}
+              {rightActions && (
+                <View style={styles.customActions}>
+                  {rightActions}
+                </View>
+              )}
+              
               {/* Notifications */}
-              <TouchableOpacity
-                style={styles.notificationButton}
-                onPress={handleNotifications}
-                activeOpacity={0.7}
-              >
-                <IconSymbol name="bell.fill" size={22} color="#FFFFFF" />
-                {notificationCount > 0 && (
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationCount}>
-                      {notificationCount > 99 ? '99+' : notificationCount}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+              {showNotifications && (
+                <TouchableOpacity
+                  style={[styles.notificationButton, rightActions && styles.notificationWithActions]}
+                  onPress={handleNotifications}
+                  activeOpacity={0.7}
+                >
+                  <IconSymbol name="bell.fill" size={22} color="#FFFFFF" />
+                  {notificationCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationCount}>
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </LinearGradient>
@@ -199,8 +236,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    backdropFilter: 'blur(10px)',
   },
   headerContent: {
     flex: 1,
@@ -283,9 +318,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  hamburgerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  customActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
   },
   notificationButton: {
     width: 44,
@@ -295,6 +344,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+  },
+  notificationWithActions: {
+    marginLeft: 8,
   },
   notificationBadge: {
     position: 'absolute',

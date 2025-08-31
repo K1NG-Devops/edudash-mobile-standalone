@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     maxHeight: 100,
-    minHeight: 40,
+    minHeight: 44,
     borderColor: '#D1D5DB',
     borderWidth: 1,
     borderRadius: 20,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     marginRight: 8,
     fontSize: 16,
-    textAlignVertical: 'top',
+    textAlignVertical: 'center',
   },
   sendButton: {
     backgroundColor: '#3B82F6',

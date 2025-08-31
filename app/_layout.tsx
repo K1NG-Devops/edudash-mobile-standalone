@@ -17,6 +17,7 @@ import { QueryProvider } from '@/contexts/QueryProvider';
 import { ToastProvider } from '@/components/ui/Toast';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
 
 // Error boundary for route-level errors
 function RouteErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -94,8 +95,10 @@ export default function RootLayout() {
   // Move useSafeAreaInsets usage inside the SafeAreaProvider via an inner component
   const ContainerWithInsets = ({ hideBottomNav }: { hideBottomNav: boolean }) => {
     const insets = useSafeAreaInsets();
+    const { isBottomNavVisible } = useNavigation();
     const bottomNavBase = 64; // estimated nav height on mobile
-    const containerPaddingBottom = (!hideBottomNav && Platform.OS !== 'web') ? (bottomNavBase + (insets?.bottom || 0)) : 0;
+    const shouldHideNav = hideBottomNav || !isBottomNavVisible;
+    const containerPaddingBottom = (!shouldHideNav && Platform.OS !== 'web') ? (bottomNavBase + (insets?.bottom || 0)) : 0;
 
     return (
       <View style={[styles.container, { paddingBottom: containerPaddingBottom }]}> 
@@ -109,7 +112,7 @@ export default function RootLayout() {
           <Stack.Screen name="about" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
         </Stack>
-        {!hideBottomNav && <GlobalBottomNav />}
+        {!shouldHideNav && <GlobalBottomNav />}
       </View>
     );
   };
@@ -119,16 +122,18 @@ export default function RootLayout() {
       <AuthProvider>
         <SubscriptionProviderWithAuth>
           <ThemeProvider>
-            <QueryProvider>
-              <ToastProvider>
-                <RevenueCatProvider>
-                  <SafeAreaProvider>
-                    <ThemeStatusBar />
-                    <ContainerWithInsets hideBottomNav={hideBottomNav} />
-                  </SafeAreaProvider>
-                </RevenueCatProvider>
-              </ToastProvider>
-            </QueryProvider>
+            <NavigationProvider>
+              <QueryProvider>
+                <ToastProvider>
+                  <RevenueCatProvider>
+                    <SafeAreaProvider>
+                      <ThemeStatusBar />
+                      <ContainerWithInsets hideBottomNav={hideBottomNav} />
+                    </SafeAreaProvider>
+                  </RevenueCatProvider>
+                </ToastProvider>
+              </QueryProvider>
+            </NavigationProvider>
           </ThemeProvider>
         </SubscriptionProviderWithAuth>
       </AuthProvider>

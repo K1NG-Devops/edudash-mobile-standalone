@@ -18,6 +18,10 @@ interface TabLayoutProps {
   onBackPress?: () => void;
   onSignOut?: () => void;
   notificationCount?: number;
+  rightActions?: React.ReactNode; // Custom actions on the right side
+  leftTrigger?: 'avatar' | 'hamburger'; // Control left trigger type
+  themeScheme?: 'light' | 'dark'; // Explicit theme override
+  showNotifications?: boolean; // Toggle notifications visibility
 }
 
 export function TabLayout({
@@ -28,7 +32,11 @@ export function TabLayout({
   showBackButton = false,
   onBackPress,
   onSignOut,
-  notificationCount = 0
+  notificationCount = 0,
+  rightActions,
+  leftTrigger = 'avatar',
+  themeScheme,
+  showNotifications = true,
 }: TabLayoutProps) {
   const insets = useSafeAreaInsets();
 
@@ -56,6 +64,10 @@ export function TabLayout({
           onNavigate={handleNavigate}
           onSignOut={onSignOut}
           notificationCount={notificationCount}
+          rightActions={rightActions}
+          leftTrigger={leftTrigger}
+          themeScheme={themeScheme}
+          showNotifications={showNotifications}
         />
       )}
       <AdPlacement>

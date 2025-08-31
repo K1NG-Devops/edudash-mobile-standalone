@@ -1191,8 +1191,11 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function DashboardTabWrapper() {
+// Fixed wrapper component to avoid hook issues
+const DashboardTabWrapper: React.FC = () => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
   return <DashboardScreen palette={palette} isDark={colorScheme === 'dark'} />;
-}
+};
+
+export default DashboardTabWrapper;

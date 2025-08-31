@@ -193,7 +193,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
         });
       }
 
-      // Premium Analytics card
+      // Analytics card - always show
       if (isFreeTier) {
         baseCards.push({
           id: 'premium_analytics',
@@ -205,15 +205,16 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
           isPremium: true,
           isLocked: true
         });
-      } else if (usageStats.quotas.advanced_analytics) {
+      } else {
         baseCards.push({
           id: 'premium_analytics',
           title: 'Analytics',
-          value: usageStats.premium_features_accessed_today.toString(),
+          value: usageStats.premium_features_accessed_today?.toString() || '0',
           subtitle: 'Reports Viewed',
           icon: 'chart.bar.xaxis',
           gradient: ['#7C3AED', '#6D28D9'] as const,
-          isPremium: true
+          isPremium: true,
+          isLocked: false
         });
       }
     }
@@ -512,7 +513,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    gap: 12,
+    gap: screenWidth < 380 ? 8 : 12,
   },
   compactGrid: {
     paddingHorizontal: 20,
@@ -521,16 +522,16 @@ const styles = StyleSheet.create({
 
   // Stat cards
   statCard: {
-    width: (screenWidth - 64) / 2, // 2 columns with gaps
-    aspectRatio: 1.2,
-    borderRadius: 16,
+    width: screenWidth < 380 ? (screenWidth - 56) / 2 : (screenWidth - 64) / 2, // 2 columns with responsive gaps
+    aspectRatio: screenWidth < 380 ? 1.1 : 1.2,
+    borderRadius: screenWidth < 380 ? 12 : 16,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    marginBottom: 12,
+    marginBottom: screenWidth < 380 ? 8 : 12,
   },
   compactCard: {
     borderRadius: 12,
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
   },
   cardGradient: {
     flex: 1,
-    padding: 16,
+    padding: screenWidth < 380 ? 12 : 16,
     position: 'relative',
   },
   compactCardGradient: {
@@ -563,7 +564,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: screenWidth < 380 ? 8 : 12,
   },
   compactCardHeader: {
     flexDirection: 'column',
@@ -572,7 +573,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   cardValue: {
-    fontSize: 24,
+    fontSize: screenWidth < 380 ? 20 : 24,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
@@ -583,7 +584,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: screenWidth < 380 ? 13 : 14,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.95)',
     marginBottom: 2,
@@ -594,9 +595,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.95)',
   },
   cardSubtitle: {
-    fontSize: 12,
+    fontSize: screenWidth < 380 ? 11 : 12,
     color: 'rgba(255,255,255,0.8)',
-    marginBottom: 8,
+    marginBottom: screenWidth < 380 ? 6 : 8,
   },
   compactCardSubtitle: {
     fontSize: 11,
@@ -655,12 +656,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: '#10B981',
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 8,
     gap: 4,
-    marginTop: 8,
+    marginTop: 'auto',
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
   },
   upgradePromptText: {
     fontSize: 11,

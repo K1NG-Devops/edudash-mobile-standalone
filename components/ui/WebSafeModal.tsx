@@ -26,20 +26,23 @@ const WebSafeModal: React.FC<WebSafeModalProps> = ({
   testID,
   accessibilityLabel,
 }) => {
-  if (Platform.OS === 'web') {
-    useEffect(() => {
-      if (!blockBackgroundScroll) return;
-      const original = document.body.style.overflow;
-      if (visible) {
-        document.body.style.overflow = 'hidden';
-      } else {
-        document.body.style.overflow = original;
-      }
-      return () => {
-        document.body.style.overflow = original;
-      };
-    }, [visible, blockBackgroundScroll]);
+  // Always call hooks at the top-level. Guard web-only behavior inside the effect.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!blockBackgroundScroll) return;
+    if (typeof document === 'undefined' || !document?.body) return;
+    const original = document.body.style.overflow;
+    if (visible) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = original;
+    }
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [visible, blockBackgroundScroll]);
 
+  if (Platform.OS === 'web') {
     if (!visible) return null;
 
     return (

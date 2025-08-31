@@ -28,6 +28,9 @@ const MAPPING: IconMapping = {
   'magnifyingglass': 'search',
   'xmark': 'close',
   'xmark.circle': 'cancel',
+  'hourglass': 'hourglass-bottom',
+  'hourglass.circle': 'hourglass-bottom',
+  'hourglass.circle.fill': 'hourglass-full',
 
   // User & Authentication
   'person.circle.fill': 'account-circle',
@@ -73,6 +76,10 @@ const MAPPING: IconMapping = {
   'envelope.fill': 'email',
   'envelope': 'email',
   'newspaper.fill': 'article',
+  'phone': 'phone',
+  'video': 'videocam',
+  'ellipsis.horizontal': 'more-horiz',
+  'ellipsis': 'more-horiz',
 
   // Media & Devices
   'video.fill': 'videocam',
@@ -101,6 +108,8 @@ const MAPPING: IconMapping = {
   'phone.fill': 'phone',
   'lock.fill': 'lock',
   'lock': 'lock',
+  'mic': 'mic',
+  'mic.fill': 'mic',
   'person.2': 'people',
   'person.badge.plus': 'person-add',
   'person.3.sequence.fill': 'groups',
@@ -157,7 +166,6 @@ const MAPPING: IconMapping = {
   'doc.text.below.ecg': 'insert-chart',
   // Stars
   'star.circle': 'star',
-  'cpu': 'memory',
   'lightbulb': 'lightbulb',
   'bolt': 'flash-on',
 
@@ -179,6 +187,7 @@ const MAPPING: IconMapping = {
   'shield.checkered': 'security',
   'shield.fill': 'security',
   'ticket': 'confirmation-number',
+  'paperclip': 'attach-file',
 };
 
 // Track dev-only warnings for unmapped icons

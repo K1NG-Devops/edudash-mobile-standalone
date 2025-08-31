@@ -32,8 +32,7 @@ export const SafeBannerAd = ({
   userTier?: 'free' | 'basic' | 'premium' | 'enterprise';
   testMode?: boolean;
 }) => {
-  // Don't show ads for paid users
-  if (userTier !== 'free') return null;
+  const shouldShowAd = userTier === 'free';
 
   // Child-safe ad configuration
   const [adLoaded, setAdLoaded] = useState(false);
@@ -42,27 +41,16 @@ export const SafeBannerAd = ({
   // For now, show educational content placeholder
   // In production, this would integrate with AdMob with child-safe settings
   useEffect(() => {
+    if (!shouldShowAd) return;
     if (testMode) {
       // Simulate ad loading
-      setTimeout(() => {
+      const t = setTimeout(() => {
         setAdLoaded(true);
         onAdLoaded?.();
       }, 1000);
+      return () => clearTimeout(t);
     }
-  }, [testMode]);
-
-  if (adError) {
-    onAdFailedToLoad?.(adError);
-    return null;
-  }
-
-  if (!adLoaded && testMode) {
-    return (
-      <View style={[styles.adPlaceholder, style]}>
-        <Text style={styles.adPlaceholderText}>Loading child-safe ads...</Text>
-      </View>
-    );
-  }
+  }, [shouldShowAd, testMode, onAdLoaded]);
 
   // Child-safe educational ads only
   const childSafeAds = [
@@ -92,9 +80,25 @@ export const SafeBannerAd = ({
     }
   ];
 
-  const [currentAd] = useState(
+  const [currentAd] = useState(() =>
     childSafeAds[Math.floor(Math.random() * childSafeAds.length)]
   );
+
+  if (!shouldShowAd) return null;
+
+  if (adError) {
+    onAdFailedToLoad?.(adError);
+    return null;
+  }
+
+  if (!adLoaded && testMode) {
+    return (
+      <View style={[styles.adPlaceholder, style]}>
+        <Text style={styles.adPlaceholderText}>Loading child-safe ads...</Text>
+      </View>
+    );
+  }
+
 
   const handleSafeAdClick = () => {
     // Track child-safe ad interaction
@@ -235,8 +239,7 @@ export const AdBanner = ({
   onAdClick?: (adData: any) => void;
   testMode?: boolean;
 }) => {
-  // Don't show ads for paid users
-  if (userTier !== 'free') return null;
+  const shouldShowAd = userTier === 'free';
 
   const mockAds = [
     {
@@ -268,7 +271,7 @@ export const AdBanner = ({
     },
   ];
 
-  const [currentAd] = useState(mockAds[Math.floor(Math.random() * mockAds.length)]);
+  const [currentAd] = useState(() => mockAds[Math.floor(Math.random() * mockAds.length)]);
 
   const handleAdClick = () => {
     trackRevenue({
@@ -291,6 +294,8 @@ export const AdBanner = ({
     medium: { height: 100, padding: 15 },
     large: { height: 150, padding: 20 },
   };
+
+  if (!shouldShowAd) return null;
 
   return (
     <TouchableOpacity 

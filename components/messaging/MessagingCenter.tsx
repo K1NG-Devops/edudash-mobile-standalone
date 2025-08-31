@@ -2,6 +2,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
+import { useNavigationVisibility } from '@/contexts/NavigationContext';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useConversationMessages } from '@/lib/hooks/useConversationMessages';
@@ -9,10 +10,6 @@ import { useConversationRealtime } from '@/lib/hooks/useConversationRealtime';
 import {
   ActivityIndicator,
   Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,10 +17,21 @@ import {
   TouchableOpacity,
   View,
   Modal,
+  Platform,
+  KeyboardAvoidingView,
+  RefreshControl,
+  Image,
 } from 'react-native';
 import ComposeMessageModal from './ComposeMessageModal';
 import { ConversationService, type Conversation as RoomConversation } from '@/lib/services/conversationService';
 import { router } from 'expo-router';
+import { MessagingHeader } from './MessagingHeader';
+import { ConversationList } from './ConversationList';
+import { ChatInputBar } from './ChatInputBar';
+import { MessagesList } from './MessagesList';
+import type { MessagesListRef } from './MessagesList';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 interface Message {
   id: string;
@@ -71,8 +79,6 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 }) => {
   const { colorScheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const NAV_OFFSET = 64; // approximate bottom nav height
-  const navPad = insets.bottom + NAV_OFFSET;
   const isDark = colorScheme === 'dark';
   const colors = {
     bg: isDark ? '#0B1220' : '#F8FAFC',
@@ -101,9 +107,18 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [parentUserId, setParentUserId] = useState<string | null>(null);
+  const [preschoolName, setPreschoolName] = useState<string | null>(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const messageSubscription = useRef<any>(null);
+
+  // Use navigation visibility hook
+  const inConversation = !!(selectedConversation || selectedRoomId);
+  useNavigationVisibility(inConversation);
+
+  // Calculate nav padding after state is initialized
+  const NAV_OFFSET = 64; // approximate bottom nav height
+  const navPad = inConversation ? 0 : NAV_OFFSET; // Remove nav padding when in conversation
 
   // Query-backed room messages and realtime bridge
   const selectedRoom = selectedRoomId ? rooms.find((r: any) => r.id === selectedRoomId) : null;
@@ -120,11 +135,33 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     autoScroll: () => scrollToBottom(),
   });
 
+  // Load preschool name if user has a preschool_id
+  const loadPreschoolName = async () => {
+    if (!profile?.preschool_id) return;
+    
+    try {
+      const { data: preschool, error } = await supabase
+        .from('preschools')
+        .select('name')
+        .eq('id', profile.preschool_id)
+        .single();
+      
+      if (error) {
+        console.error('Error loading preschool name:', error);
+        return;
+      }
+      
+      setPreschoolName(preschool?.name || null);
+    } catch (error) {
+      console.error('Error in loadPreschoolName:', error);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       if (!profile) return;
       await waitForAuthSession();
-      await Promise.all([loadConversations(), loadAnnouncements(), loadRooms()]);
+      await Promise.all([loadConversations(), loadAnnouncements(), loadRooms(), loadPreschoolName()]);
       await setupRealtimeSubscription();
     };
     init();
@@ -709,156 +746,52 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     setRefreshing(false);
   }, [selectedConversation]);
 
-  const renderConversationsList = () => (
-    <ScrollView
-      style={styles.conversationsList}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      {/* Group/Announcement Conversations */}
-      {rooms.map((room: any) => (
-        <TouchableOpacity
-          key={`room_${room.id}`}
-          style={[
-            styles.conversationItem,
-            { backgroundColor: colors.card, borderBottomColor: colors.border },
-            selectedRoomId === room.id && (isDark ? styles.selectedConversationDark : styles.selectedConversation)
-          ]}
-          onPress={async () => {
-            setSelectedConversation(null);
-            setSelectedRoomId(room.id);
-            await loadRoomContext(room.id);
-            // Messages will be loaded via React Query hook; Realtime will append incoming
-            scrollToBottom();
-          }}
-        >
-          <View style={styles.avatarContainer}>
-            <View style={[styles.defaultAvatar, isDark && { backgroundColor: '#334155' }]}>
-              <Text style={[styles.avatarText, { color: isDark ? '#CBD5E1' : '#6B7280' }]}>
-                {(room.name || 'Room').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.conversationInfo}>
-            <View style={styles.conversationHeader}>
-              <Text style={[styles.participantName, { color: colors.text }]}>{room.name || 'Group'}</Text>
-              <Text style={[styles.messageTime, { color: colors.muted }]}></Text>
-            </View>
-            <View style={styles.conversationDetails}>
-              <Text style={[styles.participantRole, { color: colors.muted }]}>
-                {room.type === 'announcement' ? '📣 Announcements' : '👥 Group Chat'}
-              </Text>
-            </View>
-            <Text style={[styles.lastMessage, { color: colors.muted }]} numberOfLines={1}>
-              {room.description || ' '}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ))}
+  const renderConversationsList = () => {
+    // Combine rooms and direct conversations into a single list for WhatsApp-like experience
+    const allConversations = [
+      // Convert rooms to conversation format
+      ...rooms.map((room: any) => ({
+        id: `room_${room.id}`,
+        participant_name: room.name || 'Group',
+        participant_avatar: null,
+        participant_role: room.type === 'announcement' ? 'announcement' : 'group',
+        last_message: room.description || 'Group conversation',
+        last_message_time: '',
+        unread_count: 0,
+        is_online: false,
+        isRoom: true,
+        roomData: room,
+      })),
+      // Add direct conversations
+      ...conversations.map(conv => ({ ...conv, isRoom: false })),
+    ];
 
-      {/* Direct Messages */}
-      {conversations.map((conversation) => (
-        <TouchableOpacity
-          key={conversation.id}
-          style={[
-            styles.conversationItem,
-            { backgroundColor: colors.card, borderBottomColor: colors.border },
-            selectedConversation === conversation.id && (isDark ? styles.selectedConversationDark : styles.selectedConversation)
-          ]}
-          onPress={() => {
+    return (
+      <ConversationList
+        conversations={allConversations}
+        loading={loading}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onPress={(conversation: any) => {
+          if (conversation.isRoom) {
+            setSelectedConversation(null);
+            setSelectedRoomId(conversation.roomData.id);
+            loadRoomContext(conversation.roomData.id);
+            scrollToBottom();
+          } else {
             setSelectedConversation(conversation.id);
             setSelectedRoomId(null);
             loadMessages(conversation.id);
-            // Load any existing draft for this DM
             loadDMDraft(conversation.id);
-          }}
-        >
-          <View style={styles.avatarContainer}>
-            {conversation.participant_avatar ? (
-              <Image
-                source={{ uri: conversation.participant_avatar }}
-                style={styles.avatar}
-              />
-            ) : (
-              <View style={[styles.defaultAvatar, isDark && { backgroundColor: '#334155' }]}>
-                <Text style={[styles.avatarText, { color: isDark ? '#CBD5E1' : '#6B7280' }]}>
-                  {conversation.participant_name.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
-            {conversation.is_online && <View style={styles.onlineIndicator} />}
-          </View>
-
-          <View style={styles.conversationInfo}>
-            <View style={styles.conversationHeader}>
-              <Text style={[styles.participantName, { color: colors.text }]}>{conversation.participant_name}</Text>
-              <Text style={[styles.messageTime, { color: colors.muted }]}>{conversation.last_message_time}</Text>
-            </View>
-
-            <View style={styles.conversationDetails}>
-              <Text style={[styles.participantRole, { color: colors.muted }]}>
-                {conversation.participant_role === 'teacher' && '👩‍🏫 Teacher'}
-                {(conversation.participant_role === 'preschool_admin' || conversation.participant_role === 'principal') && '👨‍💼 Principal'}
-                {conversation.participant_role === 'parent' && '👨‍👩‍👦 Parent'}
-                {!['teacher', 'preschool_admin', 'principal', 'parent'].includes(conversation.participant_role) && '👤 User'}
-              </Text>
-            </View>
-
-            <Text
-              style={[
-                styles.lastMessage,
-                { color: colors.muted },
-                conversation.unread_count > 0 && { color: colors.text, fontWeight: '500' }
-              ]}
-              numberOfLines={1}
-            >
-              {conversation.last_message}
-            </Text>
-          </View>
-
-          {conversation.unread_count > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>{conversation.unread_count}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      ))}
-
-      {conversations.length === 0 && !loading && (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyStateIcon}>
-            <IconSymbol name="bubble.left.and.bubble.right" size={64} color="#3B82F6" />
-          </View>
-          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>Start Your First Conversation</Text>
-          <Text style={[styles.emptyStateText, { color: colors.muted }]}>
-            {"Connect with your child's teachers, school staff, and other parents.\nTap the + button above to send your first message!"}
-          </Text>
-
-          <TouchableOpacity
-            style={styles.emptyStateButton}
-            onPress={() => setShowComposeModal(true)}
-          >
-            <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-            <Text style={styles.emptyStateButtonText}>Start a Conversation</Text>
-          </TouchableOpacity>
-
-          <View style={[styles.emptyStateFeatures, {}]}>
-            <View style={styles.featureItem}>
-              <IconSymbol name="person.2.fill" size={16} color="#10B981" />
-              <Text style={[styles.featureText, { color: colors.muted }]}>Connect with teachers</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <IconSymbol name="bell.fill" size={16} color="#F59E0B" />
-              <Text style={[styles.featureText, { color: colors.muted }]}>Get real-time updates</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <IconSymbol name="heart.fill" size={16} color="#EF4444" />
-              <Text style={[styles.featureText, { color: colors.muted }]}>Stay involved in learning</Text>
-            </View>
-          </View>
-        </View>
-      )}
-    </ScrollView>
-  );
+          }
+        }}
+        onLongPress={(conversation: any) => {
+          // Future: implement long-press actions like mute/archive
+          console.log('Long press:', conversation.participant_name);
+        }}
+      />
+    );
+  };
 
   const renderAnnouncementsList = () => (
     <ScrollView
@@ -920,19 +853,31 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       const readOnly = (roomSettings?.locked || roomSettings?.admins_only) && !isAdmin || roomSettings?.allow_member_posting === false && !isAdmin;
       return (
         <View style={styles.chatContainer}>
-          <View style={[styles.chatHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-            <TouchableOpacity style={styles.backButton} onPress={() => { setSelectedRoomId(null); setMessages([]); }}>
-              <IconSymbol name="chevron.left" size={20} color="#3B82F6" />
-            </TouchableOpacity>
-            <View style={styles.chatHeaderInfo}>
-              <Text style={[styles.chatParticipantName, { color: colors.text }]}>{room?.name || 'Group'}</Text>
-              <Text style={[styles.chatParticipantRole, { color: colors.muted }]}>
-                {room?.type === 'announcement' ? 'Announcements' : 'Group Chat'}
-              </Text>
+        <View style={[styles.chatHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => { setSelectedRoomId(null); setMessages([]); }}>
+            <IconSymbol name="chevron.left" size={20} color="#3B82F6" />
+          </TouchableOpacity>
+          <View style={styles.avatarContainer}>
+            <View style={[styles.groupAvatar, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]}>
+              <IconSymbol name="person.3.fill" size={20} color={colors.muted} />
             </View>
+          </View>
+          <View style={styles.chatHeaderInfo}>
+            <Text style={[styles.chatParticipantName, { color: colors.text }]}>{room?.name || 'Group'}</Text>
+            <Text style={[styles.chatParticipantRole, { color: colors.muted }]}>
+              {room?.type === 'announcement' ? 'Announcements' : 'Group Chat'}
+            </Text>
+          </View>
+          <View style={styles.chatHeaderActions}>
+            <TouchableOpacity style={styles.headerActionButton} onPress={() => {}}>
+              <IconSymbol name="video" size={20} color="#3B82F6" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerActionButton} onPress={() => {}}>
+              <IconSymbol name="phone" size={20} color="#3B82F6" />
+            </TouchableOpacity>
             {(myRoomRole === 'owner' || myRoomRole === 'admin') && (
               <TouchableOpacity
-                style={styles.backButton}
+                style={styles.headerActionButton}
                 onPress={async () => {
                   // Quick toggle cycle: admins_only -> locked -> allow_member_posting toggle
                   const patch: any = {};
@@ -941,10 +886,11 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
                   await loadRoomContext(room.id);
                 }}
               >
-                <IconSymbol name="gearshape" size={20} color="#3B82F6" />
+                <IconSymbol name="ellipsis" size={20} color="#3B82F6" />
               </TouchableOpacity>
             )}
           </View>
+        </View>
 
           {readOnly && (
             <View style={[styles.warningContainer, { backgroundColor: 'rgba(245,158,11,0.1)' }]}>
@@ -955,44 +901,45 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             </View>
           )}
 
-          <ScrollView ref={scrollViewRef} style={[styles.messagesContainer, { backgroundColor: colors.bg }]} contentContainerStyle={[styles.messagesContent, { paddingBottom: navPad + 16 }]} onContentSizeChange={scrollToBottom}>
-            {(roomMessagesQuery.data || []).map((message: any) => {
-              const isFromParent = parentUserId ? message.sender_id === parentUserId : false;
-              return (
-                <View key={message.id} style={[styles.messageItem, isFromParent ? styles.sentMessage : styles.receivedMessage]}>
-                  <View style={[styles.messageBubble, isFromParent ? styles.sentBubble : [styles.receivedBubble, { backgroundColor: colors.card }]]}>
-                    <Text style={[styles.messageText, isFromParent ? styles.sentText : [styles.receivedText, { color: colors.text }]]}>{message.content}</Text>
-                    <Text style={[styles.messageTime, isFromParent ? styles.sentTime : [styles.receivedTime, { color: colors.muted }]]}>{formatMessageTime(message.created_at)}</Text>
-                  </View>
-                </View>
-              );
-            })}
-          </ScrollView>
+          {/* Messages */}
+          <MessagesList
+            messages={(roomMessagesQuery.data || []).map((msg: any) => ({
+              id: msg.id,
+              text: msg.content,
+              createdAt: new Date(msg.created_at),
+              user: {
+                id: msg.sender_id,
+                name: msg.sender_name || 'Unknown',
+              },
+              isCurrentUser: parentUserId ? msg.sender_id === parentUserId : false,
+            }))}
+            currentUserId={parentUserId || ''}
+            style={{ paddingBottom: navPad + 96 }}
+            onContentSizeChange={scrollToBottom}
+          />
 
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.messageInputContainer, { backgroundColor: colors.card, borderTopColor: colors.border, marginBottom: navPad }]}>
-            <View style={styles.messageInputWrapper}>
-              <TextInput
-                style={[styles.messageInput, { borderColor: colors.border, color: colors.text, backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]}
-                value={newMessage}
-                onChangeText={setNewMessage}
-                placeholder={readOnly ? 'Read-only' : 'Type a message...'}
-                placeholderTextColor={isDark ? '#64748B' : '#9CA3AF'}
-                multiline
-                maxLength={1000}
-                editable={!readOnly}
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, (!newMessage.trim() || sending || readOnly) && styles.sendButtonDisabled]}
-                onPress={sendMessage}
-                disabled={!newMessage.trim() || sending || readOnly}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel="Send"
-                accessibilityHint="Send message"
-              >
-                {sending ? <ActivityIndicator size="small" color="#FFFFFF" /> : <IconSymbol name="arrow.up" size={20} color="#FFFFFF" />}
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
+          {/* WhatsApp-style Message Input (fixed above bottom nav) */}
+          <View style={[styles.fixedInputBar, { bottom: 0 }]}>
+            <ChatInputBar
+              value={newMessage}
+              onChangeText={setNewMessage}
+              onSend={sendMessage}
+              onAttachPress={() => {
+                Alert.alert(
+                  'Attachment Options',
+                  'Choose an attachment type',
+                  [
+                    { text: 'Photo', onPress: () => console.log('Photo pressed') },
+                    { text: 'Document', onPress: () => console.log('Document pressed') },
+                    { text: 'Cancel', style: 'cancel' }
+                  ]
+                );
+              }}
+              sending={sending}
+              placeholder={readOnly ? 'Read-only' : 'Type a message...'}
+              disabled={readOnly}
+            />
+          </View>
         </View>
       );
     }
@@ -1011,102 +958,77 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             <IconSymbol name="chevron.left" size={20} color="#3B82F6" />
           </TouchableOpacity>
 
+          <View style={styles.avatarContainer}>
+            {conversation.participant_avatar ? (
+              <Image source={{ uri: conversation.participant_avatar }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.defaultAvatar, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]}>
+                <Text style={[styles.avatarText, { color: colors.muted }]}>
+                  {conversation.participant_name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+            {conversation.is_online && <View style={styles.onlineIndicator} />}
+          </View>
+
           <View style={styles.chatHeaderInfo}>
             <Text style={[styles.chatParticipantName, { color: colors.text }]}>{conversation.participant_name}</Text>
             <Text style={[styles.chatParticipantRole, { color: colors.muted }]}>
-              {`${conversation.participant_role === 'teacher' ? 'Teacher' : 'Administrator'}${conversation.child_name ? ` • ${conversation.child_name}` : ''}`}
+              {conversation.is_online ? 'online' : `${conversation.participant_role === 'teacher' ? 'Teacher' : 'Administrator'}${conversation.child_name ? ` • ${conversation.child_name}` : ''}`}
             </Text>
           </View>
 
           <View style={styles.chatHeaderActions}>
-            {conversation.is_online && (
-              <View style={styles.onlineStatus}>
-                <View style={styles.onlineDot} />
-                <Text style={styles.onlineText}>Online</Text>
-              </View>
-            )}
+            <TouchableOpacity style={styles.headerActionButton} onPress={() => {}}>
+              <IconSymbol name="video" size={20} color="#3B82F6" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerActionButton} onPress={() => {}}>
+              <IconSymbol name="phone" size={20} color="#3B82F6" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerActionButton} onPress={() => {}}>
+              <IconSymbol name="ellipsis.horizontal" size={20} color="#3B82F6" />
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* Messages */}
-        <ScrollView
-          ref={scrollViewRef}
-          style={[styles.messagesContainer, { backgroundColor: colors.bg }]}
-          contentContainerStyle={[styles.messagesContent, { paddingBottom: navPad + 16 }]}
+        <MessagesList
+          messages={messages.map((msg) => ({
+            id: msg.id,
+            text: msg.content,
+            createdAt: new Date(msg.created_at),
+            user: {
+              id: msg.sender_id,
+              name: msg.sender_name || 'Unknown',
+            },
+            isCurrentUser: parentUserId ? msg.sender_id === parentUserId : false,
+          }))}
+          currentUserId={parentUserId || ''}
+          style={{ paddingBottom: navPad + 96 }}
           onContentSizeChange={scrollToBottom}
-        >
-          {messages.map((message) => {
-            const isFromParent = parentUserId ? message.sender_id === parentUserId : false;
-            return (
-              <View
-                key={message.id}
-                style={[
-                  styles.messageItem,
-                  isFromParent ? styles.sentMessage : styles.receivedMessage
-                ]}
-              >
-                <View
-                  style={[
-                    styles.messageBubble,
-                    isFromParent ? styles.sentBubble : [styles.receivedBubble, { backgroundColor: colors.card }]
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.messageText,
-                      isFromParent ? styles.sentText : [styles.receivedText, { color: colors.text }]
-                    ]}
-                  >
-                    {message.content}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.messageTime,
-                      isFromParent ? styles.sentTime : [styles.receivedTime, { color: colors.muted }]
-                    ]}
-                  >
-                    {formatMessageTime(message.created_at)}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
+        />
 
-        {/* Message Input */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={[styles.messageInputContainer, { backgroundColor: colors.card, borderTopColor: colors.border, marginBottom: navPad }]}
-        >
-          <View style={styles.messageInputWrapper}>
-            <TextInput
-              style={[styles.messageInput, { borderColor: colors.border, color: colors.text, backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]}
-              value={newMessage}
-              onChangeText={setNewMessage}
-              placeholder="Type a message..."
-              placeholderTextColor={isDark ? '#64748B' : '#9CA3AF'}
-              multiline
-              maxLength={1000}
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (!newMessage.trim() || sending) && styles.sendButtonDisabled
-              ]}
-              onPress={sendMessage}
-              disabled={!newMessage.trim() || sending}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Send"
-              accessibilityHint="Send message"
-            >
-              {sending ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <IconSymbol name="arrow.up" size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+        {/* WhatsApp-style Message Input (fixed above bottom nav) */}
+        <View style={[styles.fixedInputBar, { bottom: 0 }]}>
+          <ChatInputBar
+            value={newMessage}
+            onChangeText={setNewMessage}
+            onSend={sendMessage}
+            onAttachPress={() => {
+              Alert.alert(
+                'Attachment Options',
+                'Choose an attachment type',
+                [
+                  { text: 'Photo', onPress: () => console.log('Photo pressed') },
+                  { text: 'Document', onPress: () => console.log('Document pressed') },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+            sending={sending}
+            placeholder="Type a message..."
+          />
+        </View>
       </View>
     );
   };
@@ -1120,42 +1042,18 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     );
   }
 
+  const handleComposeMessage = () => {
+    const role = String(profile?.role || '');
+    const isStaff = ['teacher','principal','preschool_admin','admin','superadmin'].includes(role);
+    if (isStaff) {
+      setShowActionSheet(true);
+    } else {
+      setShowComposeModal(true);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      {/* Header */}
-      {showHeader && (
-        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-          <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]} onPress={onClose}>
-            <IconSymbol name="xmark" size={20} color={colors.muted} />
-          </TouchableOpacity>
-
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
-
-          <TouchableOpacity
-            style={[styles.composeButton, { backgroundColor: isDark ? '#1E293B' : '#EBF4FF' }]}
-            onPress={() => {
-              const role = String(profile?.role || '');
-              const isStaff = ['teacher','principal','preschool_admin','admin','superadmin'].includes(role);
-              if (isStaff) {
-                // Offer New Group or Direct Message
-                Alert.alert(
-                  'New Message',
-                  'Choose what to create',
-                  [
-                    { text: 'Direct Message', onPress: () => setShowComposeModal(true) },
-                    { text: 'New Group', onPress: () => router.push('/screens/new-group' as any) },
-                    { text: 'Cancel', style: 'cancel' }
-                  ]
-                );
-              } else {
-                setShowComposeModal(true);
-              }
-            }}
-          >
-            <IconSymbol name="plus" size={20} color="#3B82F6" />
-          </TouchableOpacity>
-        </View>
-      )}
 
       {(selectedConversation || selectedRoomId) ? (
         renderChatView()
@@ -1210,7 +1108,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
           {/* Floating Action Button */}
           <TouchableOpacity
-            style={[styles.fab, { bottom: Math.max(24, navPad + 8) }]}
+            style={[styles.fab, { bottom: Math.max(88, insets.bottom + 72) }]}
             onPress={() => {
               const role = String(profile?.role || '');
               const isStaff = ['teacher','principal','preschool_admin','admin','superadmin'].includes(role);
@@ -1518,7 +1416,24 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   chatHeaderActions: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  groupAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   onlineStatus: {
     flexDirection: 'row',
@@ -1703,6 +1618,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 6,
   },
+  fixedInputBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+  },
   sheetOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -1740,6 +1660,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#9CA3AF',
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    margin: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
   },
 });
 

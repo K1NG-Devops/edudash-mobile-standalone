@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useNavigationVisibility } from '@/contexts/NavigationContext';
 
 interface SchoolForm {
   name: string;
@@ -17,6 +18,9 @@ export default function SchoolSettingsScreen() {
   const { profile } = useAuth();
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
+  
+  // Hide bottom navigation for this settings screen
+  useNavigationVisibility(true);
 
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<SchoolForm>({ name: '', email: '', phone: '', address: '' });
