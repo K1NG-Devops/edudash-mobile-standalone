@@ -354,7 +354,48 @@ const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ profile
           )}
         </View>
         ) : (
-          <View style={[styles.announcementsSec      <CreateAnnouncementModal
+          <View style={[styles.announcementsSection, { backgroundColor: palette.surface }]}>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>📅 School Events</Text>
+            {eventsLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#3B82F6" />
+                <Text style={[styles.loadingText, { color: palette.textSecondary }]}>Loading events...</Text>
+              </View>
+            ) : events && events.length > 0 ? (
+              <FlatList
+                data={events}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <EnhancedEventCard
+                    event={item as EnhancedEvent}
+                    onPress={(ev) => {
+                      try { router.push(`/screens/event-detail?id=${ev.id}` as any); } catch {}
+                    }}
+                    onParticipate={() => {}}
+                  />
+                )}
+                scrollEnabled={false}
+                showsVerticalScrollIndicator={false}
+              />
+            ) : (
+              <View style={styles.emptyState}>
+                <IconSymbol name="calendar" size={64} color={palette.textSecondary} />
+                <Text style={[styles.emptyTitle, { color: palette.text }]}>No Events Yet</Text>
+                <Text style={[styles.emptySubtitle, { color: palette.textSecondary }]}>Create an event to get started</Text>
+                <TouchableOpacity style={styles.emptyButton} onPress={() => setShowEventModal(true)}>
+                  <LinearGradient colors={['#3B82F6', '#2563EB']} style={styles.emptyButtonGradient}>
+                    <IconSymbol name="calendar.badge.plus" size={20} color="#FFFFFF" />
+                    <Text style={styles.emptyButtonText}>Create Event</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Create Modals */}
+      <CreateAnnouncementModal
         visible={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onPosted={() => {

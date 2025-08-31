@@ -17,6 +17,7 @@ export default function ScreensLayout() {
       <Stack.Screen name="student-view" options={{ headerShown: false }} />
       <Stack.Screen name="parent-view" options={{ headerShown: false }} />
       <Stack.Screen name="announcement-management" options={{ headerShown: false }} />
+      <Stack.Screen name="event-detail" options={{ headerShown: false }} />
     </Stack>
   );
 }
