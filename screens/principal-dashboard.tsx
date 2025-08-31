@@ -316,13 +316,6 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               onPress={() => setShowTeacherManagement(true)}
             />
             <ActionCard
-              title="Create Event"
-              subtitle="Plan a school event"
-              icon="calendar.badge.plus"
-              color="#3B82F6"
-              onPress={() => setShowEventModal(true)}
-            />
-            <ActionCard
               title="School Code"
               subtitle="Parent invitation codes"
               icon="qrcode.viewfinder"

@@ -4,6 +4,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { MediaService } from '@/lib/services/mediaService';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
 
 interface CreateEventModalProps {
   visible: boolean;
@@ -55,6 +57,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
   const [location, setLocation] = useState('');
   const [eventType, setEventType] = useState<EventType>('general');
   const [posting, setPosting] = useState(false);
+  const [attachments, setAttachments] = useState<{ uri: string; mimeType: string; name: string }[]>([]);
 
   const reset = () => {
     setTitle('');
@@ -63,6 +66,32 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
     setEndDate('');
     setLocation('');
     setEventType('general');
+  };
+
+  const addImage = async () => {
+    try {
+      const picked = await MediaService.pickImage('gallery');
+      if (!picked) return;
+      const name = `img_${Date.now()}.jpg`;
+      setAttachments((prev) => [...prev, { uri: picked.uri, mimeType: 'image/jpeg', name }]);
+    } catch (e: any) {
+      Alert.alert('Image error', e?.message || 'Failed to pick image');
+    }
+  };
+
+  const addVideo = async () => {
+    try {
+      const picked = await MediaService.pickVideo('gallery');
+      if (!picked) return;
+      const name = `vid_${Date.now()}.mp4`;
+      setAttachments((prev) => [...prev, { uri: picked.uri, mimeType: 'video/mp4', name }]);
+    } catch (e: any) {
+      Alert.alert('Video error', e?.message || 'Failed to pick video');
+    }
+  };
+
+  const removeAttachment = (name: string) => {
+    setAttachments((prev) => prev.filter((a) => a.name !== name));
   };
 
   const createEvent = async () => {
@@ -100,7 +129,23 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
       if (error) throw error;
 
       const newId = data?.id as string;
+
+      // Upload attachments if any
+      for (const file of attachments) {
+        try {
+          await MediaService.uploadEventMedia(
+            file.uri,
+            file.name,
+            file.mimeType,
+            createdByUserId,
+            preschoolId,
+            newId
+          );
+        } catch {}
+      }
+
       reset();
+      setAttachments([]);
       onClose();
       onCreated?.(newId);
       if (Platform.OS !== 'web') {
@@ -182,6 +227,32 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
                 );
               })}
             </View>
+
+            {/* Attachments */}
+            <Text style={[styles.label, { color: isDark ? '#E5E7EB' : '#111827' }]}>Attachments (optional)</Text>
+            <View style={styles.attachRow}>
+              <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#10B981' }]} onPress={addImage}>
+                <IconSymbol name="photo" size={16} color="#FFFFFF" />
+                <Text style={styles.smallBtnText}>Add Image</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#F59E0B' }]} onPress={addVideo}>
+                <IconSymbol name="video" size={16} color="#FFFFFF" />
+                <Text style={styles.smallBtnText}>Add Video</Text>
+              </TouchableOpacity>
+            </View>
+            {attachments.length > 0 && (
+              <View style={styles.attachList}>
+                {attachments.map((a) => (
+                  <View key={a.name} style={[styles.attachItem, { borderColor: isDark ? '#334155' : '#E5E7EB' }]}>
+                    <IconSymbol name={a.mimeType.startsWith('image/') ? 'photo' : 'video'} size={14} color={isDark ? '#E5E7EB' : '#1F2937'} />
+                    <Text style={{ flex: 1, color: isDark ? '#E5E7EB' : '#1F2937' }} numberOfLines={1}>{a.name}</Text>
+                    <TouchableOpacity onPress={() => removeAttachment(a.name)}>
+                      <IconSymbol name="xmark.circle.fill" size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </ScrollView>
 
           <TouchableOpacity style={[styles.postBtn, { backgroundColor: '#3B82F6' }]} onPress={createEvent} disabled={posting}>
@@ -270,6 +341,37 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
+  },
+  attachRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  smallBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  smallBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  attachList: {
+    gap: 6,
+    marginBottom: 8,
+  },
+  attachItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   postBtn: {
     alignItems: 'center',

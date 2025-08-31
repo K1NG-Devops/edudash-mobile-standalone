@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 // @ts-nocheck
 import { supabase } from '@/lib/supabase';
 import { decode } from 'base64-arraybuffer';
@@ -242,6 +242,56 @@ export class MediaService {
     } catch (error) {
       log.error('Error uploading media:', error);
       return { data: null, error };
+    }
+  }
+
+  // Upload event media linked to events/event_updates
+  static async uploadEventMedia(
+    fileUri: string,
+    fileName: string,
+    mimeType: string,
+    uploaderId: string,
+    preschoolId: string,
+    eventId: string,
+    options?: { updateId?: string; isBase64?: boolean }
+  ) {
+    try {
+      let fileData;
+      let actualFileName = fileName || `${Date.now()}.${mimeType.split('/')[1] || 'bin'}`;
+      if (options?.isBase64) {
+        const base64Data = fileUri.split(',')[1] || fileUri;
+        fileData = decode(base64Data);
+      } else {
+        const base64 = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
+        fileData = decode(base64);
+      }
+
+      const filePath = `${preschoolId}/events/${eventId}/${actualFileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('media-uploads')
+        .upload(filePath, fileData, { contentType: mimeType, upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('media-uploads').getPublicUrl(filePath);
+
+      const { error: dbError } = await supabase
+        .from('event_media')
+        .insert({
+          event_id: eventId,
+          uploader_id: uploaderId,
+          media_type: mimeType.startsWith('image/') ? 'image' : mimeType.startsWith('video/') ? 'video' : 'document',
+          file_url: urlData.publicUrl,
+          thumbnail_url: null,
+          file_name: actualFileName,
+          mime_type: mimeType,
+          metadata: {},
+          update_id: options?.updateId || null,
+        } as any);
+      if (dbError) throw dbError;
+
+      return { error: null };
+    } catch (error) {
+      return { error };
     }
   }
 
