@@ -1,6 +1,7 @@
 import { SchoolCodeManager } from '@/components/admin/SchoolCodeManager';
 import { TeacherManagement } from '@/components/admin/TeacherManagement';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { PrincipalService } from '@/lib/services/principalService';
 import { supabase } from '@/lib/supabase';
@@ -230,6 +231,18 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]} edges={['bottom', 'left', 'right']}>
+      <MobileHeader
+        user={{
+          name: profile?.name || 'Principal',
+          role: profile?.role || 'preschool_admin',
+          avatar: profile?.avatar_url || undefined,
+        }}
+        schoolName={(schoolInfoQuery.data as any)?.name || 'Your Preschool'}
+        onNotificationsPress={() => handleNavigate('notifications')}
+        onSignOut={onSignOut}
+        onNavigate={handleNavigate}
+        notificationCount={statsQuery.data?.pendingPayments || 0}
+      />
 
       <ScrollView
         style={styles.scrollView}
