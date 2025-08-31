@@ -364,8 +364,15 @@ serve(async (req) => {
       }
     }
 
-    // Build or accept prompt
-    const model = body.model || "claude-3-5-sonnet-20241022";
+    // Build or accept prompt - use tier-appropriate model
+    const tierModels: Record<string, string> = {
+      free: "claude-3-haiku-20240307",           // Fast, cost-effective
+      starter: "claude-3-5-sonnet-20241022",     // Better quality
+      premium: "claude-3-5-sonnet-20241022",     // Same as starter for now
+      enterprise: "claude-3-5-sonnet-20241022"   // Could upgrade to Opus for enterprise
+    };
+    
+    const model = body.model || tierModels[userTier] || "claude-3-haiku-20240307";
     let prompt = body.prompt?.toString();
 
     if (!prompt) {
@@ -379,6 +386,14 @@ serve(async (req) => {
         prompt = `Create an engaging preschool lesson plan for ${ageGroup} on the topic "${topic}".
 Duration: ${duration} minutes
 Learning Objectives: ${learningObjectives.join(", ")}
+
+Based on current educational best practices and age-appropriate developmental standards for ${ageGroup}, create content that:
+- Uses evidence-based teaching methods for early childhood education
+- Incorporates sensory learning and hands-on activities
+- Aligns with current preschool curriculum standards
+- Includes safety considerations appropriate for the age group
+- Follows developmentally appropriate practices (DAP)
+
 Return JSON as in the documented format (title, description, content, activities[], assessmentQuestions[], homeExtension[]).`;
       } else if (feature === "homework_grading") {
         const t = String(p["assignmentTitle"] ?? "Homework");
@@ -407,36 +422,80 @@ Return JSON { title, description, instructions[], scientificConcepts[], extensio
     }
 
     const options = featureModelDefaults(feature);
-    const aiRes = await callAnthropic(ANTHROPIC_API_KEY, prompt, model, options);
-
-    // Extract content and token usage
-    const contentItem = aiRes?.content?.[0];
-    const contentText = contentItem?.type === "text" ? String(contentItem.text || "") : "";
-    const inputTokens = Number(aiRes?.usage?.input_tokens ?? 0);
-    const outputTokens = Number(aiRes?.usage?.output_tokens ?? 0);
-    const tokensUsed = inputTokens + outputTokens;
-
-    // Log usage server-side (best-effort)
-    if (userId) {
-      await admin.from("ai_usage_logs").insert({
-        user_id: userId,
-        feature,
-        tokens_used: tokensUsed,
-        created_at: new Date().toISOString(),
-      } as any);
-
-      if (overageApplied) {
-        await admin.from('ai_overage_logs').insert({
+    
+    let aiRes;
+    let contentText = "";
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let tokensUsed = 0;
+    let requestSucceeded = false;
+    
+    try {
+      aiRes = await callAnthropic(ANTHROPIC_API_KEY, prompt, model, options);
+      
+      // Extract content and token usage
+      const contentItem = aiRes?.content?.[0];
+      contentText = contentItem?.type === "text" ? String(contentItem.text || "") : "";
+      inputTokens = Number(aiRes?.usage?.input_tokens ?? 0);
+      outputTokens = Number(aiRes?.usage?.output_tokens ?? 0);
+      tokensUsed = inputTokens + outputTokens;
+      
+      // Mark as successful only if we got valid content
+      requestSucceeded = !!contentText && contentText.trim().length > 0;
+      
+    } catch (anthropicError) {
+      // AI request failed - don't log usage or charge
+      console.error('Anthropic API request failed:', anthropicError);
+      return json({ 
+        success: false, 
+        error: 'AI service temporarily unavailable. This request was not counted against your quota.',
+        code: 'AI_SERVICE_ERROR',
+        quota_charged: false
+      }, 500, corsHeaders);
+    }
+    
+    // Only log usage if the AI request was successful
+    if (requestSucceeded && userId) {
+      try {
+        await admin.from("ai_usage_logs").insert({
           user_id: userId,
           feature,
-          units: 1,
-          amount: overageAmount,
+          tokens_used: tokensUsed,
           created_at: new Date().toISOString(),
         } as any);
+
+        if (overageApplied) {
+          await admin.from('ai_overage_logs').insert({
+            user_id: userId,
+            feature,
+            units: 1,
+            amount: overageAmount,
+            created_at: new Date().toISOString(),
+          } as any);
+        }
+      } catch (dbError) {
+        // Log database error but still return success if AI worked
+        console.error('Failed to log AI usage (request succeeded):', dbError);
       }
     }
+    
+    // Return result with quota charging information
+    if (!requestSucceeded) {
+      return json({ 
+        success: false, 
+        error: 'AI generated invalid response. This request was not counted against your quota.',
+        code: 'INVALID_AI_RESPONSE',
+        quota_charged: false
+      }, 500, corsHeaders);
+    }
 
-    return json({ success: true, content: contentText, usage: { inputTokens, outputTokens }, overage: overageApplied ? { charged: true, amount: overageAmount } : { charged: false } }, 200, corsHeaders);
+    return json({ 
+      success: true, 
+      content: contentText, 
+      usage: { inputTokens, outputTokens }, 
+      overage: overageApplied ? { charged: true, amount: overageAmount } : { charged: false },
+      quota_charged: true
+    }, 200, corsHeaders);
   } catch (e) {
     console.error("ai-proxy error:", e);
     return json({ success: false, error: (e as Error).message || String(e) }, 500, corsHeaders);

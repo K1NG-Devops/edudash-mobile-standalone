@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -53,6 +54,11 @@ const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ profile
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'announcements' | 'events'>('announcements');
+  // Events filters/search
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<Array<'upcoming'|'ongoing'|'completed'|'cancelled'>>([]);
+  const [typeFilter, setTypeFilter] = useState<Array<'general'|'field_trip'|'performance'|'celebration'|'workshop'|'sports'|'arts'|'academic'>>([]);
+  const [featuredOnly, setFeaturedOnly] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch announcements
@@ -103,7 +109,16 @@ const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ profile
     loadMore: loadMoreEvents,
   } = useEnhancedEvents(
     profile?.preschool_id,
-    { limit: 10, sort: { field: 'start_date', direction: 'desc' } },
+    {
+      limit: 10,
+      sort: { field: 'start_date', direction: 'desc' },
+      query,
+      filters: {
+        status: statusFilter.length ? statusFilter : undefined,
+        event_type: typeFilter.length ? (typeFilter as any) : undefined,
+        is_featured: featuredOnly ? true : undefined,
+      }
+    },
     !!profile?.preschool_id
   );
 
@@ -356,6 +371,41 @@ const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ profile
         ) : (
           <View style={[styles.announcementsSection, { backgroundColor: palette.surface }]}>
             <Text style={[styles.sectionTitle, { color: palette.text }]}>📅 School Events</Text>
+            {/* Filters */}
+            <View style={{ marginBottom: 12 }}>
+              <TextInput
+                placeholder="Search events"
+                placeholderTextColor={palette.textSecondary}
+                style={[styles.searchInput, { borderColor: palette.outline, color: palette.text, backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+                value={query}
+                onChangeText={setQuery}
+              />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                {(['upcoming','ongoing','completed','cancelled'] as const).map((s) => {
+                  const active = statusFilter.includes(s);
+                  return (
+                    <TouchableOpacity key={s} onPress={() => setStatusFilter(prev => active ? prev.filter(x => x !== s) : [...prev, s])} style={[styles.filterChip, { borderColor: active ? '#10B981' : palette.outline, backgroundColor: active ? (isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)') : 'transparent' }] }>
+                      <Text style={{ color: active ? '#10B981' : palette.textSecondary, fontWeight: active ? '700' : '500' }}>{s}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                {(['general','field_trip','performance','celebration','workshop','sports','arts','academic'] as const).map((t) => {
+                  const active = typeFilter.includes(t);
+                  return (
+                    <TouchableOpacity key={t} onPress={() => setTypeFilter(prev => active ? prev.filter(x => x !== t) : [...prev, t])} style={[styles.filterChip, { borderColor: active ? '#3B82F6' : palette.outline, backgroundColor: active ? (isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)') : 'transparent' }] }>
+                      <Text style={{ color: active ? '#3B82F6' : palette.textSecondary, fontWeight: active ? '700' : '500' }}>{t.replace('_',' ')}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity onPress={() => setFeaturedOnly(f => !f)} style={[styles.filterChip, { borderColor: featuredOnly ? '#F59E0B' : palette.outline, backgroundColor: featuredOnly ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent' }] }>
+                  <Text style={{ color: featuredOnly ? '#F59E0B' : palette.textSecondary, fontWeight: featuredOnly ? '700' : '500' }}>Featured</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setQuery(''); setStatusFilter([]); setTypeFilter([]); setFeaturedOnly(false); }} style={[styles.filterChip, { borderColor: palette.outline }]}>
+                  <Text style={{ color: palette.textSecondary }}>Reset</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {eventsLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#3B82F6" />
@@ -621,6 +671,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  filterChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
   },
 });
 

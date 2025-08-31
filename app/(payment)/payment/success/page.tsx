@@ -69,7 +69,7 @@ export default function PaymentSuccessPage() {
   };
 
   const handleViewSubscription = () => {
-    router.push('/(tabs)/settings_new');
+    router.push('/screens/subscription-management');
   };
 
   return (

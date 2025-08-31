@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
@@ -193,13 +193,13 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         router.push('/(tabs)/dashboard');
         break;
       case 'homework':
-        router.push('/screens/homework' as any);
+        router.push(`/screens/homework${selectedChild ? `?childId=${selectedChild.id}` : ''}` as any);
         break;
       case 'activities':
         router.push('/(tabs)/activities');
         break;
       case 'calendar':
-        router.push('/(tabs)/lessons');
+        router.push('/screens/lessons');
         break;
       case 'messages':
         router.push('/(tabs)/messages');

@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MediaService } from '@/lib/services/mediaService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { EventTargetingSelector } from './EventTargetingSelector';
+import { EventTargetingConfig, PrincipalGroup } from '@/types/groups';
 
 interface CreateEventModalProps {
   visible: boolean;
@@ -13,6 +15,13 @@ interface CreateEventModalProps {
   createdByUserId: string; // users.id (internal profile id)
   onClose: () => void;
   onCreated?: (eventId: string) => void;
+  availableGroups?: PrincipalGroup[];
+  availableUsers?: Array<{
+    id: string;
+    name: string;
+    role: string;
+    avatar_url?: string;
+  }>;
 }
 
 const EVENT_TYPES = [
@@ -39,7 +48,15 @@ const toIsoLocal = (d: Date) => {
   return `${y}-${m}-${day}T${h}:${mi}`;
 };
 
-const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolId, createdByUserId, onClose, onCreated }) => {
+const CreateEventModal: React.FC<CreateEventModalProps> = ({ 
+  visible, 
+  preschoolId, 
+  createdByUserId, 
+  onClose, 
+  onCreated,
+  availableGroups = [],
+  availableUsers = [],
+}) => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
@@ -58,6 +75,19 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
   const [eventType, setEventType] = useState<EventType>('general');
   const [posting, setPosting] = useState(false);
   const [attachments, setAttachments] = useState<{ uri: string; mimeType: string; name: string }[]>([]);
+  const [targeting, setTargeting] = useState<EventTargetingConfig>({
+    audience_type: 'everyone',
+    audience_config: {
+      group_ids: [],
+      user_ids: [],
+      role_filters: [],
+      custom_criteria: {},
+    },
+    requires_approval: false,
+    auto_accept_roles: ['principal'],
+    visibility: 'public',
+  });
+  const [showTargeting, setShowTargeting] = useState(false);
 
   const reset = () => {
     setTitle('');
@@ -66,6 +96,19 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
     setEndDate('');
     setLocation('');
     setEventType('general');
+    setTargeting({
+      audience_type: 'everyone',
+      audience_config: {
+        group_ids: [],
+        user_ids: [],
+        role_filters: [],
+        custom_criteria: {},
+      },
+      requires_approval: false,
+      auto_accept_roles: ['principal'],
+      visibility: 'public',
+    });
+    setShowTargeting(false);
   };
 
   const addImage = async () => {
@@ -120,7 +163,11 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
           status: 'upcoming',
           is_featured: false,
           tags: [],
-          metadata: {},
+          metadata: {
+            targeting,
+            requires_approval: targeting.requires_approval,
+            visibility: targeting.visibility,
+          },
           created_by: createdByUserId,
         })
         .select('id')
@@ -129,6 +176,41 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
       if (error) throw error;
 
       const newId = data?.id as string;
+
+      // Create event audience records
+      if (targeting.audience_type === 'specific_groups' && targeting.audience_config.group_ids?.length) {
+        const audienceRecords = targeting.audience_config.group_ids.map(groupId => ({
+          event_id: newId,
+          audience_type: 'group' as const,
+          target_id: groupId,
+          target_value: null,
+        }));
+        
+        await supabase.from('event_audiences').insert(audienceRecords);
+      }
+
+      if (targeting.audience_type === 'specific_users' && targeting.audience_config.user_ids?.length) {
+        const audienceRecords = targeting.audience_config.user_ids.map(userId => ({
+          event_id: newId,
+          audience_type: 'user' as const,
+          target_id: userId,
+          target_value: null,
+        }));
+        
+        await supabase.from('event_audiences').insert(audienceRecords);
+      }
+
+      // Create role-based audience records
+      if (targeting.audience_config.role_filters?.length) {
+        const roleRecords = targeting.audience_config.role_filters.map(role => ({
+          event_id: newId,
+          audience_type: 'role' as const,
+          target_id: null,
+          target_value: role,
+        }));
+        
+        await supabase.from('event_audiences').insert(roleRecords);
+      }
 
       // Upload attachments if any
       for (const file of attachments) {
@@ -170,6 +252,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
           </View>
 
           <ScrollView contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
+            {/* Basic Event Info */}
             <TextInput
               placeholder="Event title"
               placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
@@ -226,6 +309,57 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ visible, preschoolI
                   </TouchableOpacity>
                 );
               })}
+            </View>
+
+            {/* Event Audience & Targeting */}
+            <View style={styles.targetingSection}>
+              <TouchableOpacity
+                style={[styles.targetingHeader, { borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+                onPress={() => setShowTargeting(!showTargeting)}
+              >
+                <View style={styles.targetingHeaderLeft}>
+                  <IconSymbol
+                    name="person.3.fill"
+                    size={20}
+                    color={isDark ? '#3B82F6' : '#3B82F6'}
+                  />
+                  <View>
+                    <Text style={[styles.targetingTitle, { color: isDark ? '#E5E7EB' : '#111827' }]}>
+                      Event Audience
+                    </Text>
+                    <Text style={[styles.targetingSubtitle, { color: isDark ? '#94A3B8' : '#6B7280' }]}>
+                      {targeting.audience_type === 'everyone' ? 'Everyone can join' :
+                       targeting.audience_type === 'specific_groups' ? `${targeting.audience_config.group_ids?.length || 0} groups selected` :
+                       targeting.audience_type === 'specific_users' ? `${targeting.audience_config.user_ids?.length || 0} users selected` :
+                       `${targeting.audience_type.replace('_', ' ').replace('s', '')} only`}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.targetingHeaderRight}>
+                  {targeting.requires_approval && (
+                    <View style={[styles.approvalBadge, { backgroundColor: '#F59E0B' }]}>
+                      <IconSymbol name="checkmark.seal" size={12} color="#FFFFFF" />
+                      <Text style={styles.approvalText}>Approval</Text>
+                    </View>
+                  )}
+                  <IconSymbol
+                    name={showTargeting ? "chevron.up" : "chevron.down"}
+                    size={16}
+                    color={isDark ? '#CBD5E1' : '#6B7280'}
+                  />
+                </View>
+              </TouchableOpacity>
+
+              {showTargeting && (
+                <View style={styles.targetingContent}>
+                  <EventTargetingSelector
+                    value={targeting}
+                    onChange={setTargeting}
+                    availableGroups={availableGroups}
+                    availableUsers={availableUsers}
+                  />
+                </View>
+              )}
             </View>
 
             {/* Attachments */}
@@ -383,6 +517,54 @@ const styles = StyleSheet.create({
   postText: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  targetingSection: {
+    marginBottom: 16,
+  },
+  targetingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  targetingHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  targetingTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 12,
+    marginBottom: 2,
+  },
+  targetingSubtitle: {
+    fontSize: 12,
+    marginLeft: 12,
+  },
+  targetingHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  approvalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  approvalText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  targetingContent: {
+    maxHeight: 400,
   },
 });
 

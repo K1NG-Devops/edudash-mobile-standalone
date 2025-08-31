@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useEventUpdates } from '@/lib/hooks/useEnhancedEvents';
 import { MediaService } from '@/lib/services/mediaService';
+import EditEventModal from '@/components/events/EditEventModal';
 
 const PostUpdateModal: React.FC<{
   visible: boolean;
@@ -88,6 +89,7 @@ export default function EventDetailScreen() {
   const { updates, loading: updatesLoading, postUpdate, refresh } = useEventUpdates(eventId, !!eventId);
 
   const [showPost, setShowPost] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const handlePost = async (content: string, attachments: { uri: string; mimeType: string; name: string }[]) => {
     const upd = await postUpdate({ event_id: eventId, content });
@@ -127,9 +129,14 @@ export default function EventDetailScreen() {
         <Text style={{ color: palette.textSecondary, marginBottom: 8 }}>{new Date(event.start_date).toLocaleString()}</Text>
         {event.description && <Text style={{ color: palette.textSecondary, marginBottom: 16 }}>{event.description}</Text>}
 
-        <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#3B82F6', marginBottom: 16 }]} onPress={() => setShowPost(true)}>
-          <Text style={styles.primaryBtnText}>Post Update</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+          <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#3B82F6', flex: 1 }]} onPress={() => setShowPost(true)}>
+            <Text style={styles.primaryBtnText}>Post Update</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#10B981', flex: 1 }]} onPress={() => setShowEdit(true)}>
+            <Text style={styles.primaryBtnText}>Edit Event</Text>
+          </TouchableOpacity>
+        </View>
 
         <Text style={[styles.sectionTitle, { color: palette.text }]}>Updates</Text>
         {updatesLoading ? (
@@ -153,6 +160,14 @@ export default function EventDetailScreen() {
         )}
       </ScrollView>
       <PostUpdateModal visible={showPost} onClose={() => setShowPost(false)} onPost={handlePost} />
+      <EditEventModal
+        visible={showEdit}
+        event={{ id: eventId, preschool_id: String(event.preschool_id || ''), ...event }}
+        onClose={() => setShowEdit(false)}
+        onSaved={() => {
+          try { (async () => { await eventQuery.refetch(); })(); } catch {}
+        }}
+      />
     </>
   );
 }

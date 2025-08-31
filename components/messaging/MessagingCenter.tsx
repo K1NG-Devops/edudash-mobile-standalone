@@ -60,6 +60,7 @@ interface Conversation {
   child_name?: string;
   last_message: string;
   last_message_time: string;
+  last_message_timestamp?: string; // Raw timestamp for sorting
   unread_count: number;
   is_online: boolean;
 }
@@ -97,15 +98,18 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   const [rooms, setRooms] = useState<RoomConversation[]>([]);
   const [roomSettings, setRoomSettings] = useState<{ admins_only?: boolean; locked?: boolean; allow_member_posting?: boolean } | null>(null);
   const [myRoomRole, setMyRoomRole] = useState<'owner' | 'admin' | 'member' | null>(null);
+  const [myRoomMuted, setMyRoomMuted] = useState<boolean>(false);
+  const [myRoomClearedAt, setMyRoomClearedAt] = useState<string | null>(null);
+  const [dmIsMuted, setDmIsMuted] = useState<boolean>(false);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   // Draft state for Direct Messages (DM). We store one draft per DM target.
   const [dmDraftId, setDmDraftId] = useState<string | null>(null);
   const draftTimerRef = useRef<any>(null);
-  const [activeTab, setActiveTab] = useState<'conversations' | 'announcements'>('conversations');
-  const [announcements, setAnnouncements] = useState<Message[]>([]);
+  // Removed announcements tab - now handled in Activities tab
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [showActionSheet, setShowActionSheet] = useState(false);
+  const [showChatMenu, setShowChatMenu] = useState(false);
   const [parentUserId, setParentUserId] = useState<string | null>(null);
   const [preschoolName, setPreschoolName] = useState<string | null>(null);
 
@@ -161,7 +165,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     const init = async () => {
       if (!profile) return;
       await waitForAuthSession();
-      await Promise.all([loadConversations(), loadAnnouncements(), loadRooms(), loadPreschoolName()]);
+      await Promise.all([loadConversations(true), loadRooms(), loadPreschoolName()]);
       await setupRealtimeSubscription();
     };
     init();
@@ -210,7 +214,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
               .single();
             if (msg) {
               setMessages(prev => [...prev, { id: msg.id, content: msg.content, created_at: msg.created_at || new Date().toISOString(), sender_id: msg.sender_id || '', message_type: 'general' }]);
-              loadConversations();
+              loadConversations(false);
               scrollToBottom();
             }
           }
@@ -220,7 +224,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   };
 
   // Load contacts for staff using secure RPC to avoid RLS issues
-  const loadSchoolContacts = async (userProfile: any) => {
+  const loadSchoolContacts = async (userProfile: any, initial = false) => {
     try {
       const includeParents = ['teacher','principal','preschool_admin','admin','superadmin'].includes(String(userProfile.role || ''));
       const { data: contactsRpc, error } = await (supabase as any).rpc('get_messaging_contacts', {
@@ -246,7 +250,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       console.error('Error loading school contacts:', error);
       Alert.alert('Error', 'Failed to load school contacts');
     } finally {
-      setLoading(false);
+      if (initial) setLoading(false);
     }
   };
 
@@ -258,11 +262,11 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     } catch {}
   };
 
-  const loadConversations = async () => {
+  const loadConversations = async (initial = false) => {
     if (!profile) return;
 
     try {
-      setLoading(true);
+      if (initial) setLoading(true);
 
       // Get user's internal ID and role
       const { data: userProfile, error: userError } = await supabase
@@ -279,7 +283,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       // If user is staff with a preschool, show school contacts list (even if no prior messages)
       if ((userProfile.role === 'teacher' || userProfile.role === 'principal' || userProfile.role === 'preschool_admin')) {
         if (userProfile.preschool_id) {
-          await loadSchoolContacts(userProfile);
+          await loadSchoolContacts(userProfile, initial);
           return;
         }
         // Fallback: try infer preschool_id from invitations
@@ -316,7 +320,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             fallbackSchool = (schoolCode?.preschool_id as string | null) || null;
           }
           if (fallbackSchool) {
-            await loadSchoolContacts({ ...userProfile, preschool_id: fallbackSchool });
+            await loadSchoolContacts({ ...userProfile, preschool_id: fallbackSchool }, initial);
             return;
           }
         } catch {}
@@ -332,10 +336,12 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             id,
             content,
             created_at,
-            sender_id
+            sender_id,
+            message_type
           )
         `)
         .eq('recipient_id', userProfile.id)
+        .neq('messages.message_type', 'announcement')
         .order('created_at', { ascending: false });
       if (incomingError) throw incomingError;
 
@@ -346,9 +352,11 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           content,
           created_at,
           sender_id,
+          message_type,
           message_recipients(recipient_id)
         `)
         .eq('sender_id', userProfile.id)
+        .neq('message_type', 'announcement')
         .order('created_at', { ascending: false });
       if (outgoingError) throw outgoingError;
 
@@ -378,17 +386,19 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             participant_role: meta.role || 'teacher',
             last_message: msg.content,
             last_message_time: formatMessageTime(msg.created_at),
+            last_message_timestamp: msg.created_at,
             unread_count: row.read_at ? 0 : 1,
             is_online: false,
           });
         } else {
           const existing = conversationMap.get(otherId)!;
           if (!row.read_at) existing.unread_count += 1;
-          const existingTime = new Date(existing.last_message_time || 0);
+          const existingTime = new Date(existing.last_message_timestamp || 0);
           const newTime = new Date(msg.created_at);
           if (newTime > existingTime) {
             existing.last_message = msg.content;
             existing.last_message_time = formatMessageTime(msg.created_at);
+            existing.last_message_timestamp = msg.created_at;
           }
         }
       });
@@ -406,16 +416,18 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
               participant_role: meta.role || 'teacher',
               last_message: msg.content,
               last_message_time: formatMessageTime(msg.created_at),
+              last_message_timestamp: msg.created_at,
               unread_count: 0,
               is_online: false,
             });
           } else {
             const existing = conversationMap.get(otherId)!;
-            const existingTime = new Date(existing.last_message_time || 0);
+            const existingTime = new Date(existing.last_message_timestamp || 0);
             const newTime = new Date(msg.created_at);
             if (newTime > existingTime) {
               existing.last_message = msg.content;
               existing.last_message_time = formatMessageTime(msg.created_at);
+              existing.last_message_timestamp = msg.created_at;
             }
           }
         });
@@ -440,11 +452,16 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
       // Otherwise sort conversations (recent first); fallback to alpha by name
       const allConversations = existingConversations.sort((a, b) => {
-        if (a.last_message_time && !b.last_message_time) return -1;
-        if (!a.last_message_time && b.last_message_time) return 1;
-        if (a.last_message_time && b.last_message_time) {
-          return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
+        // If both have timestamps, sort by timestamp (most recent first)
+        if (a.last_message_timestamp && b.last_message_timestamp) {
+          return new Date(b.last_message_timestamp).getTime() - new Date(a.last_message_timestamp).getTime();
         }
+        
+        // If only one has a timestamp, that one comes first
+        if (a.last_message_timestamp && !b.last_message_timestamp) return -1;
+        if (!a.last_message_timestamp && b.last_message_timestamp) return 1;
+        
+        // If neither has a timestamp, sort alphabetically by name
         return a.participant_name.localeCompare(b.participant_name);
       });
 
@@ -452,67 +469,11 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     } catch (error) {
       Alert.alert('Error', 'Failed to load conversations');
     } finally {
-      setLoading(false);
+      if (initial) setLoading(false);
     }
   };
 
-  const loadAnnouncements = async () => {
-    if (!profile?.auth_user_id) return;
-
-    try {
-      // Resolve current user id
-      const { data: parentProfile } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', profile.auth_user_id)
-        .single();
-      if (!parentProfile) return;
-
-      // Fetch announcement message deliveries
-      const { data: recips, error: recErr } = await supabase
-        .from('message_recipients')
-        .select('message_id, read_at, created_at')
-        .eq('recipient_id', parentProfile.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (recErr) throw recErr;
-
-      const ids = Array.from(new Set((recips || []).map((r: any) => r.message_id)));
-      if (ids.length === 0) { setAnnouncements([]); return; }
-
-      const { data: msgs, error: msgErr } = await supabase
-        .from('messages')
-        .select('id, content, created_at, sender_id, message_type')
-        .in('id', ids)
-        .eq('message_type', 'announcement')
-        .order('created_at', { ascending: false });
-      if (msgErr) throw msgErr;
-
-      const senderIds = Array.from(new Set((msgs || []).map((m: any) => m.sender_id).filter(Boolean)));
-      let senders: Record<string, any> = {};
-      if (senderIds.length > 0) {
-        const { data: users } = await supabase
-          .from('users')
-          .select('id, name, avatar_url')
-          .in('id', senderIds);
-        (users || []).forEach((u: any) => { senders[u.id] = u; });
-      }
-
-      const mapped: Message[] = (msgs || []).map((m: any) => ({
-        id: m.id,
-        content: m.content,
-        created_at: m.created_at,
-        sender_id: m.sender_id,
-        message_type: (m.message_type as any) || 'announcement',
-        sender_name: senders[m.sender_id]?.name,
-        sender_avatar: senders[m.sender_id]?.avatar_url,
-      }));
-
-      setAnnouncements(mapped);
-    } catch (error) {
-      // Removed debug statement: console.error('Error loading announcements:', error);
-    }
-  };
+  // Announcements moved to Activities tab
 
   const loadRoomContext = async (roomId: string) => {
     try {
@@ -520,16 +481,25 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       const list = await ConversationService.listMyConversations(profile!.auth_user_id);
       const found = (list || []).find((c: any) => c.id === roomId);
       setRoomSettings(found?.settings || null);
-      // Find my role
+      // Find my role and mute status; also mark as read on open
       const uid = await ConversationService.getCurrentUserId(profile!.auth_user_id);
       if (uid) {
         const { data } = await supabase
           .from('conversation_members')
-          .select('role')
+          .select('role, is_muted, last_read_at, cleared_at')
           .eq('conversation_id', roomId)
           .eq('user_id', uid)
           .maybeSingle();
-        if (data?.role) setMyRoomRole(data.role);
+        const row: any = data as any;
+        if (row?.role) setMyRoomRole(row.role);
+        setMyRoomMuted(!!row?.is_muted);
+        setMyRoomClearedAt(row?.cleared_at || null);
+        // Mark as read when opening the room
+        await supabase
+          .from('conversation_members')
+          .update({ last_read_at: new Date().toISOString() })
+          .eq('conversation_id', roomId)
+          .eq('user_id', uid);
       }
     } catch {}
   };
@@ -566,15 +536,31 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       const allIds = Array.from(new Set([...incomingIds, ...outgoingIds]));
       if (allIds.length === 0) { setMessages([]); return; }
 
+      // Fetch DM settings for this partner (mute/cleared_at)
+      const { data: dmSetting } = await (supabase as any)
+        .from('dm_settings')
+        .select('is_muted, cleared_at')
+        .eq('partner_user_id', conversationId)
+        .eq('user_id', parentProfile.id)
+        .maybeSingle();
+      setDmIsMuted(!!dmSetting?.is_muted);
+
       const { data: msgsAll } = await supabase
         .from('messages')
-        .select('id, content, created_at, sender_id')
+        .select('id, content, created_at, sender_id, message_type')
         .in('id', allIds)
         .or(`and(sender_id.eq.${conversationId}),and(sender_id.eq.${parentProfile.id})`)
+        .neq('message_type', 'announcement')
         .order('created_at', { ascending: true });
 
-      const unified: Message[] = (msgsAll || [])
+      let unified: Message[] = (msgsAll || [])
         .map((m: any) => ({ id: m.id, content: m.content, created_at: m.created_at, sender_id: m.sender_id, message_type: 'general' }));
+
+      // Apply clear filter if present
+      if (dmSetting?.cleared_at) {
+        const clearedAt = new Date(dmSetting.cleared_at).getTime();
+        unified = unified.filter(m => new Date(m.created_at).getTime() > clearedAt);
+      }
 
       setMessages(unified);
 
@@ -722,7 +708,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
       // Atomic server-side send via RPC (handles RLS)
       const { data: messageId, error: rpcError } = await supabase.rpc('send_direct_message', {
-        p_recipient_user_id: selectedConversation,
+        p_recipient_user_id: selectedConversation!,
         p_content: newMessage.trim(),
         p_subject: '',
         p_message_type: 'direct',
@@ -734,8 +720,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
       setNewMessage('');
       await deleteDMDraft();
-      await loadMessages(selectedConversation);
-      await loadConversations();
+      await loadMessages(selectedConversation!);
+      await loadConversations(false);
     } catch (error) {
       // Removed debug statement: console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message');
@@ -744,17 +730,36 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     }
   };
 
-  const formatMessageTime = (timestamp: string): string => {
+  const formatMessageTime = (timestamp: string | null | undefined): string => {
+    if (!timestamp) return '';
+    
+    // Check if timestamp is already a formatted string (contains 'ago', 'Yesterday', etc.)
+    if (typeof timestamp === 'string' && (timestamp.includes('ago') || timestamp === 'Yesterday' || timestamp === 'Just now')) {
+      return timestamp;
+    }
+    
     const date = new Date(timestamp);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+    
     const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    const diffInDays = diffInHours / 24;
 
-    if (diffInHours < 1) {
+    if (diffInMs < 0) {
+      // Future date
+      return date.toLocaleDateString();
+    } else if (diffInHours < 1) {
       return 'Just now';
     } else if (diffInHours < 24) {
       return `${Math.floor(diffInHours)}h ago`;
-    } else if (diffInHours < 48) {
+    } else if (diffInDays < 2) {
       return 'Yesterday';
+    } else if (diffInDays < 7) {
+      return `${Math.floor(diffInDays)} days ago`;
     } else {
       return date.toLocaleDateString();
     }
@@ -768,7 +773,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([loadConversations(), loadAnnouncements()]);
+    await loadConversations(false);
     if (selectedConversation) {
       await loadMessages(selectedConversation);
     }
@@ -822,56 +827,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     );
   };
 
-  const renderAnnouncementsList = () => (
-    <ScrollView
-      style={styles.announcementsList}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      {announcements.map((a) => {
-        const timeStr = formatMessageTime(a.created_at);
-        const senderName = a.sender_name || 'School Administration';
-        return (
-          <View key={a.id} style={[styles.announcementItem, { backgroundColor: colors.card }]}>
-            <View style={styles.announcementHeader}>
-              <View style={styles.announcementSender}>
-                <IconSymbol name="megaphone.fill" size={20} color="#3B82F6" />
-                <Text style={[styles.announcementSenderName, { color: '#3B82F6' }]}>{senderName}</Text>
-              </View>
-              <Text style={[styles.announcementTime, { color: colors.muted }]}>{timeStr}</Text>
-            </View>
-            <Text style={[styles.announcementContent, { color: colors.sub }]}>{a.content}</Text>
-          </View>
-        );
-      })}
-
-      {announcements.length === 0 && !loading && (
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyStateIcon, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)' }]}>
-            <IconSymbol name="megaphone.fill" size={64} color="#8B5CF6" />
-          </View>
-          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>No Announcements Yet</Text>
-          <Text style={[styles.emptyStateText, { color: colors.muted }]}>
-            {"Important school updates, events, and news will appear here.\nStay tuned for the latest from your preschool!"}
-          </Text>
-
-          <View style={styles.emptyStateFeatures}>
-            <View style={styles.featureItem}>
-              <IconSymbol name="calendar" size={16} color="#3B82F6" />
-              <Text style={styles.featureText}>Event notifications</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <IconSymbol name="exclamationmark.triangle.fill" size={16} color="#F59E0B" />
-              <Text style={styles.featureText}>Important updates</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <IconSymbol name="newspaper.fill" size={16} color="#10B981" />
-              <Text style={styles.featureText}>School news</Text>
-            </View>
-          </View>
-        </View>
-      )}
-    </ScrollView>
-  );
+  // Announcements list moved to Activities tab
 
   const renderChatView = () => {
     if (selectedRoomId) {
@@ -932,7 +888,12 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
 
           {/* Messages */}
           <MessagesList
-            messages={(roomMessagesQuery.data || []).map((msg: any) => ({
+            messages={(roomMessagesQuery.data || [])
+              .filter((msg: any) => {
+                if (!myRoomClearedAt) return true;
+                return new Date(msg.created_at).getTime() > new Date(myRoomClearedAt).getTime();
+              })
+              .map((msg: any) => ({
               id: msg.id,
               text: msg.content,
               createdAt: new Date(msg.created_at),
@@ -1014,7 +975,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             <TouchableOpacity style={styles.headerActionButton} onPress={() => {}}>
               <IconSymbol name="phone" size={20} color="#3B82F6" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.headerActionButton} onPress={() => {}}>
+            <TouchableOpacity style={styles.headerActionButton} onPress={() => setShowChatMenu(true)}>
               <IconSymbol name="ellipsis.horizontal" size={20} color="#3B82F6" />
             </TouchableOpacity>
           </View>
@@ -1088,52 +1049,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         renderChatView()
       ) : (
         <>
-          {/* Tabs */}
-          <View style={[styles.tabsContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'conversations' && styles.activeTab
-              ]}
-              onPress={() => setActiveTab('conversations')}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'conversations' && styles.activeTabText
-                ]}
-              >
-                Conversations
-              </Text>
-              {conversations.reduce((sum, conv) => sum + conv.unread_count, 0) > 0 && (
-                <View style={styles.tabBadge}>
-                  <Text style={styles.tabBadgeText}>
-                    {conversations.reduce((sum, conv) => sum + conv.unread_count, 0)}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'announcements' && styles.activeTab
-              ]}
-              onPress={() => setActiveTab('announcements')}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'announcements' && styles.activeTabText
-                ]}
-              >
-                Announcements
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Content */}
-          {activeTab === 'conversations' ? renderConversationsList() : renderAnnouncementsList()}
+          {/* Single Content - Just Conversations */}
+          {renderConversationsList()}
 
           {/* Floating Action Button */}
           <TouchableOpacity
@@ -1163,9 +1080,9 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
                   <IconSymbol name="person.3.fill" size={18} color="#10B981" />
                   <Text style={[styles.sheetItemText, { color: colors.text }]}>New group</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.sheetItem} onPress={() => { setShowActionSheet(false); setActiveTab('announcements'); }}>
+                <TouchableOpacity style={styles.sheetItem} onPress={() => { setShowActionSheet(false); router.push('/(tabs)/activities' as any); }}>
                   <IconSymbol name="megaphone.fill" size={18} color="#F59E0B" />
-                  <Text style={[styles.sheetItemText, { color: colors.text }]}>Announcements</Text>
+                  <Text style={[styles.sheetItemText, { color: colors.text }]}>View Announcements</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowActionSheet(false)}>
                   <Text style={styles.sheetCancelText}>Cancel</Text>
@@ -1176,16 +1093,156 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         </>
       )}
 
+      {/* Chat Settings Menu */}
+      <Modal visible={showChatMenu} transparent animationType="fade" onRequestClose={() => setShowChatMenu(false)}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowChatMenu(false)}>
+          <View style={[styles.sheetContainer, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF', borderColor: colors.border }]}>
+            <Text style={[styles.sheetTitle, { color: colors.text }]}>Chat Options</Text>
+            
+            <TouchableOpacity 
+              style={styles.sheetItem} 
+              onPress={() => {
+                setShowChatMenu(false);
+                try {
+                  if (selectedConversation) {
+                    const conv = conversations.find(c => c.id === selectedConversation);
+                    const name = conv?.participant_name || 'Direct Message';
+                    const roleKey = conv?.participant_role || 'teacher';
+                    const roleLabel = roleKey === 'teacher' ? 'Teacher' : 'Administrator';
+                    Alert.alert('Contact Info', `Name: ${name}\nRole: ${roleLabel}`);
+                  } else if (selectedRoomId) {
+                    const room = rooms.find((r: any) => r.id === selectedRoomId);
+                    const typeLabel = room?.type === 'announcement' ? 'Announcements' : 'Group Chat';
+                    Alert.alert('Room Info', `Name: ${room?.name || 'Group'}\nType: ${typeLabel}`);
+                  } else {
+                    Alert.alert('Contact Info', 'No active selection.');
+                  }
+                } catch {}
+              }}
+            >
+              <IconSymbol name="person.circle" size={18} color="#3B82F6" />
+              <Text style={[styles.sheetItemText, { color: colors.text }]}>Contact Info</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.sheetItem} 
+              onPress={async () => {
+                setShowChatMenu(false);
+                try {
+                  if (selectedRoomId) {
+                    const meId = await ConversationService.getCurrentUserId(profile!.auth_user_id);
+                    if (!meId) return;
+                    await supabase
+                      .from('conversation_members')
+                      .update({ is_muted: !myRoomMuted })
+                      .eq('conversation_id', selectedRoomId)
+                      .eq('user_id', meId);
+                    setMyRoomMuted(prev => !prev);
+                    Alert.alert(!myRoomMuted ? 'Muted' : 'Unmuted', `Notifications ${!myRoomMuted ? 'muted' : 'unmuted'} for this room.`);
+                  } else if (selectedConversation) {
+                    // Toggle DM mute via dm_settings
+                    const { data: me } = await supabase
+                      .from('users')
+                      .select('id')
+                      .eq('auth_user_id', profile!.auth_user_id)
+                      .single();
+                    if (!me) return;
+                    await (supabase as any)
+                      .from('dm_settings')
+                      .upsert({ user_id: me.id, partner_user_id: selectedConversation, is_muted: !dmIsMuted }, { onConflict: 'user_id,partner_user_id' } as any);
+                    setDmIsMuted(prev => !prev);
+                    Alert.alert(!dmIsMuted ? 'Muted' : 'Unmuted', `Notifications ${!dmIsMuted ? 'muted' : 'unmuted'} for this chat.`);
+                  }
+                } catch {}
+              }}
+            >
+              <IconSymbol name="bell.slash" size={18} color="#F59E0B" />
+              <Text style={[styles.sheetItemText, { color: colors.text }]}>{(selectedRoomId ? myRoomMuted : dmIsMuted) ? 'Unmute Notifications' : 'Mute Notifications'}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.sheetItem} 
+              onPress={() => {
+                setShowChatMenu(false);
+                Alert.alert(
+                  'Clear Chat',
+                  'Are you sure you want to clear this chat? This cannot be undone.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { 
+                      text: 'Clear', 
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          if (selectedRoomId) {
+                            // Clearing a room: mark as read now
+                            const meId = await ConversationService.getCurrentUserId(profile!.auth_user_id);
+                            if (meId) {
+                              const nowIso = new Date().toISOString();
+                              await supabase
+                                .from('conversation_members')
+                                .update({ last_read_at: nowIso, cleared_at: nowIso })
+                                .eq('conversation_id', selectedRoomId)
+                                .eq('user_id', meId);
+                              setMyRoomClearedAt(nowIso);
+                            }
+                            setMessages([]);
+                          } else if (selectedConversation) {
+                            // DM: set cleared_at and mark incoming unread as read
+                            const { data: me } = await supabase
+                              .from('users')
+                              .select('id')
+                              .eq('auth_user_id', profile!.auth_user_id)
+                              .single();
+                            if (me) {
+                              await (supabase as any)
+                                .from('dm_settings')
+                                .upsert({ user_id: me.id, partner_user_id: selectedConversation, cleared_at: new Date().toISOString() }, { onConflict: 'user_id,partner_user_id' } as any);
+                              // mark incoming from partner as read
+                              await supabase
+                                .from('message_recipients')
+                                .update({ is_read: true, read_at: new Date().toISOString() })
+                                .in('message_id', (
+                                  (
+                                    await supabase
+                                      .from('messages')
+                                      .select('id')
+                                      .eq('sender_id', selectedConversation)
+                                  ).data || []
+                                ).map((r: any) => r.id))
+                                .eq('recipient_id', me.id)
+                                .eq('is_read', false);
+                            }
+                            setMessages([]);
+                          }
+                          Alert.alert('Chat Cleared', 'The chat has been cleared.');
+                        } catch {}
+                      }
+                    }
+                  ]
+                );
+              }}
+            >
+              <IconSymbol name="trash" size={18} color="#EF4444" />
+              <Text style={[styles.sheetItemText, { color: colors.text }]}>Clear Chat</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowChatMenu(false)}>
+              <Text style={styles.sheetCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Compose Message Modal */}
       <ComposeMessageModal
         visible={showComposeModal}
         onClose={() => setShowComposeModal(false)}
         profile={profile}
         childrenList={childrenList}
-        onMessageSent={() => {
-          loadConversations();
-          loadAnnouncements();
-        }}
+          onMessageSent={() => {
+            loadConversations(false);
+          }}
       />
     </View>
   );

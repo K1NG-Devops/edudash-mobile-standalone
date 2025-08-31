@@ -27,10 +27,10 @@ const MessagesContent: React.FC<{ profile: any }> = ({ profile }) => {
       // Load children associated with this parent
       const { data: children } = await supabase
         .from('students')
-        .select('id, name, avatar_url, date_of_birth, enrollment_status')
+        .select('id, first_name, last_name, avatar_url, date_of_birth')
         .eq('parent_id', parentData.id)
         .eq('is_active', true)
-        .order('name');
+        .order('first_name');
 
       setChildrenList(children || []);
     } catch (error) {

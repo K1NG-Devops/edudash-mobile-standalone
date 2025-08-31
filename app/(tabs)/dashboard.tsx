@@ -306,7 +306,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
         router.push('/(tabs)/activities' as Href);
         break;
       case 'calendar':
-        router.push('/(tabs)/lessons' as Href);
+        router.push('/screens/lessons' as Href);
         break;
       case 'messages':
         router.push('/(tabs)/messages' as Href);
@@ -561,9 +561,9 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
     try {
       // Dynamically require to avoid potential circular import issues during bundling
 
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+       
       const TeacherModule = require('../screens/teacher-dashboard-functional');
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+       
       const SubscriptionModule = require('../../contexts/SubscriptionContext');
 
       const TeacherDashboard = TeacherModule?.TeacherDashboard || TeacherModule?.default;

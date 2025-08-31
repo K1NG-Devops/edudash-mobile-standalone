@@ -620,7 +620,7 @@ export class PrincipalService {
             id,
             name
           ),
-          parent:users!parent_id(
+          parent:users!students_parent_id_fkey(
             id,
             name,
             email,

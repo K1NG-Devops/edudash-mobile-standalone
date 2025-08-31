@@ -107,7 +107,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
 
   useEffect(() => {
     fetchUsageStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [subscription, showUsage, userId]);
 
   const isActive = isSubscriptionActive();
@@ -211,20 +211,12 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
     if (onUpgrade) {
       onUpgrade();
     } else {
-      router.push('/pricing');
+      router.push('/screens/subscription-management');
     }
   };
 
   const handleManagePress = () => {
-    Alert.alert(
-      'Manage Subscription',
-      'Choose an option',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'View Billing', onPress: () => router.push('/(tabs)/settings_new') },
-        { text: 'Change Plan', onPress: () => router.push('/pricing') },
-      ]
-    );
+    router.push('/screens/subscription-management');
   };
 
   const getUsagePercentage = (used: number, limit: number) => {

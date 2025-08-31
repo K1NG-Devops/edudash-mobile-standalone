@@ -13,6 +13,8 @@ import { supabase } from '@/lib/supabase'
 import { TeacherDataService } from '@/lib/services/teacherDataService'
 import { useSubscription, useFeatureAccess } from '@/contexts/SubscriptionContext'
 import UpgradeModal from '@/components/subscription/UpgradeModal'
+import { router } from 'expo-router'
+import { requestShowInterstitial } from '@/lib/ads/adEvents'
 
 interface AgeGroup { id: string; name: string }
 interface Category { id: string; name: string }
@@ -127,6 +129,7 @@ export default function AILessonGeneratorScreen() {
       }
       setSavedLessonId(lessonId)
       Alert.alert('Saved', 'Lesson saved successfully.')
+      try { requestShowInterstitial({ reason: 'lesson-saved' }) } catch {}
     } catch (e: any) {
       Alert.alert('Save failed', e?.message || 'Unknown error')
     }
@@ -164,6 +167,7 @@ export default function AILessonGeneratorScreen() {
 
       if ((result as any)?.success) {
         Alert.alert('Assigned', 'Lesson assigned successfully to your selection.')
+        try { requestShowInterstitial({ reason: 'lesson-assigned' }) } catch {}
       } else {
         Alert.alert('Assign failed', (result as any)?.error || 'Could not assign lesson.')
       }
@@ -183,7 +187,7 @@ export default function AILessonGeneratorScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={[styles.header, { borderBottomColor: palette.outline }]}>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Go back" onPress={() => { try { history.back() } catch {} }} style={styles.backBtn}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={styles.backBtn}>
           <IconSymbol name="chevron.left" size={22} color={palette.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: palette.text }]}>AI Lesson Generator</Text>
@@ -212,7 +216,7 @@ export default function AILessonGeneratorScreen() {
               userId={authUserId}
               preschoolId={preschoolId}
               onLessonGenerated={onGenerated}
-              onClose={() => { /* Stay on screen */ }}
+              onClose={() => router.back()}
             />
           </View>
 
@@ -244,10 +248,25 @@ export default function AILessonGeneratorScreen() {
                 </View>
 
                 <View style={{ flexDirection: 'row', marginTop: 12 }}>
-                  <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#10B981' }]} onPress={saveLesson}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.primaryBtn, 
+                      { 
+                        backgroundColor: (!picker.ageGroupId || !picker.categoryId) ? '#9CA3AF' : '#10B981',
+                        opacity: (!picker.ageGroupId || !picker.categoryId) ? 0.7 : 1
+                      }
+                    ]} 
+                    onPress={saveLesson}
+                    disabled={!picker.ageGroupId || !picker.categoryId}
+                  >
                     <Text style={styles.primaryBtnText}>Save Lesson</Text>
                   </TouchableOpacity>
                 </View>
+                {(!picker.ageGroupId || !picker.categoryId) && (
+                  <Text style={[styles.helpText, { color: '#EF4444', marginTop: 8 }]}>
+                    Please select both an age group and category above to save your lesson.
+                  </Text>
+                )}
               </View>
             </View>
           )}
@@ -395,4 +414,5 @@ const styles = StyleSheet.create({
   studentRowActive: { backgroundColor: '#F0FDF4' },
   secondaryBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, marginRight: 8, marginBottom: 8 },
   secondaryBtnText: { marginLeft: 8, color: '#111827', fontWeight: '600' },
+  helpText: { fontSize: 12, fontStyle: 'italic' },
 })

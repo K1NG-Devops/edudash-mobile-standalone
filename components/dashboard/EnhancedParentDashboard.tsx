@@ -438,7 +438,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         router.push('/(tabs)/activities');
         break;
       case 'lessons':
-        router.push('/(tabs)/lessons');
+        router.push('/screens/lessons');
         break;
       case 'messages':
         router.push('/(tabs)/messages');

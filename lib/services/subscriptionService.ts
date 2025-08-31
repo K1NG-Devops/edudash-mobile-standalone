@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { createLogger } from '@/lib/utils/logger';
+import * as Crypto from 'expo-crypto';
 
 const log = createLogger('subscription');
 
@@ -570,7 +571,7 @@ limits: { students: null, ai_lessons_per_month: null, ai_tutors: null, schools: 
   /**
    * Generate PayFast signature for security
    */
-  private static generatePayFastSignature(data: Record<string, string>, passphrase?: string): string {
+  private static async generatePayFastSignature(data: Record<string, string>, passphrase?: string): Promise<string> {
     // Remove signature and empty fields
     const filteredData = Object.keys(data)
       .filter(key => key !== 'signature' && data[key] !== '' && data[key] !== undefined)
@@ -590,9 +591,12 @@ limits: { students: null, ai_lessons_per_month: null, ai_tutors: null, schools: 
       parameterString += `&passphrase=${encodeURIComponent(passphrase)}`;
     }
 
-    // Generate MD5 hash
-    const crypto = require('crypto');
-    return crypto.createHash('md5').update(parameterString).digest('hex');
+    // Generate MD5 hash (Expo Crypto)
+    const hash = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.MD5,
+      parameterString
+    );
+    return hash;
   }
 
   /**
@@ -657,7 +661,7 @@ limits: { students: null, ai_lessons_per_month: null, ai_tutors: null, schools: 
       }
 
       // Generate signature
-      subscriptionData.signature = this.generatePayFastSignature(subscriptionData as any, passphrase);
+      subscriptionData.signature = await this.generatePayFastSignature(subscriptionData as any, passphrase);
 
       // Create the payment URL with parameters
       const params = new URLSearchParams();
@@ -690,7 +694,7 @@ limits: { students: null, ai_lessons_per_month: null, ai_tutors: null, schools: 
       const dataToValidate: any = { ...notification };
       delete dataToValidate.signature;
       
-      const calculatedSignature = this.generatePayFastSignature(dataToValidate as any, passphrase);
+      const calculatedSignature = await this.generatePayFastSignature(dataToValidate as any, passphrase);
       
       if (calculatedSignature !== notification.signature) {
         log.error('PayFast signature validation failed');

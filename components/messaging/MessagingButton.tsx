@@ -19,6 +19,7 @@ interface MessagingButtonProps {
   style?: any;
   size?: 'small' | 'medium' | 'large';
   variant?: 'primary' | 'secondary' | 'floating';
+  showAnnouncementBadge?: boolean;
 }
 
 const MessagingButton: React.FC<MessagingButtonProps> = ({
@@ -27,8 +28,10 @@ const MessagingButton: React.FC<MessagingButtonProps> = ({
   style,
   size = 'medium',
   variant = 'primary',
+  showAnnouncementBadge = false,
 }) => {
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadAnnouncementCount, setUnreadAnnouncementCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showMessaging, setShowMessaging] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
@@ -86,19 +89,21 @@ const MessagingButton: React.FC<MessagingButtonProps> = ({
         return;
       }
 
-      // Count unread messages
-      const { count, error } = await supabase
-        .from('message_recipients')
-        .select('*', { count: 'exact', head: true })
-        .eq('recipient_id', parentProfile.id)
-        .eq('is_read', false)
-        .eq('is_archived', false);
+      // Use the new RPC function to get both message and announcement counts
+      const { data: counts, error } = await supabase
+        .rpc('get_unread_counts' as any, { p_user_id: parentProfile.id }) as { 
+          data: { unread_messages: number; unread_announcements: number }[] | null; 
+          error: any 
+        };
 
       if (error) {
         throw error;
       }
 
-      setUnreadCount(count || 0);
+      if (counts && counts.length > 0) {
+        setUnreadCount(counts[0].unread_messages || 0);
+        setUnreadAnnouncementCount(counts[0].unread_announcements || 0);
+      }
     } catch (error) {
       // Removed debug statement: console.error('Error loading unread count:', error);
     } finally {
@@ -187,6 +192,15 @@ const MessagingButton: React.FC<MessagingButtonProps> = ({
               </Text>
             </View>
           )}
+          
+          {showAnnouncementBadge && unreadAnnouncementCount > 0 && (
+            <View style={[styles.announcementBadge, getAnnouncementBadgePosition()]}>
+              <IconSymbol name="megaphone.fill" size={10} color="#FFFFFF" />
+              <Text style={styles.announcementBadgeText}>
+                {unreadAnnouncementCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       );
     }
@@ -217,6 +231,15 @@ const MessagingButton: React.FC<MessagingButtonProps> = ({
             </Text>
           </View>
         )}
+        
+        {showAnnouncementBadge && unreadAnnouncementCount > 0 && (
+          <View style={[styles.announcementBadge, getAnnouncementBadgePosition()]}>
+            <IconSymbol name="megaphone.fill" size={10} color="#FFFFFF" />
+            <Text style={styles.announcementBadgeText}>
+              {unreadAnnouncementCount}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -229,6 +252,19 @@ const MessagingButton: React.FC<MessagingButtonProps> = ({
       minWidth: buttonSize.width * 0.35,
       height: buttonSize.width * 0.35,
       borderRadius: buttonSize.width * 0.175,
+    };
+  };
+
+  const getAnnouncementBadgePosition = () => {
+    const buttonSize = getButtonSize();
+    return {
+      bottom: -2,
+      right: -2,
+      minWidth: buttonSize.width * 0.4,
+      height: buttonSize.width * 0.35,
+      borderRadius: buttonSize.width * 0.175,
+      flexDirection: 'row' as const,
+      paddingHorizontal: 4,
     };
   };
 
@@ -302,6 +338,21 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
     fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  announcementBadge: {
+    position: 'absolute',
+    backgroundColor: '#F59E0B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    gap: 2,
+  },
+  announcementBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
     fontWeight: '700',
     textAlign: 'center',
   },

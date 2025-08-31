@@ -1,10 +1,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, FlatList } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { TeacherDataService } from '@/lib/services/teacherDataService';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { supabase } from '@/lib/supabase';
+import NotificationIndicator from '@/components/ui/NotificationIndicator';
+import { useEnhancedEvents, useEventNotifications } from '@/lib/hooks/useEnhancedEvents';
+import { useAnnouncementNotifications } from '@/lib/hooks/useAnnouncementNotifications';
+import { handleEventJoin } from '@/lib/hooks/useEventParticipation';
+import EnhancedEventCard from '@/components/events/EnhancedEventCard';
+import { EnhancedEvent } from '@/types/events';
+import { requestShowInterstitial } from '@/lib/ads/adEvents';
+import { Alert } from 'react-native';
 
 interface ActivityItem {
   id: string;
@@ -24,11 +32,46 @@ export default function ActivitiesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'teacher' | 'events' | 'announcements'>('teacher');
-  const [eventsHasMore, setEventsHasMore] = useState(true);
-  const EVENTS_PAGE_SIZE = 10;
+
+  // Enhanced events system
+  const {
+    events,
+    loading: eventsLoading,
+    hasMore: eventsHasMore,
+    refreshing: eventsRefreshing,
+    refresh: refreshEvents,
+    loadMore: loadMoreEvents,
+  } = useEnhancedEvents(
+    profile?.preschool_id,
+    {
+      limit: 10,
+      filters: { status: ['upcoming', 'ongoing', 'completed'] },
+      sort: { field: 'start_date', direction: 'desc' },
+    },
+    profile?.role !== 'teacher'
+  );
+
+  // Event notifications
+  const {
+    unreadCount: eventNotificationsCount,
+    markAllAsRead: markAllEventNotificationsRead,
+  } = useEventNotifications(
+    profile?.auth_user_id,
+    profile?.role !== 'teacher'
+  );
+
+  // Use the announcement notifications hook for non-teachers
+  const {
+    unreadCount: unreadAnnouncementsCount,
+    announcements,
+    loading: announcementsLoading,
+    refreshAnnouncements,
+    markAllAsRead,
+  } = useAnnouncementNotifications(
+    profile?.auth_user_id,
+    profile?.role !== 'teacher'
+  );
 
   const bg = isDark ? '#0B1220' : '#F8FAFC';
   const card = isDark ? '#0F172A' : '#FFFFFF';
@@ -49,16 +92,7 @@ export default function ActivitiesScreen() {
     return `${days}d ago`;
   };
 
-  const fetchEvents = async (offset = 0) => {
-    if (!profile?.preschool_id) return [] as any[];
-    const { data: ev } = await (supabase as any)
-      .from('events')
-      .select('id,title,description,start_date,end_date,location')
-      .eq('preschool_id', profile.preschool_id)
-      .order('start_date', { ascending: true })
-      .range(offset, offset + EVENTS_PAGE_SIZE - 1);
-    return ev || [];
-  };
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,30 +102,8 @@ export default function ActivitiesScreen() {
         const data = await TeacherDataService.getTeacherDashboardData(profile.auth_user_id);
         setActivities((data?.recent_activities || []) as ActivityItem[]);
       } else {
-        // Parent/Admin: fetch events and announcements
+        // Parent/Admin: events are handled by the enhanced events hook
         setActiveTab('events');
-        if (profile?.preschool_id) {
-          const first = await fetchEvents(0);
-          setEvents(first);
-          setEventsHasMore((first || []).length === EVENTS_PAGE_SIZE);
-        }
-        if (profile?.auth_user_id) {
-          const { data: u } = await (supabase as any)
-            .from('users')
-            .select('id')
-            .eq('auth_user_id', profile.auth_user_id)
-            .single();
-          if (u?.id) {
-            const { data: msgs } = await (supabase as any)
-              .from('message_recipients')
-              .select(`read_at, message:messages(id, content, created_at, sender_id, message_type)`) 
-              .eq('recipient_id', u.id)
-              .eq('message.message_type', 'announcement')
-              .order('created_at', { ascending: false })
-              .limit(20);
-            setAnnouncements((msgs || []).map((r: any) => r.message));
-          }
-        }
       }
     } catch {
       setActivities([]);
@@ -108,6 +120,39 @@ export default function ActivitiesScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await load();
+    // Also refresh announcements and events if not a teacher
+    if (profile?.role !== 'teacher') {
+      await refreshAnnouncements();
+      await refreshEvents();
+    }
+  };
+
+  const handleEventPress = (event: EnhancedEvent) => {
+    // Navigate to event details screen (to be implemented)
+    console.log('Open event:', event.title);
+  };
+
+  const handleEventParticipate = async (event: EnhancedEvent) => {
+    // Handle event participation with proper feedback
+    await handleEventJoin(event, profile?.auth_user_id, {
+      onSuccess: (message) => {
+        Alert.alert('Success! 🎉', message, [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Refresh events to show updated participation status
+              refreshEvents();
+            }
+          }
+        ]);
+      },
+      onError: (error) => {
+        Alert.alert('Unable to Join Event', error, [
+          { text: 'OK', style: 'default' }
+        ]);
+      },
+      participationType: profile?.role === 'parent' ? 'attendee' : 'volunteer'
+    });
   };
 
   const iconFor = (type: ActivityItem['type']) => {
@@ -133,71 +178,125 @@ export default function ActivitiesScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: bg }}>
         <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 12, borderBottomWidth: 1, borderBottomColor: border }}>
-          <TouchableOpacity onPress={() => setActiveTab('events')} style={[styles.tabBtn, activeTab === 'events' && [styles.tabBtnActive, { borderColor: '#8B5CF6' }]]}>
-            <Text style={{ color: activeTab === 'events' ? '#8B5CF6' : sub, fontWeight: '600' }}>Events</Text>
+          <TouchableOpacity 
+            onPress={() => {
+              setActiveTab('events');
+              // Trigger child-safe interstitial (frequency-gated)
+              try { requestShowInterstitial({ reason: 'tab-events' }); } catch {}
+              // Mark event notifications as read when tab is opened
+              if (eventNotificationsCount > 0) {
+                setTimeout(markAllEventNotificationsRead, 500);
+              }
+            }} 
+            style={[styles.tabBtn, activeTab === 'events' && [styles.tabBtnActive, { borderColor: '#8B5CF6' }]]}
+          >
+            <View style={styles.tabContent}>
+              <Text style={{ color: activeTab === 'events' ? '#8B5CF6' : sub, fontWeight: '600' }}>Events</Text>
+              {eventNotificationsCount > 0 && (
+                <View style={styles.indicatorWrapper}>
+                  <NotificationIndicator count={eventNotificationsCount} size="small" />
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setActiveTab('announcements')} style={[styles.tabBtn, activeTab === 'announcements' && [styles.tabBtnActive, { borderColor: '#8B5CF6' }]]}>
-            <Text style={{ color: activeTab === 'announcements' ? '#8B5CF6' : sub, fontWeight: '600' }}>Announcements</Text>
+          <TouchableOpacity 
+            onPress={() => {
+              setActiveTab('announcements');
+              // Trigger child-safe interstitial (frequency-gated)
+              try { requestShowInterstitial({ reason: 'tab-announcements' }); } catch {}
+              // Mark announcements as read when tab is opened
+              setTimeout(markAllAsRead, 500); // Small delay to allow UI update
+            }} 
+            style={[styles.tabBtn, activeTab === 'announcements' && [styles.tabBtnActive, { borderColor: '#8B5CF6' }]]}
+          >
+            <View style={styles.tabContent}>
+              <Text style={{ color: activeTab === 'announcements' ? '#8B5CF6' : sub, fontWeight: '600' }}>Announcements</Text>
+              {unreadAnnouncementsCount > 0 && (
+                <View style={styles.indicatorWrapper}>
+                  <NotificationIndicator count={unreadAnnouncementsCount} size="small" />
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
         </View>
 
         {activeTab === 'events' ? (
-          events.length ? (
-            <ScrollView style={{ flex: 1, backgroundColor: bg }} contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-              {events.map((e: any) => (
-                <View key={e.id} style={[styles.card, { backgroundColor: card, borderColor: border }]}> 
-                  <View style={styles.row}>
-                    <View style={[styles.iconWrap, { backgroundColor: isDark ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)' }]}> 
-                      <IconSymbol name="calendar" size={20} color="#10B981" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.title, { color: text }]} numberOfLines={1}>{e.title}</Text>
-                      {!!e.description && <Text style={[styles.desc, { color: sub }]} numberOfLines={2}>{e.description}</Text>}
-                      <View style={styles.metaRow}>
-                        <Text style={[styles.meta, { color: sub }]}>{new Date(e.start_date).toLocaleDateString()}</Text>
-                        {!!e.location && <Text style={[styles.meta, { color: sub }]}>{e.location}</Text>}
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              ))}
-              {eventsHasMore && (
-                <TouchableOpacity
-                  onPress={async () => {
-                    const next = await fetchEvents(events.length);
-                    setEvents(prev => [...prev, ...next]);
-                    setEventsHasMore(next.length === EVENTS_PAGE_SIZE);
-                  }}
-                  style={{ alignSelf: 'center', marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: isDark ? '#1E293B' : '#E5E7EB' }}
-                >
-                  <Text style={{ color: isDark ? '#E5E7EB' : '#111827' }}>Load more</Text>
-                </TouchableOpacity>
+          eventsLoading ? (
+            <View style={[styles.center, { backgroundColor: bg }]}> 
+              <ActivityIndicator size="large" color="#8B5CF6" />
+              <Text style={{ marginTop: 12, color: sub }}>Loading events…</Text>
+            </View>
+          ) : events.length ? (
+            <FlatList
+              data={events}
+              renderItem={({ item }) => (
+                <EnhancedEventCard
+                  event={item}
+                  onPress={handleEventPress}
+                  onParticipate={handleEventParticipate}
+                  showActions={true}
+                  compact={false}
+                />
               )}
-              <View style={{ height: 24 }} />
-            </ScrollView>
+              keyExtractor={(item) => item.id}
+              style={{ flex: 1, backgroundColor: bg }}
+              contentContainerStyle={{ padding: 16 }}
+              refreshControl={
+                <RefreshControl 
+                  refreshing={eventsRefreshing} 
+                  onRefresh={refreshEvents}
+                  tintColor="#8B5CF6"
+                />
+              }
+              onEndReached={() => {
+                if (eventsHasMore && !eventsLoading) {
+                  loadMoreEvents();
+                }
+              }}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={
+                eventsHasMore ? (
+                  <View style={{ padding: 16, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color="#8B5CF6" />
+                    <Text style={[{ marginTop: 8, color: sub }]}>Loading more events...</Text>
+                  </View>
+                ) : events.length > 5 ? (
+                  <View style={{ padding: 16, alignItems: 'center' }}>
+                    <Text style={[{ color: sub }]}>You've reached the end</Text>
+                  </View>
+                ) : null
+              }
+              showsVerticalScrollIndicator={false}
+            />
           ) : (
             <View style={[styles.center, { backgroundColor: bg, padding: 24 }]}> 
-              <Text style={{ color: sub }}>No upcoming events.</Text>
+              <View style={[styles.emptyIcon, { backgroundColor: isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.08)' }]}>
+                <IconSymbol name="calendar" size={64} color="#10B981" />
+              </View>
+              <Text style={[styles.emptyTitle, { color: text }]}>No events yet</Text>
+              <Text style={[styles.emptyText, { color: sub }]}>School events and activities will appear here when created.</Text>
             </View>
           )
         ) : (
           announcements.length ? (
             <ScrollView style={{ flex: 1, backgroundColor: bg }} contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-              {announcements.map((a: any) => (
-                <View key={a.id} style={[styles.card, { backgroundColor: card, borderColor: border }]}> 
-                  <View style={styles.row}>
-                    <View style={[styles.iconWrap, { backgroundColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.1)' }]}> 
-                      <IconSymbol name="megaphone.fill" size={20} color="#8B5CF6" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.title, { color: text }]} numberOfLines={2}>{a.content}</Text>
-                      <View style={styles.metaRow}>
-                        <Text style={[styles.meta, { color: sub }]}>{timeAgo(a.created_at)}</Text>
+              {announcements
+                .filter(Boolean)
+                .map((a: any) => (
+                  <View key={a.id} style={[styles.card, { backgroundColor: card, borderColor: border }]}> 
+                    <View style={styles.row}>
+                      <View style={[styles.iconWrap, { backgroundColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.1)' }]}> 
+                        <IconSymbol name="megaphone.fill" size={20} color="#8B5CF6" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.title, { color: text }]} numberOfLines={2}>{a.content}</Text>
+                        <View style={styles.metaRow}>
+                          <Text style={[styles.meta, { color: sub }]}>{timeAgo(a.created_at)}</Text>
+                        </View>
                       </View>
                     </View>
                   </View>
-                </View>
-              ))}
+                ))}
               <View style={{ height: 24 }} />
             </ScrollView>
           ) : (
@@ -272,4 +371,13 @@ const styles = StyleSheet.create({
   desc: { fontSize: 14, marginTop: 2 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   meta: { fontSize: 12 },
+  tabContent: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    position: 'relative' 
+  },
+  indicatorWrapper: {
+    marginLeft: 6,
+    marginTop: -2,
+  },
 });

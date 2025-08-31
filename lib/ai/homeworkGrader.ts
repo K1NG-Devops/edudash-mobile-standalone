@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 // @ts-nocheck
 import { claudeAI, HomeworkGrading } from './claudeService';
 import { supabase } from '@/lib/supabase';

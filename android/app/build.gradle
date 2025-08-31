@@ -1,8 +1,39 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
+
+// Load release keystore properties if present (android/keystore.properties)
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+// Load additional local secrets from user home or project-local (never committed)
+def secretsProps = new Properties()
+def userHome = System.properties['user.home']
+def homeSecretsFile = new File("${userHome}/.edudash/android-secrets.properties")
+def projectSecretsFile = rootProject.file("secrets.local.properties")
+if (homeSecretsFile.exists()) {
+    println "Loading secrets from ${homeSecretsFile}"
+    secretsProps.load(new FileInputStream(homeSecretsFile))
+} else if (projectSecretsFile.exists()) {
+    println "Loading secrets from ${projectSecretsFile}"
+    secretsProps.load(new FileInputStream(projectSecretsFile))
+} else if (keystorePropertiesFile.exists()) {
+    // Fallback to keystore.properties for signing-only
+    println "No dedicated secrets file found; falling back to keystore.properties for signing"
+    secretsProps.putAll(keystoreProperties)
+}
+
+// Environment variable fallback (useful on EAS Cloud)
+def env = System.getenv()
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -94,6 +125,16 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
+
+        // Manifest placeholders from secrets (fallback to props or test IDs)
+        manifestPlaceholders = [
+            admobAppId: (
+                (secretsProps["ADMOB_APP_ID"]
+                ?: env.get("ADMOB_APP_ID")
+                ?: findProperty('ADMOB_APP_ID')
+                ?: "ca-app-pub-3940256099942544~3347511713")
+            )
+        ]
     }
     signingConfigs {
         debug {
@@ -102,15 +143,47 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            // Prefer environment variables (EAS Cloud compatible)
+            if (env.get("ANDROID_KEYSTORE_PATH") && env.get("ANDROID_KEYSTORE_PASSWORD") && env.get("ANDROID_KEY_ALIAS") && env.get("ANDROID_KEY_PASSWORD")) {
+                println "Using signing config from environment variables"
+                storeFile file(env.get("ANDROID_KEYSTORE_PATH"))
+                storePassword env.get("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias env.get("ANDROID_KEY_ALIAS")
+                keyPassword env.get("ANDROID_KEY_PASSWORD")
+                v1SigningEnabled true
+                v2SigningEnabled true
+            } else if (secretsProps["storeFile"] && secretsProps["storePassword"] && secretsProps["keyAlias"] && secretsProps["keyPassword"]) {
+                storeFile file(secretsProps["storeFile"]) // e.g. app/release.keystore or absolute path
+                storePassword secretsProps["storePassword"]
+                keyAlias secretsProps["keyAlias"]
+                keyPassword secretsProps["keyPassword"]
+                v1SigningEnabled true
+                v2SigningEnabled true
+            } else if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties["storeFile"]) // e.g. app/release.keystore
+                storePassword keystoreProperties["storePassword"]
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+                v1SigningEnabled true
+                v2SigningEnabled true
+            } else {
+                // Fallback to debug signing if no release keystore is configured
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
+            // In production, ensure keystore.properties is configured with your release keys.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"

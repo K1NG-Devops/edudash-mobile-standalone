@@ -218,6 +218,8 @@ const ConversationItem = memo<{
   );
 });
 
+ConversationItem.displayName = 'ConversationItem';
+
 export const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
   onPress,

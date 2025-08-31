@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
@@ -63,6 +63,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
   const [showPopModal, setShowPopModal] = useState(false);
   const [contacts, setContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(false);
 
   const isFreeTier = !subscription || subscription.plan?.tier === 'free';
   const subscriptionTier = subscription?.plan?.tier || 'free';
@@ -99,6 +100,32 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
       console.warn('Error loading contacts:', error);
     } finally {
       setLoadingContacts(false);
+    }
+  };
+
+  // Check profile completeness
+  const checkProfileCompleteness = async () => {
+    try {
+      // Get parent's internal user profile
+      const { data: parentProfile, error } = await supabase
+        .from('users')
+        .select('name, email, phone, street_address')
+        .eq('auth_user_id', userId)
+        .limit(1)
+        .single();
+
+      if (!error && parentProfile) {
+        // Check if required profile fields are completed
+        const requiredFields = ['name', 'email', 'phone', 'street_address'];
+        const completedFields = requiredFields.filter(field => {
+          const value = parentProfile[field as keyof typeof parentProfile];
+          return value && value.toString().trim() !== '';
+        });
+
+        setProfileComplete(completedFields.length === requiredFields.length);
+      }
+    } catch (error) {
+      console.warn('Error checking profile completeness:', error);
     }
   };
 
@@ -146,6 +173,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
   // Initial data fetch
   useEffect(() => {
     fetchDashboardData();
+    checkProfileCompleteness();
   }, [userId]);
 
   // Handle refresh
@@ -154,7 +182,8 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
     await Promise.all([
       fetchDashboardData(),
       refreshSubscription(),
-      loadContacts()
+      loadContacts(),
+      checkProfileCompleteness()
     ]);
   };
 
@@ -173,7 +202,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
 
   // Handle upgrade action
   const handleUpgrade = () => {
-    router.push('/pricing');
+    router.push('/screens/subscription-management');
   };
 
   // Handle AI feature usage
@@ -249,13 +278,13 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         router.push('/(tabs)/dashboard');
         break;
       case 'homework':
-        router.push('/screens/homework' as any);
+        router.push(`/screens/homework${selectedChildId ? `?childId=${selectedChildId}` : ''}` as any);
         break;
       case 'activities':
         router.push('/(tabs)/activities');
         break;
       case 'calendar':
-        router.push('/(tabs)/lessons');
+        router.push('/screens/lessons');
         break;
       case 'messages':
         router.push('/(tabs)/messages');
@@ -267,10 +296,10 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         router.push('/screens/complete-profile');
         break;
       case 'ai-lessons':
-        router.push('/screens/ai-lessons' as any);
+        router.push('/screens/ai-lesson-generator' as any);
         break;
       case 'homework-ai':
-        router.push('/screens/homework-ai' as any);
+        router.push('/screens/homework' as any);
         break;
       case 'ai-tutoring':
         router.push('/screens/ai-tutoring' as any);
@@ -418,11 +447,11 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                     {selectedChild.class_name || selectedChild.age_group_name || 'Unassigned'}
                   </Text>
                 </View>
-                <View style={styles.attendanceButton}>
+                <TouchableOpacity style={styles.attendanceButton} onPress={() => router.push(`/screens/attendance${selectedChildId ? `?childId=${selectedChildId}` : ''}` as any)}>
                   <Text style={styles.attendanceText}>
                     Attendance: {selectedChild.attendance_percentage}%
                   </Text>
-                </View>
+                </TouchableOpacity>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -571,10 +600,27 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
               style={styles.quickAction}
               onPress={() => handleQuickAction('complete-profile')}
             >
-              <View style={styles.quickActionIcon}>
-                <IconSymbol name="person.circle" size={24} color="#6B7280" />
+              <View style={[
+                styles.quickActionIcon,
+                !profileComplete && styles.incompleteProfileIcon
+              ]}>
+                <IconSymbol 
+                  name={profileComplete ? "checkmark.circle.fill" : "person.circle"} 
+                  size={24} 
+                  color={profileComplete ? "#10B981" : "#EF4444"} 
+                />
+                {!profileComplete && (
+                  <View style={styles.alertBadge}>
+                    <IconSymbol name="exclamationmark" size={8} color="#FFFFFF" />
+                  </View>
+                )}
               </View>
-              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Complete Profile</Text>
+              <Text style={[
+                styles.quickActionLabel, 
+                { color: profileComplete ? palette.textSecondary : '#EF4444' }
+              ]}>
+                {profileComplete ? 'Profile Complete' : 'Complete Profile'}
+              </Text>
             </TouchableOpacity>
 
             {/* AI-powered actions */}
@@ -980,6 +1026,10 @@ const styles = StyleSheet.create({
   aiActionIcon: {
     backgroundColor: '#8B5CF6',
   },
+  incompleteProfileIcon: {
+    borderWidth: 2,
+    borderColor: '#FEE2E2',
+  },
   lockBadge: {
     position: 'absolute',
     top: -2,
@@ -988,6 +1038,17 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
   },

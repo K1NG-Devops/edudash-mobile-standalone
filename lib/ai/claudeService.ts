@@ -1,7 +1,20 @@
 import { supabase } from '@/lib/supabase';
 import { logger as log } from '@/lib/utils/logger';
 
-const DEFAULT_MODEL = 'claude-3-5-sonnet-20241022';
+// Model selection based on subscription tier
+const TIER_MODELS: Record<string, string> = {
+  free: 'claude-3-haiku-20240307',           // Fast, cost-effective
+  starter: 'claude-3-5-sonnet-20241022',     // Better quality
+  premium: 'claude-3-5-sonnet-20241022',     // High quality
+  enterprise: 'claude-3-5-sonnet-20241022'   // Could upgrade to Opus
+};
+
+const DEFAULT_MODEL = 'claude-3-haiku-20240307';
+
+// Get model for user's subscription tier
+function getModelForTier(tier?: string): string {
+  return TIER_MODELS[tier || 'free'] || DEFAULT_MODEL;
+}
 
 // Core AI Service Class
 export class ClaudeAIService {
@@ -97,8 +110,18 @@ Make it educational, fun, and age-appropriate with hands-on learning experiences
         return { success: false, error: error.message };
       }
 
+      // Check if this was a quota-protected error
+      const quotaCharged = data?.quota_charged !== false;
       const contentText: string | undefined = data?.content;
-      if (!contentText) return { success: false, error: 'Empty AI response' };
+      
+      if (!contentText) {
+        const errorMsg = data?.error || 'Empty AI response';
+        const isQuotaProtected = errorMsg.includes('not counted against your quota') || !quotaCharged;
+        return { 
+          success: false, 
+          error: isQuotaProtected ? errorMsg : 'AI service temporarily unavailable'
+        };
+      }
 
       const lessonData = JSON.parse(contentText);
       return { success: true, content: lessonData };

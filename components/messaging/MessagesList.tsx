@@ -167,14 +167,12 @@ export const MessagesList = forwardRef<MessagesListRef, MessagesListProps>(({
         }}
         // Performance optimizations
         removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        updateCellsBatchingPeriod={50}
-        initialNumToRender={15}
-        windowSize={10}
       />
     </View>
   );
 });
+
+MessagesList.displayName = 'MessagesList';
 
 const styles = StyleSheet.create({
   container: {

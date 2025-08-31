@@ -283,8 +283,24 @@ export class StudentDataService {
    * Calculate attendance rate (placeholder - would integrate with actual attendance system)
    */
   static async calculateAttendanceRate(studentId: string): Promise<number> {
-    // Until attendance tracking is implemented, return 0 (no mock values)
-    return 0;
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('status, attendance_date')
+        .eq('student_id', studentId)
+        .gte('attendance_date', startOfMonth.toISOString());
+
+      if (error || !data || data.length === 0) return 0;
+      const total = data.length;
+      const presentCount = data.filter((r: any) => (r.status || '').toLowerCase() === 'present').length;
+      return Math.round((presentCount / total) * 100);
+    } catch {
+      return 0;
+    }
   }
 
   /**
@@ -322,7 +338,7 @@ export class StudentDataService {
    * Get recent achievements for student
    */
   static async getRecentAchievements(studentId: string): Promise<string[]> {
-    // No mock achievements
+    // If you add an achievements table, query it here. For now return empty.
     return [];
   }
 
@@ -391,15 +407,59 @@ export class StudentDataService {
    * Get recent updates for students
    */
   static async getRecentUpdates(studentIds: string[]) {
-    // No mock updates until real aggregation is implemented
-    return [] as any[];
+    try {
+      if (!studentIds || studentIds.length === 0) return [] as any[];
+      // Example aggregation from homework_submissions (recent) as updates
+      const { data: subs } = await supabase
+        .from('homework_submissions')
+        .select('id, student_id, status, created_at')
+        .in('student_id', studentIds)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      const updates = (subs || []).map((s: any) => ({
+        id: s.id,
+        type: 'homework',
+        title: 'Homework update',
+        description: `Status: ${s.status || 'submitted'}`,
+        timestamp: s.created_at,
+        student_id: s.student_id,
+        icon: 'doc.text'
+      }));
+      return updates as any[];
+    } catch {
+      return [] as any[];
+    }
   }
 
   /**
    * Get upcoming events for students
    */
   static async getUpcomingEvents(studentIds: string[]) {
-    // No mock events until real events source is implemented
-    return [] as any[];
+    try {
+      // If your schema has events tied to preschool or class, you can adapt this.
+      // Here we return an empty list safely to avoid 404s.
+      return [] as any[];
+    } catch {
+      return [] as any[];
+    }
+  }
+
+  /**
+   * Get attendance history for a student (recent first)
+   */
+  static async getAttendanceHistory(studentId: string): Promise<Array<{ date: string; status: string }>> {
+    try {
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('attendance_date, status')
+        .eq('student_id', studentId)
+        .order('attendance_date', { ascending: false })
+        .limit(90);
+      if (error || !data) return [];
+      return data.map((r: any) => ({ date: r.attendance_date, status: r.status }));
+    } catch {
+      return [];
+    }
   }
 }

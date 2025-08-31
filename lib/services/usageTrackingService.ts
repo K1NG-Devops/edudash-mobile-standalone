@@ -187,25 +187,72 @@ export class UsageTrackingService {
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
 
-      const { data: todayUsage } = await (supabase as any)
-        .from('usage_logs')
-        .select('feature_type, usage_count')
-        .eq('user_id', userId)
-        .gte('created_at', todayStart.toISOString());
+      // Use server-authoritative AI usage logs for AI features to keep UI consistent
+      // Map auth_user_id -> public.users.id for ai_usage_logs
+      const { data: dbUser } = await (supabase as any)
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', userId)
+        .maybeSingle();
 
-      const { data: monthUsage } = await (supabase as any)
-        .from('usage_logs')
-        .select('feature_type, usage_count')
-        .eq('user_id', userId)
-        .gte('created_at', monthStart.toISOString());
+      const endOfMonth = new Date(monthStart);
+      endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+      endOfMonth.setDate(0);
+      endOfMonth.setHours(23, 59, 59, 999);
 
-      // Calculate usage totals
-      const aiLessonsToday = this.sumUsageByType(todayUsage || [], 'ai_lesson');
-      const aiLessonsMonth = this.sumUsageByType(monthUsage || [], 'ai_lesson');
-      const homeworkToday = this.sumUsageByType(todayUsage || [], 'homework_grading');
-      const homeworkMonth = this.sumUsageByType(monthUsage || [], 'homework_grading');
-      const tutoringToday = this.sumUsageByType(todayUsage || [], 'ai_tutoring');
-      const premiumToday = this.sumUsageByType(todayUsage || [], 'premium_feature');
+      let aiLessonsToday = 0;
+      let aiLessonsMonth = 0;
+      let homeworkToday = 0;
+      let homeworkMonth = 0;
+      let tutoringToday = 0; // still sourced from generic usage_logs below if used elsewhere
+      let premiumToday = 0;  // derived from AI features we proxy
+
+      if (dbUser?.id) {
+        const { data: aiTodayLogs } = await (supabase as any)
+          .from('ai_usage_logs')
+          .select('feature, created_at')
+          .eq('user_id', dbUser.id)
+          .gte('created_at', todayStart.toISOString());
+
+        const { data: aiMonthLogs } = await (supabase as any)
+          .from('ai_usage_logs')
+          .select('feature, created_at')
+          .eq('user_id', dbUser.id)
+          .gte('created_at', monthStart.toISOString())
+          .lte('created_at', endOfMonth.toISOString());
+
+        const countBy = (arr: Array<{ feature: string }>, name: string) =>
+          (arr || []).filter((r) => r.feature === name).length;
+
+        aiLessonsToday = countBy(aiTodayLogs || [], 'lesson_generation');
+        homeworkToday = countBy(aiTodayLogs || [], 'homework_grading');
+        premiumToday = (aiTodayLogs || []).filter((r: { feature: string }) => r.feature === 'progress_analysis' || r.feature === 'stem_activity').length;
+
+        aiLessonsMonth = countBy(aiMonthLogs || [], 'lesson_generation');
+        homeworkMonth = countBy(aiMonthLogs || [], 'homework_grading');
+      }
+
+      // Optional: fall back to legacy client-side usage_logs if AI logs are unavailable
+      if (aiLessonsToday === 0 && aiLessonsMonth === 0 && homeworkToday === 0 && homeworkMonth === 0) {
+        const { data: todayUsage } = await (supabase as any)
+          .from('usage_logs')
+          .select('feature_type, usage_count')
+          .eq('user_id', userId)
+          .gte('created_at', todayStart.toISOString());
+
+        const { data: monthUsage } = await (supabase as any)
+          .from('usage_logs')
+          .select('feature_type, usage_count')
+          .eq('user_id', userId)
+          .gte('created_at', monthStart.toISOString());
+
+        aiLessonsToday = this.sumUsageByType(todayUsage || [], 'ai_lesson');
+        aiLessonsMonth = this.sumUsageByType(monthUsage || [], 'ai_lesson');
+        homeworkToday = this.sumUsageByType(todayUsage || [], 'homework_grading');
+        homeworkMonth = this.sumUsageByType(monthUsage || [], 'homework_grading');
+        tutoringToday = this.sumUsageByType(todayUsage || [], 'ai_tutoring');
+        premiumToday = this.sumUsageByType(todayUsage || [], 'premium_feature');
+      }
 
       // Calculate permissions (monthly)
       const canUseAiLessons = quotas.ai_lessons_per_month === null || aiLessonsMonth < quotas.ai_lessons_per_month;

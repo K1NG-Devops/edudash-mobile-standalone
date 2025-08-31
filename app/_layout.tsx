@@ -19,6 +19,8 @@ import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
 import AdsBootstrapper from '@/components/advertising/AdsBootstrapper';
+import { GrowthBookProvider } from '@growthbook/growthbook-react';
+import { growthbook } from '@/lib/growthbook';
 
 // Error boundary for route-level errors
 function RouteErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -41,6 +43,29 @@ function SubscriptionProviderWithAuth({ children }: { children: React.ReactNode 
   return <SubscriptionProvider userId={userId}>{children}</SubscriptionProvider>;
 }
 
+// Sync GrowthBook targeting attributes with the authenticated user
+function GrowthBookAttributeSync() {
+  const { user, profile } = useAuth();
+  useEffect(() => {
+    try {
+      const attrs: Record<string, any> = {
+        environment: process.env.EXPO_PUBLIC_ENVIRONMENT,
+        platform: Platform.OS,
+      };
+      const id = (profile as any)?.auth_user_id || (user as any)?.id;
+      if (id) attrs.userId = id;
+      const role = (profile as any)?.role || (user as any)?.role;
+      if (role) attrs.role = role;
+      const schoolId = (profile as any)?.preschool_id || (user as any)?.preschool_id;
+      if (schoolId) attrs.school_id = schoolId;
+      growthbook.setAttributes(attrs);
+    } catch {
+      // best-effort; never block UI
+    }
+  }, [user, profile]);
+  return null;
+}
+
 // Foreground notifications behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -54,7 +79,7 @@ Notifications.setNotificationHandler({
 
 export default function RootLayout() {
   const pathname = usePathname();
-  const hideBottomNav = pathname === '/' || pathname.startsWith('/(auth)') || pathname.startsWith('/screens/super-admin-dashboard');
+  const hideBottomNav = pathname === '/' || pathname.startsWith('/(auth)') || pathname.startsWith('/screens/super-admin-dashboard') || pathname === '/pricing';
 
   useEffect(() => {
     const register = async () => {
@@ -123,24 +148,27 @@ export default function RootLayout() {
   return (
     <AuthErrorBoundary>
       <AuthProvider>
-        <SubscriptionProviderWithAuth>
-          <ThemeProvider>
-            <NavigationProvider>
-              <QueryProvider>
-                <ToastProvider>
-                  <RevenueCatProvider>
-                    <SafeAreaProvider>
-                      <ThemeStatusBar />
-                      {/* Initialize ads and interstitial wiring (child-safe, gated by EXPO_PUBLIC_ENABLE_ADS) */}
-                      {Platform.OS !== 'web' && <AdsBootstrapper />}
-                      <ContainerWithInsets hideBottomNav={hideBottomNav} />
-                    </SafeAreaProvider>
-                  </RevenueCatProvider>
-                </ToastProvider>
-              </QueryProvider>
-            </NavigationProvider>
-          </ThemeProvider>
-        </SubscriptionProviderWithAuth>
+        <GrowthBookProvider growthbook={growthbook}>
+          <GrowthBookAttributeSync />
+          <SubscriptionProviderWithAuth>
+            <ThemeProvider>
+              <NavigationProvider>
+                <QueryProvider>
+                  <ToastProvider>
+                    <RevenueCatProvider>
+                      <SafeAreaProvider>
+                        <ThemeStatusBar />
+                        {/* Initialize ads and interstitial wiring (child-safe, gated by EXPO_PUBLIC_ENABLE_ADS) */}
+                        {Platform.OS !== 'web' && <AdsBootstrapper />}
+                        <ContainerWithInsets hideBottomNav={hideBottomNav} />
+                      </SafeAreaProvider>
+                    </RevenueCatProvider>
+                  </ToastProvider>
+                </QueryProvider>
+              </NavigationProvider>
+            </ThemeProvider>
+          </SubscriptionProviderWithAuth>
+        </GrowthBookProvider>
       </AuthProvider>
     </AuthErrorBoundary>
   );

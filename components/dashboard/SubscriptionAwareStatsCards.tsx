@@ -229,7 +229,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
         `${card.title} requires a premium subscription. Would you like to upgrade?`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => onUpgradePress ? onUpgradePress() : router.push('/pricing') }
+          { text: 'Upgrade', onPress: () => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management') }
         ]
       );
       return;
@@ -243,7 +243,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
           permission.reason + '\n\nUpgrade for higher limits and unlimited features.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Upgrade', onPress: () => onUpgradePress ? onUpgradePress() : router.push('/pricing') }
+            { text: 'Upgrade', onPress: () => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management') }
           ]
         );
         return;
@@ -258,11 +258,14 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
       case 'homework':
         router.push('/screens/homework' as any);
         break;
+      case 'attendance':
+        router.push('/screens/attendance' as any);
+        break;
       case 'ai_lessons':
-        router.push('/screens/ai-lessons' as any);
+        router.push('/screens/ai-lesson-generator' as any);
         break;
       case 'homework_ai':
-        router.push('/screens/homework-ai' as any);
+        router.push('/screens/homework' as any);
         break;
       case 'ai_tutoring':
         router.push('/screens/ai-tutoring' as any);
@@ -386,10 +389,10 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
             {card.isLocked && !compact && (
               <TouchableOpacity 
                 style={styles.upgradePrompt}
-                onPress={() => onUpgradePress ? onUpgradePress() : router.push('/pricing')}
+                onPress={() => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management')}
               >
                 <Text style={styles.upgradePromptText}>
-                  {card.isPremium ? 'Upgrade to Unlock' : 'Increase Limits'}
+                  {card.isPremium ? 'Upgrade to Unlock' : 'Manage Subscription'}
                 </Text>
                 <IconSymbol name="arrow.up.right" size={12} color="#FFFFFF" />
               </TouchableOpacity>
@@ -425,7 +428,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
           {usageStats?.upgrade_recommended && (
             <TouchableOpacity 
               style={styles.upgradeButton}
-              onPress={() => onUpgradePress ? onUpgradePress() : router.push('/pricing')}
+              onPress={() => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management')}
             >
               <Text style={styles.upgradeButtonText}>Upgrade</Text>
             </TouchableOpacity>
@@ -454,7 +457,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
           {isFreeTier && (
             <TouchableOpacity 
               style={styles.tierUpgradeButton}
-              onPress={() => onUpgradePress ? onUpgradePress() : router.push('/pricing')}
+              onPress={() => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management')}
             >
               <Text style={styles.tierUpgradeText}>Upgrade</Text>
               <IconSymbol name="arrow.right" size={12} color="#8B5CF6" />

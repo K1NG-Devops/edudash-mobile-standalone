@@ -72,6 +72,14 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
         color: '#6366F1',
       },
       {
+        id: 'subscription',
+        title: 'Usage & Billing',
+        subtitle: 'Subscription management',
+        icon: 'chart.bar.fill',
+        route: '/screens/subscription-management',
+        color: '#10B981',
+      },
+      {
         id: 'notifications',
         title: 'Notifications',
         subtitle: 'Manage alerts & updates',
@@ -203,11 +211,11 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             color: '#059669',
           },
           {
-            id: 'parents',
+            id: 'parent-communications',
             title: 'Parent Communications',
-            subtitle: 'Parent engagement tools',
-            icon: 'person.3.fill',
-            route: '/screens/parents',
+            subtitle: 'Manage announcements & messages',
+            icon: 'megaphone.fill',
+            route: '/screens/announcement-management',
             color: '#059669',
           },
           {

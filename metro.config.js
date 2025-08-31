@@ -68,4 +68,19 @@ config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
 // Platform-specific platform overrides
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 
+// Platform-specific resolver to exclude native-only modules from web
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Exclude react-native-google-mobile-ads from web builds
+  if (platform === 'web' && moduleName === 'react-native-google-mobile-ads') {
+    // Return a mock module for web
+    return {
+      filePath: path.resolve(__dirname, './lib/ads/googleMobileAds.web.js'),
+      type: 'sourceFile',
+    };
+  }
+  
+  // Use default resolver for other cases
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = config;

@@ -21,6 +21,11 @@ import { getOfferingsSafe, purchaseDefault } from '@/lib/services/revenuecat';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { useOverageTrackingMultiple } from '@/hooks/useOverageTracking';
+import { UsageWarningBanner, UsageProgressIndicator } from '@/components/overage/OverageComponents';
+import OverageBillingCard from '@/components/overage/OverageBillingCard';
+import { overageBillingService } from '@/lib/services/overageBillingService';
+import type { OverageBillingRecord, UsageQuota } from '@/lib/services/overageBillingService';
 
 const { width } = Dimensions.get('window');
 
@@ -66,6 +71,7 @@ export const PricingComponent = ({
   compactMode = false,
   initialView = 'overview',
   theme = 'futuristic',
+  showUsageTracking = true,
 }: {
   embedded?: boolean;
   showRoles?: boolean;
@@ -75,10 +81,22 @@ export const PricingComponent = ({
   compactMode?: boolean;
   initialView?: 'overview' | 'role-specific';
   theme?: 'professional' | 'futuristic';
+  showUsageTracking?: boolean;
 }) => {
   const { user, session } = useAuth();
   const isProfessional = theme === 'professional';
-  const { subscription, createSubscription, loading: subscriptionLoading, error: subscriptionError, plans } = useSubscription();
+  const { subscription, createSubscription, loading: subscriptionLoading, error: subscriptionError, plans, isSubscriptionActive } = useSubscription();
+  
+  // Track usage for authenticated users
+  const { 
+    getOverageStatuses, 
+    usage, 
+    loading: usageLoading 
+  } = useOverageTrackingMultiple(
+    ['aiGenerations', 'studentsPerClass', 'monthlyLessons', 'storageGB'],
+    { enabled: showUsageTracking && !!user }
+  );
+  const overageStatuses = user ? getOverageStatuses() : {};
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'parent' | 'teacher' | 'principal' | null>(defaultSelectedRole);
@@ -161,7 +179,7 @@ export const PricingComponent = ({
         "📱 Mobile app access",
         "📱 Shows ads on non-learning pages"
       ],
-      color: DesignSystem.gradients.primarySubtle,
+      color: DesignSystem.gradients.surfaceCard,
       popular: false,
       targetRoles: ['parent', 'teacher'],
       value: 'free',
@@ -420,7 +438,7 @@ export const PricingComponent = ({
     }
 
     // Check if user already has an active subscription
-    if (subscription && subscription.status !== 'canceled' && subscription.status !== 'expired') {
+    if (subscription && isSubscriptionActive()) {
       setShowSubscriptionModal(true);
       return;
     }
@@ -681,7 +699,7 @@ export const PricingComponent = ({
                 style={[styles.alertButton, styles.alertButtonPrimary]}
                 onPress={() => {
                   setShowSubscriptionModal(false);
-                  router.push('/pricing');
+                  router.push('/screens/subscription-management');
                 }}
               >
                 <Text style={styles.alertButtonTextPrimary}>Manage</Text>
@@ -879,6 +897,36 @@ export const PricingComponent = ({
 
   return (
     <View style={embedded ? styles.embeddedContainer : styles.standaloneContainer}>
+      {/* Show usage warnings for authenticated users */}
+      {user && showUsageTracking && (
+        <View style={styles.usageWarningsSection}>
+          {Object.entries(overageStatuses).map(([quotaType, status]) => (
+            <UsageWarningBanner
+              key={quotaType}
+              quotaType={quotaType as keyof typeof overageStatuses}
+              overageStatus={status}
+              compact={embedded}
+              onUpgrade={() => router.push('/pricing')}
+            />
+          ))}
+        </View>
+      )}
+      
+      {/* Show overage billing card for authenticated users with overages */}
+      {user && showUsageTracking && (
+        <OverageBillingCard
+          userId={user.id}
+          compact={embedded}
+          showPayButton={true}
+          onPaymentStarted={(paymentUrl) => {
+            // Redirect to PayFast payment
+            if (typeof window !== 'undefined') {
+              window.location.href = paymentUrl;
+            }
+          }}
+        />
+      )}
+      
       {!embedded && (
         <View style={styles.pricingHeader}>
           <Animated.View style={{
@@ -998,6 +1046,11 @@ const styles = StyleSheet.create({
   },
   embeddedContainer: {
     marginVertical: DesignSystem.spacing.xl,
+  },
+
+  // Usage Warnings Section
+  usageWarningsSection: {
+    marginBottom: DesignSystem.spacing.lg,
   },
 
   // Header Styles

@@ -109,7 +109,10 @@ export class ConversationService {
         .maybeSingle();
       if (fetchErr) return { success: false, error: fetchErr.message };
 
-      const next = { ...(conv?.settings || {}), ...params.patch } as any;
+      const base = conv && typeof (conv as any).settings === 'object' && (conv as any).settings !== null
+        ? ((conv as any).settings as Record<string, any>)
+        : {};
+      const next = { ...base, ...params.patch } as any;
       const { error } = await supabase
         .from('conversations')
         .update({ settings: next })

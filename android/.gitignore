@@ -14,3 +14,9 @@ local.properties
 
 # Bundle artifacts
 *.jsbundle
+
+# Android signing files (do not commit secrets)
+keystore.properties
+secrets.local.properties
+*.keystore
+*.jks

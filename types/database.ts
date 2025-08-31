@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -11,6 +12,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -663,10 +689,12 @@ export type Database = {
           assessment_type: string | null
           class_id: string | null
           created_at: string | null
+          created_by: string | null
           description: string | null
           due_date: string | null
           id: string
           is_published: boolean | null
+          student_id: string | null
           teacher_id: string | null
           title: string
           total_points: number | null
@@ -676,10 +704,12 @@ export type Database = {
           assessment_type?: string | null
           class_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
           is_published?: boolean | null
+          student_id?: string | null
           teacher_id?: string | null
           title: string
           total_points?: number | null
@@ -689,10 +719,12 @@ export type Database = {
           assessment_type?: string | null
           class_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
           is_published?: boolean | null
+          student_id?: string | null
           teacher_id?: string | null
           title?: string
           total_points?: number | null
@@ -718,6 +750,27 @@ export type Database = {
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_assessment_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_assessment_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_assessment_student"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -791,6 +844,67 @@ export type Database = {
           },
           {
             foreignKeyName: "assignment_submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance: {
+        Row: {
+          arrival_time: string | null
+          attendance_date: string
+          created_at: string | null
+          departure_time: string | null
+          id: string
+          notes: string | null
+          recorded_by: string
+          status: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          arrival_time?: string | null
+          attendance_date?: string
+          created_at?: string | null
+          departure_time?: string | null
+          id?: string
+          notes?: string | null
+          recorded_by: string
+          status?: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          arrival_time?: string | null
+          attendance_date?: string
+          created_at?: string | null
+          departure_time?: string | null
+          id?: string
+          notes?: string | null
+          recorded_by?: string
+          status?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_attendance_recorded_by"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_attendance_recorded_by"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_attendance_student"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -1356,6 +1470,7 @@ export type Database = {
       }
       conversation_members: {
         Row: {
+          cleared_at: string | null
           conversation_id: string
           id: string
           is_muted: boolean
@@ -1365,6 +1480,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cleared_at?: string | null
           conversation_id: string
           id?: string
           is_muted?: boolean
@@ -1374,6 +1490,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cleared_at?: string | null
           conversation_id?: string
           id?: string
           is_muted?: boolean
@@ -1474,6 +1591,135 @@ export type Database = {
           },
         ]
       }
+      daily_activities: {
+        Row: {
+          activity_date: string | null
+          activity_name: string
+          class_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_time: string | null
+          id: string
+          learning_objectives: string[] | null
+          materials_needed: string[] | null
+          notes: string | null
+          start_time: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activity_date?: string | null
+          activity_name: string
+          class_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          learning_objectives?: string[] | null
+          materials_needed?: string[] | null
+          notes?: string | null
+          start_time?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activity_date?: string | null
+          activity_name?: string
+          class_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          learning_objectives?: string[] | null
+          materials_needed?: string[] | null
+          notes?: string | null
+          start_time?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_daily_activity_class"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_daily_activity_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_daily_activity_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dm_settings: {
+        Row: {
+          cleared_at: string | null
+          created_at: string
+          id: string
+          is_muted: boolean
+          partner_user_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cleared_at?: string | null
+          created_at?: string
+          id?: string
+          is_muted?: boolean
+          partner_user_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cleared_at?: string | null
+          created_at?: string
+          id?: string
+          is_muted?: boolean
+          partner_user_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dm_settings_partner_user_id_fkey"
+            columns: ["partner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_settings_partner_user_id_fkey"
+            columns: ["partner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emergency_contacts: {
         Row: {
           address: string | null
@@ -1527,46 +1773,440 @@ export type Database = {
           },
         ]
       }
+      event_media: {
+        Row: {
+          alt_text: string | null
+          caption: string | null
+          created_at: string | null
+          deleted_at: string | null
+          event_id: string
+          file_name: string | null
+          file_size: number | null
+          file_url: string
+          id: string
+          media_type: string
+          metadata: Json | null
+          mime_type: string | null
+          thumbnail_url: string | null
+          update_id: string | null
+          uploader_id: string
+        }
+        Insert: {
+          alt_text?: string | null
+          caption?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          event_id: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url: string
+          id?: string
+          media_type: string
+          metadata?: Json | null
+          mime_type?: string | null
+          thumbnail_url?: string | null
+          update_id?: string | null
+          uploader_id: string
+        }
+        Update: {
+          alt_text?: string | null
+          caption?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          event_id?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          media_type?: string
+          metadata?: Json | null
+          mime_type?: string | null
+          thumbnail_url?: string | null
+          update_id?: string | null
+          uploader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_media_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_media_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "event_updates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_media_uploader_id_fkey"
+            columns: ["uploader_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_media_uploader_id_fkey"
+            columns: ["uploader_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_notifications: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          message: string | null
+          metadata: Json | null
+          notification_type: string
+          read_at: string | null
+          recipient_id: string
+          sent_at: string | null
+          title: string
+          update_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          notification_type: string
+          read_at?: string | null
+          recipient_id: string
+          sent_at?: string | null
+          title: string
+          update_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          notification_type?: string
+          read_at?: string | null
+          recipient_id?: string
+          sent_at?: string | null
+          title?: string
+          update_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_notifications_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "event_updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_participants: {
+        Row: {
+          checked_in_at: string | null
+          checked_out_at: string | null
+          created_at: string | null
+          event_id: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          participation_type: string | null
+          registered_at: string | null
+          status: string | null
+          student_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          checked_in_at?: string | null
+          checked_out_at?: string | null
+          created_at?: string | null
+          event_id: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          participation_type?: string | null
+          registered_at?: string | null
+          status?: string | null
+          student_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          checked_in_at?: string | null
+          checked_out_at?: string | null
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          participation_type?: string | null
+          registered_at?: string | null
+          status?: string | null
+          student_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_participants_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_reactions: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          deleted_at: string | null
+          event_id: string | null
+          id: string
+          parent_reaction_id: string | null
+          reaction_type: string
+          update_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          event_id?: string | null
+          id?: string
+          parent_reaction_id?: string | null
+          reaction_type: string
+          update_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          event_id?: string | null
+          id?: string
+          parent_reaction_id?: string | null
+          reaction_type?: string
+          update_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_reactions_parent_reaction_id_fkey"
+            columns: ["parent_reaction_id"]
+            isOneToOne: false
+            referencedRelation: "event_reactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_reactions_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "event_updates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_updates: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string | null
+          deleted_at: string | null
+          event_id: string
+          id: string
+          is_live: boolean | null
+          metadata: Json | null
+          posted_at: string | null
+          title: string | null
+          update_type: string | null
+          updated_at: string | null
+          visibility: string | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string | null
+          deleted_at?: string | null
+          event_id: string
+          id?: string
+          is_live?: boolean | null
+          metadata?: Json | null
+          posted_at?: string | null
+          title?: string | null
+          update_type?: string | null
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          event_id?: string
+          id?: string
+          is_live?: boolean | null
+          metadata?: Json | null
+          posted_at?: string | null
+          title?: string | null
+          update_type?: string | null
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_updates_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_updates_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_updates_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
+          cover_image_url: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           end_date: string | null
           event_type: string | null
           id: string
+          is_featured: boolean | null
           is_published: boolean | null
           location: string | null
+          max_participants: number | null
+          metadata: Json | null
           preschool_id: string | null
           start_date: string
+          status: string | null
+          tags: string[] | null
           title: string
           updated_at: string | null
         }
         Insert: {
+          cover_image_url?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           end_date?: string | null
           event_type?: string | null
           id?: string
+          is_featured?: boolean | null
           is_published?: boolean | null
           location?: string | null
+          max_participants?: number | null
+          metadata?: Json | null
           preschool_id?: string | null
           start_date: string
+          status?: string | null
+          tags?: string[] | null
           title: string
           updated_at?: string | null
         }
         Update: {
+          cover_image_url?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           end_date?: string | null
           event_type?: string | null
           id?: string
+          is_featured?: boolean | null
           is_published?: boolean | null
           location?: string | null
+          max_participants?: number | null
+          metadata?: Json | null
           preschool_id?: string | null
           start_date?: string
+          status?: string | null
+          tags?: string[] | null
           title?: string
           updated_at?: string | null
         }
@@ -1929,6 +2569,7 @@ export type Database = {
           duration_minutes: number | null
           id: string
           instructions: string | null
+          is_active: boolean | null
           materials: string | null
           subject: string | null
           title: string
@@ -1941,6 +2582,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           instructions?: string | null
+          is_active?: boolean | null
           materials?: string | null
           subject?: string | null
           title: string
@@ -1953,6 +2595,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           instructions?: string | null
+          is_active?: boolean | null
           materials?: string | null
           subject?: string | null
           title?: string
@@ -2258,13 +2901,17 @@ export type Database = {
           content: string
           conversation_id: string | null
           created_at: string | null
+          deleted_at: string | null
           id: string
           is_read: boolean | null
           message_type: string | null
           preschool_id: string | null
           preview: string | null
           priority: string | null
+          receiver_id: string | null
+          receiver_type: string | null
           sender_id: string | null
+          sender_type: string | null
           sent_at: string | null
           subject: string
         }
@@ -2272,13 +2919,17 @@ export type Database = {
           content: string
           conversation_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           is_read?: boolean | null
           message_type?: string | null
           preschool_id?: string | null
           preview?: string | null
           priority?: string | null
+          receiver_id?: string | null
+          receiver_type?: string | null
           sender_id?: string | null
+          sender_type?: string | null
           sent_at?: string | null
           subject?: string
         }
@@ -2286,13 +2937,17 @@ export type Database = {
           content?: string
           conversation_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           is_read?: boolean | null
           message_type?: string | null
           preschool_id?: string | null
           preview?: string | null
           priority?: string | null
+          receiver_id?: string | null
+          receiver_type?: string | null
           sender_id?: string | null
+          sender_type?: string | null
           sent_at?: string | null
           subject?: string
         }
@@ -2309,6 +2964,20 @@ export type Database = {
             columns: ["preschool_id"]
             isOneToOne: false
             referencedRelation: "preschools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
             referencedColumns: ["id"]
           },
           {
@@ -2405,6 +3074,104 @@ export type Database = {
           school_name?: string
           status?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      overage_billing_records: {
+        Row: {
+          billing_period_end: string
+          billing_period_start: string
+          created_at: string | null
+          currency: string | null
+          id: string
+          overage_units: number
+          paid_at: string | null
+          payment_reference: string | null
+          payment_url: string | null
+          quota_type: string
+          status: Database["public"]["Enums"]["overage_billing_status"] | null
+          total_amount: number
+          unit_price: number
+          updated_at: string | null
+          usage_tracking_id: string
+          user_id: string
+        }
+        Insert: {
+          billing_period_end: string
+          billing_period_start: string
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          overage_units: number
+          paid_at?: string | null
+          payment_reference?: string | null
+          payment_url?: string | null
+          quota_type: string
+          status?: Database["public"]["Enums"]["overage_billing_status"] | null
+          total_amount: number
+          unit_price: number
+          updated_at?: string | null
+          usage_tracking_id: string
+          user_id: string
+        }
+        Update: {
+          billing_period_end?: string
+          billing_period_start?: string
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          overage_units?: number
+          paid_at?: string | null
+          payment_reference?: string | null
+          payment_url?: string | null
+          quota_type?: string
+          status?: Database["public"]["Enums"]["overage_billing_status"] | null
+          total_amount?: number
+          unit_price?: number
+          updated_at?: string | null
+          usage_tracking_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overage_billing_records_usage_tracking_id_fkey"
+            columns: ["usage_tracking_id"]
+            isOneToOne: false
+            referencedRelation: "user_usage_tracking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      overage_notifications: {
+        Row: {
+          id: string
+          is_read: boolean | null
+          message: string
+          notification_type: string
+          quota_type: string
+          read_at: string | null
+          sent_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_read?: boolean | null
+          message: string
+          notification_type: string
+          quota_type: string
+          read_at?: string | null
+          sent_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          notification_type?: string
+          quota_type?: string
+          read_at?: string | null
+          sent_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -2548,48 +3315,92 @@ export type Database = {
       }
       payments: {
         Row: {
+          amount: number | null
           amount_cents: number
+          attachment_url: string | null
           created_at: string | null
           currency: string | null
           description: string | null
+          fee_ids: string[] | null
           id: string
           metadata: Json | null
+          parent_id: string | null
           payment_method: string | null
           payment_provider: string | null
+          payment_reference: string | null
           preschool_id: string | null
           provider_payment_id: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: string | null
+          student_id: string | null
+          submitted_at: string | null
           updated_at: string | null
         }
         Insert: {
+          amount?: number | null
           amount_cents: number
+          attachment_url?: string | null
           created_at?: string | null
           currency?: string | null
           description?: string | null
+          fee_ids?: string[] | null
           id?: string
           metadata?: Json | null
+          parent_id?: string | null
           payment_method?: string | null
           payment_provider?: string | null
+          payment_reference?: string | null
           preschool_id?: string | null
           provider_payment_id?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string | null
+          student_id?: string | null
+          submitted_at?: string | null
           updated_at?: string | null
         }
         Update: {
+          amount?: number | null
           amount_cents?: number
+          attachment_url?: string | null
           created_at?: string | null
           currency?: string | null
           description?: string | null
+          fee_ids?: string[] | null
           id?: string
           metadata?: Json | null
+          parent_id?: string | null
           payment_method?: string | null
           payment_provider?: string | null
+          payment_reference?: string | null
           preschool_id?: string | null
           provider_payment_id?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string | null
+          student_id?: string | null
+          submitted_at?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_preschool_id_fkey"
             columns: ["preschool_id"]
@@ -2597,7 +3408,50 @@ export type Database = {
             referencedRelation: "preschools"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      plan_quotas: {
+        Row: {
+          annual_limit: number | null
+          created_at: string | null
+          id: string
+          monthly_limit: number
+          overage_enabled: boolean | null
+          overage_unit_price: number | null
+          plan_tier: string
+          quota_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          annual_limit?: number | null
+          created_at?: string | null
+          id?: string
+          monthly_limit?: number
+          overage_enabled?: boolean | null
+          overage_unit_price?: number | null
+          plan_tier: string
+          quota_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          annual_limit?: number | null
+          created_at?: string | null
+          id?: string
+          monthly_limit?: number
+          overage_enabled?: boolean | null
+          overage_unit_price?: number | null
+          plan_tier?: string
+          quota_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       platform_analytics: {
         Row: {
@@ -3087,6 +3941,58 @@ export type Database = {
           },
         ]
       }
+      student_parent_relationships: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          parent_id: string
+          relationship_type: string | null
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          parent_id: string
+          relationship_type?: string | null
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          parent_id?: string
+          relationship_type?: string | null
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_parent"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_parent"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_student"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_registrations: {
         Row: {
           created_at: string | null
@@ -3202,6 +4108,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "students_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "students_class_id_fkey"
             columns: ["class_id"]
@@ -3598,6 +4511,48 @@ export type Database = {
           },
         ]
       }
+      user_usage_tracking: {
+        Row: {
+          created_at: string | null
+          current_usage: number
+          id: string
+          last_updated: string | null
+          overage_amount: number
+          overage_status: Database["public"]["Enums"]["overage_status"] | null
+          quota_limit: number
+          quota_type: string
+          usage_period_end: string
+          usage_period_start: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_usage?: number
+          id?: string
+          last_updated?: string | null
+          overage_amount?: number
+          overage_status?: Database["public"]["Enums"]["overage_status"] | null
+          quota_limit?: number
+          quota_type: string
+          usage_period_end: string
+          usage_period_start: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_usage?: number
+          id?: string
+          last_updated?: string | null
+          overage_amount?: number
+          overage_status?: Database["public"]["Enums"]["overage_status"] | null
+          quota_limit?: number
+          quota_type?: string
+          usage_period_end?: string
+          usage_period_start?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           age_groups_taught: string[] | null
@@ -3969,6 +4924,51 @@ export type Database = {
       }
     }
     Views: {
+      usage_logs: {
+        Row: {
+          created_at: string | null
+          feature_name: string | null
+          feature_type: string | null
+          id: string | null
+          metadata: Json | null
+          usage_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          feature_name?: string | null
+          feature_type?: string | null
+          id?: string | null
+          metadata?: never
+          usage_count?: never
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          feature_name?: string | null
+          feature_type?: string | null
+          id?: string | null
+          metadata?: never
+          usage_count?: never
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_subscription"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users_with_subscription: {
         Row: {
           age_groups_taught: string[] | null
@@ -4043,6 +5043,26 @@ export type Database = {
       }
     }
     Functions: {
+      add_message_attachment: {
+        Args: {
+          p_file_name: string
+          p_file_size: number
+          p_file_type: string
+          p_file_url: string
+          p_message_id: string
+          p_mime_type?: string
+        }
+        Returns: string
+      }
+      audit_rls_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          policy_count: number
+          rls_enabled: boolean
+          status: string
+          table_name: string
+        }[]
+      }
       can_send_in_conversation: {
         Args: { p_conversation_id: string }
         Returns: boolean
@@ -4087,6 +5107,30 @@ export type Database = {
         Args: { p_auth_user_id: string; p_email: string; p_name: string }
         Returns: string
       }
+      debug_messaging_contacts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active_parents_count: number
+          active_teachers_count: number
+          all_roles_in_preschool: string[]
+          current_user_auth_id: string
+          current_user_internal_id: string
+          current_user_preschool_id: string
+          total_users_in_preschool: number
+        }[]
+      }
+      debug_messaging_context: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          auth_uid: string
+          contacts_in_school: number
+          internal_user_id: string
+          preschool_id: string
+          preschool_name: string
+          user_name: string
+          user_role: string
+        }[]
+      }
       generate_invitation_code: {
         Args: { p_email: string; p_preschool_id: string; p_role: string }
         Returns: string
@@ -4105,6 +5149,10 @@ export type Database = {
       }
       get_all_users_for_superadmin: {
         Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_message_with_attachments: {
+        Args: { p_message_id: string }
         Returns: Json
       }
       get_messaging_contacts: {
@@ -4139,6 +5187,41 @@ export type Database = {
           total_revenue: number
           total_subscriptions: number
           trial_subscriptions: number
+        }[]
+      }
+      get_total_unread_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          dm_unread: number
+          room_unread: number
+          total: number
+        }[]
+      }
+      get_unread_announcements_count: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
+      get_unread_counts: {
+        Args: { p_user_id: string }
+        Returns: {
+          total_unread: number
+          unread_announcements: number
+          unread_messages: number
+        }[]
+      }
+      get_user_messages: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          content: string
+          is_sent: boolean
+          message_id: string
+          read_at: string
+          recipient_email: string
+          recipient_name: string
+          sender_email: string
+          sender_name: string
+          sent_at: string
+          subject: string
         }[]
       }
       get_user_profile_by_auth_id: {
@@ -4186,15 +5269,39 @@ export type Database = {
         Args: {
           p_content: string
           p_message_type?: string
-          p_priority?: string
           p_recipient_user_id: string
           p_subject?: string
         }
         Returns: string
       }
+      send_school_announcement: {
+        Args:
+          | { p_audience?: string; p_content: string; p_subject?: string }
+          | {
+              p_content: string
+              p_include_parents?: boolean
+              p_include_sender?: boolean
+              p_include_staff?: boolean
+              p_subject?: string
+            }
+        Returns: string
+      }
       superadmin_approve_onboarding: {
         Args: { request_id: string }
         Returns: Json
+      }
+      test_messaging_user_context: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          auth_user_id: string
+          error_message: string
+          has_preschool: boolean
+          internal_user_id: string
+          preschool_id: string
+          user_active: boolean
+          user_exists: boolean
+          user_role: string
+        }[]
       }
       test_onboarding_access: {
         Args: Record<PropertyKey, never>
@@ -4215,9 +5322,38 @@ export type Database = {
         }
         Returns: string
       }
+      validate_invitation_code: {
+        Args: { p_code: string; p_email: string }
+        Returns: {
+          code: string
+          created_at: string | null
+          current_uses: number | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          invitation_type: string
+          invited_by: string | null
+          invited_email: string | null
+          invited_name: string | null
+          is_active: boolean | null
+          max_uses: number | null
+          metadata: Json | null
+          preschool_id: string
+          school_id: string | null
+          updated_at: string | null
+          used_at: string | null
+          used_by: string | null
+        }
+      }
     }
     Enums: {
-      [_ in never]: never
+      overage_billing_status:
+        | "pending"
+        | "processing"
+        | "completed"
+        | "failed"
+        | "refunded"
+      overage_status: "none" | "approaching_limit" | "at_limit" | "exceeded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4343,7 +5479,19 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  public: {
+  graphql_public: {
     Enums: {},
+  },
+  public: {
+    Enums: {
+      overage_billing_status: [
+        "pending",
+        "processing",
+        "completed",
+        "failed",
+        "refunded",
+      ],
+      overage_status: ["none", "approaching_limit", "at_limit", "exceeded"],
+    },
   },
 } as const

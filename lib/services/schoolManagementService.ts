@@ -172,7 +172,7 @@ export class SchoolManagementService {
       return {
         success: true,
         invitation_code: invitationCode,
-        expires_at: data.expires_at,
+        expires_at: data.expires_at ?? undefined,
       };
 
     } catch (error: any) {
@@ -219,7 +219,7 @@ export class SchoolManagementService {
       return {
         success: true,
         invitation_code: invitationCode,
-        expires_at: data.expires_at,
+        expires_at: data.expires_at ?? undefined,
       };
 
     } catch (error: any) {
@@ -263,7 +263,7 @@ export class SchoolManagementService {
       return {
         success: true,
         invitation_code: invitationCode,
-        expires_at: data.expires_at,
+        expires_at: data.expires_at ?? undefined,
       };
 
     } catch (error: any) {
@@ -303,7 +303,7 @@ export class SchoolManagementService {
       }
 
       // 2. Check expiration and usage limits
-      if (new Date(invitation.expires_at) < new Date()) {
+      if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
         return { success: false, error: 'Invitation code has expired' };
       }
 
@@ -493,6 +493,53 @@ export class SchoolManagementService {
     console.log(`Your school "${schoolName}" has been created on EduDash Pro!`);
     console.log(`Your invitation code: ${invitationCode}`);
     console.log(`Please complete your registration to get started.`);
+  }
+
+  /**
+   * Create a class in a school
+   */
+  static async createClass(
+    data: {
+      preschool_id: string;
+      name: string;
+      teacher_id?: string;
+      grade_level?: string;
+      capacity?: number;
+    }
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    class_id?: string;
+  }> {
+    try {
+      const { data: newClass, error } = await supabase
+        .from('classes')
+        .insert({
+          preschool_id: data.preschool_id,
+          name: data.name,
+          teacher_id: data.teacher_id,
+          grade_level: data.grade_level,
+          capacity: data.capacity || 30,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return {
+        success: true,
+        class_id: newClass.id,
+      };
+    } catch (error: any) {
+      console.error('Error creating class:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to create class',
+      };
+    }
   }
 
   /**

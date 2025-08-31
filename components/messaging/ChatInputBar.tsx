@@ -178,7 +178,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
                 opacity: disabled ? 0.6 : 1,
               },
             ]}
-            onPress={hasText ? handleSend : undefined}
+            onPress={(e: any) => { try { e?.preventDefault?.(); } catch {} if (hasText) handleSend(); }}
             disabled={disabled || (!hasText && !sending)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityLabel={hasText ? 'Send message' : 'Voice message'}

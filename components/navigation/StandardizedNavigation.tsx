@@ -60,10 +60,10 @@ export function StandardizedNavigation({
 }: StandardizedNavigationProps) {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const systemColorScheme = useColorScheme();
-  const { theme } = useTheme();
+  const { colorScheme } = useTheme();
   
   // Determine the effective color scheme
-  const effectiveScheme = themeScheme || theme?.colorScheme || systemColorScheme || 'light';
+  const effectiveScheme = themeScheme || colorScheme || systemColorScheme || 'light';
   const roleColors = getRoleColors(user?.role || 'default', effectiveScheme);
 
   const getDisplayTitle = () => {
@@ -188,7 +188,7 @@ export function StandardizedNavigation({
               {/* Notifications */}
               {showNotifications && (
                 <TouchableOpacity
-                  style={[styles.notificationButton, rightActions && styles.notificationWithActions]}
+                  style={[styles.notificationButton, rightActions ? styles.notificationWithActions : undefined]}
                   onPress={handleNotifications}
                   activeOpacity={0.7}
                 >

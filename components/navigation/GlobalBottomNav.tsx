@@ -7,6 +7,8 @@ import { router, usePathname } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { shadow } from '@/lib/ui/shadow';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 interface TabItem {
   key: string;
@@ -21,6 +23,112 @@ export default function GlobalBottomNav() {
   const { profile, loading } = useAuth();
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
+
+  // Track unread count for Messages tab
+  const [unread, setUnread] = useState<number>(0);
+  // Track unread announcements count for Activities tab
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState<number>(0);
+  const meIdRef = useRef<string | null>(null);
+  const channelRef = useRef<any>(null);
+  const announcementChannelRef = useRef<any>(null);
+  
+  useEffect(() => {
+    let timer: any;
+    const setup = async () => {
+      if (!profile?.auth_user_id) return;
+      // Resolve internal user id once
+      try {
+        const { data: me } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', profile.auth_user_id)
+          .single();
+        meIdRef.current = me?.id || null;
+      } catch {}
+
+      const refreshUnread = async () => {
+        try {
+          const { data } = await (supabase as any).rpc('get_total_unread_counts');
+          const row = Array.isArray(data) ? data[0] : data;
+          const total = row?.total ?? row?.dm_unread ?? 0; // fallback to dm_unread if total missing
+          setUnread(typeof total === 'number' ? total : 0);
+        } catch {
+          // fallback: count only direct messages via message_recipients (excluding announcements)
+          if (!meIdRef.current) return;
+          const { count } = await supabase
+            .from('message_recipients')
+            .select('id', { count: 'exact', head: true })
+            .eq('recipient_id', meIdRef.current)
+            .eq('is_read', false)
+            .eq('is_archived', false);
+          setUnread(count || 0);
+        }
+      };
+
+      const refreshAnnouncementUnread = async () => {
+        try {
+          if (!meIdRef.current) return;
+          // Count unread announcements specifically
+          const { data: recips } = await supabase
+            .from('message_recipients')
+            .select('message_id, read_at')
+            .eq('recipient_id', meIdRef.current)
+            .eq('is_read', false)
+            .eq('is_archived', false);
+          
+          if (!recips || recips.length === 0) {
+            setUnreadAnnouncements(0);
+            return;
+          }
+          
+          const messageIds = recips.map(r => r.message_id);
+          const { count } = await supabase
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .in('id', messageIds)
+            .eq('message_type', 'announcement');
+          
+          setUnreadAnnouncements(count || 0);
+        } catch {
+          setUnreadAnnouncements(0);
+        }
+      };
+
+      await refreshUnread();
+      await refreshAnnouncementUnread();
+      timer = setInterval(() => {
+        refreshUnread();
+        refreshAnnouncementUnread();
+      }, 15000);
+
+      // Realtime listener for new direct deliveries to current user
+      if (meIdRef.current) {
+        try {
+          channelRef.current = (supabase as any)
+            .channel(`nav_badge_mr_${meIdRef.current}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_recipients', filter: `recipient_id=eq.${meIdRef.current}` }, async () => {
+              await refreshUnread();
+              await refreshAnnouncementUnread();
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'message_recipients', filter: `recipient_id=eq.${meIdRef.current}` }, async () => {
+              await refreshUnread();
+              await refreshAnnouncementUnread();
+            })
+            .subscribe();
+        } catch {}
+      }
+    };
+
+    setup();
+
+    return () => {
+      if (timer) clearInterval(timer);
+      try { 
+        if (channelRef.current) (supabase as any).removeChannel(channelRef.current);
+        if (announcementChannelRef.current) (supabase as any).removeChannel(announcementChannelRef.current);
+      } catch {}
+    };
+  }, [profile?.auth_user_id]);
 
   // Hide the global nav on welcome and auth screens
   const hide = pathname === '/' || pathname.startsWith('/(auth)');
@@ -95,11 +203,23 @@ export default function GlobalBottomNav() {
             const isActive = activeTab === tab.key;
             return (
               <TouchableOpacity key={tab.key} style={styles.tabButton} onPress={tab.onPress}>
-                <IconSymbol 
-                  name={tab.icon as any} 
-                  size={16} 
-                  color={isActive ? iconColorActive : iconColorInactive} 
-                />
+                <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+                  <IconSymbol 
+                    name={tab.icon as any} 
+                    size={16} 
+                    color={isActive ? iconColorActive : iconColorInactive} 
+                  />
+                  {tab.key === 'messages' && unread > 0 && (
+                    <View style={[styles.badge, { backgroundColor: '#EF4444', borderColor: backgroundColor }]}>
+                      <Text style={styles.badgeText}>{unread > 99 ? '99+' : String(unread)}</Text>
+                    </View>
+                  )}
+                  {tab.key === 'activities' && unreadAnnouncements > 0 && (
+                    <View style={[styles.badge, { backgroundColor: '#F59E0B', borderColor: backgroundColor }]}>
+                      <Text style={styles.badgeText}>{unreadAnnouncements > 99 ? '99+' : String(unreadAnnouncements)}</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={[styles.tabLabel, { 
                   color: isActive ? textColorActive : textColorInactive,
                   fontWeight: isActive ? '600' : '500'
@@ -144,6 +264,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
   },
 });
 

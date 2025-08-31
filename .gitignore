@@ -51,6 +51,10 @@ android/android/
 .env*.backup
 .env*.remote
 
+# Treat all env files as secrets except documented examples
+.env.*
+!.env.example
+
 # Supabase
 .supabase/
 supabase/.branches
@@ -182,3 +186,41 @@ project-scripts/
 .vercel
 .secrets.txt
 android/app/service-account.json
+
+# Expo/EAS credentials
+credentials.json
+credentials/
+
+# Documentation (ignore all markdown except the main README)
+*.md
+!README.md
+
+# Project docs directories (non-product code)
+docs/
+
+# Ignore local test scripts (keep app code and unit tests tracked)
+scripts/*test*.js
+scripts/*test*.ts
+scripts/**/*test*.js
+scripts/**/*test*.ts
+scripts/*smoke-*.js
+scripts/*smoke-*.ts
+scripts/**/*smoke-*.js
+scripts/**/*smoke-*.ts
+scripts/*e2e-*.js
+scripts/*e2e-*.ts
+scripts/**/*e2e-*.js
+scripts/**/*e2e-*.ts
+scripts/*perf-*.js
+scripts/*perf-*.ts
+scripts/**/*perf-*.js
+scripts/**/*perf-*.ts
+scripts/*benchmark*.js
+scripts/*benchmark*.ts
+scripts/**/*benchmark*.js
+scripts/**/*benchmark*.ts
+
+# Misc local notes
+*.notes
+*.note
+TODO*

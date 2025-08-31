@@ -74,10 +74,10 @@ export class HomeworkService {
           await supabase
             .from('homework_submissions')
             .update({
-              grade: gradingResult.score.toString(),
-              teacher_feedback: gradingResult.feedback,
+              grade: Number(gradingResult.score),
+              feedback: gradingResult.feedback,
               graded_at: new Date().toISOString(),
-              reviewed_by: 'ai',
+              graded_by: 'ai',
               status: 'reviewed'
             })
             .eq('id', submissionId);
@@ -115,13 +115,13 @@ export class HomeworkService {
       let query = supabase
         .from('homework_assignments')
         .select(`
-          *,
-          lesson:lessons(
-            id,
-            title,
-            description,
-            thumbnail_url
-          )
+          id,
+          title,
+          description,
+          created_at,
+          due_date,
+          class_id,
+          teacher_id
         `);
 
       // Apply filters if provided (limited to known HomeworkFilter fields)
@@ -168,26 +168,25 @@ export class HomeworkService {
       const response = await supabase
         .from('homework_submissions')
         .select(`
-          *,
+          id,
+          status,
+          created_at,
+          submission_text,
+          file_urls,
+          grade,
+          graded_at,
+          teacher_feedback:feedback,
           homework_assignment:homework_assignments(
             id,
             title,
             description,
-            instructions,
-            materials_needed,
-            due_date_offset_days,
-            estimated_time_minutes,
-            difficulty_level,
-            is_required,
-            lesson:lessons(
-              title,
-              subject
-            )
+            created_at,
+            due_date
           ),
           student:students(
             id,
-            full_name,
-            grade_level
+            first_name,
+            last_name
           )
         `)
         .eq('student_id', studentId)
@@ -199,6 +198,8 @@ export class HomeworkService {
       const rows = (response.data || []) as any[];
       const mapped: StudentHomeworkSubmission[] = rows.map((r) => ({
         ...r,
+        grade: r.grade != null ? String(r.grade) : null,
+        teacher_feedback: r.teacher_feedback ?? r.feedback ?? null,
         submission_content: r.submission_content ?? r.submission_text ?? null,
       }));
       return mapped;
@@ -393,8 +394,15 @@ export class HomeworkService {
       throw new Error('AI homework help service unavailable');
     } catch (error) {
       log.error('Error getting homework help:', error);
+      
+      // Check if this was a quota-protected error
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const isQuotaProtected = errorMsg.includes('not counted against your quota');
+      
       return {
-        explanation: 'For help with this assignment, please ask your teacher or parent.',
+        explanation: isQuotaProtected ? 
+          'AI service temporarily unavailable. Your quota was not charged for this request. Please try again or ask your teacher.' :
+          'For help with this assignment, please ask your teacher or parent.',
         hints: ['Read the problem carefully', 'Take your time to understand'],
         examples: ['Practice makes perfect']
       };

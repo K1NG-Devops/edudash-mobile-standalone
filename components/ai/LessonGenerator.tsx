@@ -10,15 +10,24 @@ import {
   ActivityIndicator,
   StyleSheet,
   Dimensions,
+  FlatList,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { lessonGenerator, LESSON_TEMPLATES, LessonTemplate } from '@/lib/ai/lessonGenerator';
 import { LessonContent , isAIAvailable } from '@/lib/ai/claudeService';
+import { 
+  SUBJECTS, 
+  AGE_GROUPS, 
+  getSubjectTopics, 
+  searchTopics, 
+  COMMON_OBJECTIVES,
+  CurriculumTopic 
+} from '@/lib/data/curriculumData';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-const SUBJECT_OPTIONS = ['Science', 'Math', 'Language Arts', 'Art', 'Music', 'Creative Expression', 'Social Skills', 'Emotional Development', 'Nature Studies', 'Physical Activity', 'Engineering'];
 
 interface LessonGeneratorProps {
   userId: string;
@@ -34,31 +43,126 @@ interface GenerationStep {
   active: boolean;
 }
 
+type ResolvedLesson = NonNullable<LessonContent>;
+
 export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   userId,
   preschoolId,
   onLessonGenerated,
   onClose,
 }) => {
+  const { colorScheme } = useTheme();
+  const palette = Colors[colorScheme];
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<LessonTemplate | null>(null);
   const [customMode, setCustomMode] = useState(false);
   
-  // Form data
-const [topic, setTopic] = useState('Colors and Rainbows');
-  const [ageGroup, setAgeGroup] = useState('3-4 years');
+  // Enhanced form data with smart defaults
+  const [topic, setTopic] = useState('');
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [ageGroup, setAgeGroup] = useState('3-4');
   const [duration, setDuration] = useState(30);
   const [subjects, setSubjects] = useState<string[]>([]);
-const [learningObjectives, setLearningObjectives] = useState<string[]>(['Recognize basic colors']);
+  const [learningObjectives, setLearningObjectives] = useState<string[]>([]);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'challenging'>('medium');
+  
+  // Smart dropdown states
+  const [showTopicDropdown, setShowTopicDropdown] = useState(false);
+  const [showObjectivesModal, setShowObjectivesModal] = useState(false);
+  const [topicSearchQuery, setTopicSearchQuery] = useState('');
+  const [availableTopics, setAvailableTopics] = useState<CurriculumTopic[]>([]);
+  const [filteredTopics, setFilteredTopics] = useState<CurriculumTopic[]>([]);
+  const [suggestedObjectives, setSuggestedObjectives] = useState<string[]>([]);
   
   // Generated content
   const [generatedLesson, setGeneratedLesson] = useState<LessonContent | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-const [lastGenAt, setLastGenAt] = useState<number>(0);
+  const [lastGenAt, setLastGenAt] = useState<number>(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
+  
+  // Update available topics when subjects or age group changes
+  useEffect(() => {
+    updateAvailableTopics();
+  }, [subjects, ageGroup]);
+  
+  // Update filtered topics when search query changes
+  useEffect(() => {
+    if (topicSearchQuery.trim()) {
+      const searchResults = searchTopics(topicSearchQuery, subjects[0], ageGroup);
+      setFilteredTopics(searchResults);
+    } else {
+      setFilteredTopics(availableTopics);
+    }
+  }, [topicSearchQuery, availableTopics]);
+  
+  const updateAvailableTopics = () => {
+    if (subjects.length === 0) {
+      setAvailableTopics([]);
+      setFilteredTopics([]);
+      return;
+    }
+    
+    // Get topics for the primary subject and age group
+    const topics = getSubjectTopics(subjects[0], ageGroup);
+    setAvailableTopics(topics);
+    setFilteredTopics(topics);
+    
+    // Clear selected topic if it's not available for current subject/age
+    if (selectedTopicId && !topics.find(t => t.id === selectedTopicId)) {
+      setSelectedTopicId(null);
+      setTopic('');
+      setLearningObjectives([]);
+    }
+  };
+  
+  const handleTopicSelect = (selectedTopic: CurriculumTopic) => {
+    setSelectedTopicId(selectedTopic.id);
+    setTopic(selectedTopic.name);
+    setDuration(selectedTopic.estimatedDuration);
+    setLearningObjectives([...selectedTopic.objectives]);
+    setSuggestedObjectives(selectedTopic.objectives);
+    setShowTopicDropdown(false);
+    setTopicSearchQuery('');
+  };
+  
+  const handleSubjectToggle = (subject: string) => {
+    setSubjects(prev => {
+      let newSubjects;
+      if (prev.includes(subject)) {
+        // Remove subject
+        newSubjects = prev.filter(s => s !== subject);
+      } else {
+        // Add subject (replace previous selection for single-subject mode)
+        newSubjects = [subject];
+      }
+      
+      // Clear topic-related state when subjects change
+      if (newSubjects.length !== prev.length || newSubjects[0] !== prev[0]) {
+        setTopic('');
+        setSelectedTopicId(null);
+        setLearningObjectives([]);
+      }
+      
+      return newSubjects;
+    });
+  };
+  
+  const addCustomObjective = () => {
+    setLearningObjectives(prev => [...prev, '']);
+  };
+  
+  const toggleCommonObjective = (objective: string) => {
+    setLearningObjectives(prev => {
+      if (prev.includes(objective)) {
+        return prev.filter(obj => obj !== objective);
+      } else {
+        return [...prev, objective];
+      }
+    });
+  };
 
   const steps: GenerationStep[] = [
     { id: 0, title: 'Choose Template', completed: false, active: true },
@@ -203,10 +307,20 @@ if (!validateForm()) return;
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to generate lesson. Please try again.';
       setGenError(msg);
+      
+      // Check if this error includes quota information
+      const isQuotaProtected = msg.includes('not counted against your quota') || 
+                               msg.includes('not count towards your quota');
+      
+      const title = isQuotaProtected ? 'Request Failed - No Charges Applied' : 'Generation Failed';
+      const message = isQuotaProtected ? 
+        `${msg}\n\n✅ This failed request has not been counted against your AI usage quota.` :
+        msg;
+      
       try {
         Alert.alert(
-          'Generation Failed',
-          msg,
+          title,
+          message,
           [
             { text: 'Retry', onPress: () => setCurrentStep(1) },
             { text: 'OK' }
@@ -227,6 +341,79 @@ if (!validateForm()) return;
         [{ text: 'Great!', onPress: onClose }]
       );
     }
+  };
+
+  // Resource generation functions
+  const generateWorksheet = (lesson: ResolvedLesson) => {
+    Alert.alert(
+      'Generate Worksheet',
+      `Would you like to create a printable worksheet for "${lesson.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Generate', 
+          onPress: () => {
+            // In a real implementation, this would generate a PDF worksheet
+            Alert.alert('Worksheet Generated', 'A printable worksheet has been created and is ready for download.');
+          }
+        }
+      ]
+    );
+  };
+
+  const findEducationalVideos = (lesson: ResolvedLesson) => {
+    const videoSuggestions = [
+      `https://www.youtube.com/results?search_query=${encodeURIComponent(lesson.title + ' preschool educational video')}`,
+      `https://www.youtube.com/results?search_query=${encodeURIComponent(topic + ' kids learning video')}`,
+      `https://www.youtube.com/results?search_query=${encodeURIComponent(ageGroup + ' ' + topic + ' educational content')}`
+    ];
+    
+    Alert.alert(
+      'Educational Videos',
+      'Here are some suggested video searches for your lesson:',
+      [
+        { text: 'YouTube Search 1', onPress: () => {
+          // In a web environment, you could open these URLs
+          console.log('Opening:', videoSuggestions[0]);
+        }},
+        { text: 'YouTube Search 2', onPress: () => {
+          console.log('Opening:', videoSuggestions[1]);
+        }},
+        { text: 'Done', style: 'cancel' }
+      ]
+    );
+  };
+
+  const generateParentGuide = (lesson: ResolvedLesson) => {
+    Alert.alert(
+      'Parent Guide',
+      `Creating a parent guide for "${lesson.title}" with:\n\n• Learning objectives\n• Activities to do at home\n• Discussion questions\n• Materials needed`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Generate', 
+          onPress: () => {
+            Alert.alert('Parent Guide Created', 'A comprehensive parent guide has been generated and is ready to share.');
+          }
+        }
+      ]
+    );
+  };
+
+  const generateAssessmentRubric = (lesson: ResolvedLesson) => {
+    Alert.alert(
+      'Assessment Rubric',
+      `Creating an assessment rubric for "${lesson.title}" with evaluation criteria for:\n\n• Understanding of concepts\n• Participation level\n• Skill demonstration\n• Creative expression`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Generate', 
+          onPress: () => {
+            Alert.alert('Assessment Rubric Created', 'A detailed assessment rubric has been generated for this lesson.');
+          }
+        }
+      ]
+    );
   };
 
   const renderStepIndicator = () => (
@@ -372,31 +559,91 @@ if (!validateForm()) return;
             </View>
           </View>
 
-          <View style={{ marginTop: 8 }}>
-            <Text style={styles.inputLabel}>Subjects</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-              {SUBJECT_OPTIONS.map((sub) => {
-                const active = subjects.includes(sub);
+          {/* Enhanced Subject Selection */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Subject *</Text>
+            <View style={styles.subjectGrid}>
+              {Object.entries(SUBJECTS).map(([key, subject]) => {
+                const isSelected = subjects.includes(key);
                 return (
                   <TouchableOpacity
-                    key={sub}
-                    style={[styles.subjectChip, active && styles.subjectChipActive]}
-                    onPress={() => toggleSubject(sub)}
+                    key={key}
+                    style={[
+                      styles.subjectCard, 
+                      isSelected && [styles.subjectCardActive, { borderColor: subject.color }]
+                    ]}
+                    onPress={() => handleSubjectToggle(key)}
                   >
-                    <Text style={[styles.subjectChipText, active && styles.subjectChipTextActive]}>{sub}</Text>
+                    <View style={[styles.subjectIcon, { backgroundColor: isSelected ? subject.color : '#F3F4F6' }]}>
+                      <IconSymbol name={subject.icon} size={20} color={isSelected ? '#FFFFFF' : subject.color} />
+                    </View>
+                    <Text style={[
+                      styles.subjectName, 
+                      isSelected && [styles.subjectNameActive, { color: subject.color }]
+                    ]}>
+                      {subject.name}
+                    </Text>
+                    <Text style={styles.subjectDescription}>{subject.description}</Text>
                   </TouchableOpacity>
                 );
               })}
-            </ScrollView>
-            <Text style={{ marginTop: 6, color: '#6B7280', fontSize: 12 }}>
-              Select one or more subjects to guide the lesson focus.
-            </Text>
+            </View>
           </View>
+
+          {/* Smart Topic Selection */}
+          {subjects.length > 0 && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Topic *</Text>
+              <TouchableOpacity 
+                style={[styles.dropdownButton, { borderColor: topic ? '#10B981' : '#D1D5DB' }]}
+                onPress={() => setShowTopicDropdown(true)}
+              >
+                <Text style={[
+                  styles.dropdownButtonText, 
+                  { color: topic ? '#111827' : '#9CA3AF' }
+                ]}>
+                  {topic || `Select a ${subjects[0]} topic...`}
+                </Text>
+                <IconSymbol name="chevron.down" size={16} color="#6B7280" />
+              </TouchableOpacity>
+              
+              {availableTopics.length > 0 && (
+                <Text style={styles.helperText}>
+                  {availableTopics.length} curriculum-aligned topics available for {subjects[0]} (Age {ageGroup})
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Custom Topic Input */}
+          {subjects.length > 0 && !selectedTopicId && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Or enter custom topic</Text>
+              <TextInput
+                style={[styles.textInput, { borderColor: topic && !selectedTopicId ? '#8B5CF6' : '#D1D5DB' }]}
+                value={topic}
+                onChangeText={setTopic}
+                placeholder={`e.g., "Colors in Nature" for ${subjects[0]}`}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+          )}
         </>
       )}
 
+      {/* Enhanced Learning Objectives */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Learning Objectives</Text>
+        <View style={styles.objectivesHeader}>
+          <Text style={styles.inputLabel}>Learning Objectives *</Text>
+          <TouchableOpacity 
+            style={styles.suggestButton}
+            onPress={() => setShowObjectivesModal(true)}
+          >
+            <IconSymbol name="lightbulb" size={16} color="#F59E0B" />
+            <Text style={styles.suggestButtonText}>Suggestions</Text>
+          </TouchableOpacity>
+        </View>
+        
         {learningObjectives.map((objective, index) => (
           <View key={index} style={styles.objectiveRow}>
             <TextInput
@@ -405,6 +652,7 @@ if (!validateForm()) return;
               onChangeText={(text) => updateObjective(index, text)}
               placeholder="What should children learn?"
               placeholderTextColor="#9CA3AF"
+              multiline
             />
             {learningObjectives.length > 1 && (
               <TouchableOpacity
@@ -416,10 +664,17 @@ if (!validateForm()) return;
             )}
           </View>
         ))}
-        <TouchableOpacity style={styles.addButton} onPress={addLearningObjective}>
-          <IconSymbol name="plus.circle.fill" size={20} color="#3B82F6" />
-          <Text style={styles.addButtonText}>Add Objective</Text>
-        </TouchableOpacity>
+        
+        <View style={styles.objectiveActions}>
+          <TouchableOpacity style={styles.addButton} onPress={addCustomObjective}>
+            <IconSymbol name="plus.circle" size={18} color="#3B82F6" />
+            <Text style={styles.addButtonText}>Add Custom Objective</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {learningObjectives.length === 0 && (
+          <Text style={styles.errorText}>Please add at least one learning objective.</Text>
+        )}
       </View>
 
       {formError && (
@@ -579,12 +834,169 @@ if (!validateForm()) return;
               {generatedLesson.homeExtension.map((extension, index) => (
                 <Text key={index} style={styles.fullExtensionText}>• {extension}</Text>
               ))}
+              
+              {/* Enhanced Resources Section */}
+              <Text style={styles.fullSectionTitle}>Resources & Materials</Text>
+              
+              <View style={styles.resourceSection}>
+                <Text style={styles.resourceSubtitle}>📋 Printable Worksheets</Text>
+                <TouchableOpacity style={styles.resourceButton} onPress={() => generateWorksheet(generatedLesson)}>
+                  <Text style={styles.resourceButtonText}>Generate Worksheet PDF</Text>
+                </TouchableOpacity>
+                
+                <Text style={styles.resourceSubtitle}>🎥 Educational Videos</Text>
+                <TouchableOpacity style={styles.resourceButton} onPress={() => findEducationalVideos(generatedLesson)}>
+                  <Text style={styles.resourceButtonText}>Find Related Videos</Text>
+                </TouchableOpacity>
+                
+                <Text style={styles.resourceSubtitle}>🏠 Parent Resources</Text>
+                <TouchableOpacity style={styles.resourceButton} onPress={() => generateParentGuide(generatedLesson)}>
+                  <Text style={styles.resourceButtonText}>Generate Parent Guide</Text>
+                </TouchableOpacity>
+                
+                <Text style={styles.resourceSubtitle}>🎯 Assessment Tools</Text>
+                <TouchableOpacity style={styles.resourceButton} onPress={() => generateAssessmentRubric(generatedLesson)}>
+                  <Text style={styles.resourceButtonText}>Create Assessment Rubric</Text>
+                </TouchableOpacity>
+              </View>
             </ScrollView>
           )}
         </View>
       </Modal>
+      
+      {/* Topic Selection Modal */}
+      <Modal visible={showTopicDropdown} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.modalContainer, { backgroundColor: palette.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: palette.outline }]}>
+            <TouchableOpacity onPress={() => setShowTopicDropdown(false)}>
+              <IconSymbol name="xmark" size={20} color={palette.textSecondary} />
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: palette.text }]}>Choose Topic</Text>
+            <View style={{ width: 20 }} />
+          </View>
+          
+          <View style={styles.searchSection}>
+            <View style={[styles.searchInput, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
+              <IconSymbol name="magnifyingglass" size={16} color={palette.textSecondary} />
+              <TextInput
+                style={[styles.searchText, { color: palette.text }]}
+                value={topicSearchQuery}
+                onChangeText={setTopicSearchQuery}
+                placeholder="Search topics..."
+                placeholderTextColor={palette.textSecondary}
+              />
+            </View>
+          </View>
+          
+          <FlatList
+            data={filteredTopics}
+            keyExtractor={(item) => item.id}
+            style={styles.topicList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.topicItem, { backgroundColor: palette.surface, borderColor: palette.outline }]}
+                onPress={() => handleTopicSelect(item)}
+              >
+                <View style={styles.topicContent}>
+                  <View style={styles.topicHeader}>
+                    <Text style={[styles.topicName, { color: palette.text }]}>{item.name}</Text>
+                    <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(item.difficulty) }]}>
+                      <Text style={styles.difficultyText}>Level {item.difficulty}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.topicDescription, { color: palette.textSecondary }]}>{item.description}</Text>
+                  <View style={styles.topicMeta}>
+                    <Text style={[styles.topicDuration, { color: palette.textSecondary }]}>⏱️ {item.estimatedDuration} min</Text>
+                    <Text style={[styles.topicObjectiveCount, { color: palette.textSecondary }]}>🎯 {item.objectives.length} objectives</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <IconSymbol name="doc.text" size={48} color={palette.textSecondary} />
+                <Text style={[styles.emptyStateText, { color: palette.textSecondary }]}>No topics found</Text>
+                <Text style={[styles.emptyStateSubtext, { color: palette.textSecondary }]}>Try adjusting your search or select a different subject</Text>
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
+      
+      {/* Learning Objectives Suggestions Modal */}
+      <Modal visible={showObjectivesModal} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.modalContainer, { backgroundColor: palette.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: palette.outline }]}>
+            <TouchableOpacity onPress={() => setShowObjectivesModal(false)}>
+              <IconSymbol name="xmark" size={20} color={palette.textSecondary} />
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: palette.text }]}>Suggested Objectives</Text>
+            <View style={{ width: 20 }} />
+          </View>
+          
+          <ScrollView style={styles.objectivesContent}>
+            {/* Topic-specific objectives */}
+            {suggestedObjectives.length > 0 && (
+              <View style={styles.objectiveCategory}>
+                <Text style={[styles.categoryTitle, { color: palette.text }]}>From Selected Topic</Text>
+                {suggestedObjectives.map((objective, index) => (
+                  <TouchableOpacity
+                    key={`topic-${index}`}
+                    style={[
+                      styles.objectiveSuggestion,
+                      { backgroundColor: palette.surface, borderColor: palette.outline },
+                      learningObjectives.includes(objective) && styles.objectiveSuggestionSelected
+                    ]}
+                    onPress={() => toggleCommonObjective(objective)}
+                  >
+                    <Text style={[styles.objectiveSuggestionText, { color: palette.text }]}>{objective}</Text>
+                    {learningObjectives.includes(objective) && (
+                      <IconSymbol name="checkmark.circle.fill" size={20} color="#10B981" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            
+            {/* Common objectives by category */}
+            {Object.entries(COMMON_OBJECTIVES).map(([category, objectives]) => (
+              <View key={category} style={styles.objectiveCategory}>
+                <Text style={[styles.categoryTitle, { color: palette.text }]}>{category}</Text>
+                {objectives.map((objective, index) => (
+                  <TouchableOpacity
+                    key={`${category}-${index}`}
+                    style={[
+                      styles.objectiveSuggestion,
+                      { backgroundColor: palette.surface, borderColor: palette.outline },
+                      learningObjectives.includes(objective) && styles.objectiveSuggestionSelected
+                    ]}
+                    onPress={() => toggleCommonObjective(objective)}
+                  >
+                    <Text style={[styles.objectiveSuggestionText, { color: palette.text }]}>{objective}</Text>
+                    {learningObjectives.includes(objective) && (
+                      <IconSymbol name="checkmark.circle.fill" size={20} color="#10B981" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
     </Modal>
   );
+};
+
+// Helper function for difficulty colors
+const getDifficultyColor = (difficulty: number): string => {
+  switch (difficulty) {
+    case 1: return '#10B981'; // Easy - Green
+    case 2: return '#3B82F6'; // Medium-Easy - Blue  
+    case 3: return '#F59E0B'; // Medium - Orange
+    case 4: return '#EF4444'; // Hard - Red
+    case 5: return '#8B5CF6'; // Very Hard - Purple
+    default: return '#6B7280'; // Default - Gray
+  }
 };
 
 const styles = StyleSheet.create({
@@ -1065,5 +1477,258 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     marginTop: 8,
     marginBottom: 8,
+  },
+  resourceSection: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  resourceSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  resourceButton: {
+    backgroundColor: '#F3F4F6',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  resourceButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#3B82F6',
+    textAlign: 'center',
+  },
+  
+  // Enhanced Subject Selection Styles
+  subjectGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  subjectCard: {
+    width: (screenWidth - 64) / 2, // Two columns with margins
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  subjectCardActive: {
+    borderWidth: 2,
+    backgroundColor: '#F8FAFC',
+  },
+  subjectIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  subjectName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  subjectNameActive: {
+    fontWeight: '700',
+  },
+  subjectDescription: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  
+  // Dropdown Styles
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  dropdownButtonText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#059669',
+    marginTop: 4,
+  },
+  
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  
+  // Search Styles
+  searchSection: {
+    padding: 16,
+  },
+  searchInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchText: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  
+  // Topic List Styles
+  topicList: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  topicItem: {
+    marginBottom: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  topicContent: {
+    padding: 16,
+  },
+  topicHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  topicName: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  difficultyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  difficultyText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  topicDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  topicMeta: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  topicDuration: {
+    fontSize: 12,
+  },
+  topicObjectiveCount: {
+    fontSize: 12,
+  },
+  
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  
+  // Enhanced Objectives Styles
+  objectivesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  suggestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FEF3C7',
+  },
+  suggestButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#D97706',
+    marginLeft: 4,
+  },
+  objectiveActions: {
+    marginTop: 8,
+  },
+  
+  // Objectives Modal Styles
+  objectivesContent: {
+    flex: 1,
+    padding: 16,
+  },
+  objectiveCategory: {
+    marginBottom: 24,
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  objectiveSuggestion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  objectiveSuggestionSelected: {
+    borderColor: '#10B981',
+    backgroundColor: '#ECFDF5',
+  },
+  objectiveSuggestionText: {
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
   },
 });

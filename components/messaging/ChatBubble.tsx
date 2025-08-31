@@ -136,7 +136,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     styles.messageBubble,
     {
       backgroundColor: getBubbleBackgroundColor(),
-      alignSelf: isMine ? 'flex-end' : 'flex-start',
+      alignSelf: (isMine ? 'flex-end' : 'flex-start') as 'flex-end' | 'flex-start',
       borderBottomRightRadius: isMine ? 4 : 16,
       borderBottomLeftRadius: isMine ? 16 : 4,
       maxWidth: screenWidth * 0.78,

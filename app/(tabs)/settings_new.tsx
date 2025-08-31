@@ -158,14 +158,23 @@ export default function SettingsNewScreen() {
 
         {/* Account Section */}
         <View style={[styles.section, { backgroundColor: palette.surface }]}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>Account</Text>
-
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>Account & Subscription</Text>
+          
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: palette.surface }]}
             onPress={() => router.push('/pricing')}
           >
-            <IconSymbol name="creditcard.fill" size={20} color={palette.primary} />
-            <Text style={[styles.actionButtonText, { color: palette.text }]}>Manage Subscription / Upgrade</Text>
+            <IconSymbol name="crown.fill" size={20} color={palette.primary} />
+            <Text style={[styles.actionButtonText, { color: palette.text }]}>View Plans & Upgrade</Text>
+            <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: palette.surface }]}
+            onPress={() => router.push('/screens/subscription-management')}
+          >
+            <IconSymbol name="chart.bar.fill" size={20} color={palette.success} />
+            <Text style={[styles.actionButtonText, { color: palette.text }]}>Usage & Billing</Text>
             <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
           </TouchableOpacity>
           

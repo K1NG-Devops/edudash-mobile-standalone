@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 // @ts-nocheck
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
