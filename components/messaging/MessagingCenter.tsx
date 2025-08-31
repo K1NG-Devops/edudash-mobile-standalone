@@ -182,31 +182,23 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     } catch { }
   };
 
-  // Load contacts for teachers - shows other school staff and parents
+  // Load contacts for staff using secure RPC to avoid RLS issues
   const loadSchoolContacts = async (userProfile: any) => {
     try {
-      // Get all users in the same school (principals, other teachers, parents)
-      const { data: schoolUsers, error: schoolError } = await supabase
-        .from('users')
-        .select('id, name, avatar_url, role, email')
-        .eq('preschool_id', userProfile.preschool_id)
-        .neq('id', userProfile.id) // Exclude self
-        // Accept active users and users with null is_active to avoid hiding contacts
-        .or('is_active.is.null,is_active.eq.true')
-        // Include principal alias in addition to preschool_admin
-        .in('role', ['preschool_admin', 'principal', 'teacher', 'parent'])
-        .order('role', { ascending: true }) // Admins first, then teachers, then parents
-        .order('name', { ascending: true });
+      const includeParents = ['teacher','principal','preschool_admin','admin','superadmin'].includes(String(userProfile.role || ''));
+      const { data: contactsRpc, error } = await (supabase as any).rpc('get_messaging_contacts', {
+        p_include_staff: true,
+        p_include_parents: includeParents,
+        p_limit: 500,
+      });
+      if (error) throw error;
 
-      if (schoolError) throw schoolError;
-
-      // Convert to conversation format
-      const schoolContacts: Conversation[] = ((schoolUsers || []) as any[]).map((user: any) => ({
-        id: user.id,
-        participant_name: user.name || user.email || 'Unknown User',
-        participant_avatar: user.avatar_url,
-        participant_role: user.role,
-        last_message: `Start a conversation with ${user.name || 'this user'}`,
+      const schoolContacts: Conversation[] = (contactsRpc || []).map((u: any) => ({
+        id: u.id,
+        participant_name: u.name || u.email || 'Unknown User',
+        participant_avatar: u.avatar_url,
+        participant_role: u.role,
+        last_message: `Start a conversation with ${u.name || 'this user'}`,
         last_message_time: '',
         unread_count: 0,
         is_online: false,
@@ -235,7 +227,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     try {
       setLoading(true);
 
-      // Get user's internal ID
+      // Get user's internal ID and role
       const { data: userProfile, error: userError } = await supabase
         .from('users')
         .select('id, role, preschool_id')
@@ -247,7 +239,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       }
       setParentUserId(userProfile.id);
 
-      // If user is a teacher or principal, show other school staff and parents
+      // If user is staff with a preschool, show school contacts list (even if no prior messages)
       if ((userProfile.role === 'teacher' || userProfile.role === 'principal' || userProfile.role === 'preschool_admin')) {
         if (userProfile.preschool_id) {
           await loadSchoolContacts(userProfile);
@@ -255,7 +247,6 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         }
         // Fallback: try infer preschool_id from invitations
         try {
-          // teacher_invitations invited_by
           const { data: tInvite } = await supabase
             .from('teacher_invitations')
             .select('preschool_id, created_at')
@@ -294,25 +285,23 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         } catch {}
       }
 
-      // 1) Incoming messages to parent
+      // Build conversation history without embedding cross-table user rows to avoid RLS blockers
       const { data: incoming, error: incomingError } = await supabase
         .from('message_recipients')
         .select(`
           read_at,
           created_at,
-          message:messages(
+          message:messages!inner(
             id,
             content,
             created_at,
-            sender_id,
-            sender:users(name, avatar_url, role)
+            sender_id
           )
         `)
         .eq('recipient_id', userProfile.id)
         .order('created_at', { ascending: false });
       if (incomingError) throw incomingError;
 
-      // 2) Outgoing messages from parent (to build conversations)
       const { data: outgoing, error: outgoingError } = await supabase
         .from('messages')
         .select(`
@@ -326,64 +315,104 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         .order('created_at', { ascending: false });
       if (outgoingError) throw outgoingError;
 
-      // Collect recipient user ids from outgoing to backfill names
-      const recipientIds = new Set<string>();
-      outgoing?.forEach((m: any) => m.message_recipients?.forEach((r: any) => recipientIds.add(r.recipient_id)));
-      const missingIds = Array.from(recipientIds);
-      let recipientsById: Record<string, { name: string; avatar_url: string | null; role: string | null }> = {};
-      if (missingIds.length > 0) {
-        const { data: usersData } = await supabase
-          .from('users')
-          .select('id, name, avatar_url, role')
-          .in('id', missingIds);
-        (usersData || []).forEach((u: any) => { recipientsById[u.id] = { name: u.name, avatar_url: u.avatar_url, role: u.role }; });
-      }
+      // Fetch contact metadata securely via RPC instead of direct users selects
+      const includeParents = ['teacher','principal','preschool_admin','admin','superadmin'].includes(String(userProfile.role || ''));
+      const { data: contactsRpc } = await (supabase as any).rpc('get_messaging_contacts', {
+        p_include_staff: true,
+        p_include_parents: includeParents,
+        p_limit: 500,
+      });
+      const contactById: Record<string, { name?: string; avatar_url?: string | null; role?: string | null }> = {};
+      (contactsRpc || []).forEach((u: any) => { if (u?.id) contactById[u.id] = { name: u.name, avatar_url: u.avatar_url, role: u.role }; });
 
       const conversationMap = new Map<string, Conversation>();
 
-      // Build from incoming
+      // From incoming messages
       incoming?.forEach((row: any) => {
         const msg = row.message;
         if (!msg) return;
         const otherId = msg.sender_id;
+        const meta = contactById[otherId] || {};
         if (!conversationMap.has(otherId)) {
           conversationMap.set(otherId, {
             id: otherId,
-            participant_name: msg.sender?.name || 'Unknown',
-            participant_avatar: msg.sender?.avatar_url || null,
-            participant_role: msg.sender?.role || 'teacher',
+            participant_name: meta.name || 'Unknown',
+            participant_avatar: meta.avatar_url || null,
+            participant_role: meta.role || 'teacher',
             last_message: msg.content,
             last_message_time: formatMessageTime(msg.created_at),
             unread_count: row.read_at ? 0 : 1,
             is_online: false,
           });
+        } else {
+          const existing = conversationMap.get(otherId)!;
+          if (!row.read_at) existing.unread_count += 1;
+          const existingTime = new Date(existing.last_message_time || 0);
+          const newTime = new Date(msg.created_at);
+          if (newTime > existingTime) {
+            existing.last_message = msg.content;
+            existing.last_message_time = formatMessageTime(msg.created_at);
+          }
         }
       });
 
-      // Build from outgoing
+      // From outgoing messages
       outgoing?.forEach((msg: any) => {
-        const recipients = msg.message_recipients || [];
-        recipients.forEach((r: any) => {
+        (msg.message_recipients || []).forEach((r: any) => {
           const otherId = r.recipient_id;
+          const meta = contactById[otherId] || {};
           if (!conversationMap.has(otherId)) {
-            const recipient = recipientsById[otherId];
             conversationMap.set(otherId, {
               id: otherId,
-              participant_name: recipient?.name || 'Unknown',
-              participant_avatar: recipient?.avatar_url || null,
-              participant_role: recipient?.role || 'teacher',
+              participant_name: meta.name || 'Unknown',
+              participant_avatar: meta.avatar_url || null,
+              participant_role: meta.role || 'teacher',
               last_message: msg.content,
               last_message_time: formatMessageTime(msg.created_at),
               unread_count: 0,
               is_online: false,
             });
+          } else {
+            const existing = conversationMap.get(otherId)!;
+            const existingTime = new Date(existing.last_message_time || 0);
+            const newTime = new Date(msg.created_at);
+            if (newTime > existingTime) {
+              existing.last_message = msg.content;
+              existing.last_message_time = formatMessageTime(msg.created_at);
+            }
           }
         });
       });
 
-      setConversations(Array.from(conversationMap.values()));
+      // If no conversations exist, surface available contacts so the user can start a chat
+      const existingConversations = Array.from(conversationMap.values());
+      if (existingConversations.length === 0 && userProfile.preschool_id) {
+        const availableContacts: Conversation[] = (contactsRpc || []).map((u: any) => ({
+          id: u.id,
+          participant_name: u.name || u.email || 'Unknown User',
+          participant_avatar: u.avatar_url,
+          participant_role: u.role,
+          last_message: `Start a conversation with ${u.name || 'this user'}`,
+          last_message_time: '',
+          unread_count: 0,
+          is_online: false,
+        }));
+        setConversations(availableContacts);
+        return;
+      }
+
+      // Otherwise sort conversations (recent first); fallback to alpha by name
+      const allConversations = existingConversations.sort((a, b) => {
+        if (a.last_message_time && !b.last_message_time) return -1;
+        if (!a.last_message_time && b.last_message_time) return 1;
+        if (a.last_message_time && b.last_message_time) {
+          return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
+        }
+        return a.participant_name.localeCompare(b.participant_name);
+      });
+
+      setConversations(allConversations);
     } catch (error) {
-      // Removed debug statement: console.error('Error loading conversations:', error);
       Alert.alert('Error', 'Failed to load conversations');
     } finally {
       setLoading(false);
