@@ -21,6 +21,7 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "credentialsSource": "remote",
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
@@ -32,6 +33,7 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "credentialsSource": "remote",
       "cache": {
         "disabled": false
       },
@@ -46,6 +48,7 @@
     "production-apk": {
       "extends": "production",
       "channel": "production",
+      "credentialsSource": "remote",
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"

@@ -18,6 +18,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
+import AdsBootstrapper from '@/components/advertising/AdsBootstrapper';
 
 // Error boundary for route-level errors
 function RouteErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -46,6 +47,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: false,
     shouldSetBadge: true,
+    shouldShowBanner: false,
+    shouldShowList: true,
   }),
 });
 
@@ -128,6 +131,8 @@ export default function RootLayout() {
                   <RevenueCatProvider>
                     <SafeAreaProvider>
                       <ThemeStatusBar />
+                      {/* Initialize ads and interstitial wiring (child-safe, gated by EXPO_PUBLIC_ENABLE_ADS) */}
+                      {Platform.OS !== 'web' && <AdsBootstrapper />}
                       <ContainerWithInsets hideBottomNav={hideBottomNav} />
                     </SafeAreaProvider>
                   </RevenueCatProvider>
