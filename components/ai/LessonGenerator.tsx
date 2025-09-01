@@ -34,6 +34,7 @@ interface LessonGeneratorProps {
   preschoolId: string;
   onLessonGenerated: (lesson: LessonContent) => void;
   onClose: () => void;
+  audience?: 'teacher' | 'parent';
 }
 
 interface GenerationStep {
@@ -50,6 +51,7 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   preschoolId,
   onLessonGenerated,
   onClose,
+  audience = 'teacher',
 }) => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
@@ -82,6 +84,7 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   const [lastGenAt, setLastGenAt] = useState<number>(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
+  const [lastQuotaCharged, setLastQuotaCharged] = useState<boolean | null>(null);
   
   // Update available topics when subjects or age group changes
   useEffect(() => {
@@ -90,23 +93,53 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   
   // Update filtered topics when search query changes
   useEffect(() => {
+    // Normalize age group: allow either keys like '3-4' or labels like '3-4 years'
+    const ageKey = Object.entries(AGE_GROUPS).find(([, label]) => label === ageGroup)?.[0] || ageGroup;
     if (topicSearchQuery.trim()) {
-      const searchResults = searchTopics(topicSearchQuery, subjects[0], ageGroup);
-      setFilteredTopics(searchResults);
+      const searchResults = searchTopics(topicSearchQuery, subjects[0], ageKey);
+      // Apply audience tailoring to search results as well
+      const tailored = (audience === 'parent')
+        ? searchResults.filter(t => t.difficulty <= 3 && t.estimatedDuration <= 40)
+        : searchResults;
+      setFilteredTopics(tailored);
     } else {
       setFilteredTopics(availableTopics);
     }
-  }, [topicSearchQuery, availableTopics]);
+  }, [topicSearchQuery, availableTopics, ageGroup, subjects]);
   
   const updateAvailableTopics = () => {
+    // Normalize age group to internal key used by curriculum database
+    const ageKey = Object.entries(AGE_GROUPS).find(([, label]) => label === ageGroup)?.[0] || ageGroup;
+
+    // Helper: tailor topic list by audience
+    const filterForAudience = (list: CurriculumTopic[]): CurriculumTopic[] => {
+      if (audience === 'parent') {
+        // Parents: prefer easy/medium and shorter activities for home
+        return list
+          .filter(t => (t.difficulty <= 3) && (t.estimatedDuration <= 40))
+          .sort((a, b) => a.difficulty - b.difficulty || a.estimatedDuration - b.estimatedDuration);
+      }
+      // Teachers: keep full list but sort by age-appropriate duration then difficulty
+      return [...list].sort((a, b) => a.estimatedDuration - b.estimatedDuration || a.difficulty - b.difficulty);
+    };
+
     if (subjects.length === 0) {
-      setAvailableTopics([]);
-      setFilteredTopics([]);
+      // If no subject chosen yet, show a helpful cross-subject topic list for the selected age
+      const allTopicsForAge: CurriculumTopic[] = Object.keys(SUBJECTS).flatMap((subj) => {
+        try {
+          return getSubjectTopics(subj, ageKey);
+        } catch {
+          return [] as CurriculumTopic[];
+        }
+      });
+      const tailored = filterForAudience(allTopicsForAge);
+      setAvailableTopics(tailored);
+      setFilteredTopics(tailored);
       return;
     }
     
     // Get topics for the primary subject and age group
-    const topics = getSubjectTopics(subjects[0], ageGroup);
+    const topics = filterForAudience(getSubjectTopics(subjects[0], ageKey));
     setAvailableTopics(topics);
     setFilteredTopics(topics);
     
@@ -267,6 +300,7 @@ if (!validateForm()) return;
 
     setFormError(null);
     setGenError(null);
+    setLastQuotaCharged(null);
     setIsGenerating(true);
     setCurrentStep(2);
     updateSteps(2);
@@ -274,7 +308,7 @@ if (!validateForm()) return;
     try {
       const validObjectives = learningObjectives.filter(obj => obj.trim().length > 0);
 
-      let result;
+      let result: any;
       if (selectedTemplate && !customMode) {
         result = await lessonGenerator.generateLessonFromTemplate({
           templateId: selectedTemplate.id,
@@ -299,34 +333,26 @@ if (!validateForm()) return;
 
       if (result.success && result.lesson) {
         setGeneratedLesson(result.lesson);
+        setLastQuotaCharged(result.quota_charged === true);
         setCurrentStep(3);
         updateSteps(3);
       } else {
-        throw new Error(result.error || 'Failed to generate lesson');
+        const msg = result.error || 'Failed to generate lesson';
+        setGenError(msg);
+        setLastQuotaCharged(!!result.quota_charged);
+        const isQuotaProtected = !result.quota_charged || /not counted against your quota|not count towards your quota/i.test(msg);
+        const title = isQuotaProtected ? 'Request Failed - No Charges Applied' : 'Generation Failed';
+        const message = isQuotaProtected ? `${msg}\n\n✅ This failed request has not been counted against your AI usage quota.` : msg;
+        try {
+          Alert.alert(title, message, [
+            { text: 'OK' }
+          ]);
+        } catch {}
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to generate lesson. Please try again.';
       setGenError(msg);
-      
-      // Check if this error includes quota information
-      const isQuotaProtected = msg.includes('not counted against your quota') || 
-                               msg.includes('not count towards your quota');
-      
-      const title = isQuotaProtected ? 'Request Failed - No Charges Applied' : 'Generation Failed';
-      const message = isQuotaProtected ? 
-        `${msg}\n\n✅ This failed request has not been counted against your AI usage quota.` :
-        msg;
-      
-      try {
-        Alert.alert(
-          title,
-          message,
-          [
-            { text: 'Retry', onPress: () => setCurrentStep(1) },
-            { text: 'OK' }
-          ]
-        );
-      } catch {}
+      setLastQuotaCharged(false);
     } finally {
       setIsGenerating(false);
     }
@@ -448,7 +474,7 @@ if (!validateForm()) return;
   );
 
   const renderTemplateSelection = () => (
-    <ScrollView style={styles.stepContent}>
+    <ScrollView style={styles.stepContent} contentContainerStyle={styles.stepContentContainer}>
       <Text style={styles.stepTitle}>Choose a Lesson Template</Text>
       <Text style={styles.stepDescription}>
         Select a pre-designed template or create a custom lesson from scratch.
@@ -483,43 +509,101 @@ if (!validateForm()) return;
       ))}
     </ScrollView>
   );
-
   const renderParameterSetting = () => (
-    <ScrollView style={styles.stepContent}>
+    <ScrollView style={styles.stepContent} contentContainerStyle={styles.stepContentContainer}>
       <Text style={styles.stepTitle}>Lesson Parameters</Text>
       
+      {customMode && (
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Subject *</Text>
+          <View style={styles.subjectGrid}>
+            {Object.entries(SUBJECTS).map(([key, subject]) => {
+              const isSelected = subjects.includes(key);
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[
+                    styles.subjectCard,
+                    isSelected && [styles.subjectCardActive, { borderColor: subject.color }]
+                  ]}
+                  onPress={() => handleSubjectToggle(key)}
+                >
+                  <View style={[styles.subjectIcon, { backgroundColor: isSelected ? subject.color : '#F3F4F6' }]}>
+                    <IconSymbol name={subject.icon} size={20} color={isSelected ? '#FFFFFF' : subject.color} />
+                  </View>
+                  <Text style={[
+                    styles.subjectName,
+                    isSelected && [styles.subjectNameActive, { color: subject.color }]
+                  ]}>
+                    {subject.name}
+                  </Text>
+                  <Text style={styles.subjectDescription}>{subject.description}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Topic *</Text>
+        <TouchableOpacity 
+          style={[
+            styles.dropdownButton, 
+            { 
+              borderColor: topic ? '#10B981' : '#D1D5DB',
+              opacity: subjects.length === 0 ? 0.6 : 1
+            }
+          ]}
+          onPress={() => subjects.length > 0 && setShowTopicDropdown(true)}
+          disabled={subjects.length === 0}
+          accessibilityRole="button"
+          accessibilityLabel="Choose a topic from suggestions"
+        >
+          <Text style={[
+            styles.dropdownButtonText, 
+            { color: topic ? '#111827' : '#9CA3AF' }
+          ]}>
+            {topic || (subjects[0] ? `Select a ${subjects[0]} topic...` : 'Choose a subject to see topic ideas')}
+          </Text>
+          <IconSymbol name="chevron.down" size={16} color="#6B7280" />
+        </TouchableOpacity>
+        {subjects.length === 0 && (
+          <Text style={styles.helperText}>Choose a subject to see topic ideas</Text>
+        )}
+        {subjects.length > 0 && availableTopics.length > 0 && (
+          <Text style={styles.helperText}>
+            {availableTopics.length} {audience === 'parent' ? 'home‑friendly' : 'curriculum‑aligned'} topics {subjects[0] ? `for ${subjects[0]}` : ''}
+          </Text>
+        )}
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Or enter custom topic</Text>
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, { borderColor: topic && !selectedTopicId ? '#8B5CF6' : '#D1D5DB' }]}
           value={topic}
-          onChangeText={setTopic}
-          placeholder="e.g., Colors and Rainbows"
+          onChangeText={(text) => { setTopic(text); setSelectedTopicId(null); }}
+          placeholder={subjects[0] ? `e.g., "Colors in Nature" for ${subjects[0]}` : 'e.g., Colors in Nature'}
           placeholderTextColor="#9CA3AF"
         />
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Age Group</Text>
-        <View style={styles.segmentControl}>
-          {['2-3 years', '3-4 years', '4-5 years'].map((age) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 4 }}>
+          {['2-3 years', '3-4 years', '4-5 years', '5-7 years', '8-10 years', '11-13 years', '14-18 years'].map((age) => (
             <TouchableOpacity
               key={age}
-              style={[
-                styles.segmentButton,
-                ageGroup === age && styles.segmentButtonActive
-              ]}
+              style={[styles.segmentButton, ageGroup === age && styles.segmentButtonActive, { marginRight: 8 }]}
               onPress={() => setAgeGroup(age)}
             >
-              <Text style={[
-                styles.segmentText,
-                ageGroup === age && styles.segmentTextActive
-              ]}>
+              <Text style={[styles.segmentText, ageGroup === age && styles.segmentTextActive]}>
                 {age}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {customMode && (
@@ -528,7 +612,7 @@ if (!validateForm()) return;
             <Text style={styles.inputLabel}>Duration (minutes)</Text>
             <TextInput
               style={styles.textInput}
-              value={duration.toString()}
+              value={String(duration)}
               onChangeText={(text) => setDuration(parseInt(text) || 30)}
               keyboardType="numeric"
               placeholder="30"
@@ -558,80 +642,9 @@ if (!validateForm()) return;
               ))}
             </View>
           </View>
-
-          {/* Enhanced Subject Selection */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Subject *</Text>
-            <View style={styles.subjectGrid}>
-              {Object.entries(SUBJECTS).map(([key, subject]) => {
-                const isSelected = subjects.includes(key);
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    style={[
-                      styles.subjectCard, 
-                      isSelected && [styles.subjectCardActive, { borderColor: subject.color }]
-                    ]}
-                    onPress={() => handleSubjectToggle(key)}
-                  >
-                    <View style={[styles.subjectIcon, { backgroundColor: isSelected ? subject.color : '#F3F4F6' }]}>
-                      <IconSymbol name={subject.icon} size={20} color={isSelected ? '#FFFFFF' : subject.color} />
-                    </View>
-                    <Text style={[
-                      styles.subjectName, 
-                      isSelected && [styles.subjectNameActive, { color: subject.color }]
-                    ]}>
-                      {subject.name}
-                    </Text>
-                    <Text style={styles.subjectDescription}>{subject.description}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Smart Topic Selection */}
-          {subjects.length > 0 && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Topic *</Text>
-              <TouchableOpacity 
-                style={[styles.dropdownButton, { borderColor: topic ? '#10B981' : '#D1D5DB' }]}
-                onPress={() => setShowTopicDropdown(true)}
-              >
-                <Text style={[
-                  styles.dropdownButtonText, 
-                  { color: topic ? '#111827' : '#9CA3AF' }
-                ]}>
-                  {topic || `Select a ${subjects[0]} topic...`}
-                </Text>
-                <IconSymbol name="chevron.down" size={16} color="#6B7280" />
-              </TouchableOpacity>
-              
-              {availableTopics.length > 0 && (
-                <Text style={styles.helperText}>
-                  {availableTopics.length} curriculum-aligned topics available for {subjects[0]} (Age {ageGroup})
-                </Text>
-              )}
-            </View>
-          )}
-
-          {/* Custom Topic Input */}
-          {subjects.length > 0 && !selectedTopicId && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Or enter custom topic</Text>
-              <TextInput
-                style={[styles.textInput, { borderColor: topic && !selectedTopicId ? '#8B5CF6' : '#D1D5DB' }]}
-                value={topic}
-                onChangeText={setTopic}
-                placeholder={`e.g., "Colors in Nature" for ${subjects[0]}`}
-                placeholderTextColor="#9CA3AF"
-              />
-            </View>
-          )}
         </>
       )}
 
-      {/* Enhanced Learning Objectives */}
       <View style={styles.inputGroup}>
         <View style={styles.objectivesHeader}>
           <Text style={styles.inputLabel}>Learning Objectives *</Text>
@@ -716,7 +729,15 @@ if (!validateForm()) return;
       <IconSymbol name="exclamationmark.triangle" size={28} color="#EF4444" />
       <Text style={[styles.generatingTitle, { color: '#EF4444' }]}>Generation failed</Text>
       <Text style={styles.generatingDescription}>{genError || 'Something went wrong. Please try again.'}</Text>
-      <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+      {lastQuotaCharged !== null && (
+        <Text style={{ marginTop: 4, fontSize: 12, color: lastQuotaCharged ? '#DC2626' : '#059669' }}>
+          AI usage: {lastQuotaCharged ? 'Charged for last request' : 'Not charged for last request'}
+        </Text>
+      )}
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: 12, alignSelf: 'stretch' }}>
+        <TouchableOpacity onPress={generateLesson} style={styles.retryNowButton}>
+          <Text style={styles.retryNowButtonText}>Retry now</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => { setCurrentStep(1); setGenError(null); }} style={[styles.previewButton, { backgroundColor: '#F3F4F6' }]}>
           <Text style={[styles.previewButtonText, { color: '#111827' }]}>Back to parameters</Text>
         </TouchableOpacity>
@@ -728,7 +749,7 @@ if (!validateForm()) return;
     if (!generatedLesson) return null;
 
     return (
-      <ScrollView style={styles.stepContent}>
+      <ScrollView style={styles.stepContent} contentContainerStyle={styles.stepContentContainer}>
         <Text style={styles.stepTitle}>Lesson Preview</Text>
         
         <View style={styles.previewCard}>
@@ -737,7 +758,7 @@ if (!validateForm()) return;
           
           <View style={styles.previewSection}>
             <Text style={styles.previewSectionTitle}>Content</Text>
-            <Text style={styles.previewText}>{generatedLesson.content.substring(0, 300)}...</Text>
+            <Text style={styles.previewText}>{(typeof generatedLesson.content === 'string' ? generatedLesson.content : JSON.stringify(generatedLesson.content ?? '')).slice(0, 300)}...</Text>
           </View>
 
           <View style={styles.previewSection}>
@@ -770,6 +791,9 @@ if (!validateForm()) return;
             </LinearGradient>
           </TouchableOpacity>
         </View>
+        {lastQuotaCharged !== null && (
+          <Text style={styles.quotaNote}>AI usage: {lastQuotaCharged ? 'Charged' : 'Not charged'} for last request</Text>
+        )}
       </ScrollView>
     );
   };
@@ -797,7 +821,13 @@ if (!validateForm()) return;
       <Modal visible={showPreview} animationType="slide">
         <View style={styles.fullPreviewContainer}>
           <View style={styles.fullPreviewHeader}>
-            <TouchableOpacity onPress={() => setShowPreview(false)}>
+            <TouchableOpacity 
+              onPress={() => setShowPreview(false)} 
+              style={{ padding: 8 }} 
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
               <IconSymbol name="chevron.left" size={24} color="#3B82F6" />
             </TouchableOpacity>
             <Text style={styles.fullPreviewTitle}>Full Lesson Preview</Text>
@@ -810,7 +840,7 @@ if (!validateForm()) return;
               <Text style={styles.fullLessonDescription}>{generatedLesson.description}</Text>
               
               <Text style={styles.fullSectionTitle}>Lesson Content</Text>
-              <Text style={styles.fullSectionText}>{generatedLesson.content}</Text>
+              <Text style={styles.fullSectionText}>{typeof generatedLesson.content === 'string' ? generatedLesson.content : JSON.stringify(generatedLesson.content ?? '')}</Text>
               
               <Text style={styles.fullSectionTitle}>Activities</Text>
               {generatedLesson.activities.map((activity, index) => (
@@ -1071,6 +1101,9 @@ const styles = StyleSheet.create({
   stepContent: {
     flex: 1,
     padding: 20,
+  },
+  stepContentContainer: {
+    paddingBottom: 160,
   },
   stepTitle: {
     fontSize: 24,
@@ -1341,6 +1374,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#3B82F6',
+  },
+  retryNowButton: {
+    flex: 1,
+    backgroundColor: '#3B82F6',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryNowButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  quotaNote: {
+    marginTop: 8,
+    fontSize: 12,
+    textAlign: 'center',
+    color: '#6B7280',
   },
   saveButton: {
     flex: 1,

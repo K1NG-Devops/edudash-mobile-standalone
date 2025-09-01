@@ -1,5 +1,4 @@
 import { analytics } from '@/lib/services/analyticsService';
-import { notificationService } from '@/lib/services/notificationService';
 import { supabase } from '@/lib/supabase';
 
 interface InitializationConfig {
@@ -40,14 +39,7 @@ export class AppInitializer {
       // Get current user for notifications
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Initialize notifications
-      if (config.oneSignalAppId && user) {
-        await notificationService.initialize(
-          config.oneSignalAppId,
-          user.id
-        );
-        console.log('Notifications initialized');
-      }
+      // Notifications initialization omitted (no-op placeholder)
 
       // Set up auth state listener
       supabase.auth.onAuthStateChange((event, session) => {
@@ -59,10 +51,7 @@ export class AppInitializer {
 
           // Update notification user
           if (config.oneSignalAppId) {
-            notificationService.initialize(
-              config.oneSignalAppId,
-              session.user.id
-            );
+            // Notifications initialization omitted (no-op placeholder)
           }
         } else if (event === 'SIGNED_OUT') {
           // Reset analytics and notifications

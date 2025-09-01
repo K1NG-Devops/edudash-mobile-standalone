@@ -149,14 +149,33 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const badgeCount = typeof notificationCount === 'number' ? notificationCount : internalUnreadCount;
   const roleColors = getRoleColors(user?.role || 'default', colorScheme);
   const firstName = user?.name?.split(' ')[0] || 'User';
+  // For superadmin, prefer a short display label over raw email/name
+  const displayName = user?.role === 'superadmin'
+    ? 'Super Admin'
+    : (user?.name?.includes('@')
+        ? (user?.name?.split('@')[0] || firstName)
+        : firstName);
+  const displayInitial = displayName.charAt(0).toUpperCase();
+
+  // Determine bar style based on the top gradient color brightness for best contrast
+  const isLightColor = (hex: string): boolean => {
+    const h = hex.replace('#','');
+    const r = parseInt(h.substring(0,2),16);
+    const g = parseInt(h.substring(2,4),16);
+    const b = parseInt(h.substring(4,6),16);
+    // Perceived brightness (YIQ)
+    const yiq = (r*299 + g*587 + b*114) / 1000;
+    return yiq > 186; // threshold
+  };
+  const topColor = String(roleColors.gradient[0]);
+  const computedBarStyle = isLightColor(topColor) ? 'dark-content' : 'light-content';
 
     return (
       <>
         <SafeAreaView style={[styles.safeArea, { backgroundColor: roleColors.gradient[0] }]} edges={['top', 'left', 'right']}>
           <StatusBar 
-            barStyle="light-content"
-            backgroundColor={roleColors.gradient[0]}
-            translucent={false}
+            barStyle={computedBarStyle as any}
+            translucent={true}
           />
           <LinearGradient
             colors={[roleColors.gradient[0], roleColors.gradient[1], 'rgba(0,0,0,0.1)']}
@@ -177,7 +196,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 >
                   <View style={styles.avatarContainer}>
                     <Text style={styles.avatarText}>
-                      {firstName.charAt(0).toUpperCase()}
+                      {displayInitial}
                     </Text>
                   </View>
                   <View style={styles.statusIndicator} />
@@ -195,7 +214,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   
                   {/* User info below */}
                   <View style={styles.userInfoRow}>
-                    <Text style={styles.userName}>{firstName}</Text>
+                    <Text style={styles.userName}>{displayName}</Text>
                     <View style={styles.roleContainer}>
                       <View style={styles.roleBadge}>
                         <Text style={styles.roleTitle}>

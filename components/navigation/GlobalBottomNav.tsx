@@ -196,7 +196,7 @@ export default function GlobalBottomNav() {
       <SafeAreaView edges={['bottom','left','right']}>
         <View style={[styles.tabNavigationBottom, shadow(3), {
           backgroundColor,
-          borderTopColor: borderColor,
+          borderTopWidth: 0,
         }]}
         >
           {tabs.map((tab) => {
@@ -250,8 +250,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 10,
     paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
   },
   tabButton: {
     flex: 1,

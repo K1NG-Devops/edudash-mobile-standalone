@@ -1,4 +1,18 @@
-import PostHog from 'posthog-react-native';
+// NOTE: Avoid top-level import of native modules so the app can run in Expo Go.
+// We'll lazy-require posthog-react-native at runtime and gracefully no-op if missing.
+let PostHogCtor: any | null = null;
+function getPostHogCtor(): any | null {
+  if (PostHogCtor !== null) return PostHogCtor;
+  try {
+    // Prefer default export but fall back if library shape differs
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require('posthog-react-native');
+    PostHogCtor = (mod && (mod.default || mod)) || null;
+  } catch {
+    PostHogCtor = null;
+  }
+  return PostHogCtor;
+}
 
 interface AnalyticsEvent {
   name: string;
@@ -7,7 +21,7 @@ interface AnalyticsEvent {
 
 export class AnalyticsService {
   private static instance: AnalyticsService;
-  private posthog: PostHog | null = null;
+  private posthog: any | null = null;
   private userId: string | null = null;
 
   static getInstance(): AnalyticsService {
@@ -18,23 +32,29 @@ export class AnalyticsService {
   }
 
   async initialize(apiKey: string, host?: string) {
-    this.posthog = new PostHog(apiKey, {
+    const PH = getPostHogCtor();
+    if (!PH) {
+      // In Expo Go or web, the native SDK may not be available. Silently skip.
+      this.posthog = null;
+      return;
+    }
+    this.posthog = new PH(apiKey, {
       host: host || 'https://app.posthog.com',
     });
   }
 
   identify(userId: string, properties?: Record<string, any>) {
     this.userId = userId;
-    this.posthog?.identify(userId, properties);
+    this.posthog?.identify?.(userId, properties);
   }
 
   track(event: AnalyticsEvent) {
     if (!this.posthog) {
-      console.warn('Analytics not initialized');
+      // No-op if not initialized/available
       return;
     }
 
-    this.posthog.capture(event.name, {
+    this.posthog.capture?.(event.name, {
       ...event.properties,
       timestamp: new Date().toISOString(),
     });

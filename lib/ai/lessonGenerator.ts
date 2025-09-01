@@ -84,6 +84,9 @@ export class LessonGeneratorService {
     success: boolean;
     lesson?: LessonContent & { template: LessonTemplate };
     error?: string;
+    errorCode?: string;
+    errorType?: string;
+    quota_charged?: boolean;
   }> {
     const template = LESSON_TEMPLATES.find(t => t.id === params.templateId);
     if (!template) {
@@ -113,11 +116,12 @@ export class LessonGeneratorService {
         lesson: {
           ...result.content,
           template
-        }
+        },
+        quota_charged: result.quota_charged,
       };
     }
 
-    return { success: false, error: result.error };
+    return { success: false, error: result.error, errorCode: (result as any).errorCode, errorType: (result as any).errorType, quota_charged: (result as any).quota_charged };
   }
 
   /**
@@ -136,6 +140,9 @@ export class LessonGeneratorService {
     success: boolean;
     lesson?: LessonContent;
     error?: string;
+    errorCode?: string;
+    errorType?: string;
+    quota_charged?: boolean;
   }> {
     // Enhance objectives based on difficulty level
     const enhancedObjectives = LessonGeneratorService.enhanceObjectivesByDifficulty(
@@ -143,19 +150,38 @@ export class LessonGeneratorService {
       params.difficulty
     );
 
-    const result = await claudeAI.generateLessonContent({
-      topic: params.topic,
-      ageGroup: params.ageGroup,
-      duration: params.duration,
-      learningObjectives: enhancedObjectives,
-      userId: params.userId,
-      preschoolId: params.preschoolId
-    });
+    // Decide whether to route to integrated Robotics/AI/STEM lesson generator
+    const lowerSubjects = (params.subjects || []).map(s => s.toLowerCase());
+    const isIntegrated =
+      lowerSubjects.some(s => ['robotics','ai literacy','ai','technology','engineering','computer science','coding','programming'].includes(s))
+      || /^5-7|8-10|11-13|14-18/.test(params.ageGroup);
+
+    const result = isIntegrated
+      ? await claudeAI.generateIntegratedLesson({
+          topic: params.topic,
+          ageGroup: params.ageGroup.endsWith('years') ? params.ageGroup : `${params.ageGroup} years`,
+          duration: params.duration,
+          learningObjectives: enhancedObjectives,
+          subjects: params.subjects.length ? params.subjects : ['STEM'],
+          emphasis: lowerSubjects.includes('robotics') ? ['Robotics','STEM']
+                   : lowerSubjects.includes('ai literacy') || lowerSubjects.includes('ai') ? ['AI','STEM']
+                   : ['STEM'],
+          userId: params.userId,
+          preschoolId: params.preschoolId,
+        })
+      : await claudeAI.generateLessonContent({
+          topic: params.topic,
+          ageGroup: params.ageGroup,
+          duration: params.duration,
+          learningObjectives: enhancedObjectives,
+          userId: params.userId,
+          preschoolId: params.preschoolId
+        });
 
     if (result.success && result.content) {
-      return { success: true, lesson: result.content };
+      return { success: true, lesson: result.content, quota_charged: result.quota_charged };
     }
-    return { success: false, error: result.error || 'Failed to generate lesson' };
+    return { success: false, error: result.error || 'Failed to generate lesson', errorCode: (result as any).errorCode, errorType: (result as any).errorType, quota_charged: (result as any).quota_charged };
   }
 
   /**
@@ -189,6 +215,7 @@ export class LessonGeneratorService {
           preschool_id: params.preschoolId,
           created_by: params.teacherId,
           is_published: false,
+          is_ai_generated: true,
           tier: 'free',
           has_video: false,
           has_interactive: true,

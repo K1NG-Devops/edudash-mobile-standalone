@@ -1,7 +1,10 @@
-import { claudeService } from '@/lib/ai/claudeService';
+import { claudeAI, claudeService } from '@/lib/ai/claudeService';
 import { HomeworkAssignment, HomeworkFilter, HomeworkNotification, HomeworkSubmissionData, HomeworkSummary, StudentHomeworkSubmission } from '@/types/homework-types';
 import { supabase } from '../supabase';
 import { logger as log } from '@/lib/utils/logger';
+
+// Unified AI feature flag: enabled if either public flag is true
+const AI_ENABLED = (process.env.EXPO_PUBLIC_AI_ENABLED === 'true') || (process.env.EXPO_PUBLIC_ENABLE_AI_FEATURES === 'true');
 
 export class HomeworkService {
   // Subscriptions for real-time updates
@@ -26,7 +29,7 @@ export class HomeworkService {
     areasForImprovement: string[];
   }> {
     try {
-      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+      if (!AI_ENABLED) {
         // Fallback grading without AI
         return {
           score: 75,
@@ -37,66 +40,78 @@ export class HomeworkService {
         };
       }
 
-      const prompt = `
-        As an experienced early childhood educator, grade this homework submission:
-        
-        Assignment: ${assignmentTitle}
-        Grade Level: ${gradeLevel}
-        Student Submission: ${submissionContent}
-        
-        Please provide:
-        1. A score out of 100
-        2. Constructive feedback (age-appropriate)
-        3. 2-3 specific suggestions for improvement
-        4. 1-2 strengths demonstrated
-        5. 1-2 areas for improvement
-        
-        Format as JSON: {
-          "score": number,
-          "feedback": "string",
-          "suggestions": ["suggestion1", "suggestion2"],
-          "strengths": ["strength1", "strength2"],
-          "areasForImprovement": ["area1", "area2"]
-        }
-      `;
+      // Derive a rough student age from gradeLevel (if possible)
+      const ageMatch = String(gradeLevel || '').match(/(\d{1,2})/);
+      const studentAge = ageMatch ? Math.max(3, Math.min(12, parseInt(ageMatch[1], 10))) : 5;
 
-      const response = await claudeService.generateContent({
-        prompt,
-        type: 'grading',
-        context: { submissionId, gradeLevel },
+      // Resolve current auth user and preschool for logging/association
+      let internalUserId: string | null = null;
+      let preschoolId: string | null = null;
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const authUserId = auth?.user?.id || null;
+        if (authUserId) {
+          const { data: userRow } = await supabase
+            .from('users')
+            .select('id, preschool_id')
+            .eq('auth_user_id', authUserId)
+            .maybeSingle();
+          if (userRow) {
+            internalUserId = userRow.id;
+            preschoolId = userRow.preschool_id;
+          }
+        }
+      } catch {}
+
+      // Call the structured Claude grading pathway
+      const result = await claudeAI.gradeHomework({
+        assignmentTitle,
+        assignmentInstructions: '',
+        studentSubmission: submissionContent,
+        studentAge,
+        userId: internalUserId || 'unknown',
+        preschoolId: preschoolId || 'unknown',
       });
 
-      if (response.success && response.content) {
-        try {
-          const gradingResult = JSON.parse(response.content);
-
-          // Update the submission with AI grading
-          await supabase
-            .from('homework_submissions')
-            .update({
-              grade: Number(gradingResult.score),
-              feedback: gradingResult.feedback,
-              graded_at: new Date().toISOString(),
-              graded_by: 'ai',
-              status: 'reviewed'
-            })
-            .eq('id', submissionId);
-
-          return gradingResult;
-        } catch (parseError) {
-          log.warn('Failed to parse AI grading response:', parseError);
-          // Return fallback grading
-          return {
-            score: 75,
-            feedback: response.content.slice(0, 200),
-            suggestions: ['Continue practicing', 'Ask for help when needed'],
-            strengths: ['Shows effort and engagement'],
-            areasForImprovement: ['Focus on accuracy']
-          };
-        }
+      if (!result.success || !result.grading) {
+        throw new Error(result.error || 'AI grading failed');
       }
 
-      throw new Error('AI grading service unavailable');
+      // Normalize to the legacy return shape expected by callers
+      const category = result.grading.grade || 'Good';
+      const scoreMap: Record<string, number> = {
+        'Excellent': 95,
+        'Good': 85,
+        'Needs Improvement': 65,
+        'Incomplete': 40,
+      };
+      const score = scoreMap[category] ?? 80;
+
+      const normalized = {
+        score,
+        feedback: result.grading.feedback || 'Great effort! Keep practicing.',
+        suggestions: Array.isArray(result.grading.nextSteps) ? result.grading.nextSteps : [],
+        strengths: Array.isArray(result.grading.strengths) ? result.grading.strengths : [],
+        areasForImprovement: Array.isArray(result.grading.areasForImprovement) ? result.grading.areasForImprovement : [],
+      };
+
+      // Update the submission with AI grading
+      try {
+        await supabase
+          .from('homework_submissions')
+          .update({
+            grade: Number(normalized.score),
+            feedback: normalized.feedback,
+            graded_at: new Date().toISOString(),
+            graded_by: 'ai',
+            status: 'reviewed'
+          })
+          .eq('id', submissionId);
+      } catch (dbErr) {
+        log.warn('Failed to update submission with AI grade:', dbErr);
+      }
+
+      return normalized;
     } catch (error) {
       log.error('Error in AI homework grading:', error);
       // Return basic fallback grading
@@ -336,14 +351,14 @@ export class HomeworkService {
     }
   }
 
-  // AI-powered homework assistance
+  // AI-powered homework assistance (uses structured AI proxy with optional attachments support)
   static async getHomeworkHelp(assignmentTitle: string, question: string, gradeLevel: string): Promise<{
     explanation: string;
     hints: string[];
     examples: string[];
   }> {
     try {
-      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+      if (!AI_ENABLED) {
         return {
           explanation: 'For help with this assignment, please ask your teacher or parent.',
           hints: ['Read the instructions carefully', 'Take your time'],
@@ -351,56 +366,93 @@ export class HomeworkService {
         };
       }
 
-      const prompt = `
-        As a helpful early childhood education assistant, provide age-appropriate help for this homework question:
-        
-        Assignment: ${assignmentTitle}
-        Grade Level: ${gradeLevel}
-        Student Question: ${question}
-        
-        Please provide:
-        1. A simple explanation appropriate for the grade level
-        2. 2-3 helpful hints (not direct answers)
-        3. 1-2 similar examples they can practice
-        
-        Keep language simple and encouraging for young learners.
-        
-        Format as JSON: {
-          "explanation": "string",
-          "hints": ["hint1", "hint2"],
-          "examples": ["example1", "example2"]
-        }
-      `;
+      // Derive a rough student age from gradeLevel (if possible)
+      const ageMatch = String(gradeLevel || '').match(/(\d{1,2})/);
+      const studentAge = ageMatch ? Math.max(3, Math.min(12, parseInt(ageMatch[1], 10))) : 5;
 
-      const response = await claudeService.generateContent({
-        prompt,
-        type: 'homework_help',
-        context: { assignmentTitle, gradeLevel },
+      // Resolve current auth user and preschool for logging/association
+      let internalUserId: string | null = null;
+      let preschoolId: string | null = null;
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const authUserId = auth?.user?.id || null;
+        if (authUserId) {
+          const { data: userRow } = await supabase
+            .from('users')
+            .select('id, preschool_id')
+            .eq('auth_user_id', authUserId)
+            .maybeSingle();
+          if (userRow) {
+            internalUserId = userRow.id;
+            preschoolId = userRow.preschool_id;
+          }
+        }
+      } catch {}
+
+      // Provide assignment context inline within the question
+      const combinedQuestion = assignmentTitle
+        ? `[Assignment: ${assignmentTitle}] ${question}`
+        : question;
+
+      // Call the structured homework help pathway (supports attachments via other UIs)
+      const result = await claudeAI.askHomeworkHelp({
+        question: combinedQuestion,
+        childAge: studentAge,
+        userId: internalUserId || 'unknown',
+        preschoolId: preschoolId || 'unknown',
       });
 
-      if (response.success && response.content) {
-        try {
-          return JSON.parse(response.content);
-        } catch (parseError) {
-          log.warn('Failed to parse homework help response:', parseError);
-          return {
-            explanation: response.content.slice(0, 200),
-            hints: ['Think step by step', 'Ask for help if you need it'],
-            examples: ['Try a similar problem first']
-          };
-        }
+      if (result.success) {
+        return {
+          explanation: result.answer || 'Here are some tips to get started...',
+          hints: Array.isArray(result.suggestions) ? result.suggestions : [],
+          examples: [],
+        };
       }
 
-      throw new Error('AI homework help service unavailable');
+      // When the AI proxy returns a structured error, surface it to the user instead of a generic template
+      const code = String(result?.errorCode || '').toUpperCase();
+      const msg = String(result?.error || '').trim() || 'AI service is temporarily unavailable.';
+      if (code) {
+        const explanationBase = (() => {
+          switch (code) {
+            case 'USAGE_LIMIT':
+              return 'You\'ve reached your monthly AI usage limit for this plan. Please try again after your usage resets, enable tester access, or ask your school admin to upgrade your plan.';
+            case 'TRIAL_EXPIRED':
+              return 'Your 14-day trial has expired. To continue using AI features, please upgrade your plan or contact your school administrator.';
+            case 'TRIAL_DAILY_LIMIT':
+              return 'You\'ve reached the daily AI usage limit during your trial. Please try again tomorrow or contact your admin for additional access.';
+            case 'TRIAL_TOTAL_LIMIT':
+              return 'You\'ve reached the total AI usage limit for your trial. Please contact your admin to upgrade or request tester access.';
+            case 'RATE_LIMIT':
+            case 'RATE_LIMIT_BURST':
+            case 'RATE_LIMIT_MINUTE':
+              return 'You\'re sending requests too quickly. Please wait a moment and try again.';
+            default:
+              return msg;
+          }
+        })();
+        const explanation = result?.quota_charged === false
+          ? `${explanationBase} This failed request has not been counted against your quota.`
+          : explanationBase;
+        return {
+          explanation,
+          hints: [],
+          examples: []
+        };
+      }
+
+      // Generic failure
+      throw new Error(msg || 'AI homework help service unavailable');
     } catch (error) {
       log.error('Error getting homework help:', error);
-      
+
       // Check if this was a quota-protected error
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       const isQuotaProtected = errorMsg.includes('not counted against your quota');
-      
+
       return {
-        explanation: isQuotaProtected ? 
+        explanation: isQuotaProtected ?
           'AI service temporarily unavailable. Your quota was not charged for this request. Please try again or ask your teacher.' :
           'For help with this assignment, please ask your teacher or parent.',
         hints: ['Read the problem carefully', 'Take your time to understand'],
@@ -419,7 +471,7 @@ export class HomeworkService {
     difficulty_level: number;
   }> {
     try {
-      if (process.env.EXPO_PUBLIC_AI_ENABLED !== 'true') {
+      if (!AI_ENABLED) {
         return {
           title: 'Practice Assignment',
           description: 'Complete the practice exercises',

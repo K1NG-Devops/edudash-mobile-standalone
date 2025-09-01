@@ -26,14 +26,14 @@ import { useTheme } from '@/contexts/ThemeContext';
  * - Real-time updates via Supabase subscriptions
  */
 export default function GroupsScreen() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { colorScheme } = useTheme();
   const { canCreateGroup } = usePermissions();
   const isDark = colorScheme === 'dark';
 
   // Get the user's preschool ID
-  const preschoolId = user?.preschool_id || '';
-  const userId = user?.id || '';
+  const preschoolId = profile?.preschool_id || '';
+  const userId = profile?.id || '';
 
   // Use the groups hook for data management
   const {

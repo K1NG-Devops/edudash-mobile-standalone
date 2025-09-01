@@ -8,12 +8,13 @@ const exclusionList = require('metro-config/src/defaults/exclusionList');
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
-// Path alias
-config.resolver.alias = {
-  '@': path.resolve(__dirname, './'),
-};
+// Path alias (handled by Babel's module-resolver). Avoid duplicating here to reduce risk of virtual modules.
+// config.resolver.alias = {
+//   '@': path.resolve(__dirname, './'),
+// };
 
 // Exclusions (use Metro's exclusionList to create a single RegExp)
+// IMPORTANT: Do not exclude broad patterns that could match inside node_modules.
 config.resolver.blockList = exclusionList([
   /(^|\/)\.git\//,
   /(^|\/)\.expo\//,
@@ -36,18 +37,6 @@ config.resolver.blockList = exclusionList([
   /.*\.bak$/,
   /.*\.backup$/,
   /.*\.old$/,
-  /scripts\/.*\.js$/,
-  /.*_test\.js$/,
-  /.*\.test\.js$/,
-  /check_.*\.js$/,
-  /fix_.*\.js$/,
-  /test_.*\.js$/,
-  /create_.*\.js$/,
-  /complete_.*\.js$/,
-  /quick_.*\.js$/,
-  /verify_.*\.js$/,
-  /simple_.*\.js$/,
-  /inspect_.*\.js$/,
   /.*\.sql$/,
   /database-migrations\/.*$/,
   /logs\/.*$/,
@@ -63,24 +52,11 @@ config.resolver.sourceExts = Array.from(new Set([
 ]));
 
 // Platform-specific resolver to handle native-only modules on web
-config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
+config.resolver.mainFields = ['react-native', 'browser', 'main'];
 
 // Platform-specific platform overrides
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 
-// Platform-specific resolver to exclude native-only modules from web
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Exclude react-native-google-mobile-ads from web builds
-  if (platform === 'web' && moduleName === 'react-native-google-mobile-ads') {
-    // Return a mock module for web
-    return {
-      filePath: path.resolve(__dirname, './lib/ads/googleMobileAds.web.js'),
-      type: 'sourceFile',
-    };
-  }
-  
-  // Use default resolver for other cases
-  return context.resolveRequest(context, moduleName, platform);
-};
+// Platform-specific resolver removed - no custom module resolution needed
 
 module.exports = config;

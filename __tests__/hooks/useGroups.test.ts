@@ -83,7 +83,7 @@ describe('useGroups', () => {
     await result.current.updateGroup('1', { name: 'Updated Group' });
 
     expect(supabase.from).toHaveBeenCalledWith('principal_groups');
-    expect(supabase.from().update).toHaveBeenCalledWith({ name: 'Updated Group' });
+    expect((supabase as any).from().update).toHaveBeenCalledWith({ name: 'Updated Group' });
   });
 
   it('deletes a group by marking it inactive', async () => {
@@ -97,7 +97,7 @@ describe('useGroups', () => {
     await result.current.deleteGroup('1');
 
     expect(supabase.from).toHaveBeenCalledWith('principal_groups');
-    expect(supabase.from().update).toHaveBeenCalledWith({ is_active: false });
+    expect((supabase as any).from().update).toHaveBeenCalledWith({ is_active: false });
   });
 
   it('joins a group', async () => {
@@ -110,7 +110,7 @@ describe('useGroups', () => {
     await result.current.joinGroup('1');
 
     expect(supabase.from).toHaveBeenCalledWith('group_members');
-    expect(supabase.from().insert).toHaveBeenCalledWith({
+    expect((supabase as any).from().insert).toHaveBeenCalledWith({
       group_id: '1',
       user_id: 'user-1',
       role_in_group: 'member',
@@ -121,7 +121,6 @@ describe('useGroups', () => {
   it('leaves a group', async () => {
     (supabase.from as jest.Mock).mockReturnValue({
       delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
       eq: jest.fn().mockResolvedValue({ error: null }),
     });
 

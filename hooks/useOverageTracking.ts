@@ -73,7 +73,7 @@ export function useOverageTracking(quotaType: keyof QuotaLimits) {
   const [error, setError] = useState<string | null>(null);
 
   // Get current plan limits
-  const planTier = subscription?.plan_tier || 'free';
+  const planTier = (subscription?.plan?.tier as keyof typeof PLAN_QUOTAS) || 'free';
   const quotaLimits = PLAN_QUOTAS[planTier] || PLAN_QUOTAS.free;
 
   // Calculate overage status for specific quota type
@@ -91,6 +91,18 @@ export function useOverageTracking(quotaType: keyof QuotaLimits) {
 
     const limit = quotaLimits[type];
     let used = 0;
+
+    // If this quota type is a feature flag (boolean), treat it as non-numeric for overage math
+    if (typeof limit !== 'number') {
+      return {
+        isAtLimit: !limit,
+        isOverLimit: !limit,
+        percentageUsed: limit ? 0 : 100,
+        remainingQuota: limit ? -1 : 0,
+        nextResetDate: getNextResetDate(),
+        warningThreshold: 80,
+      };
+    }
 
     switch (type) {
       case 'aiGenerations':
@@ -170,7 +182,7 @@ export function useOverageTracking(quotaType: keyof QuotaLimits) {
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
       // Fetch AI generations count for current month
-      const { count: aiGenerationsCount } = await supabase
+      const { count: aiGenerationsCount } = await (supabase as any)
         .from('ai_generation_logs')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', profile.auth_user_id)
@@ -192,7 +204,7 @@ export function useOverageTracking(quotaType: keyof QuotaLimits) {
         .lte('created_at', endOfMonth.toISOString());
 
       // Fetch storage usage (simplified - you might want to implement actual file size tracking)
-      const { count: mediaCount } = await supabase
+      const { count: mediaCount } = await (supabase as any)
         .from('lesson_media')
         .select('*', { count: 'exact', head: true })
         .eq('uploaded_by', profile.auth_user_id);
@@ -281,7 +293,7 @@ export function useOverageTrackingMultiple(
   const [loading, setLoading] = useState<boolean>(enabled);
   const [error, setError] = useState<string | null>(null);
 
-  const planTier = subscription?.plan_tier || 'free';
+  const planTier = (subscription?.plan?.tier as keyof typeof PLAN_QUOTAS) || 'free';
   const quotaLimits = PLAN_QUOTAS[planTier] || PLAN_QUOTAS.free;
 
   const getOverageStatuses = () => {
@@ -302,6 +314,18 @@ export function useOverageTrackingMultiple(
 
       const limit = quotaLimits[type];
       let used = 0;
+
+      if (typeof limit !== 'number') {
+        statuses[type] = {
+          isAtLimit: !limit,
+          isOverLimit: !limit,
+          percentageUsed: limit ? 0 : 100,
+          remainingQuota: limit ? -1 : 0,
+          nextResetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+          warningThreshold: 80,
+        };
+        return;
+      }
 
       switch (type) {
         case 'aiGenerations':
@@ -377,7 +401,7 @@ export function useOverageTrackingMultiple(
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-      const { count: aiGenerationsCount } = await supabase
+      const { count: aiGenerationsCount } = await (supabase as any)
         .from('ai_generation_logs')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', profile.auth_user_id)
@@ -396,7 +420,7 @@ export function useOverageTrackingMultiple(
         .gte('created_at', startOfMonth.toISOString())
         .lte('created_at', endOfMonth.toISOString());
 
-      const { count: mediaCount } = await supabase
+      const { count: mediaCount } = await (supabase as any)
         .from('lesson_media')
         .select('*', { count: 'exact', head: true })
         .eq('uploaded_by', profile.auth_user_id);

@@ -56,7 +56,15 @@ export default function SignIn() {
         // Wait briefly for profile to be available to avoid race with auth listener/RLS
         try {
           const { data: userResult } = await supabase.auth.getUser();
-          const authId = userResult.user?.id;
+          const authUser = userResult.user;
+          const authId = authUser?.id;
+
+          // Fast-path: trust JWT/user_metadata for role when DB profile may be blocked by RLS
+          const mdRole = (authUser as any)?.user_metadata?.role;
+          if (mdRole && String(mdRole).toLowerCase() === 'superadmin') {
+            router.replace('/screens/super-admin-dashboard');
+            return;
+          }
 
           const waitForProfile = async (
             id: string,
@@ -116,7 +124,7 @@ export default function SignIn() {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="light-content" translucent />
       <LinearGradient
         colors={['#1e3c72', '#2a5298']}
         style={styles.container}

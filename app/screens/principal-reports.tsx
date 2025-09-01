@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrincipalService } from '@/lib/services/principalService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -40,10 +41,11 @@ export default function PrincipalReportsScreen() {
   const onRefresh = async () => { setRefreshing(true); await load(); };
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
+    <SafeAreaView style={{ flex: 1 }} edges={['top','left','right']}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
       <View style={styles.header}>
         <Text style={styles.title}>School Reports</Text>
         <Text style={styles.subtitle}>Key metrics for your school</Text>
@@ -66,7 +68,8 @@ export default function PrincipalReportsScreen() {
       )}
 
       <View style={{ height: 24 }} />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

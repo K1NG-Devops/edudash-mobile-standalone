@@ -1266,7 +1266,7 @@ export const TeacherLessonGenerator: React.FC<TeacherLessonGeneratorProps> = ({
           
           <View style={styles.previewSection}>
             <Text style={styles.previewSectionTitle}>Content</Text>
-            <Text style={styles.previewText}>{generatedLesson.content.substring(0, 300)}...</Text>
+            <Text style={styles.previewText}>{(typeof generatedLesson.content === 'string' ? generatedLesson.content : JSON.stringify(generatedLesson.content ?? '')).slice(0, 300)}...</Text>
           </View>
 
           <View style={styles.previewSection}>
@@ -1339,7 +1339,7 @@ export const TeacherLessonGenerator: React.FC<TeacherLessonGeneratorProps> = ({
               <Text style={styles.fullLessonDescription}>{generatedLesson.description}</Text>
               
               <Text style={styles.fullSectionTitle}>Lesson Content</Text>
-              <Text style={styles.fullSectionText}>{generatedLesson.content}</Text>
+              <Text style={styles.fullSectionText}>{typeof generatedLesson.content === 'string' ? generatedLesson.content : JSON.stringify(generatedLesson.content ?? '')}</Text>
               
               <Text style={styles.fullSectionTitle}>Activities</Text>
               {generatedLesson.activities.map((activity, index) => (

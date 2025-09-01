@@ -404,12 +404,12 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         <View style={styles.quickActions}>
           <TouchableOpacity 
             style={styles.quickAction}
-            onPress={() => handleQuickAction('home')}
+            onPress={() => handleQuickAction('calendar')}
           >
             <View style={styles.quickActionIcon}>
-              <IconSymbol name="house.fill" size={24} color="#6B7280" />
+              <IconSymbol name="book.fill" size={24} color="#6B7280" />
             </View>
-            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Home</Text>
+            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Lessons</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -432,15 +432,6 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
             <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Activities</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.quickAction}
-            onPress={() => handleQuickAction('calendar')}
-          >
-            <View style={styles.quickActionIcon}>
-              <IconSymbol name="calendar" size={24} color="#6B7280" />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Lessons</Text>
-          </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.quickAction}

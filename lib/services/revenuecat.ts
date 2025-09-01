@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // Lightweight RevenueCat wrapper. No secrets are embedded; SDK keys are read from Expo extra.
 export type BillingInterval = 'monthly' | 'annual';
@@ -19,10 +20,21 @@ function getPurchases(): any {
 export function configureRevenueCat({ iosKey, androidKey, appUserId }: { iosKey?: string | null; androidKey?: string | null; appUserId?: string | null }) {
   if (configured) return;
   if (Platform.OS === 'web') return;
+
+  // Disable in Expo Go where the native module is not available
+  const isExpoGo = (Constants as any)?.appOwnership === 'expo';
+  if (isExpoGo) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn('[RevenueCat] Disabled in Expo Go. Use a development build for testing purchases.');
+    }
+    return;
+  }
+
   const Purchases = getPurchases();
-  if (!Purchases) return;
+  if (!Purchases || typeof Purchases.configure !== 'function') return;
+
   const apiKey = Platform.OS === 'ios' ? iosKey : androidKey;
-  if (!apiKey) {
+  if (!apiKey || typeof apiKey !== 'string') {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
       // Warn developers on native if SDK keys are not present
       // This is safe: it does not crash the app, and web is already gated
@@ -30,8 +42,16 @@ export function configureRevenueCat({ iosKey, androidKey, appUserId }: { iosKey?
     }
     return; // Graceful no-op if keys are not set
   }
-  Purchases.configure({ apiKey, appUserID: appUserId || undefined });
-  configured = true;
+
+  try {
+    Purchases.configure({ apiKey, appUserID: appUserId || undefined });
+    configured = true;
+  } catch (e) {
+    // Never crash app due to billing init failures
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn('[RevenueCat] configure failed:', (e as any)?.message || e);
+    }
+  }
 }
 
 export async function getOfferingsSafe(): Promise<{ current?: any } | null> {

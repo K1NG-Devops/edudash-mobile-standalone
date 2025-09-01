@@ -70,6 +70,26 @@ export const STEM_CONCEPTS: STEMConcept[] = [
     keywords: ['magnets', 'attract', 'repel', 'metal', 'force']
   },
 
+  // Robotics Concepts (new)
+  {
+    id: 'unplugged_robotics',
+    name: 'Unplugged Robotics',
+    description: 'Sequence movement commands using arrows or cards',
+    ageRange: { min: 5, max: 7 },
+    subject: 'Technology',
+    complexity: 'beginner',
+    keywords: ['sequence', 'debug', 'arrows']
+  },
+  {
+    id: 'line_following_intro',
+    name: 'Line Following Intro',
+    description: 'Tune a line-following behavior and test thresholds',
+    ageRange: { min: 8, max: 10 },
+    subject: 'Technology',
+    complexity: 'intermediate',
+    keywords: ['sensor', 'line', 'threshold']
+  },
+
   // Technology Concepts
   {
     id: 'simple_coding',
@@ -88,6 +108,17 @@ export const STEM_CONCEPTS: STEMConcept[] = [
     subject: 'Technology',
     complexity: 'intermediate',
     keywords: ['tablet', 'apps', 'camera', 'recording', 'digital']
+  },
+
+  // Robotics/Engineering Hybrid
+  {
+    id: 'sensors_and_actuators',
+    name: 'Sensors and Actuators',
+    description: 'Use a microcontroller to read a sensor and control a motor/fan',
+    ageRange: { min: 11, max: 13 },
+    subject: 'Engineering',
+    complexity: 'advanced',
+    keywords: ['sensor', 'actuator', 'microcontroller']
   },
 
   // Engineering Concepts

@@ -3,11 +3,13 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { router } from 'expo-router';
+import { classifyError, AppErrorInfo } from '@/lib/utils/errorClassify';
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error?: Error;
   errorInfo?: React.ErrorInfo;
+  appError?: AppErrorInfo;
 }
 
 interface ErrorBoundaryProps {
@@ -16,8 +18,8 @@ interface ErrorBoundaryProps {
 }
 
 /**
- * Error boundary specifically designed to catch authentication-related errors
- * and provide a fallback UI with recovery options
+ * Error boundary that classifies errors (auth, rate limit, quota, network, etc.)
+ * and provides contextual recovery options.
  */
 export class AuthErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
@@ -35,22 +37,60 @@ export class AuthErrorBoundary extends React.Component<ErrorBoundaryProps, Error
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log the error for debugging
-    // Removed debug statement: console.error('🚨 [AUTH-ERROR-BOUNDARY] Authentication error caught:', error);
-    // Removed debug statement: console.error('🚨 [AUTH-ERROR-BOUNDARY] Error info:', errorInfo);
+    console.error('🚨 [ERROR-BOUNDARY] Error caught:', error);
+    console.error('🚨 [ERROR-BOUNDARY] Error info:', errorInfo);
+    console.error('🚨 [ERROR-BOUNDARY] Error stack:', error?.stack);
     
+    const appError = classifyError(error);
+
     this.setState({
       hasError: true,
       error,
-      errorInfo
+      errorInfo,
+      appError,
     });
 
     // You could also log this to an error reporting service
-    // logErrorToService(error, errorInfo);
+    // logErrorToService({ error, errorInfo, appError });
   }
 
   retry = () => {
-    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+    this.setState({ hasError: false, error: undefined, errorInfo: undefined, appError: undefined });
   };
+
+  getGradientColors(type: AppErrorInfo['type']): [string, string, ...string[]] {
+    switch (type) {
+      case 'auth':
+        return ['#DC2626', '#EF4444', '#F87171']; // red
+      case 'rate_limit':
+        return ['#F59E0B', '#FBBF24', '#FCD34D']; // amber
+      case 'quota':
+        return ['#7C3AED', '#8B5CF6', '#A78BFA']; // violet
+      case 'ai_config':
+        return ['#DB2777', '#EC4899', '#F472B6']; // pink
+      case 'network':
+        return ['#2563EB', '#3B82F6', '#60A5FA']; // blue
+      default:
+        return ['#374151', '#4B5563', '#6B7280']; // gray
+    }
+  }
+
+  getTitle(type: AppErrorInfo['type']): string {
+    switch (type) {
+      case 'auth':
+        return 'Authentication Error';
+      case 'rate_limit':
+        return 'Too Many Requests';
+      case 'quota':
+        return 'AI Usage Limit Reached';
+      case 'ai_config':
+        return 'AI Configuration Error';
+      case 'network':
+        return 'Network Error';
+      default:
+        return 'Something went wrong';
+    }
+  }
 
   render() {
     if (this.state.hasError) {
@@ -60,10 +100,13 @@ export class AuthErrorBoundary extends React.Component<ErrorBoundaryProps, Error
         return <FallbackComponent error={this.state.error} retry={this.retry} />;
       }
 
-      // Default fallback UI
+      const appError = this.state.appError ?? { type: 'unknown', userMessage: 'An unexpected error occurred.' } as AppErrorInfo;
+      const colors = this.getGradientColors(appError.type);
+      const title = this.getTitle(appError.type);
+
       return (
         <LinearGradient
-          colors={['#DC2626', '#EF4444', '#F87171']}
+          colors={colors}
           style={styles.container}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -73,28 +116,35 @@ export class AuthErrorBoundary extends React.Component<ErrorBoundaryProps, Error
               <IconSymbol name="exclamationmark.triangle.fill" size={60} color="#FFFFFF" />
             </View>
             
-            <Text style={styles.title}>Authentication Error</Text>
+            <Text style={styles.title}>{title}</Text>
             <Text style={styles.message}>
-              Something went wrong with the authentication system. This might be due to network issues or configuration problems.
+              {appError.userMessage || 'Please try again or contact support if the problem persists.'}
             </Text>
             
-            {__DEV__ && this.state.error && (
+            {__DEV__ && (this.state.error || this.state.errorInfo) && (
               <View style={styles.debugContainer}>
                 <Text style={styles.debugTitle}>Debug Info (Dev Only):</Text>
-                <Text style={styles.debugText}>{this.state.error.message}</Text>
+                {this.state.error && (
+                  <Text style={styles.debugText}>{this.state.error.message}</Text>
+                )}
+                {this.state.errorInfo?.componentStack ? (
+                  <>
+                    <Text style={[styles.debugTitle, { marginTop: 8 }]}>Component stack:</Text>
+                    <Text style={[styles.debugText, { maxHeight: 200 }]}>{this.state.errorInfo.componentStack}</Text>
+                  </>
+                ) : null}
               </View>
             )}
             
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={styles.primaryButton} onPress={this.retry}>
-                <IconSymbol name="arrow.clockwise" size={20} color="#DC2626" />
-                <Text style={styles.primaryButtonText}>Try Again</Text>
+                <IconSymbol name="arrow.clockwise" size={20} color={colors[0]} />
+                <Text style={[styles.primaryButtonText, { color: colors[0] }]}>Try Again</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={styles.secondaryButton} 
                 onPress={() => {
-                  // Reset to welcome screen
                   router.replace('/');
                 }}
               >
@@ -182,7 +232,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   primaryButtonText: {
-    color: '#DC2626',
+    color: '#111827',
     fontSize: 16,
     fontWeight: 'bold',
   },

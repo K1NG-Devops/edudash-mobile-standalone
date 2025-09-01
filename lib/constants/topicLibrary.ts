@@ -85,6 +85,78 @@ export const TOPIC_CATEGORIES: TopicCategory[] = [
     ]
   },
   {
+    id: 'robotics',
+    name: 'ROBOTICS',
+    icon: 'dot.radiowaves.left.and.right',
+    description: 'Unplugged robotics, sensors, and autonomous challenges',
+    subjects: ['Robotics', 'Engineering', 'Technology'],
+    topics: [
+      {
+        id: 'unplugged-robot',
+        name: 'Unplugged Robot Sequencing',
+        description: 'Use arrows to “program” movement and debug',
+        ageGroups: ['5-7 years', '8-10 years'],
+        difficulty: 'easy',
+        duration: 30,
+        learningObjectives: ['Sequence steps', 'Debug mistakes', 'Use directional language']
+      },
+      {
+        id: 'line-following',
+        name: 'Line-Following Robot Basics',
+        description: 'Build and tune a simple line follower',
+        ageGroups: ['8-10 years', '11-13 years'],
+        difficulty: 'medium',
+        duration: 60,
+        learningObjectives: ['Explain sensors', 'Tune thresholds', 'Test and iterate']
+      },
+      {
+        id: 'sensors-actuators',
+        name: 'Sensors and Actuators 101',
+        description: 'Read sensors and drive motors with a microcontroller',
+        ageGroups: ['11-13 years', '14-18 years'],
+        difficulty: 'challenging',
+        duration: 75,
+        learningObjectives: ['Read analog sensor', 'Control motor speed', 'Use feedback']
+      }
+    ]
+  },
+  {
+    id: 'ai-literacy',
+    name: 'AI & DIGITAL LITERACY',
+    icon: 'brain.head.profile',
+    description: 'Patterns, training, fairness, and safe tech use',
+    subjects: ['AI Literacy', 'Technology', 'Computer Science'],
+    topics: [
+      {
+        id: 'pattern-spotting',
+        name: 'Pattern Spotting',
+        description: 'Find patterns and give clear instructions',
+        ageGroups: ['5-7 years', '8-10 years'],
+        difficulty: 'easy',
+        duration: 25,
+        learningObjectives: ['Recognize patterns', 'Give instructions', 'Discuss fairness']
+      },
+      {
+        id: 'train-a-model',
+        name: 'Train a Paper Model',
+        description: 'Use examples to “train” and test a classifier',
+        ageGroups: ['8-10 years', '11-13 years'],
+        difficulty: 'medium',
+        duration: 40,
+        learningObjectives: ['Define training data', 'Test new data', 'Avoid bias']
+      },
+      {
+        id: 'ml-mini-project',
+        name: 'ML Mini Project',
+        description: 'Prototype a tiny ML app and evaluate metrics',
+        ageGroups: ['14-18 years'],
+        difficulty: 'challenging',
+        duration: 90,
+        learningObjectives: ['Define problem & metric', 'Prepare data responsibly', 'Evaluate results']
+      }
+    ]
+  },
+  {
     id: 'arts',
     name: 'ARTS',
     icon: 'paintbrush',

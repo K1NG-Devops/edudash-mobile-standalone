@@ -22,6 +22,7 @@ import { useSubscription } from '@/lib/hooks/useSubscription';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { useOverageTrackingMultiple } from '@/hooks/useOverageTracking';
+import type { QuotaLimits } from '@/hooks/useOverageTracking';
 import { UsageWarningBanner, UsageProgressIndicator } from '@/components/overage/OverageComponents';
 import OverageBillingCard from '@/components/overage/OverageBillingCard';
 import { overageBillingService } from '@/lib/services/overageBillingService';
@@ -903,7 +904,7 @@ export const PricingComponent = ({
           {Object.entries(overageStatuses).map(([quotaType, status]) => (
             <UsageWarningBanner
               key={quotaType}
-              quotaType={quotaType as keyof typeof overageStatuses}
+              quotaType={quotaType as keyof QuotaLimits}
               overageStatus={status}
               compact={embedded}
               onUpgrade={() => router.push('/pricing')}

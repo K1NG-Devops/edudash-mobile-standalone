@@ -1,4 +1,4 @@
-import '@/lib/monitoring';
+// import '@/lib/monitoring';
 import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary';
 import { AuthProvider } from '@/contexts/SimpleWorkingAuth';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
@@ -10,7 +10,6 @@ import GlobalBottomNav from '@/components/navigation/GlobalBottomNav';
 import { PushService } from '@/lib/services/pushService';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import * as SystemUI from 'expo-system-ui';
 import { Colors } from '@/constants/Colors';
 import RevenueCatProvider from '@/components/payments/RevenueCatProvider';
 import { QueryProvider } from '@/contexts/QueryProvider';
@@ -18,9 +17,9 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
-import AdsBootstrapper from '@/components/advertising/AdsBootstrapper';
-import { GrowthBookProvider } from '@growthbook/growthbook-react';
-import { growthbook } from '@/lib/growthbook';
+// import AdsBootstrapper from '@/components/advertising/AdsBootstrapper';
+// import { GrowthBookProvider } from '@growthbook/growthbook-react';
+// import { growthbook } from '@/lib/growthbook';
 
 // Error boundary for route-level errors
 function RouteErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -44,6 +43,8 @@ function SubscriptionProviderWithAuth({ children }: { children: React.ReactNode 
 }
 
 // Sync GrowthBook targeting attributes with the authenticated user
+// Temporarily disabled for testing
+/*
 function GrowthBookAttributeSync() {
   const { user, profile } = useAuth();
   useEffect(() => {
@@ -65,6 +66,7 @@ function GrowthBookAttributeSync() {
   }, [user, profile]);
   return null;
 }
+*/
 
 // Foreground notifications behavior
 Notifications.setNotificationHandler({
@@ -79,7 +81,14 @@ Notifications.setNotificationHandler({
 
 export default function RootLayout() {
   const pathname = usePathname();
-  const hideBottomNav = pathname === '/' || pathname.startsWith('/(auth)') || pathname.startsWith('/screens/super-admin-dashboard') || pathname === '/pricing';
+  // Hide global bottom nav on welcome, landing, auth, super-admin dashboard and pricing pages
+  const hideBottomNav = (
+    pathname === '/' ||
+    pathname === '/landing' ||
+    pathname.startsWith('/(auth)') ||
+    pathname.startsWith('/screens/super-admin-dashboard') ||
+    pathname === '/pricing'
+  );
 
   useEffect(() => {
     const register = async () => {
@@ -113,20 +122,23 @@ export default function RootLayout() {
   }, []);
   const ThemeStatusBar = () => {
     const { colorScheme } = useTheme();
-    const palette = Colors[colorScheme];
-    useEffect(() => {
-      SystemUI.setBackgroundColorAsync(palette.background).catch(() => {});
-    }, [palette.background]);
-    return <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} backgroundColor={palette.background} />;
+    return <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />;
   };
 
   // Move useSafeAreaInsets usage inside the SafeAreaProvider via an inner component
   const ContainerWithInsets = ({ hideBottomNav }: { hideBottomNav: boolean }) => {
     const insets = useSafeAreaInsets();
     const { isBottomNavVisible } = useNavigation();
+    const { user, profile, loading } = useAuth();
     const bottomNavBase = 64; // estimated nav height on mobile
-    const shouldHideNav = hideBottomNav || !isBottomNavVisible;
-    const containerPaddingBottom = (!shouldHideNav && Platform.OS !== 'web') ? (bottomNavBase + (insets?.bottom || 0)) : 0;
+
+    // GlobalBottomNav renders null when unauthenticated or loading.
+    const navWouldRender = !!profile && !loading && isBottomNavVisible;
+    const shouldHideNav = hideBottomNav || !navWouldRender;
+
+    const containerPaddingBottom = (!shouldHideNav && Platform.OS !== 'web')
+      ? (bottomNavBase + (insets?.bottom || 0))
+      : 0;
 
     return (
       <View style={[styles.container, { paddingBottom: containerPaddingBottom }]}> 
@@ -148,27 +160,22 @@ export default function RootLayout() {
   return (
     <AuthErrorBoundary>
       <AuthProvider>
-        <GrowthBookProvider growthbook={growthbook}>
-          <GrowthBookAttributeSync />
-          <SubscriptionProviderWithAuth>
-            <ThemeProvider>
-              <NavigationProvider>
-                <QueryProvider>
-                  <ToastProvider>
-                    <RevenueCatProvider>
-                      <SafeAreaProvider>
-                        <ThemeStatusBar />
-                        {/* Initialize ads and interstitial wiring (child-safe, gated by EXPO_PUBLIC_ENABLE_ADS) */}
-                        {Platform.OS !== 'web' && <AdsBootstrapper />}
-                        <ContainerWithInsets hideBottomNav={hideBottomNav} />
-                      </SafeAreaProvider>
-                    </RevenueCatProvider>
-                  </ToastProvider>
-                </QueryProvider>
-              </NavigationProvider>
-            </ThemeProvider>
-          </SubscriptionProviderWithAuth>
-        </GrowthBookProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            <RevenueCatProvider>
+              <ToastProvider>
+                <NavigationProvider>
+                  <SubscriptionProviderWithAuth>
+                    <SafeAreaProvider>
+                      <ThemeStatusBar />
+                      <ContainerWithInsets hideBottomNav={hideBottomNav} />
+                    </SafeAreaProvider>
+                  </SubscriptionProviderWithAuth>
+                </NavigationProvider>
+              </ToastProvider>
+            </RevenueCatProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </AuthProvider>
     </AuthErrorBoundary>
   );

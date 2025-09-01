@@ -3,18 +3,18 @@ import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { analytics } from '@/lib/services/analyticsService';
 
 export const useAnalytics = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   useEffect(() => {
-    if (user?.id) {
-      analytics.identify(user.id, {
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        preschool_id: user.preschool_id,
+    if (profile?.auth_user_id) {
+      analytics.identify(profile.auth_user_id, {
+        name: profile.name,
+        email: profile.email,
+        role: profile.role,
+        preschool_id: profile.preschool_id ?? undefined,
       });
     }
-  }, [user]);
+  }, [profile]);
 
   return analytics;
 };

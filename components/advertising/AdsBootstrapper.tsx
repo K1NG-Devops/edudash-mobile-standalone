@@ -8,7 +8,7 @@ import { shouldShowForEvent } from '@/lib/ads/frequencyGate';
 // Mount once near the root of the app to initialize ads and wire interstitial events.
 const AdsBootstrapper: React.FC = () => {
   const { subscription } = useSubscription();
-  const tier = subscription?.tier || subscription?.plan?.tier || 'free';
+  const tier = subscription?.tier ?? 'free';
 
   useEffect(() => {
     const enabled = process.env.EXPO_PUBLIC_ENABLE_ADS === 'true';

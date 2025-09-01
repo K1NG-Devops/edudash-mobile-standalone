@@ -62,6 +62,23 @@ interface AuthContextType {
 
 const AuthContext = React.createContext<AuthContextType | null>(null);
 
+// Non-crashing fallback for when useAuth is called outside of AuthProvider
+// This helps prevent full-app crashes while we isolate provider issues on device
+const AuthContextFallback: AuthContextType = {
+  user: null,
+  profile: null,
+  session: null,
+  loading: true,
+  signIn: async () => ({ error: 'AuthProvider not mounted' }),
+  signUp: async () => ({ error: 'AuthProvider not mounted' }),
+  signOut: async () => {},
+  refreshProfile: async () => {},
+  resetPassword: async () => ({ error: 'AuthProvider not mounted' }),
+  updatePassword: async () => ({ error: 'AuthProvider not mounted' }),
+  hasRole: () => false,
+  isRole: () => false,
+};
+
 interface AuthProviderProps {
   children: React.ReactNode;
 }
@@ -573,7 +590,12 @@ export const AuthProvider = (props: AuthProviderProps) => {
 export const useAuth = (): AuthContextType => {
   const context = React.useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Do not crash the whole app; return a safe fallback and log for diagnostics
+    try {
+      // eslint-disable-next-line no-console
+      console.error('[Auth] useAuth called outside AuthProvider. Using fallback context.');
+    } catch {}
+    return AuthContextFallback;
   }
   return context;
 };

@@ -97,17 +97,18 @@ export const useEnhancedEvents = (
       }
 
       // Process the data to match EnhancedEvent interface
-      const processedEvents: EnhancedEvent[] = (data || []).map(event => ({
+      const processedEvents: EnhancedEvent[] = (data || []).map((event: any) => ({
         ...event,
+        preschool_id: event?.preschool_id ?? '',
         stats: {
-          participants_count: event.event_participants?.filter(p => p.status === 'attended').length || 0,
-          updates_count: event.event_updates?.length || 0,
-          media_count: event.event_media?.length || 0,
+          participants_count: event?.event_participants?.filter((p: any) => p.status === 'attended').length || 0,
+          updates_count: event?.event_updates?.length || 0,
+          media_count: event?.event_media?.length || 0,
           reactions_count: 0, // This would need a separate query
           comments_count: 0, // This would need a separate query
         },
-        recent_updates: event.event_updates?.slice(0, 3) || [],
-        featured_media: event.event_media?.slice(0, 5) || [],
+        recent_updates: (event?.event_updates || []).slice(0, 3).map((u: any) => ({ ...u, title: u?.title ?? undefined })),
+        featured_media: (event?.event_media || []).slice(0, 5),
       }));
 
       if (reset) {
@@ -232,7 +233,7 @@ export const useEventUpdates = (
 
       if (fetchError) throw fetchError;
 
-      const processedUpdates: EventUpdate[] = data || [];
+      const processedUpdates: EventUpdate[] = (data || []).map((u: any) => ({ ...u, title: u?.title ?? undefined }));
 
       if (reset) {
         setUpdates(processedUpdates);
@@ -296,10 +297,12 @@ export const useEventUpdates = (
 
     if (error) throw error;
 
-    // Add to the top of updates list
-    setUpdates(prev => [data, ...prev]);
+    const normalized = { ...(data as any), title: (data as any)?.title ?? undefined } as EventUpdate;
 
-    return data;
+    // Add to the top of updates list
+    setUpdates(prev => [normalized, ...prev]);
+
+    return normalized;
   }, [eventId]);
 
   const reactToUpdate = useCallback(async (reaction: CreateEventReactionRequest): Promise<void> => {
@@ -408,8 +411,10 @@ export const useEventNotifications = (
 
       if (error) throw error;
 
-      setNotifications(data || []);
-      setUnreadCount((data || []).filter(n => !n.read_at).length);
+      const normalized = (data || []).map((n: any) => ({ ...n, update_id: n?.update_id ?? undefined }));
+
+      setNotifications(normalized);
+      setUnreadCount(normalized.filter((n: any) => !n.read_at).length);
 
     } catch (err) {
       console.error('Failed to fetch event notifications:', err);

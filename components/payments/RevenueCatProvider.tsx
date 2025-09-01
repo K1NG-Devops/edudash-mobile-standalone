@@ -8,6 +8,7 @@ export default function RevenueCatProvider({ children }: { children: React.React
   const { user } = useAuth();
 
   useEffect(() => {
+    // On web or in Expo Go, the billing SDK is unavailable; the configure function will no-op
     const extras: any = Constants.expoConfig?.extra || {};
     const iosKey = extras?.revenuecat?.iosSdkKey ?? null;
     const androidKey = extras?.revenuecat?.androidSdkKey ?? null;

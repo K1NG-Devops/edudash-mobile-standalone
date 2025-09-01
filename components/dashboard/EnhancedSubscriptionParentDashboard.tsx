@@ -546,12 +546,12 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
             {/* Standard actions */}
             <TouchableOpacity 
               style={styles.quickAction}
-              onPress={() => handleQuickAction('home')}
+              onPress={() => handleQuickAction('calendar')}
             >
               <View style={styles.quickActionIcon}>
-                <IconSymbol name="house.fill" size={24} color="#6B7280" />
+                <IconSymbol name="book.fill" size={24} color="#6B7280" />
               </View>
-              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Home</Text>
+              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Lessons</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 

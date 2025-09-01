@@ -66,6 +66,18 @@ export function StandardizedNavigation({
   const effectiveScheme = themeScheme || colorScheme || systemColorScheme || 'light';
   const roleColors = getRoleColors(user?.role || 'default', effectiveScheme);
 
+  // Decide bar style from top gradient color brightness for best contrast
+  const isLightColor = (hex: string): boolean => {
+    const h = hex.replace('#','');
+    const r = parseInt(h.substring(0,2),16);
+    const g = parseInt(h.substring(2,4),16);
+    const b = parseInt(h.substring(4,6),16);
+    const yiq = (r*299 + g*587 + b*114) / 1000;
+    return yiq > 186;
+  };
+  const topColor = String(roleColors.gradient[0]);
+  const computedBarStyle = isLightColor(topColor) ? 'dark-content' : 'light-content';
+
   const getDisplayTitle = () => {
     if (title) return title;
 
@@ -114,9 +126,8 @@ export function StandardizedNavigation({
     <>
       <SafeAreaView style={[styles.safeArea, { backgroundColor: roleColors.gradient[0] }]}>
         <StatusBar
-          barStyle="light-content"
-          backgroundColor={roleColors.gradient[0]}
-          translucent={false}
+          barStyle={computedBarStyle as any}
+          translucent={true}
         />
         <LinearGradient
           colors={[roleColors.gradient[0], roleColors.gradient[1], 'rgba(0,0,0,0.1)']}

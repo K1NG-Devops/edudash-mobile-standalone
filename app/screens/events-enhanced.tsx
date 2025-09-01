@@ -19,7 +19,7 @@ import { useNotifications } from '@/lib/hooks/useNotifications';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { EventCard } from '@/components/events/EventCard';
 import { EventInvitationCard } from '@/components/events/EventInvitationCard';
-import { CreateEventModal } from '@/components/events/CreateEventModal';
+import CreateEventModal from '@/components/events/CreateEventModal';
 import { JoinEventModal } from '@/components/events/JoinEventModal';
 import { ProtectedComponent } from '@/components/auth/ProtectedComponent';
 import { PERMISSIONS } from '@/lib/utils/permissions';
@@ -27,7 +27,7 @@ import type { Event } from '@/lib/hooks/useEvents';
 
 export default function EventsEnhancedScreen() {
   const { colorScheme } = useTheme();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const analytics = useAnalytics();
   const notifications = useNotifications();
   const isDark = colorScheme === 'dark';
@@ -40,7 +40,7 @@ export default function EventsEnhancedScreen() {
   const [activeTab, setActiveTab] = useState<'all' | 'invitations' | 'my-events'>('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  const { events, loading, error, createEvent, joinEvent, refresh } = useEvents(user?.preschool_id || '');
+  const { events, loading, error, createEvent, joinEvent, refresh } = useEvents(profile?.preschool_id || '');
   const { invitations, respondToInvitation } = useEventInvitations();
   const { canCreateEvent, canApproveEventRequests } = usePermissions();
 
@@ -61,7 +61,7 @@ export default function EventsEnhancedScreen() {
           await notifications.sendEventInvitation(
             newEvent.id,
             userId,
-            user?.name || 'Someone'
+            profile?.name || 'Someone'
           );
         }
       }
@@ -73,14 +73,14 @@ export default function EventsEnhancedScreen() {
     }
   };
 
-  const handleJoinEvent = async (event: Event, message?: string) => {
+  const handleJoinEvent = async (event: { id: string; requires_approval?: boolean }, message?: string) => {
     try {
       if (event.requires_approval) {
         // Send approval request
         await notifications.sendApprovalRequest(
           event.id,
-          event.created_by,
-          user?.name || 'Someone'
+          (selectedEvent as any)?.created_by,
+          profile?.name || 'Someone'
         );
         analytics.trackApprovalRequest(event.id);
         Alert.alert('Request Sent', 'Your request to join this event has been sent for approval.');
@@ -280,19 +280,31 @@ export default function EventsEnhancedScreen() {
       {/* Modals */}
       <CreateEventModal
         visible={showCreateModal}
+        preschoolId={profile?.preschool_id || ''}
+        createdByUserId={profile?.id || ''}
         onClose={() => setShowCreateModal(false)}
-        onCreate={handleCreateEvent}
+        onCreated={() => {
+          setShowCreateModal(false);
+          Alert.alert('Success', 'Event created successfully!');
+          try { (async () => { await refresh(); })(); } catch {}
+        }}
       />
 
       {selectedEvent && (
         <JoinEventModal
           visible={showJoinModal}
           event={selectedEvent}
+          visibilityInfo={{
+            can_see: true,
+            can_join: true,
+            requires_approval: !!selectedEvent.requires_approval,
+          }}
           onClose={() => {
             setShowJoinModal(false);
             setSelectedEvent(null);
           }}
           onJoin={handleJoinEvent}
+          onRequestAccess={(ev, msg) => handleJoinEvent(ev as any, msg)}
         />
       )}
     </View>

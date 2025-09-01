@@ -26,6 +26,7 @@ interface Lesson {
   duration_minutes: number | null;
   difficulty_level: number | null;
   is_public: boolean | null;
+  is_ai_generated?: boolean | null;
   created_at: string | null;
 }
 
@@ -39,6 +40,7 @@ export default function LessonsScreen() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<'all' | 'ai' | 'manual'>('all');
 
   useEffect(() => {
     loadLessons();
@@ -71,10 +73,13 @@ export default function LessonsScreen() {
     }
   };
 
-  const filteredLessons = lessons.filter(lesson =>
+  const searched = lessons.filter(lesson =>
     lesson.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (lesson.description && lesson.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+  const filteredLessons = tab === 'all'
+    ? searched
+    : searched.filter(l => tab === 'ai' ? l.is_ai_generated === true : l.is_ai_generated !== true);
 
   const renderLessonCard = (lesson: Lesson) => {
     const isPublic = lesson.is_public;
@@ -86,7 +91,7 @@ export default function LessonsScreen() {
         key={lesson.id}
         style={[styles.lessonCard, { backgroundColor: palette.surface, borderColor: palette.outline }]}
         onPress={() => {
-          // Navigate to lesson details or edit
+          router.push(`/screens/lesson/${lesson.id}`)
         }}
       >
         <View style={styles.lessonHeader}>
@@ -193,6 +198,28 @@ export default function LessonsScreen() {
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabsRow}>
+        <TouchableOpacity
+          style={[styles.tabChip, tab === 'all' && styles.tabChipActive]}
+          onPress={() => setTab('all')}
+        >
+          <Text style={[styles.tabChipText, tab === 'all' && styles.tabChipTextActive]}>All</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabChip, tab === 'ai' && styles.tabChipActive]}
+          onPress={() => setTab('ai')}
+        >
+          <Text style={[styles.tabChipText, tab === 'ai' && styles.tabChipTextActive]}>AI-generated</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabChip, tab === 'manual' && styles.tabChipActive]}
+          onPress={() => setTab('manual')}
+        >
+          <Text style={[styles.tabChipText, tab === 'manual' && styles.tabChipTextActive]}>Manual</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Content */}
@@ -315,6 +342,32 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     paddingBottom: 100,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  tabChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+  },
+  tabChipActive: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  tabChipText: {
+    color: '#111827',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  tabChipTextActive: {
+    color: '#FFFFFF',
   },
   emptyContainer: {
     flex: 1,

@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { shadow } from '@/lib/ui/shadow';
 
 
@@ -593,8 +594,9 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
 
   render() {
     return (
-      <AuthConsumer>
-        {({ profile, signOut }) => {
+      <SafeAreaView style={{ flex: 1 }} edges={['top','left','right']}>
+        <AuthConsumer>
+          {({ profile, signOut }) => {
           // Verify user has required data for school isolation
           if (!profile) {
             return (
@@ -657,7 +659,8 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
               );
           }
         }}
-      </AuthConsumer>
+        </AuthConsumer>
+      </SafeAreaView>
     );
   }
 }

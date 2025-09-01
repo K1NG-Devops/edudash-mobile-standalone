@@ -289,80 +289,14 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
     };
 
     const trackAIUsage = async (featureId: string): Promise<boolean> => {
-        if (!userId || !subscription || !aiUsage) {
-            return false;
-        }
-
-        // SuperAdmins have unlimited usage - don't track or limit
-        if (subscription.userRole === 'superadmin') {
-            return true;
-        }
-
-        // Only track AI features
-        if (!AI_FEATURES.includes(featureId)) {
-            return true;
-        }
-
-        // Check if user can use AI
-        if (!aiUsage.canUseAI) {
-            return false;
-        }
-
-        try {
-            // Get current user ID from database
-            const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('id')
-                .eq('auth_user_id', userId)
-                .single();
-
-            if (userError || !userData) {
-                console.error('Error finding user:', userError);
-                return false;
-            }
-
-            // Log AI usage
-            const usageLog: AIUsageInsert = {
-                user_id: userData.id,
-                feature: featureId,
-                created_at: new Date().toISOString(),
-                tokens_used: null, // Will be updated by AI service
-                cost_usd: null, // Will be calculated by AI service
-            };
-
-            const { error: insertError } = await supabase
-                .from('ai_usage_logs')
-                .insert(usageLog);
-
-            if (insertError) {
-                console.error('Error logging AI usage:', insertError);
-                return false;
-            }
-
-            // Update local usage count
-            const newUsage = aiUsage.currentUsage + 1;
-            const newRemainingUsage = aiUsage.monthlyLimit === -1 ? -1 : Math.max(0, aiUsage.monthlyLimit - newUsage);
-
-            setAIUsage({
-                ...aiUsage,
-                currentUsage: newUsage,
-                remainingUsage: newRemainingUsage,
-                canUseAI: aiUsage.monthlyLimit === -1 || newUsage < aiUsage.monthlyLimit,
-            });
-
-            // Update subscription data
-            if (subscription) {
-                setSubscription({
-                    ...subscription,
-                    aiUsageUsed: newUsage,
-                });
-            }
-
-            return true;
-        } catch (err) {
-            console.error('Error tracking AI usage:', err);
-            return false;
-        }
+        // Client-side tracking no longer writes to ai_usage_logs to avoid double-counting.
+        // Server-side ai-proxy is the single source of truth and logs usage upon successful AI responses.
+        // We still gate based on current subscription state.
+        if (!userId || !subscription || !aiUsage) return true;
+        if (subscription.userRole === 'superadmin') return true;
+        if (!AI_FEATURES.includes(featureId)) return true;
+        if (!aiUsage.canUseAI) return false;
+        return true;
     };
 
     useEffect(() => {

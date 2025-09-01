@@ -1,4 +1,4 @@
-import { User } from '@/types/auth';
+type SimpleUser = { role?: string | null };
 import { GroupMemberRole } from '@/types/groups';
 
 export const ROLES = {
@@ -131,7 +131,7 @@ const GROUP_ROLE_PERMISSIONS: Record<GroupMemberRole, string[]> = {
 /**
  * Check if a user has a specific permission
  */
-export const hasPermission = (user: User | null | undefined, permission: Permission): boolean => {
+export const hasPermission = (user: SimpleUser | null | undefined, permission: Permission): boolean => {
   if (!user) return false;
   
   const userRole = user.role as UserRole;
@@ -143,14 +143,14 @@ export const hasPermission = (user: User | null | undefined, permission: Permiss
 /**
  * Check if a user has any of the specified permissions
  */
-export const hasAnyPermission = (user: User | null | undefined, permissions: Permission[]): boolean => {
+export const hasAnyPermission = (user: SimpleUser | null | undefined, permissions: Permission[]): boolean => {
   return permissions.some(permission => hasPermission(user, permission));
 };
 
 /**
  * Check if a user has all of the specified permissions
  */
-export const hasAllPermissions = (user: User | null | undefined, permissions: Permission[]): boolean => {
+export const hasAllPermissions = (user: SimpleUser | null | undefined, permissions: Permission[]): boolean => {
   return permissions.every(permission => hasPermission(user, permission));
 };
 
@@ -170,7 +170,7 @@ export const hasGroupPermission = (
 /**
  * Check if a user can manage a group (either through platform role or group role)
  */
-export const canManageGroup = (user: User | null | undefined, groupRole?: GroupMemberRole): boolean => {
+export const canManageGroup = (user: SimpleUser | null | undefined, groupRole?: GroupMemberRole): boolean => {
   // Principals and admins always can manage groups in their preschool
   if (hasPermission(user, PERMISSIONS.MANAGE_GROUP_MEMBERS)) {
     return true;
@@ -183,21 +183,21 @@ export const canManageGroup = (user: User | null | undefined, groupRole?: GroupM
 /**
  * Check if a user can create events
  */
-export const canCreateEvent = (user: User | null | undefined): boolean => {
+export const canCreateEvent = (user: SimpleUser | null | undefined): boolean => {
   return hasPermission(user, PERMISSIONS.CREATE_EVENT);
 };
 
 /**
  * Check if a user can approve event join requests
  */
-export const canApproveEventRequests = (user: User | null | undefined): boolean => {
+export const canApproveEventRequests = (user: SimpleUser | null | undefined): boolean => {
   return hasPermission(user, PERMISSIONS.APPROVE_EVENT_REQUESTS);
 };
 
 /**
  * Get all permissions for a user based on their role
  */
-export const getUserPermissions = (user: User | null | undefined): Permission[] => {
+export const getUserPermissions = (user: SimpleUser | null | undefined): Permission[] => {
   if (!user) return [];
   
   const userRole = user.role as UserRole;
@@ -237,7 +237,7 @@ export const getRoleColor = (role: UserRole): string => {
 /**
  * Check if a user is an administrator (principal or higher)
  */
-export const isAdmin = (user: User | null | undefined): boolean => {
+export const isAdmin = (user: SimpleUser | null | undefined): boolean => {
   if (!user) return false;
   
   const adminRoles: UserRole[] = [
@@ -252,7 +252,7 @@ export const isAdmin = (user: User | null | undefined): boolean => {
 /**
  * Check if a user is a school staff member (teacher or higher)
  */
-export const isStaff = (user: User | null | undefined): boolean => {
+export const isStaff = (user: SimpleUser | null | undefined): boolean => {
   if (!user) return false;
   
   const staffRoles: UserRole[] = [

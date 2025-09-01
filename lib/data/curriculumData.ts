@@ -27,7 +27,12 @@ export const AGE_GROUPS = {
   '2-3': '2-3 years',
   '3-4': '3-4 years',
   '4-5': '4-5 years',
-  '5-6': '5-6 years'
+  '5-6': '5-6 years',
+  // Extended ranges for primary and secondary
+  '5-7': '5-7 years',
+  '8-10': '8-10 years',
+  '11-13': '11-13 years',
+  '14-18': '14-18 years'
 };
 
 // Subject definitions with colors and icons
@@ -74,11 +79,42 @@ export const SUBJECTS = {
     color: '#84CC16',
     description: 'Learn cooperation, empathy, and communication'
   },
-  'Nature Studies': {
+'Nature Studies': {
     name: 'Nature Studies',
     icon: 'leaf',
     color: '#22C55E',
     description: 'Discover plants, animals, and environmental awareness'
+  },
+  // New subjects for expanded Robotics/AI/STEM focus
+  'Technology': {
+    name: 'Technology',
+    icon: 'desktopcomputer',
+    color: '#0EA5E9',
+    description: 'Explore tools, systems, and digital literacy'
+  },
+  'Engineering': {
+    name: 'Engineering',
+    icon: 'wrench.and.screwdriver',
+    color: '#F97316',
+    description: 'Design, build, test, and improve solutions'
+  },
+  'Robotics': {
+    name: 'Robotics',
+    icon: 'dot.radiowaves.left.and.right',
+    color: '#E11D48',
+    description: 'Design simple robots and learn sensors, motion, and logic'
+  },
+  'AI Literacy': {
+    name: 'AI Literacy',
+    icon: 'brain.head.profile',
+    color: '#7C3AED',
+    description: 'Understand AI concepts, patterns, ethics, and safe usage'
+  },
+  'Computer Science': {
+    name: 'Computer Science',
+    icon: 'chevron.left.slash.chevron.right',
+    color: '#10B981',
+    description: 'Algorithms, coding, data, and problem solving'
   }
 };
 
@@ -426,6 +462,266 @@ export const CURRICULUM_DATABASE: CurriculumDatabase = {
         difficulty: 3,
         estimatedDuration: 40,
         materials: ['life cycle cards', 'magnifying glass', 'nature journal']
+      }
+    ]
+  },
+
+  // New: Technology
+  'Technology': {
+    '5-7': [
+      {
+        id: 'tech-57-001',
+        name: 'Intro to Digital Devices',
+        description: 'Identify common devices and what they do',
+        objectives: ['Name device parts', 'Explain safe usage', 'Compare input and output'],
+        keywords: ['devices', 'tablet', 'computer', 'input', 'output', 'safety'],
+        difficulty: 2,
+        estimatedDuration: 30,
+        materials: ['tablet or computer', 'picture cards']
+      }
+    ],
+    '8-10': [
+      {
+        id: 'tech-810-001',
+        name: 'Digital Citizenship Basics',
+        description: 'Explore online safety, privacy, and kindness',
+        objectives: ['Explain privacy', 'Recognize safe sharing', 'Practice netiquette'],
+        keywords: ['privacy', 'passwords', 'kindness', 'netiquette'],
+        difficulty: 2,
+        estimatedDuration: 40,
+        materials: ['scenario cards']
+      }
+    ],
+    '11-13': [
+      {
+        id: 'tech-1113-001',
+        name: 'What is Data?',
+        description: 'Collect, organize, and visualize data responsibly',
+        objectives: ['Collect data', 'Create simple charts', 'Discuss bias'],
+        keywords: ['data', 'charts', 'bias', 'privacy'],
+        difficulty: 3,
+        estimatedDuration: 45,
+        materials: ['spreadsheet', 'survey forms']
+      }
+    ],
+    '14-18': [
+      {
+        id: 'tech-1418-001',
+        name: 'Human-Centered Tech Design',
+        description: 'Apply design thinking to solve real problems ethically',
+        objectives: ['Empathize with users', 'Prototype solutions', 'Consider ethics'],
+        keywords: ['design thinking', 'ethics', 'prototype'],
+        difficulty: 4,
+        estimatedDuration: 60,
+        materials: ['paper', 'prototyping materials']
+      }
+    ]
+  },
+
+  // New: Engineering
+  'Engineering': {
+    '5-7': [
+      {
+        id: 'eng-57-001',
+        name: 'Build a Bridge',
+        description: 'Design and test simple bridges from everyday materials',
+        objectives: ['Plan and build', 'Test and observe', 'Improve design'],
+        keywords: ['bridge', 'design', 'test', 'improve'],
+        difficulty: 2,
+        estimatedDuration: 40,
+        materials: ['paper', 'tape', 'blocks']
+      }
+    ],
+    '8-10': [
+      {
+        id: 'eng-810-001',
+        name: 'Simple Machines Project',
+        description: 'Combine levers and wheels to solve a task',
+        objectives: ['Identify simple machines', 'Build a compound machine', 'Explain how it works'],
+        keywords: ['lever', 'wheel', 'pulley', 'force'],
+        difficulty: 3,
+        estimatedDuration: 50,
+        materials: ['craft sticks', 'spools', 'string']
+      }
+    ],
+    '11-13': [
+      {
+        id: 'eng-1113-001',
+        name: 'Design Process Challenge',
+        description: 'Use plan-build-test-iterate on a real challenge',
+        objectives: ['Apply constraints', 'Iterate with data', 'Present results'],
+        keywords: ['iterate', 'constraints', 'data'],
+        difficulty: 3,
+        estimatedDuration: 60,
+        materials: ['varied prototyping materials']
+      }
+    ],
+    '14-18': [
+      {
+        id: 'eng-1418-001',
+        name: 'Sustainable Engineering',
+        description: 'Evaluate material choices and environmental impact',
+        objectives: ['Analyze trade-offs', 'Optimize design', 'Reflect on sustainability'],
+        keywords: ['sustainability', 'optimize', 'trade-offs'],
+        difficulty: 4,
+        estimatedDuration: 60,
+        materials: ['research materials', 'testing setup']
+      }
+    ]
+  },
+
+  // New: Robotics
+  'Robotics': {
+    '5-7': [
+      {
+        id: 'rob-57-001',
+        name: 'Unplugged Robotics',
+        description: 'Use arrows and cards to “program” a friend robot',
+        objectives: ['Sequence steps', 'Debug simple mistakes', 'Use directional language'],
+        keywords: ['sequence', 'debug', 'direction'],
+        difficulty: 2,
+        estimatedDuration: 30,
+        materials: ['arrow cards', 'tape grid']
+      }
+    ],
+    '8-10': [
+      {
+        id: 'rob-810-001',
+        name: 'Line-Following Basics',
+        description: 'Build and tune a simple line-following robot with a kit',
+        objectives: ['Explain sensors', 'Tune thresholds', 'Test and iterate'],
+        keywords: ['sensor', 'line-follow', 'iteration'],
+        difficulty: 3,
+        estimatedDuration: 60,
+        materials: ['beginner robotics kit', 'tape track']
+      }
+    ],
+    '11-13': [
+      {
+        id: 'rob-1113-001',
+        name: 'Sensors and Actuators',
+        description: 'Program a microcontroller to read sensors and control motors',
+        objectives: ['Read analog sensor', 'Control motor speed', 'Use feedback'],
+        keywords: ['microcontroller', 'sensor', 'actuator'],
+        difficulty: 4,
+        estimatedDuration: 75,
+        materials: ['Arduino/micro:bit', 'breadboard', 'motor']
+      }
+    ],
+    '14-18': [
+      {
+        id: 'rob-1418-001',
+        name: 'Autonomous Challenge',
+        description: 'Implement navigation and obstacle avoidance',
+        objectives: ['Use control loops', 'Calibrate sensors', 'Evaluate performance'],
+        keywords: ['PID', 'navigation', 'autonomy'],
+        difficulty: 5,
+        estimatedDuration: 90,
+        materials: ['robot kit', 'sensors', 'course']
+      }
+    ]
+  },
+
+  // New: AI Literacy
+  'AI Literacy': {
+    '5-7': [
+      {
+        id: 'ai-57-001',
+        name: 'Spot the Pattern',
+        description: 'Find patterns and give simple instructions like a mini-AI',
+        objectives: ['Recognize patterns', 'Give clear steps', 'Discuss fairness'],
+        keywords: ['patterns', 'instructions', 'fairness'],
+        difficulty: 1,
+        estimatedDuration: 25,
+        materials: ['pattern blocks', 'cards']
+      }
+    ],
+    '8-10': [
+      {
+        id: 'ai-810-001',
+        name: 'How AIs Learn',
+        description: 'Train a paper “model” with examples and test it',
+        objectives: ['Define training data', 'Test with new data', 'Avoid bias'],
+        keywords: ['training', 'bias', 'generalize'],
+        difficulty: 2,
+        estimatedDuration: 40,
+        materials: ['paper dataset', 'stickers']
+      }
+    ],
+    '11-13': [
+      {
+        id: 'ai-1113-001',
+        name: 'Classification & Ethics',
+        description: 'Build a simple classifier and discuss ethical trade-offs',
+        objectives: ['Choose features', 'Measure accuracy', 'Debate impacts'],
+        keywords: ['classifier', 'features', 'ethics'],
+        difficulty: 3,
+        estimatedDuration: 60,
+        materials: ['spreadsheet', 'sample data']
+      }
+    ],
+    '14-18': [
+      {
+        id: 'ai-1418-001',
+        name: 'Intro to ML Projects',
+        description: 'Prototype a small ML project with careful data handling',
+        objectives: ['Define problem', 'Prepare data', 'Evaluate metrics', 'Consider privacy'],
+        keywords: ['ML', 'metrics', 'privacy', 'bias'],
+        difficulty: 4,
+        estimatedDuration: 90,
+        materials: ['Python/JS runtime or no-code tool']
+      }
+    ]
+  },
+
+  // New: Computer Science
+  'Computer Science': {
+    '5-7': [
+      {
+        id: 'cs-57-001',
+        name: 'Sequencing Stories',
+        description: 'Put story steps in order and “program” a character',
+        objectives: ['Sequence steps', 'Use loops as repeats', 'Debug simple errors'],
+        keywords: ['sequence', 'loop', 'debug'],
+        difficulty: 2,
+        estimatedDuration: 30,
+        materials: ['story cards']
+      }
+    ],
+    '8-10': [
+      {
+        id: 'cs-810-001',
+        name: 'Block Coding Basics',
+        description: 'Create an interactive project in a block language',
+        objectives: ['Understand events', 'Use variables', 'Share project'],
+        keywords: ['blocks', 'variables', 'events'],
+        difficulty: 2,
+        estimatedDuration: 60,
+        materials: ['Scratch or similar']
+      }
+    ],
+    '11-13': [
+      {
+        id: 'cs-1113-001',
+        name: 'Intro to Algorithms',
+        description: 'Design and analyze simple algorithms',
+        objectives: ['Design steps', 'Analyze efficiency', 'Test cases'],
+        keywords: ['algorithm', 'efficiency', 'test'],
+        difficulty: 3,
+        estimatedDuration: 60,
+        materials: ['pseudocode sheets']
+      }
+    ],
+    '14-18': [
+      {
+        id: 'cs-1418-001',
+        name: 'Python Fundamentals',
+        description: 'Write small programs using core language features',
+        objectives: ['Use control flow', 'Manipulate data', 'Structure code'],
+        keywords: ['python', 'loops', 'functions'],
+        difficulty: 4,
+        estimatedDuration: 90,
+        materials: ['laptop', 'IDE or online REPL']
       }
     ]
   }

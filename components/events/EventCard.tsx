@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Event } from '@/types/events';
+import type { Event } from '@/lib/hooks/useEvents';
 import { format } from 'date-fns';
 
 interface EventCardProps {
@@ -28,14 +28,14 @@ export const EventCard: React.FC<EventCardProps> = ({
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
 
-  const eventTypeColors = {
+  const eventTypeColors: Record<string, string> = {
     meeting: '#3B82F6',
     activity: '#10B981',
     announcement: '#F59E0B',
     other: '#8B5CF6',
   };
 
-  const eventTypeIcons = {
+  const eventTypeIcons: Record<string, string> = {
     meeting: 'person.3.fill',
     activity: 'figure.run',
     announcement: 'megaphone.fill',
@@ -64,13 +64,13 @@ export const EventCard: React.FC<EventCardProps> = ({
         <View
           style={[
             styles.iconContainer,
-            { backgroundColor: eventTypeColors[event.event_type] + '20' },
+            { backgroundColor: (eventTypeColors[event.event_type] || '#3B82F6') + '20' },
           ]}
         >
           <IconSymbol
-            name={eventTypeIcons[event.event_type]}
+            name={eventTypeIcons[event.event_type] || 'calendar'}
             size={24}
-            color={eventTypeColors[event.event_type]}
+            color={eventTypeColors[event.event_type] || '#3B82F6'}
           />
         </View>
         
@@ -109,7 +109,7 @@ export const EventCard: React.FC<EventCardProps> = ({
               color={subtextColor}
             />
             <Text style={[styles.statText, { color: subtextColor }]}>
-              {event.current_participants || 0}
+              {(event.participants?.length ?? 0)}
               {event.max_participants && `/${event.max_participants}`} participants
             </Text>
           </View>
@@ -130,7 +130,7 @@ export const EventCard: React.FC<EventCardProps> = ({
 
         {showJoinButton && onJoin && (
           <TouchableOpacity
-            style={[styles.joinButton, { backgroundColor: eventTypeColors[event.event_type] }]}
+            style={[styles.joinButton, { backgroundColor: eventTypeColors[event.event_type] || '#3B82F6' }]}
             onPress={(e) => {
               e.stopPropagation();
               onJoin();
@@ -140,7 +140,7 @@ export const EventCard: React.FC<EventCardProps> = ({
           </TouchableOpacity>
         )}
 
-        {event.is_participating && onLeave && (
+        {!showJoinButton && onLeave && (
           <TouchableOpacity
             style={[styles.leaveButton, { borderColor: '#EF4444' }]}
             onPress={(e) => {

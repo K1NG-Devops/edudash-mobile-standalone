@@ -18,7 +18,7 @@ import { LessonContent , isAIAvailable } from '@/lib/ai/claudeService';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 
-const SUBJECT_OPTIONS = ['Science', 'Math', 'Language Arts', 'Art', 'Music', 'Creative Expression', 'Social Skills', 'Emotional Development', 'Nature Studies', 'Physical Activity', 'Engineering'];
+const SUBJECT_OPTIONS = ['Science', 'Math', 'Language Arts', 'Art', 'Music', 'Creative Expression', 'Social Skills', 'Emotional Development', 'Nature Studies', 'Physical Activity', 'Engineering', 'Technology', 'Robotics', 'AI Literacy', 'Computer Science'];
 
 interface LessonGeneratorProps {
   userId: string;
@@ -906,25 +906,19 @@ export const LessonGeneratorV2: React.FC<LessonGeneratorProps> = ({
 
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Age Group</Text>
-        <View style={styles.segmentControl}>
-          {['2-3 years', '3-4 years', '4-5 years'].map((age) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 4 }}>
+          {['2-3 years', '3-4 years', '4-5 years', '5-7 years', '8-10 years', '11-13 years', '14-18 years'].map((age) => (
             <TouchableOpacity
               key={age}
-              style={[
-                styles.segmentButton,
-                ageGroup === age && styles.segmentButtonActive
-              ]}
+              style={[styles.segmentButton, ageGroup === age && styles.segmentButtonActive, { marginRight: 8 }]}
               onPress={() => setAgeGroup(age)}
             >
-              <Text style={[
-                styles.segmentText,
-                ageGroup === age && styles.segmentTextActive
-              ]}>
+              <Text style={[styles.segmentText, ageGroup === age && styles.segmentTextActive]}>
                 {age}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {customMode && (
@@ -1074,7 +1068,7 @@ export const LessonGeneratorV2: React.FC<LessonGeneratorProps> = ({
           
           <View style={styles.previewSection}>
             <Text style={styles.previewSectionTitle}>Content</Text>
-            <Text style={styles.previewText}>{generatedLesson.content.substring(0, 300)}...</Text>
+            <Text style={styles.previewText}>{(typeof generatedLesson.content === 'string' ? generatedLesson.content : JSON.stringify(generatedLesson.content ?? '')).slice(0, 300)}...</Text>
           </View>
 
           <View style={styles.previewSection}>
@@ -1147,7 +1141,7 @@ export const LessonGeneratorV2: React.FC<LessonGeneratorProps> = ({
               <Text style={styles.fullLessonDescription}>{generatedLesson.description}</Text>
               
               <Text style={styles.fullSectionTitle}>Lesson Content</Text>
-              <Text style={styles.fullSectionText}>{generatedLesson.content}</Text>
+              <Text style={styles.fullSectionText}>{typeof generatedLesson.content === 'string' ? generatedLesson.content : JSON.stringify(generatedLesson.content ?? '')}</Text>
               
               <Text style={styles.fullSectionTitle}>Activities</Text>
               {generatedLesson.activities.map((activity, index) => (

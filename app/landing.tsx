@@ -20,9 +20,9 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem, getRoleColors } from '@/constants/DesignSystem';
 import { Avatar } from '@/components/ui/Avatar';
 import { rolesContent, featuresContent, testimonialsContent } from '@/constants/marketing';
-import { PricingComponent } from '@/components/pricing/PricingComponent';
-import { useAuth } from '@/contexts/SimpleWorkingAuth';
-import { AdBanner, SponsoredContent, RevenueBanner } from '@/components/advertising/AdComponents';
+// import { PricingComponent } from '@/components/pricing/PricingComponent';
+// import { useAuth } from '@/contexts/SimpleWorkingAuth';
+// import { AdBanner, SponsoredContent, RevenueBanner } from '@/components/advertising/AdComponents';
 
 const { width, height } = Dimensions.get('window');
 
@@ -55,7 +55,7 @@ interface FeatureModalProps {
 
 // Society 5.0 Futuristic Marketing Page for EduDash Pro
 export default function FuturisticMarketingPage() {
-  const [scrollY] = useState(new Animated.Value(0));
+  const scrollY = useRef(new Animated.Value(0)).current;
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [showQA, setShowQA] = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -100,15 +100,18 @@ export default function FuturisticMarketingPage() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" translucent />
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: Platform.OS !== 'web' }
-        )}
-        scrollEventThrottle={16}
-      >
+      <SafeAreaView edges={['top','left','right']} style={{ flex: 1 }}>
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="never"
+          contentContainerStyle={styles.scrollContent}
+          onScroll={(e) => {
+            const y = e.nativeEvent.contentOffset?.y ?? 0;
+            try { scrollY.setValue(y); } catch {}
+          }}
+          scrollEventThrottle={16}
+        >
         <HeroSection />
         <RoleBasedBenefitsSection />
         <FeaturesSection setSelectedFeature={setSelectedFeature} />
@@ -117,7 +120,8 @@ export default function FuturisticMarketingPage() {
         <QASection showQA={showQA} setShowQA={setShowQA} />
         <EnhancedAdSection />
         <FooterSection />
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
       
       <FeatureModal selectedFeature={selectedFeature} setSelectedFeature={setSelectedFeature} />
     </View>
@@ -171,7 +175,7 @@ const HeroSection = () => {
           ))}
         </View>
 
-        <SafeAreaView style={styles.heroContent}>
+        <SafeAreaView edges={['top','left','right']} style={styles.heroContent}>
           {/* Futuristic Navigation */}
           <View style={styles.navbar}>
             <View style={styles.logo}>
@@ -638,9 +642,10 @@ const RoleBasedBenefitsSection = () => {
 
 // Embedded Pricing Section
 const EmbeddedPricingSection = () => {
-  const { profile } = useAuth();
-  const roleStr = (profile?.role ?? undefined) as string | undefined;
-  const isPrincipal = !!(roleStr === 'principal' || roleStr === 'preschool_admin');
+  // const { profile } = useAuth();
+  // const roleStr = (profile?.role ?? undefined) as string | undefined;
+  // const isPrincipal = !!(roleStr === 'principal' || roleStr === 'preschool_admin');
+  const isPrincipal = false; // Hardcoded for testing
 
   return (
     <View style={styles.embeddedPricingContainer}>
@@ -650,7 +655,7 @@ const EmbeddedPricingSection = () => {
           Transparent pricing • No hidden fees • Start free today
         </Text>
         
-        <PricingComponent 
+        {/* <PricingComponent 
           embedded={true}
           showRoles={true}
           showComparison={false}
@@ -658,7 +663,10 @@ const EmbeddedPricingSection = () => {
           defaultSelectedRole={isPrincipal ? 'principal' : null}
           initialView={isPrincipal ? 'role-specific' : 'overview'}
           theme="professional"
-        />
+        /> */}
+        <Text style={{ color: '#fff', textAlign: 'center', marginVertical: 12 }}>
+          Pricing temporarily hidden for debugging auth provider
+        </Text>
         
         <TouchableOpacity 
           style={styles.viewFullPricingButton}
@@ -700,30 +708,30 @@ const EnhancedAdSection = () => {
         </Text>
         
         {/* Revenue Banner */}
-        {showRevenueBanner && (
+        {/* showRevenueBanner && (
           <RevenueBanner
             type="feature-unlock"
             discount={25}
             onUpgrade={() => router.push('/pricing')}
             onDismiss={() => setShowRevenueBanner(false)}
           />
-        )}
+        ) */}
         
         {/* Ad Banner */}
-        <AdBanner
+        {/* <AdBanner
           placement="landing-page"
           size="large"
           userTier="free"
           onAdClick={(adData) => {
           }}
-        />
+        /> */}
         
         {/* Sponsored Content */}
-        <SponsoredContent
+        {/* <SponsoredContent
           content={sponsoredContent}
           onInteraction={(type, data) => {
           }}
-        />
+        /> */}
         
         {/* Traditional Ad Grid */}
         <View style={styles.adGrid}>
@@ -961,6 +969,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 0,
   },
 
   // Hero Section Styles
@@ -1208,18 +1219,18 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#000000',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   featureSubtitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'rgba(0,0,0,0.8)',
+    color: 'rgba(255,255,255,0.85)',
     marginBottom: 12,
   },
   featureDescription: {
     fontSize: 14,
-    color: 'rgba(0,0,0,0.7)',
+    color: 'rgba(255,255,255,0.8)',
     lineHeight: 18,
     marginBottom: 12,
   },
@@ -1228,7 +1239,7 @@ const styles = StyleSheet.create({
   },
   featureTechText: {
     fontSize: 12,
-    color: 'rgba(0,0,0,0.6)',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '600',
     fontStyle: 'italic',
   },
@@ -1597,7 +1608,8 @@ const styles = StyleSheet.create({
   
   // Footer Section
   footerContainer: {
-    paddingVertical: 60,
+    paddingTop: 40,
+    paddingBottom: 12,
   },
   footerGradient: {
     paddingHorizontal: 20,

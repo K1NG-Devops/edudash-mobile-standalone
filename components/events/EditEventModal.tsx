@@ -89,8 +89,11 @@ export default function EditEventModal({ visible, event, onClose, onSaved }: Pro
           event.preschool_id,
           { isBase64: false }
         );
-        if (uploadRes?.data?.file_url) {
-          coverUrl = uploadRes.data.file_url;
+        const uploaded: any = uploadRes?.data;
+        if (uploaded?.file_url) {
+          coverUrl = uploaded.file_url;
+        } else if (uploaded?.url) {
+          coverUrl = uploaded.url;
         }
       }
 

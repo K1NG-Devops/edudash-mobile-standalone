@@ -29,6 +29,7 @@ interface Child {
   last_name: string;
   age: number;
   class_name: string;
+  preschool_id?: string;
 }
 
 export default function AITutoringScreen() {
@@ -43,6 +44,8 @@ export default function AITutoringScreen() {
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [canUseTutoring, setCanUseTutoring] = useState(false);
   const [usageStats, setUsageStats] = useState<any>(null);
+  const [parentInternalId, setParentInternalId] = useState<string | null>(null);
+  const [parentPreschoolId, setParentPreschoolId] = useState<string | null>(null);
 
   const isActive = isSubscriptionActive();
   const isFreeTier = !subscription || subscription.plan?.tier === 'free';
@@ -62,7 +65,7 @@ export default function AITutoringScreen() {
       // Get parent's children
       const { data: parentProfile, error: parentError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, preschool_id')
         .eq('auth_user_id', user.id)
         .limit(1)
         .single();
@@ -70,6 +73,8 @@ export default function AITutoringScreen() {
       if (parentError || !parentProfile) {
         throw new Error('Parent profile not found');
       }
+      setParentInternalId(parentProfile.id);
+      setParentPreschoolId(parentProfile.preschool_id || null);
 
       // Fetch children
       const { data: studentsData, error: studentsError } = await supabase
@@ -79,6 +84,7 @@ export default function AITutoringScreen() {
           first_name,
           last_name,
           date_of_birth,
+          preschool_id,
           classes (
             name
           )
@@ -100,7 +106,8 @@ export default function AITutoringScreen() {
           last_name: student.last_name,
           age,
           class_name: student.classes?.name || 'Not Assigned',
-        };
+          preschool_id: student.preschool_id || parentProfile.preschool_id || null,
+        } as Child;
       });
 
       setChildren(formattedChildren);
@@ -413,6 +420,9 @@ export default function AITutoringScreen() {
           childName={selectedChild.first_name}
           childAge={selectedChild.age}
           userId={user?.id || ''}
+          studentId={selectedChild.id}
+          preschoolId={selectedChild.preschool_id || parentPreschoolId || undefined}
+          profileUserId={parentInternalId || undefined}
           onClose={() => setShowAIAssistant(false)}
         />
       )}

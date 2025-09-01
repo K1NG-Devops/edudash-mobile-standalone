@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
@@ -28,12 +29,14 @@ const PostUpdateModal: React.FC<{
           <TouchableOpacity onPress={onClose}><IconSymbol name="xmark" size={20} color={isDark ? '#CBD5E1' : '#6B7280'} /></TouchableOpacity>
         </View>
         <View style={{ borderWidth: 1, borderColor: isDark ? '#334155' : '#E5E7EB', borderRadius: 10, padding: 10, minHeight: 100 }}>
-          <Text
-            style={{ color: isDark ? '#E5E7EB' : '#111827' }}
-            onChangeText={(t: any) => setContent(String(t))}
-          >
-            {content || 'Write an update...'}
-          </Text>
+          <TextInput
+            multiline
+            placeholder="Write an update..."
+            placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
+            style={{ color: isDark ? '#E5E7EB' : '#111827', minHeight: 80 }}
+            value={content}
+            onChangeText={(t) => setContent(String(t))}
+          />
         </View>
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
           <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#10B981' }]} onPress={async () => {
@@ -118,11 +121,32 @@ export default function EventDetailScreen() {
     );
   }
 
+  const handleBack = () => {
+    try {
+      // @ts-ignore - router.canGoBack may not exist in older versions
+      if (router.canGoBack && router.canGoBack()) {
+        router.back();
+        return;
+      }
+    } catch {}
+    try {
+      if (typeof window !== 'undefined' && (window.history?.length || 0) > 1) {
+        window.history.back();
+        return;
+      }
+    } catch {}
+    try {
+      router.replace('/screens/principal-dashboard');
+    } catch {
+      try { router.push('/screens/principal-dashboard'); } catch {}
+    }
+  };
+
   return (
-    <>
+    <SafeAreaView style={{ flex: 1, backgroundColor: palette.background }} edges={['top','left','right']}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 12 }}>
+        <TouchableOpacity onPress={handleBack} style={{ marginBottom: 12 }}>
           <IconSymbol name="chevron.backward" size={18} color={palette.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: palette.text }]}>{event.title}</Text>
@@ -168,7 +192,7 @@ export default function EventDetailScreen() {
           try { (async () => { await eventQuery.refetch(); })(); } catch {}
         }}
       />
-    </>
+    </SafeAreaView>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { router } from 'expo-router';
@@ -55,8 +56,9 @@ export default function AddChildScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.card}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top','left','right']}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.card}>
         <Text style={styles.title}>Add your child</Text>
         <Text style={styles.subtitle}>Provide basic details to register your child</Text>
 
@@ -67,8 +69,9 @@ export default function AddChildScreen() {
         <TouchableOpacity disabled={saving} onPress={handleSave} style={[styles.button, saving && styles.buttonDisabled]}>
           <Text style={styles.buttonText}>{saving ? 'Saving...' : 'Add Child'}</Text>
         </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

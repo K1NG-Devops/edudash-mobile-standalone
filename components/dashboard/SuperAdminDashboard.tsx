@@ -27,6 +27,7 @@ import {
   UserOverview
 } from '@/lib/services/superAdminDataService';
 import { shadow } from '@/lib/ui/shadow';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SuperAdminDashboardProps {
   userId: string;
@@ -53,6 +54,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<'overview' | 'schools' | 'users' | 'activity' | 'system'>('overview');
   const [showCreateSchoolModal, setShowCreateSchoolModal] = useState(false);
+
+  const insets = useSafeAreaInsets();
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
@@ -159,6 +162,33 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         }
       ]
     );
+  };
+
+  // Reset AI usage for a user
+  const handleResetAIForUser = async (user: UserOverview) => {
+    const res = await SuperAdminDataService.resetAIUsage({ scope: 'user', targetUserId: user.id, mode: 'soft', reason: 'superadmin reset from dashboard' });
+    if (res.success) Alert.alert('AI Usage Reset', `AI usage for ${user.name} has been reset.`);
+    else Alert.alert('Reset Failed', res.error || 'Could not reset AI usage.');
+  };
+
+  // Toggle tester overage for a user
+  const handleToggleOverageForUser = async (user: UserOverview, enabled: boolean) => {
+    const res = await SuperAdminDataService.setTesterOverage({ scope: 'user', targetUserId: user.id, enabled, pricePerUnit: 0 });
+    if (res.success) Alert.alert(enabled ? 'Tester Overage Enabled' : 'Tester Overage Disabled', `${user.name} can ${enabled ? 'bypass' : 'no longer bypass'} monthly AI caps.`);
+    else Alert.alert('Update Failed', res.error || 'Could not update tester overage.');
+  };
+
+  // School-wide actions
+  const handleResetAIForSchool = async (school: SchoolOverview) => {
+    const res = await SuperAdminDataService.resetAIUsage({ scope: 'preschool', targetPreschoolId: school.id, mode: 'soft', reason: 'superadmin reset for school' });
+    if (res.success) Alert.alert('AI Usage Reset', `AI usage baseline updated for ${school.name}.`);
+    else Alert.alert('Reset Failed', res.error || 'Could not reset AI usage.');
+  };
+
+  const handleToggleOverageForSchool = async (school: SchoolOverview, enabled: boolean) => {
+    const res = await SuperAdminDataService.setTesterOverage({ scope: 'preschool', targetPreschoolId: school.id, enabled, pricePerUnit: 0 });
+    if (res.success) Alert.alert(enabled ? 'School Overage Enabled' : 'School Overage Disabled', `${school.name} testers can ${enabled ? 'bypass' : 'no longer bypass'} monthly AI caps.`);
+    else Alert.alert('Update Failed', res.error || 'Could not update school overage.');
   };
 
   const getStatusColor = (status: string) => {
@@ -281,6 +311,28 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               <Text style={styles.statusText}>{school.subscription_status}</Text>
             </View>
 
+            {/* Enable tester overage for entire school */}
+            <TouchableOpacity
+              style={styles.actionButtonInfo}
+              onPress={() => handleToggleOverageForSchool(school, true)}
+            >
+              <IconSymbol name="bolt.fill" size={16} color="#2563EB" />
+            </TouchableOpacity>
+            {/* Disable tester overage for entire school */}
+            <TouchableOpacity
+              style={styles.actionButtonOff}
+              onPress={() => handleToggleOverageForSchool(school, false)}
+            >
+              <IconSymbol name="bolt.slash" size={16} color="#F97316" />
+            </TouchableOpacity>
+            {/* Reset AI usage baseline for school */}
+            <TouchableOpacity
+              style={styles.actionButtonNeutral}
+              onPress={() => handleResetAIForSchool(school)}
+            >
+              <IconSymbol name="arrow.counterclockwise" size={16} color="#374151" />
+            </TouchableOpacity>
+            {/* Suspend school */}
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleSuspendSchool(school)}
@@ -315,6 +367,28 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               <Text style={styles.statusText}>{user.account_status}</Text>
             </View>
 
+            {/* Enable tester overage for this user */}
+            <TouchableOpacity
+              style={styles.actionButtonInfo}
+              onPress={() => handleToggleOverageForUser(user, true)}
+            >
+              <IconSymbol name="bolt.fill" size={16} color="#2563EB" />
+            </TouchableOpacity>
+            {/* Disable tester overage for this user */}
+            <TouchableOpacity
+              style={styles.actionButtonOff}
+              onPress={() => handleToggleOverageForUser(user, false)}
+            >
+              <IconSymbol name="bolt.slash" size={16} color="#F97316" />
+            </TouchableOpacity>
+            {/* Reset AI usage baseline for this user */}
+            <TouchableOpacity
+              style={styles.actionButtonNeutral}
+              onPress={() => handleResetAIForUser(user)}
+            >
+              <IconSymbol name="arrow.counterclockwise" size={16} color="#374151" />
+            </TouchableOpacity>
+            {/* Suspend */}
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleSuspendUser(user)}
@@ -356,7 +430,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
   // Tab navigation (bottom bar)
   const renderTabNavigation = () => (
-    <View style={styles.tabNavigationBottom}>
+    <View style={[styles.tabNavigationBottom, { paddingBottom: insets.bottom, borderTopWidth: 0 }]}>
       {[
         { key: 'overview', label: 'Overview', icon: 'chart.bar' },
         { key: 'schools', label: 'Schools', icon: 'building.2' },
@@ -448,7 +522,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 64 }]}
       >
         {/* Header Text */}
         <View style={styles.headerTextSection}>
@@ -531,7 +605,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           </View>
         )}
 
-        <View style={styles.bottomSpacing} />
       </ScrollView>
 
       {/* Bottom Tab Navigation */}
@@ -556,7 +629,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   headerTextSection: {
     paddingHorizontal: 20,
@@ -585,8 +658,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 10,
     paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
   },
   tabButton: {
     flex: 1,
@@ -761,6 +832,21 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#FEF2F2',
+  },
+  actionButtonNeutral: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  actionButtonInfo: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+  },
+  actionButtonOff: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#FFF7ED',
   },
 
   // Users List

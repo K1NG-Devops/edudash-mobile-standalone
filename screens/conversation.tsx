@@ -10,14 +10,16 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { CommunicationService, Message } from '@/lib/services/communicationService';
 import { MessageService } from '@/lib/services/messageService';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 
 export default function ConversationScreen() {
   const { user } = useAuth();
@@ -123,42 +125,62 @@ export default function ConversationScreen() {
     return <LoadingSpinner />;
   }
 
+  const headerColor = '#128C7E'; // WhatsApp-like green header
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <FlashList
-        ref={flatListRef as any}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessageItem}
-        contentContainerStyle={styles.listContent}
-        estimatedItemSize={64}
-        showsVerticalScrollIndicator={false}
-      />
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={newMessage}
-          onChangeText={setNewMessage}
-          placeholder="Type a message..."
-          multiline
-          maxLength={500}
-        />
-        <TouchableOpacity 
-          style={[styles.sendButton, (!newMessage.trim() || sending) && styles.sendButtonDisabled]} 
-          onPress={handleSend}
-          disabled={!newMessage.trim() || sending}
-        >
-          <IconSymbol 
-            name={sending ? "hourglass" : "paperplane.fill"} 
-            size={16} 
-            color="#FFFFFF" 
-          />
+    <SafeAreaView style={{ flex: 1, backgroundColor: headerColor }} edges={['top','left','right']}>
+      <StatusBar barStyle="light-content" translucent />
+
+      {/* WhatsApp-like header */}
+      <View style={[styles.waHeader, { backgroundColor: headerColor }]}> 
+        <TouchableOpacity onPress={() => { try { router.back(); } catch {} }} style={styles.waBackBtn}>
+          <IconSymbol name="chevron.left" size={22} color="#FFFFFF" />
         </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.waTitle} numberOfLines={1}>Conversation</Text>
+          <Text style={styles.waSubtitle}>Online</Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity><IconSymbol name="phone.fill" size={18} color="#FFFFFF" /></TouchableOpacity>
+          <TouchableOpacity><IconSymbol name="video.fill" size={18} color="#FFFFFF" /></TouchableOpacity>
+        </View>
       </View>
-    </KeyboardAvoidingView>
+
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <FlashList
+          ref={flatListRef as any}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessageItem}
+          contentContainerStyle={styles.listContent}
+          estimatedItemSize={64}
+          showsVerticalScrollIndicator={false}
+        />
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={newMessage}
+            onChangeText={setNewMessage}
+            placeholder="Type a message..."
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity 
+            style={[styles.sendButton, (!newMessage.trim() || sending) && styles.sendButtonDisabled]} 
+            onPress={handleSend}
+            disabled={!newMessage.trim() || sending}
+          >
+            <IconSymbol 
+              name={sending ? "hourglass" : "paperplane.fill"} 
+              size={16} 
+              color="#FFFFFF" 
+            />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -167,6 +189,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  waHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  waBackBtn: { padding: 6, marginRight: 8 },
+  waTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  waSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
   listContent: {
     padding: 16,
     paddingBottom: 80,

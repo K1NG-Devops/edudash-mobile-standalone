@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { StatusBar } from 'react-native';
 
 class OverviewScreen extends React.Component {
   render() {
@@ -11,6 +12,7 @@ class OverviewScreen extends React.Component {
       <AuthConsumer>
         {(auth) => (
           <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" translucent />
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
               {/* Header */}
               <LinearGradient

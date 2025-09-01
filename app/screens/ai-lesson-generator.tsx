@@ -217,6 +217,7 @@ export default function AILessonGeneratorScreen() {
               preschoolId={preschoolId}
               onLessonGenerated={onGenerated}
               onClose={() => router.back()}
+              audience={(profile?.role === 'parent') ? 'parent' : 'teacher'}
             />
           </View>
 
@@ -262,6 +263,16 @@ export default function AILessonGeneratorScreen() {
                     <Text style={styles.primaryBtnText}>Save Lesson</Text>
                   </TouchableOpacity>
                 </View>
+
+                {savedLessonId && (
+                  <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                    <TouchableOpacity style={[styles.secondaryBtn]} onPress={() => router.push('/screens/lessons')}>
+                      <IconSymbol name="book" size={18} color="#111827" />
+                      <Text style={styles.secondaryBtnText}>View saved lessons</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 {(!picker.ageGroupId || !picker.categoryId) && (
                   <Text style={[styles.helpText, { color: '#EF4444', marginTop: 8 }]}>
                     Please select both an age group and category above to save your lesson.

@@ -6,13 +6,15 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { EnhancedEvent } from '@/types/events';
 import { EventVisibilityInfo } from '@/types/groups';
 
+type JoinableEvent = Pick<EnhancedEvent, 'id' | 'title' | 'start_date' | 'description' | 'location' | 'cover_image_url'>;
+
 interface JoinEventModalProps {
   visible: boolean;
-  event: EnhancedEvent | null;
-  visibilityInfo: EventVisibilityInfo | null;
+  event: JoinableEvent | null;
+  visibilityInfo?: EventVisibilityInfo | null;
   onClose: () => void;
-  onJoin: (event: EnhancedEvent, message?: string) => Promise<void>;
-  onRequestAccess: (event: EnhancedEvent, message: string) => Promise<void>;
+  onJoin: (event: JoinableEvent, message?: string) => Promise<void>;
+  onRequestAccess?: (event: JoinableEvent, message: string) => Promise<void>;
 }
 
 export const JoinEventModal: React.FC<JoinEventModalProps> = ({
@@ -45,7 +47,11 @@ export const JoinEventModal: React.FC<JoinEventModalProps> = ({
           Alert.alert('Message Required', 'Please provide a message explaining why you want to join this event.');
           return;
         }
-        await onRequestAccess(event, message.trim());
+        if (onRequestAccess) {
+          await onRequestAccess(event, message.trim());
+        } else {
+          await onJoin(event, message.trim());
+        }
         Alert.alert('Request Sent', 'Your request to join this event has been sent for approval.');
       } else {
         await onJoin(event, message.trim() || undefined);
@@ -60,7 +66,7 @@ export const JoinEventModal: React.FC<JoinEventModalProps> = ({
     }
   };
 
-  if (!event || !visibilityInfo) {
+  if (!event) {
     return null;
   }
 
@@ -76,9 +82,9 @@ export const JoinEventModal: React.FC<JoinEventModalProps> = ({
     });
   };
 
-  const canJoin = visibilityInfo.can_join;
-  const requiresApproval = visibilityInfo.requires_approval;
-  const isAlreadyRegistered = visibilityInfo.user_status === 'registered';
+  const canJoin = visibilityInfo?.can_join ?? true;
+  const requiresApproval = visibilityInfo?.requires_approval ?? false;
+  const isAlreadyRegistered = visibilityInfo?.user_status === 'registered';
 
   let actionText = 'Join Event';
   let actionIcon = 'plus.circle';
@@ -265,7 +271,7 @@ export const JoinEventModal: React.FC<JoinEventModalProps> = ({
                       { color: isDark ? '#CBD5E1' : '#4B5563' }
                     ]}
                   >
-                    {visibilityInfo.reason || 'You cannot join this event'}
+                    {visibilityInfo?.reason || 'You cannot join this event'}
                   </Text>
                 </View>
               )}

@@ -67,14 +67,6 @@ export default {
           resizeMode: "contain",
           backgroundColor: "#ffffff"
         }
-      ],
-      [
-        "react-native-google-mobile-ads",
-        {
-          // Use correct camelCase keys expected by the plugin
-          androidAppId: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713",
-          iosAppId: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID || "ca-app-pub-3940256099942544~1458002511"
-        }
       ]
     ],
     experiments: {

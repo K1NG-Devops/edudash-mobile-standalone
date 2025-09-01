@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
 import MessagingCenter from '@/components/messaging/MessagingCenter';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -55,7 +55,7 @@ export default function MessagesTabScreen() {
   const palette = Colors[colorScheme];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: palette.background }} edges={['top','left','right']}>
       <AuthConsumer>
         {({ profile }) => <MessagesContent profile={profile} />}
       </AuthConsumer>

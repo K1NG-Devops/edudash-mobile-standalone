@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { TeacherDataService } from '@/lib/services/teacherDataService';
@@ -43,7 +44,7 @@ export default function ActivitiesScreen() {
     refresh: refreshEvents,
     loadMore: loadMoreEvents,
   } = useEnhancedEvents(
-    profile?.preschool_id,
+    profile?.preschool_id ?? undefined,
     {
       limit: 10,
       filters: { status: ['upcoming', 'ongoing', 'completed'] },
@@ -166,17 +167,19 @@ export default function ActivitiesScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: bg }]}> 
-        <ActivityIndicator size="large" color="#8B5CF6" />
-        <Text style={{ marginTop: 12, color: sub }}>Loading activities…</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top','left','right']}>
+        <View style={[styles.center, { backgroundColor: bg }]}> 
+          <ActivityIndicator size="large" color="#8B5CF6" />
+          <Text style={{ marginTop: 12, color: sub }}>Loading activities…</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (profile?.role !== 'teacher') {
     // Parent/Admin view with toggle between Events and Announcements
     return (
-      <View style={{ flex: 1, backgroundColor: bg }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top','left','right']}>
         <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 12, borderBottomWidth: 1, borderBottomColor: border }}>
           <TouchableOpacity 
             onPress={() => {
@@ -305,13 +308,14 @@ export default function ActivitiesScreen() {
             </View>
           )
         )}
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!activities.length) {
     return (
-      <View style={[styles.center, { backgroundColor: bg, padding: 24 }]}> 
+      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top','left','right']}>
+        <View style={[styles.center, { backgroundColor: bg, padding: 24 }]}> 
         <View style={[styles.emptyIcon, { backgroundColor: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }]}> 
           <IconSymbol name="figure.run" size={64} color="#8B5CF6" />
         </View>
@@ -320,13 +324,15 @@ export default function ActivitiesScreen() {
         {profile?.role !== 'teacher' && (
           <Text style={[styles.emptyHint, { color: sub }]}>Activities for your role are coming soon.</Text>
         )}
-      </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: bg }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top','left','right']}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: bg }}
       contentContainerStyle={{ padding: 16 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       showsVerticalScrollIndicator={false}
@@ -351,7 +357,8 @@ export default function ActivitiesScreen() {
         </View>
       ))}
       <View style={{ height: 24 }} />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

@@ -184,7 +184,9 @@ export const GroupManagementDashboard: React.FC<GroupManagementDashboardProps> =
     if (onCreateGroup) {
       const newGroup = await onCreateGroup(groupData);
       setGroups(prev => [newGroup, ...prev]);
+      return newGroup;
     }
+    return Promise.resolve({} as PrincipalGroup);
   };
 
   const handleGroupPress = (group: PrincipalGroup) => {

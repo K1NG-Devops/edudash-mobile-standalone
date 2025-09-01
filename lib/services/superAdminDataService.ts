@@ -151,7 +151,23 @@ export class SuperAdminDataService {
         return false;
       }
 
-      // Validate UUID to prevent database errors
+      // 1) Prefer JWT/user_metadata claim (does not depend on RLS)
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const authUser = auth?.user;
+        if (authUser?.id === userId) {
+          const md: any = (authUser as any).user_metadata || {};
+          const topLevelRole = (authUser as any).role; // typically undefined in Supabase
+          const claimRole = md?.role || topLevelRole;
+          if (String(claimRole).toLowerCase() === 'superadmin') {
+            return true;
+          }
+        }
+      } catch (e) {
+        // Non-fatal; fall through to DB-based check
+      }
+
+      // 2) Fallback to DB check (requires users self-select policy)
       const validUserId = validateUUID(userId);
       if (!validUserId) {
         console.error('❌ [SuperAdmin] Invalid user ID format:', userId);
@@ -165,7 +181,7 @@ export class SuperAdminDataService {
         .single();
 
       if (error || !user) {
-        console.error('❌ [SuperAdmin] User not found:', error);
+        console.error('❌ [SuperAdmin] User not found or unreadable:', error);
         return false;
       }
 
@@ -181,66 +197,90 @@ export class SuperAdminDataService {
    */
   static async getPlatformStats(): Promise<PlatformStats> {
     try {
-      // Get school count
-      const { count: schoolCount } = await supabase
-        .from('preschools')
-        .select('*', { count: 'exact', head: true });
-
-      // Get user counts by role
-      const { data: userStats } = await supabase
-        .from('users')
-        .select('role')
-        .eq('is_active', true);
-
-      const userCounts = userStats?.reduce((acc: Record<string, number>, user) => {
-        acc[user.role] = (acc[user.role] || 0) + 1;
-        acc.total = (acc.total || 0) + 1;
-        return acc;
-      }, {}) || {};
-
-      // Get student count
-      const { count: studentCount } = await supabase
-        .from('students')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
-
-      // Calculate subscription stats (real values available)
-      const { data: subscriptions } = await supabase
-        .from('preschools')
-        .select('subscription_status, subscription_plan');
-
-      const activeSubscriptions = subscriptions?.filter(s => s.subscription_status === 'active').length || 0;
-
-      // Best-effort counts for optional fields (fallback to 0 if table not present)
-      let aiUsageCount = 0;
+      // If the current session user is superadmin, prefer the privileged edge function
       try {
-        const { count: aiCount, error: aiError } = await supabase
-          .from('ai_usage_logs' as any)
-          .select('*', { count: 'exact', head: true });
-        if (!aiError && aiCount !== null && aiCount !== undefined) {
-          aiUsageCount = aiCount;
-        } else {
-          // Table likely doesn't exist, use fallback
+        const { data: auth } = await supabase.auth.getUser();
+        const md: any = auth?.user?.user_metadata || {};
+        const topRole = (auth?.user as any)?.role;
+        const role = String(md?.role || topRole || '').toLowerCase();
+        if (role === 'superadmin') {
+          const { data: res } = await supabase.functions.invoke('platform-stats');
+          if (res?.success) {
+            return {
+              total_schools: res.total_schools ?? 0,
+              total_users: res.total_users ?? 0,
+              total_students: res.total_students ?? 0,
+              total_teachers: res.total_teachers ?? 0,
+              total_parents: res.total_parents ?? 0,
+              active_subscriptions: res.active_subscriptions ?? 0,
+              monthly_revenue: 0,
+              growth_rate: 0,
+              ai_usage_count: res.ai_usage_count ?? 0,
+              storage_usage_gb: 0,
+            };
+          }
+        }
+      } catch {}
+
+      // Primary path: direct queries (works when RLS allows sufficient visibility)
+      try {
+        const [{ count: schoolCount }, { data: userStats }, { count: studentCount }, { data: subscriptions }] = await Promise.all([
+          supabase.from('preschools').select('*', { count: 'exact', head: true }),
+          supabase.from('users').select('role').eq('is_active', true),
+          supabase.from('students').select('*', { count: 'exact', head: true }).eq('is_active', true),
+          supabase.from('preschools').select('subscription_status, subscription_plan'),
+        ]);
+
+        const userCounts = (userStats || []).reduce((acc: Record<string, number>, u: any) => {
+          acc[u.role] = (acc[u.role] || 0) + 1;
+          acc.total = (acc.total || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        let aiUsageCount = 0;
+        try {
+          const { count: aiCount } = await supabase
+            .from('ai_usage_logs' as any)
+            .select('*', { count: 'exact', head: true });
+          aiUsageCount = aiCount ?? 0;
+        } catch {
           aiUsageCount = 0;
         }
-      } catch (_) {
-        // Table doesn't exist or other error
-        aiUsageCount = 0;
-      }
 
-      return {
-        total_schools: schoolCount || 0,
-        total_users: userCounts.total || 0,
-        total_students: studentCount || 0,
-        total_teachers: userCounts.teacher || 0,
-        total_parents: userCounts.parent || 0,
-        active_subscriptions: activeSubscriptions,
-        // The following metrics require external systems; return 0 until integrated
-        monthly_revenue: 0,
-        growth_rate: 0,
-        ai_usage_count: aiUsageCount,
-        storage_usage_gb: 0
-      };
+        const activeSubscriptions = (subscriptions || []).filter((s: any) => s.subscription_status === 'active').length || 0;
+
+        return {
+          total_schools: schoolCount || 0,
+          total_users: userCounts.total || 0,
+          total_students: studentCount || 0,
+          total_teachers: userCounts.teacher || 0,
+          total_parents: userCounts.parent || 0,
+          active_subscriptions: activeSubscriptions,
+          monthly_revenue: 0,
+          growth_rate: 0,
+          ai_usage_count: aiUsageCount,
+          storage_usage_gb: 0,
+        };
+      } catch (primaryErr) {
+        // Fallback path: call privileged edge function (uses service role on server)
+        console.warn('⚠️ [SuperAdmin] Falling back to edge function for platform stats:', (primaryErr as any)?.message || primaryErr);
+        const { data: res } = await supabase.functions.invoke('platform-stats');
+        if (res?.success) {
+          return {
+            total_schools: res.total_schools ?? 0,
+            total_users: res.total_users ?? 0,
+            total_students: res.total_students ?? 0,
+            total_teachers: res.total_teachers ?? 0,
+            total_parents: res.total_parents ?? 0,
+            active_subscriptions: res.active_subscriptions ?? 0,
+            monthly_revenue: 0,
+            growth_rate: 0,
+            ai_usage_count: res.ai_usage_count ?? 0,
+            storage_usage_gb: 0,
+          };
+        }
+        throw primaryErr;
+      }
     } catch (error) {
       console.error('❌ [SuperAdmin] Error fetching platform stats:', error);
       return {
@@ -253,7 +293,7 @@ export class SuperAdminDataService {
         monthly_revenue: 0,
         growth_rate: 0,
         ai_usage_count: 0,
-        storage_usage_gb: 0
+        storage_usage_gb: 0,
       };
     }
   }
@@ -263,58 +303,79 @@ export class SuperAdminDataService {
    */
   static async getRecentSchools(): Promise<SchoolOverview[]> {
     try {
-      const { data: schools, error } = await supabase
-        .from('preschools')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+      // If superadmin, prefer privileged function to avoid RLS limitations
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const md: any = auth?.user?.user_metadata || {};
+        const topRole = (auth?.user as any)?.role;
+        const role = String(md?.role || topRole || '').toLowerCase();
+        if (role === 'superadmin') {
+          const { data: res } = await supabase.functions.invoke('get-schools-admin');
+          if (res?.success && Array.isArray(res.schools)) {
+            return res.schools as SchoolOverview[];
+          }
+        }
+      } catch {}
 
-      if (error || !schools) {
-        console.error('❌ [SuperAdmin] Error fetching schools:', error);
-        return [];
+      try {
+        const { data: schools, error } = await supabase
+          .from('preschools')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (error || !schools) {
+          throw error || new Error('No schools');
+        }
+
+        // Enhance each school with user counts (DB path)
+        const enhancedSchools = await Promise.all(
+          schools.map(async (school) => {
+            const [userCount, studentCount] = await Promise.all([
+              this.getSchoolUserCount(school.id),
+              this.getSchoolStudentCount(school.id)
+            ]);
+
+            let teachers = 0;
+            let parents = 0;
+            try {
+              const { data: roleCounts } = await supabase
+                .from('users')
+                .select('role')
+                .eq('preschool_id', school.id)
+                .eq('is_active', true);
+              roleCounts?.forEach((u: any) => {
+                if (u.role === 'teacher') teachers += 1;
+                if (u.role === 'parent') parents += 1;
+              });
+            } catch (_) { }
+
+            const enhanced: SchoolOverview = {
+              ...school,
+              user_count: userCount.total,
+              student_count: studentCount,
+              teacher_count: teachers,
+              parent_count: parents,
+              last_activity: (school as any).updated_at || (school as any).created_at || new Date().toISOString(),
+              subscription_status: (school as any).subscription_status as any || 'active',
+              monthly_fee: 0,
+              ai_usage: 0,
+              storage_usage: 0
+            };
+
+            return enhanced;
+          })
+        );
+
+        return enhancedSchools;
+      } catch (primaryErr) {
+        console.warn('⚠️ [SuperAdmin] Falling back to edge function for recent schools:', (primaryErr as any)?.message || primaryErr);
+        const { data: res } = await supabase.functions.invoke('get-schools-admin');
+        if (res?.success && Array.isArray(res.schools)) {
+          return res.schools as SchoolOverview[];
+        }
+        throw primaryErr;
       }
-
-      // Enhance each school with user counts (pure DB-derived)
-      const enhancedSchools = await Promise.all(
-        schools.map(async (school) => {
-          const [userCount, studentCount] = await Promise.all([
-            this.getSchoolUserCount(school.id),
-            this.getSchoolStudentCount(school.id)
-          ]);
-
-          // Optional: derive teachers/parents if roles are in users
-          let teachers = 0;
-          let parents = 0;
-          try {
-            const { data: roleCounts } = await supabase
-              .from('users')
-              .select('role')
-              .eq('preschool_id', school.id)
-              .eq('is_active', true);
-            roleCounts?.forEach((u: any) => {
-              if (u.role === 'teacher') teachers += 1;
-              if (u.role === 'parent') parents += 1;
-            });
-          } catch (_) { }
-
-          const enhanced: SchoolOverview = {
-            ...school,
-            user_count: userCount.total,
-            student_count: studentCount,
-            teacher_count: teachers,
-            parent_count: parents,
-            last_activity: (school as any).updated_at || (school as any).created_at || new Date().toISOString(),
-            subscription_status: school.subscription_status as any || 'active',
-            monthly_fee: 0,
-            ai_usage: 0,
-            storage_usage: 0
-          };
-
-          return enhanced;
-        })
-      );
-
-      return enhancedSchools;
     } catch (error) {
       console.error('❌ [SuperAdmin] Error fetching recent schools:', error);
       return [];
@@ -326,52 +387,72 @@ export class SuperAdminDataService {
    */
   static async getRecentUsers(): Promise<UserOverview[]> {
     try {
-      // Get users first
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error || !users) {
-        console.error('❌ [SuperAdmin] Error fetching users:', error);
-        return [];
-      }
-
-      // Get school names separately to avoid foreign key relationship issues
-      const schoolIds = users.map(u => u.preschool_id).filter((id: string | null): id is string => !!id);
-      let schoolsMap: Record<string, string> = {};
-
-      if (schoolIds.length > 0) {
-        try {
-          const { data: schools } = await supabase
-            .from('preschools')
-            .select('id, name')
-            .in('id', schoolIds as string[]);
-
-          if (schools) {
-            schoolsMap = schools.reduce((acc, school) => {
-              acc[school.id] = school.name;
-              return acc;
-            }, {} as Record<string, string>);
+      // If superadmin, always use the privileged edge function to bypass RLS and include all roles
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const md: any = auth?.user?.user_metadata || {};
+        const topRole = (auth?.user as any)?.role;
+        const role = String(md?.role || topRole || '').toLowerCase();
+        if (role === 'superadmin') {
+          const { data: res } = await supabase.functions.invoke('get-users-admin');
+          if (res?.success && Array.isArray(res.users)) {
+            return res.users as UserOverview[];
           }
-        } catch (schoolError) {
-          console.warn('⚠️ [SuperAdmin] Could not fetch school names:', schoolError);
         }
+      } catch {}
+
+      try {
+        // DB path
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (error || !users) {
+          throw error || new Error('No users');
+        }
+
+        const schoolIds = users.map(u => u.preschool_id).filter((id: string | null): id is string => !!id);
+        let schoolsMap: Record<string, string> = {};
+
+        if (schoolIds.length > 0) {
+          try {
+            const { data: schools } = await supabase
+              .from('preschools')
+              .select('id, name')
+              .in('id', schoolIds as string[]);
+
+            if (schools) {
+              schoolsMap = schools.reduce((acc, school) => {
+                acc[school.id] = school.name;
+                return acc;
+              }, {} as Record<string, string>);
+            }
+          } catch (schoolError) {
+            console.warn('⚠️ [SuperAdmin] Could not fetch school names:', schoolError);
+          }
+        }
+
+        const enhancedUsers: UserOverview[] = users.map((user: any) => ({
+          ...user,
+          school_name: user.preschool_id ? schoolsMap[user.preschool_id] || null : null,
+          last_login: null,
+          is_suspended: !user.is_active,
+          subscription_status: null,
+          total_students: 0,
+          account_status: user.is_active ? 'active' : 'inactive'
+        }));
+
+        return enhancedUsers;
+      } catch (primaryErr) {
+        console.warn('⚠️ [SuperAdmin] Falling back to edge function for recent users:', (primaryErr as any)?.message || primaryErr);
+        const { data: res } = await supabase.functions.invoke('get-users-admin');
+        if (res?.success && Array.isArray(res.users)) {
+          return res.users as UserOverview[];
+        }
+        throw primaryErr;
       }
-
-      const enhancedUsers: UserOverview[] = users.map((user: any) => ({
-        ...user,
-        school_name: user.preschool_id ? schoolsMap[user.preschool_id] || null : null,
-        // These fields require external sources; provide DB-derived only
-        last_login: null,
-        is_suspended: !user.is_active,
-        subscription_status: null,
-        total_students: 0,
-        account_status: user.is_active ? 'active' : 'inactive'
-      }));
-
-      return enhancedUsers;
     } catch (error) {
       console.error('❌ [SuperAdmin] Error fetching recent users:', error);
       return [];
@@ -697,6 +778,33 @@ export class SuperAdminDataService {
     }
   }
 
+  /**
+   * Reset AI usage counters server-side via ai-proxy (superadmin only).
+   * scope: 'user' | 'preschool' | 'platform'
+   * mode: 'soft' uses a new baseline (preferred); 'hard' deletes logs (rarely needed)
+   */
+  static async resetAIUsage(params: { scope: 'user' | 'preschool' | 'platform'; targetUserId?: string; targetPreschoolId?: string; mode?: 'soft' | 'hard'; reason?: string }): Promise<{ success: boolean; error?: string; reset?: any }> {
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: {
+          action: 'admin_reset_ai_usage',
+          reset: {
+            scope: params.scope,
+            target_user_id: params.targetUserId || null,
+            target_preschool_id: params.targetPreschoolId || null,
+            mode: params.mode || 'soft',
+            reason: params.reason || 'superadmin reset from app'
+          }
+        }
+      });
+      if (error) return { success: false, error: error.message };
+      if (data?.success) return { success: true, reset: data.reset };
+      return { success: false, error: data?.error || 'Reset failed' };
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Reset failed' };
+    }
+  }
+
   static async suspendUser(userId: string, reason: string) {
     try {
       const { error } = await supabase
@@ -714,6 +822,31 @@ export class SuperAdminDataService {
       console.error('❌ [SuperAdmin] Error suspending user:', error);
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
+    }
+  }
+
+  /**
+   * Enable/disable tester overage for a single user or entire preschool (superadmin only).
+   */
+  static async setTesterOverage(params: { scope: 'user' | 'preschool'; targetUserId?: string; targetPreschoolId?: string; enabled: boolean; pricePerUnit?: number }): Promise<{ success: boolean; error?: string; overage?: any }> {
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: {
+          action: 'admin_set_overage',
+          overage: {
+            scope: params.scope,
+            target_user_id: params.targetUserId || null,
+            target_preschool_id: params.targetPreschoolId || null,
+            enabled: params.enabled,
+            price_per_unit: params.pricePerUnit ?? 0,
+          }
+        }
+      });
+      if (error) return { success: false, error: error.message };
+      if (data?.success) return { success: true, overage: data.overage };
+      return { success: false, error: data?.error || 'Overage update failed' };
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Overage update failed' };
     }
   }
 

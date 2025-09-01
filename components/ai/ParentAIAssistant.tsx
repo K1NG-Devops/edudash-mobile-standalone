@@ -16,12 +16,19 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { claudeAI, isAIAvailable } from '@/lib/ai/claudeService';
 import { TOPIC_CATEGORIES, getFilteredTopics } from '@/lib/constants/topicLibrary';
+import * as DocumentPicker from 'expo-document-picker';
+import { MediaService } from '@/lib/services/mediaService';
+import { supabase } from '@/lib/supabase';
 
 interface ParentAIAssistantProps {
   childName: string;
   childAge: number;
-  userId: string;
+  userId: string; // auth user id
   onClose: () => void;
+  // For uploads and context
+  studentId?: string;
+  preschoolId?: string;
+  profileUserId?: string; // users.id (internal)
 }
 
 type AssistantFeature = 'homework-help' | 'activity-ideas' | 'developmental-questions' | 'learning-support';
@@ -38,6 +45,9 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
   childAge,
   userId,
   onClose,
+  studentId,
+  preschoolId,
+  profileUserId,
 }) => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
@@ -51,6 +61,8 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
     content: string;
     timestamp: Date;
   }>>([]);
+  const [attachments, setAttachments] = useState<Array<{ uri: string; fileName: string; mimeType: string; fileSize?: number }>>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!isAIAvailable()) {
@@ -116,68 +128,89 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
     setIsLoading(true);
     
     try {
-      let prompt = '';
-      
       switch (activeFeature) {
-        case 'homework-help':
-          prompt = `As a helpful parent education assistant, provide guidance for helping a ${childAge}-year-old child named ${childName} with their homework. 
+        case 'homework-help': {
+          // Upload attachments (if any) to storage to obtain public URLs
+          let internalUserId = profileUserId || '';
+          let schoolId = preschoolId || '';
+          try {
+            if (!internalUserId || !schoolId) {
+              const { data: userRow } = await supabase
+                .from('users')
+                .select('id, preschool_id')
+                .eq('auth_user_id', userId)
+                .maybeSingle();
+              if (userRow) {
+                internalUserId = internalUserId || userRow.id;
+                schoolId = schoolId || (userRow.preschool_id || '');
+              }
+            }
+          } catch {}
 
-Parent's question/situation: "${userInput}"
+          let uploaded: { url: string; mimeType: string; name?: string }[] = [];
+          if (attachments.length > 0 && internalUserId && schoolId) {
+            setUploading(true);
+            const results = await Promise.all(
+              attachments.map(async (a, index) => {
+                const res = await MediaService.uploadMedia(
+                  a.uri,
+                  a.fileName || `ai_helper_${Date.now()}_${index}`,
+                  a.mimeType,
+                  internalUserId,
+                  schoolId,
+                  { studentId }
+                );
+                if ((res as any)?.data?.file_url) {
+                  return { url: (res as any).data.file_url as string, mimeType: a.mimeType, name: a.fileName };
+                }
+                return null;
+              })
+            );
+            uploaded = results.filter(Boolean) as any[];
+            setUploading(false);
+          }
 
-Please provide:
-1. Specific, age-appropriate strategies
-2. Tips for making homework time positive
-3. When to seek teacher help
-4. Fun ways to reinforce learning
+          const help = await claudeAI.askHomeworkHelp({
+            question: userInput,
+            childName,
+            childAge,
+            userId,
+            preschoolId: schoolId || 'parent-assistant',
+            attachments: uploaded,
+          });
 
-Keep advice practical and encouraging for parents.`;
+          if (help.success && help.answer) {
+            const response: AIResponse = {
+              title: 'Homework Help',
+              content: help.answer,
+              suggestions: help.suggestions || [],
+            };
+            setAiResponse(response);
+            setConversationHistory(prev => [
+              ...prev,
+              { type: 'user', content: userInput, timestamp: new Date() },
+              { type: 'ai', content: response.content, timestamp: new Date() }
+            ]);
+            setUserInput('');
+            // Keep attachments list for next turn or clear
+            // setAttachments([]);
+          } else {
+            throw new Error(help.error || 'Failed to get AI response');
+          }
           break;
+        }
 
         case 'activity-ideas':
-          prompt = `Suggest fun, educational home activities for a ${childAge}-year-old named ${childName}.
-
-Parent request: "${userInput}"
-
-Please provide:
-1. 3-4 specific activity ideas
-2. Materials needed (using common household items when possible)
-3. Learning benefits for each activity
-4. Age-appropriate modifications
-
-Focus on activities that build parent-child connection while learning.`;
           break;
 
         case 'developmental-questions':
-          prompt = `Answer a parent's developmental question about their ${childAge}-year-old child named ${childName}.
-
-Parent's question: "${userInput}"
-
-Please provide:
-1. Age-appropriate developmental information
-2. What to expect at this stage
-3. Signs of healthy development
-4. When to consult professionals if needed
-5. Ways to support development at home
-
-Keep information reassuring and evidence-based.`;
           break;
 
         case 'learning-support':
-          prompt = `Provide learning support advice for parents of a ${childAge}-year-old named ${childName}.
-
-Parent's concern/question: "${userInput}"
-
-Please provide:
-1. Practical strategies for home support
-2. How to create a learning-friendly environment
-3. Ways to communicate with teachers
-4. Resources that might help
-
-Focus on empowering parents with actionable advice.`;
           break;
       }
 
-      // Use the simple content generator for parent assistance
+      // Default flows for other features (use lesson content generator)
       const result = await claudeAI.generateLessonContent({
         topic: userInput,
         ageGroup: `${childAge} years`,
@@ -222,6 +255,23 @@ Focus on empowering parents with actionable advice.`;
   const getAgeAppropriateTopics = () => {
     const ageGroup = childAge <= 3 ? '2-3 years' : childAge <= 4 ? '3-4 years' : '4-5 years';
     return getFilteredTopics({ ageGroup });
+  };
+
+  const pickDocument = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
+      if (!res.canceled && res.assets && res.assets[0]) {
+        const a = res.assets[0];
+        setAttachments(prev => [...prev, {
+          uri: a.uri,
+          fileName: a.name || `doc_${Date.now()}`,
+          mimeType: a.mimeType || 'application/octet-stream',
+          fileSize: a.size,
+        }]);
+      }
+    } catch (e) {
+      Alert.alert('File error', 'Failed to select document');
+    }
   };
 
   const styles = StyleSheet.create({
@@ -536,6 +586,26 @@ Focus on empowering parents with actionable advice.`;
                   placeholderTextColor={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'}
                   multiline
                 />
+
+                {activeFeature === 'homework-help' && (
+                  <View>
+                    <TouchableOpacity onPress={pickDocument} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: palette.outline, borderRadius: 8 }}>
+                      <Text style={{ color: palette.text }}>Attach document or photo</Text>
+                    </TouchableOpacity>
+                    {attachments.length > 0 && (
+                      <View style={{ marginTop: 8 }}>
+                        {attachments.map((a, idx) => (
+                          <Text key={`${a.fileName}_${idx}`} style={{ color: palette.textSecondary, fontSize: 12 }}>
+                            📎 {a.fileName}
+                          </Text>
+                        ))}
+                        {uploading && (
+                          <Text style={{ color: palette.textSecondary, fontSize: 12, marginTop: 4 }}>Uploading attachments...</Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
                 
                 <TouchableOpacity 
                   style={styles.sendButton} 

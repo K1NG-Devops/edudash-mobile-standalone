@@ -23,6 +23,7 @@ const MAPPING: IconMapping = {
   'chevron.up': 'expand-less',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
+  'chevron.left.slash.chevron.right': 'code', // alias used in some components
   'arrow.up.right': 'trending-up',
   'arrow.up': 'arrow-upward',
   'magnifyingglass': 'search',
@@ -82,25 +83,29 @@ const MAPPING: IconMapping = {
   'ellipsis': 'more-horiz',
 
   // Media & Devices
-  'video.fill': 'videocam',
+'video.fill': 'videocam',
   'gamecontroller.fill': 'sports-esports',
   'camera.fill': 'photo-camera',
   'photo': 'photo',
   'play.fill': 'play-arrow',
+  'dot.radiowaves.left.and.right': 'wifi-tethering',
 
   // Actions
   'flag.fill': 'flag',
-  'plus.circle.fill': 'add-circle',
+'plus.circle.fill': 'add-circle',
   'plus.app': 'add',
   'plus': 'add',
+  'minus.circle.fill': 'remove-circle',
   'checkmark.circle.fill': 'check-circle',
   'checkmark.circle': 'check-circle',
   'checkmark.seal.fill': 'verified',
   'exclamationmark.triangle.fill': 'warning',
   'exclamationmark.triangle': 'warning',
+  'exclamationmark.circle': 'error-outline',
   'clock.fill': 'schedule',
   'qrcode.viewfinder': 'qr-code-scanner',
   'sparkles': 'auto-awesome',
+  'wand.and.stars': 'auto-awesome',
   'trash': 'delete',
   'trash.fill': 'delete-forever',
   'trash.circle': 'delete-forever',
@@ -159,7 +164,7 @@ const MAPPING: IconMapping = {
   'ellipsis.vertical': 'more-vert',
 
   // AI & Brain
-  'brain.head.profile': 'psychology',
+'brain.head.profile': 'psychology',
   'cpu': 'memory',
   // Medical/diagnostics
   'stethoscope': 'medical-services',
@@ -168,14 +173,17 @@ const MAPPING: IconMapping = {
   'star.circle': 'star',
   'lightbulb': 'lightbulb',
   'bolt': 'flash-on',
+  'bolt.fill': 'flash-on',
 
   // Parent Dashboard Specific Icons
-  'heart.fill': 'favorite',
+'heart.fill': 'favorite',
+  'heart': 'favorite-border',
   'trophy.fill': 'emoji-events',
+  'crown.fill': 'workspace-premium',
   'person.2.square.stack.fill': 'people',
 
   // Additional missing icons
-  'wrench': 'build',
+'wrench': 'build',
   'wrench.and.screwdriver.fill': 'build',
   'mail': 'mail',
   'checkmark': 'check',
@@ -188,6 +196,12 @@ const MAPPING: IconMapping = {
   'shield.fill': 'security',
   'ticket': 'confirmation-number',
   'paperclip': 'attach-file',
+  'eye': 'visibility',
+  'book.closed': 'menu-book',
+  'book.pages': 'menu-book',
+  'chart.bar.xaxis': 'bar-chart',
+  'person.2.badge.gearshape': 'manage-accounts',
+  'doc.badge.plus': 'post-add',
 };
 
 // Track dev-only warnings for unmapped icons

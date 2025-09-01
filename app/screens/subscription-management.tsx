@@ -86,7 +86,7 @@ export default function SubscriptionManagementScreen() {
     try {
       setBillingLoading(true);
       const result = await SubscriptionService.getRecentPayments(user.id, 10);
-      if (result.success && result.data) {
+      if (!result.error && result.data) {
         setBillingHistory(result.data);
       }
     } catch (error) {
@@ -520,7 +520,21 @@ export default function SubscriptionManagementScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => {
+            try {
+              // Prefer safe back; if none, fall back to a dashboard
+              // @ts-ignore - expo-router may expose canGoBack at runtime
+              if (router.canGoBack && router.canGoBack()) {
+                router.back();
+              } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+                window.history.back();
+              } else {
+                router.replace('/screens/principal-dashboard' as any);
+              }
+            } catch {
+              router.replace('/screens/principal-dashboard' as any);
+            }
+          }}>
             <IconSymbol name="chevron.left" size={24} color={palette.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: palette.text }]}>
@@ -543,7 +557,21 @@ export default function SubscriptionManagementScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => {
+          try {
+            // Prefer safe back; if none, fall back to a dashboard
+            // @ts-ignore - expo-router may expose canGoBack at runtime
+            if (router.canGoBack && router.canGoBack()) {
+              router.back();
+            } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+              window.history.back();
+            } else {
+              router.replace('/screens/principal-dashboard' as any);
+            }
+          } catch {
+            router.replace('/screens/principal-dashboard' as any);
+          }
+        }}>
           <IconSymbol name="chevron.left" size={24} color={palette.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: palette.text }]}>
