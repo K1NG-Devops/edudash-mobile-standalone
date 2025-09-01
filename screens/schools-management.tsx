@@ -142,6 +142,8 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
   };
 
   const approveRequest = async (requestId: string) => {
+    console.log('Approve button clicked for request:', requestId);
+    
     // Use React Native's Alert for confirmation
     Alert.alert(
       'Approve Onboarding Request',
@@ -152,9 +154,12 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
           text: 'Continue',
           style: 'default',
           onPress: async () => {
-            // Proceed with approval flow
+            console.log('User confirmed approval');
+            
+            // Check if we have admin client
             if (!supabaseAdmin) {
-              Alert.alert('Error', 'Admin operations not available - service role key missing');
+              console.error('No admin client available');
+              Alert.alert('Error', 'Admin operations not available - service role key missing.\n\nPlease ensure EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY is set in your environment.');
               return;
             }
 
@@ -164,10 +169,13 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
               // Get the request details first
               const request = state.onboardingRequests.find(r => r.id === requestId);
               if (!request) {
+                console.error('Request not found:', requestId);
                 Alert.alert('Error', 'Request not found');
                 setState(prev => ({ ...prev, loading: false }));
                 return;
               }
+              
+              console.log('Processing request for:', request.preschool_name);
 
               // Step 1: Create the preschool
               const tenantSlug = request.preschool_name
@@ -175,6 +183,8 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/^-+|-+$/g, '')
                 .substring(0, 50);
+
+              console.log('Creating preschool with slug:', tenantSlug);
 
               const { data: preschoolData, error: preschoolError } = await supabase
                 .from('preschools')
@@ -196,14 +206,18 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
                 .single();
 
               if (preschoolError) {
-                // Removed debug statement: console.error('Error creating preschool:', preschoolError);
+                console.error('Error creating preschool:', preschoolError);
                 Alert.alert('Error', 'Failed to create preschool - ' + preschoolError.message);
                 setState(prev => ({ ...prev, loading: false }));
                 return;
               }
+              
+              console.log('Preschool created successfully:', preschoolData.id);
 
               // Step 2: Create admin user in Supabase Auth using admin client
               const tempPassword = Math.random().toString(36).slice(-8) + 'A1!'; // Temporary password
+              
+              console.log('Creating auth user for:', request.admin_email);
 
               const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
                 email: request.admin_email,
@@ -211,20 +225,24 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
                 email_confirm: true,
                 user_metadata: {
                   name: request.admin_name,
-                  role: 'admin'
+                  role: 'preschool_admin'
                 }
               });
 
               if (authError) {
-                // Removed debug statement: console.error('Error creating auth user:', authError);
+                console.error('Error creating auth user:', authError);
                 // If auth user creation fails, we should delete the preschool
                 await supabase.from('preschools').delete().eq('id', preschoolData.id);
                 Alert.alert('Error', 'Failed to create admin account - ' + authError.message);
                 setState(prev => ({ ...prev, loading: false }));
                 return;
               }
+              
+              console.log('Auth user created successfully:', authData.user.id);
 
               // Step 3: Create user profile in users table
+              console.log('Creating user profile for:', request.admin_name);
+              
               const { error: userError } = await supabase
                 .from('users')
                 .insert({
@@ -233,13 +251,13 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
                   name: request.admin_name,
                   email: request.admin_email,
                   phone: request.phone,
-                  role: 'admin',
+                  role: 'preschool_admin',
                   is_active: true,
                   created_at: new Date().toISOString()
                 });
 
               if (userError) {
-                // Removed debug statement: console.error('Error creating user profile:', userError);
+                console.error('Error creating user profile:', userError);
                 // Cleanup: delete auth user and preschool using admin client
                 await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
                 await supabase.from('preschools').delete().eq('id', preschoolData.id);
@@ -247,6 +265,8 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
                 setState(prev => ({ ...prev, loading: false }));
                 return;
               }
+              
+              console.log('User profile created successfully');
 
               // Step 4: Update the onboarding request status
               const { error: updateError } = await supabase
@@ -272,7 +292,7 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
               await loadData();
               setState(prev => ({ ...prev, showRequestModal: false, selectedRequest: null }));
             } catch (error) {
-              // Removed debug statement: console.error('Error in approve request process:', error);
+              console.error('Error in approve request process:', error);
               const msg = error instanceof Error ? error.message : String(error);
               Alert.alert('Error', 'An unexpected error occurred while approving the request - ' + msg);
             } finally {
@@ -592,6 +612,15 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Schools Management</Text>
           <Text style={styles.subtitle}>
@@ -645,8 +674,27 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   headerContent: {
     alignItems: 'center',

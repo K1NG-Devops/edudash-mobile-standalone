@@ -1,14 +1,16 @@
 // import '@/lib/monitoring';
+import '../global.css'; // NativeWind styles
 import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary';
 import { AuthProvider } from '@/contexts/SimpleWorkingAuth';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { ThemeProvider as DesignSystemThemeProvider } from '@/src/design-system/theme/ThemeProvider';
 import * as Notifications from 'expo-notifications';
 import { Stack, usePathname, ErrorBoundaryProps } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform, View, StyleSheet, Text } from 'react-native';
 import GlobalBottomNav from '@/components/navigation/GlobalBottomNav';
 import { PushService } from '@/lib/services/pushService';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import RevenueCatProvider from '@/components/payments/RevenueCatProvider';
@@ -130,6 +132,7 @@ export default function RootLayout() {
     const insets = useSafeAreaInsets();
     const { isBottomNavVisible } = useNavigation();
     const { user, profile, loading } = useAuth();
+    const { colorScheme } = useTheme();
     const bottomNavBase = 64; // estimated nav height on mobile
 
     // GlobalBottomNav renders null when unauthenticated or loading.
@@ -140,8 +143,10 @@ export default function RootLayout() {
       ? (bottomNavBase + (insets?.bottom || 0))
       : 0;
 
+    const bgColor = colorScheme === 'dark' ? Colors.dark.background : Colors.light.background;
+
     return (
-      <View style={[styles.container, { paddingBottom: containerPaddingBottom }]}> 
+      <SafeAreaView edges={['top','left','right']} style={[styles.container, { paddingBottom: containerPaddingBottom, backgroundColor: bgColor }]}> 
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="landing" options={{ headerShown: false }} />
@@ -153,7 +158,7 @@ export default function RootLayout() {
           <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
         </Stack>
         {!shouldHideNav && <GlobalBottomNav />}
-      </View>
+      </SafeAreaView>
     );
   };
 
@@ -162,18 +167,20 @@ export default function RootLayout() {
       <AuthProvider>
         <QueryProvider>
           <ThemeProvider>
-            <RevenueCatProvider>
-              <ToastProvider>
-                <NavigationProvider>
-                  <SubscriptionProviderWithAuth>
-                    <SafeAreaProvider>
-                      <ThemeStatusBar />
-                      <ContainerWithInsets hideBottomNav={hideBottomNav} />
-                    </SafeAreaProvider>
-                  </SubscriptionProviderWithAuth>
-                </NavigationProvider>
-              </ToastProvider>
-            </RevenueCatProvider>
+            <DesignSystemThemeProvider>
+              <RevenueCatProvider>
+                <ToastProvider>
+                  <NavigationProvider>
+                    <SubscriptionProviderWithAuth>
+                      <SafeAreaProvider>
+                        <ThemeStatusBar />
+                        <ContainerWithInsets hideBottomNav={hideBottomNav} />
+                      </SafeAreaProvider>
+                    </SubscriptionProviderWithAuth>
+                  </NavigationProvider>
+                </ToastProvider>
+              </RevenueCatProvider>
+            </DesignSystemThemeProvider>
           </ThemeProvider>
         </QueryProvider>
       </AuthProvider>

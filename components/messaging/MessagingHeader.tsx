@@ -73,7 +73,7 @@ export const MessagingHeader: React.FC<MessagingHeaderProps> = ({
     <>
       <SafeAreaView 
         style={[styles.safeArea, { backgroundColor: roleColors.gradient[0] }]} 
-        edges={['top', 'left', 'right']}
+        edges={['left', 'right']}
       >
         <StatusBar 
           barStyle="light-content"

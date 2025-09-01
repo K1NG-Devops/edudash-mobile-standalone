@@ -52,7 +52,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'schools' | 'users' | 'activity' | 'system'>('overview');
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'schools' | 'users' | 'activity' | 'system' | 'onboarding'>('overview');
   const [showCreateSchoolModal, setShowCreateSchoolModal] = useState(false);
 
   const insets = useSafeAreaInsets();
@@ -87,6 +87,18 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
   // Handle navigation
   const handleNavigate = (route: string) => {
+    // Check if route contains a tab parameter
+    if (route.includes('?tab=')) {
+      const tabMatch = route.match(/\?tab=([^&]+)/);
+      if (tabMatch && tabMatch[1]) {
+        const tabName = tabMatch[1] as any;
+        // If it's the super admin dashboard with a tab, just switch tabs
+        if (route.includes('super-admin-dashboard')) {
+          setSelectedTab(tabName);
+          return;
+        }
+      }
+    }
 
     // Use parent onNavigate if provided, otherwise use local routing
     if (onNavigate) {
@@ -401,6 +413,90 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     </View>
   );
 
+  // Render onboarding section
+  const renderOnboardingSection = () => {
+    // Use the pending approvals data to show onboarding requests
+    const pendingCount = dashboardData?.pending_approvals?.schools || 0;
+    
+    return (
+      <View style={styles.onboardingSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>🎓 School Onboarding Requests</Text>
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={() => router.push('/screens/schools-management')}
+          >
+            <Text style={styles.viewAllButtonText}>View All</Text>
+            <IconSymbol name="arrow.right" size={14} color="#8B5CF6" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Stats Cards */}
+        <View style={styles.onboardingStats}>
+          <View style={styles.onboardingStatCard}>
+            <IconSymbol name="clock.fill" size={24} color="#F59E0B" />
+            <Text style={styles.onboardingStatValue}>{pendingCount}</Text>
+            <Text style={styles.onboardingStatLabel}>Pending</Text>
+          </View>
+          <View style={styles.onboardingStatCard}>
+            <IconSymbol name="checkmark.circle.fill" size={24} color="#10B981" />
+            <Text style={styles.onboardingStatValue}>{dashboardData?.pending_approvals?.schools || 0}</Text>
+            <Text style={styles.onboardingStatLabel}>This Month</Text>
+          </View>
+          <View style={styles.onboardingStatCard}>
+            <IconSymbol name="building.2.fill" size={24} color="#3B82F6" />
+            <Text style={styles.onboardingStatValue}>{dashboardData?.platform_stats?.total_schools || 0}</Text>
+            <Text style={styles.onboardingStatLabel}>Total Schools</Text>
+          </View>
+        </View>
+
+        {/* Pending Requests List */}
+        {pendingCount > 0 ? (
+          <View style={styles.pendingRequestsList}>
+            <Text style={styles.subsectionTitle}>Recent Requests</Text>
+            {/* Show placeholder for now - would need to fetch actual onboarding requests */}
+            <View style={styles.requestCard}>
+              <View style={styles.requestInfo}>
+                <Text style={styles.requestSchoolName}>Loading onboarding requests...</Text>
+                <Text style={styles.requestDetails}>Check the Schools Management screen for details</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.goToRequestsButton}
+                onPress={() => router.push('/screens/schools-management')}
+              >
+                <Text style={styles.goToRequestsButtonText}>Go to Requests</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <IconSymbol name="tray" size={48} color="#9CA3AF" />
+            <Text style={styles.emptyStateTitle}>No Pending Requests</Text>
+            <Text style={styles.emptyStateText}>All school onboarding requests have been processed</Text>
+          </View>
+        )}
+
+        {/* Quick Actions */}
+        <View style={styles.onboardingActions}>
+          <TouchableOpacity 
+            style={styles.onboardingActionButton}
+            onPress={() => router.push('/screens/schools-management')}
+          >
+            <IconSymbol name="list.bullet" size={20} color="#FFFFFF" />
+            <Text style={styles.onboardingActionText}>Manage All Requests</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.onboardingActionButton, styles.secondaryActionButton]}
+            onPress={() => setShowCreateSchoolModal(true)}
+          >
+            <IconSymbol name="plus.circle" size={20} color="#8B5CF6" />
+            <Text style={[styles.onboardingActionText, { color: '#8B5CF6' }]}>Create School Manually</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   // Render activity feed
   const renderActivityFeed = (activities: PlatformActivity[]) => (
     <View style={styles.activityFeed}>
@@ -434,6 +530,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       {[
         { key: 'overview', label: 'Overview', icon: 'chart.bar' },
         { key: 'schools', label: 'Schools', icon: 'building.2' },
+        { key: 'onboarding', label: 'Onboarding', icon: 'person.badge.plus' },
         { key: 'users', label: 'Users', icon: 'person.3' },
         { key: 'activity', label: 'Activity', icon: 'clock' },
         { key: 'system', label: 'System', icon: 'gear' }
@@ -569,10 +666,46 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                 </View>
               </View>
             </View>
+
+            {/* Quick Actions */}
+            <View style={styles.quickActionsSection}>
+              <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
+              <View style={styles.quickActionsGrid}>
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => router.push('/screens/schools-management')}
+                >
+                  <IconSymbol name="person.badge.plus" size={24} color="#8B5CF6" />
+                  <Text style={styles.quickActionLabel}>Manage Onboarding</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => setSelectedTab('activity')}
+                >
+                  <IconSymbol name="chart.bar.doc.horizontal" size={24} color="#10B981" />
+                  <Text style={styles.quickActionLabel}>Platform Reports</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => setSelectedTab('system')}
+                >
+                  <IconSymbol name="gear.badge" size={24} color="#F59E0B" />
+                  <Text style={styles.quickActionLabel}>System Settings</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => setSelectedTab('users')}
+                >
+                  <IconSymbol name="person.badge.shield.checkmark" size={24} color="#3B82F6" />
+                  <Text style={styles.quickActionLabel}>User Management</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </>
         )}
 
         {selectedTab === 'schools' && renderSchoolsList(dashboardData.recent_schools)}
+        {selectedTab === 'onboarding' && renderOnboardingSection()}
         {selectedTab === 'users' && renderUsersList(dashboardData.recent_users)}
         {selectedTab === 'activity' && renderActivityFeed(dashboardData.platform_activity)}
 
@@ -976,7 +1109,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   quickActionsSection: {
+    paddingHorizontal: 20,
     marginTop: 20,
+    marginBottom: 20,
   },
   quickActionsGrid: {
     flexDirection: 'row',
@@ -1043,6 +1178,129 @@ const styles = StyleSheet.create({
 
   bottomSpacing: {
     height: 20,
+  },
+
+  // Onboarding Section Styles
+  onboardingSection: {
+    paddingHorizontal: 20,
+  },
+  onboardingStats: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  onboardingStatCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    ...shadow(2),
+  },
+  onboardingStatValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  onboardingStatLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewAllButtonText: {
+    fontSize: 14,
+    color: '#8B5CF6',
+    fontWeight: '600',
+  },
+  pendingRequestsList: {
+    marginTop: 20,
+  },
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  requestCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    ...shadow(2),
+  },
+  requestInfo: {
+    flex: 1,
+  },
+  requestSchoolName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  requestDetails: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  goToRequestsButton: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  goToRequestsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  onboardingActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  onboardingActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8B5CF6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  secondaryActionButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  onboardingActionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

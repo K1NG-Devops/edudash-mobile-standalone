@@ -193,10 +193,11 @@ export default function GlobalBottomNav() {
 
   return (
     <View style={[...wrapperStyle, { pointerEvents: 'box-none' as any }]}> 
-      <SafeAreaView edges={['bottom','left','right']}>
-        <View style={[styles.tabNavigationBottom, shadow(3), {
+      <SafeAreaView edges={['bottom','left','right']} style={{ backgroundColor }}>
+        <View style={[styles.tabNavigationBottom, shadow(0), {
           backgroundColor,
           borderTopWidth: 0,
+          borderTopColor: backgroundColor,
         }]}
         >
           {tabs.map((tab) => {
@@ -247,8 +248,8 @@ const styles = StyleSheet.create({
   tabNavigationBottom: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     paddingTop: 12,
   },
   tabButton: {

@@ -103,6 +103,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   const [dmIsMuted, setDmIsMuted] = useState<boolean>(false);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
   // Draft state for Direct Messages (DM). We store one draft per DM target.
   const [dmDraftId, setDmDraftId] = useState<string | null>(null);
   const draftTimerRef = useRef<any>(null);
@@ -112,6 +113,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [parentUserId, setParentUserId] = useState<string | null>(null);
   const [preschoolName, setPreschoolName] = useState<string | null>(null);
+  const [sendOnEnter, setSendOnEnter] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const messageSubscription = useRef<any>(null);
@@ -837,8 +839,16 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
       const isAdmin = myRoomRole === 'owner' || myRoomRole === 'admin';
       const readOnly = (roomSettings?.locked || roomSettings?.admins_only) && !isAdmin || roomSettings?.allow_member_posting === false && !isAdmin;
       return (
-        <View style={styles.chatContainer}>
-        <View style={[styles.chatHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <KeyboardAvoidingView style={styles.chatContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={headerHeight}>
+        <View style={[
+          styles.chatHeader,
+          { 
+            backgroundColor: colors.card, 
+            borderBottomColor: colors.border,
+            marginTop: -insets.top,
+            paddingTop: 8 + insets.top,
+          }
+        ]} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
           <TouchableOpacity style={styles.backButton} onPress={() => { setSelectedRoomId(null); setMessages([]); }}>
             <IconSymbol name="chevron.left" size={20} color="#3B82F6" />
           </TouchableOpacity>
@@ -908,29 +918,28 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
             onContentSizeChange={scrollToBottom}
           />
 
-          {/* WhatsApp-style Message Input (fixed above bottom nav) */}
-          <View style={[styles.fixedInputBar, { bottom: 0 }]}>
-            <ChatInputBar
-              value={newMessage}
-              onChangeText={setNewMessage}
-              onSend={sendMessage}
-              onAttachPress={() => {
-                Alert.alert(
-                  'Attachment Options',
-                  'Choose an attachment type',
-                  [
-                    { text: 'Photo', onPress: () => console.log('Photo pressed') },
-                    { text: 'Document', onPress: () => console.log('Document pressed') },
-                    { text: 'Cancel', style: 'cancel' }
-                  ]
-                );
-              }}
-              sending={sending}
-              placeholder={readOnly ? 'Read-only' : 'Type a message...'}
-              disabled={readOnly}
-            />
-          </View>
-        </View>
+          {/* WhatsApp-style Message Input */}
+          <ChatInputBar
+            value={newMessage}
+            onChangeText={setNewMessage}
+            onSend={sendMessage}
+            onAttachPress={() => {
+              Alert.alert(
+                'Attachment Options',
+                'Choose an attachment type',
+                [
+                  { text: 'Photo', onPress: () => console.log('Photo pressed') },
+                  { text: 'Document', onPress: () => console.log('Document pressed') },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+            sending={sending}
+            placeholder={readOnly ? 'Read-only' : 'Type a message...'}
+            disabled={readOnly}
+            sendOnEnter={sendOnEnter}
+          />
+        </KeyboardAvoidingView>
       );
     }
 
@@ -938,9 +947,17 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     if (!conversation) return null;
 
     return (
-      <View style={styles.chatContainer}>
+      <KeyboardAvoidingView style={styles.chatContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={headerHeight}>
         {/* Chat Header */}
-        <View style={[styles.chatHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <View style={[
+          styles.chatHeader, 
+          { 
+            backgroundColor: colors.card, 
+            borderBottomColor: colors.border,
+            marginTop: -insets.top,
+            paddingTop: 8 + insets.top,
+          }
+        ]} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => setSelectedConversation(null)}
@@ -998,28 +1015,27 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           onContentSizeChange={scrollToBottom}
         />
 
-        {/* WhatsApp-style Message Input (fixed above bottom nav) */}
-        <View style={[styles.fixedInputBar, { bottom: 0 }]}>
-          <ChatInputBar
-            value={newMessage}
-            onChangeText={setNewMessage}
-            onSend={sendMessage}
-            onAttachPress={() => {
-              Alert.alert(
-                'Attachment Options',
-                'Choose an attachment type',
-                [
-                  { text: 'Photo', onPress: () => console.log('Photo pressed') },
-                  { text: 'Document', onPress: () => console.log('Document pressed') },
-                  { text: 'Cancel', style: 'cancel' }
-                ]
-              );
-            }}
-            sending={sending}
-            placeholder="Type a message..."
-          />
-        </View>
-      </View>
+        {/* WhatsApp-style Message Input */}
+        <ChatInputBar
+          value={newMessage}
+          onChangeText={setNewMessage}
+          onSend={sendMessage}
+          onAttachPress={() => {
+            Alert.alert(
+              'Attachment Options',
+              'Choose an attachment type',
+              [
+                { text: 'Photo', onPress: () => console.log('Photo pressed') },
+                { text: 'Document', onPress: () => console.log('Document pressed') },
+                { text: 'Cancel', style: 'cancel' }
+              ]
+            );
+          }}
+          sending={sending}
+          placeholder="Type a message..."
+          sendOnEnter={sendOnEnter}
+        />
+      </KeyboardAvoidingView>
     );
   };
 
@@ -1157,7 +1173,18 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
               }}
             >
               <IconSymbol name="bell.slash" size={18} color="#F59E0B" />
-              <Text style={[styles.sheetItemText, { color: colors.text }]}>{(selectedRoomId ? myRoomMuted : dmIsMuted) ? 'Unmute Notifications' : 'Mute Notifications'}</Text>
+            <Text style={[styles.sheetItemText, { color: colors.text }]}>{(selectedRoomId ? myRoomMuted : dmIsMuted) ? 'Unmute Notifications' : 'Mute Notifications'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sheetItem}
+              onPress={() => {
+                setSendOnEnter(prev => !prev);
+                setShowChatMenu(false);
+              }}
+            >
+              <IconSymbol name={sendOnEnter ? 'checkmark.circle' : 'circle'} size={18} color="#3B82F6" />
+              <Text style={[styles.sheetItemText, { color: colors.text }]}>Enter key sends</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -1480,8 +1507,8 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',

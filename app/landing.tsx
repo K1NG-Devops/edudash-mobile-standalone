@@ -53,6 +53,55 @@ interface FeatureModalProps {
   setSelectedFeature: (feature: any) => void;
 }
 
+// School Onboarding Banner Component - NEW
+const SchoolOnboardingBanner = () => {
+  return (
+    <View style={styles.schoolBannerContainer}>
+      <LinearGradient 
+        colors={['#ff8000', '#ff0080', '#8000ff']} 
+        style={styles.schoolBannerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.schoolBannerContent}>
+          <View style={styles.schoolBannerHeader}>
+            <IconSymbol name="building.2.fill" size={32} color="#FFFFFF" />
+            <Text style={styles.schoolBannerTitle}>🎓 Schools & Institutions</Text>
+          </View>
+          <Text style={styles.schoolBannerSubtitle}>
+            Transform your entire school with AI-powered education
+          </Text>
+          <Text style={styles.schoolBannerDescription}>
+            Request a personalized onboarding session for your institution.
+            Get special pricing, training, and dedicated support.
+          </Text>
+          <View style={styles.schoolBannerFeatures}>
+            <View style={styles.schoolBannerFeature}>
+              <Text style={styles.schoolBannerFeatureIcon}>✅</Text>
+              <Text style={styles.schoolBannerFeatureText}>Free Demo</Text>
+            </View>
+            <View style={styles.schoolBannerFeature}>
+              <Text style={styles.schoolBannerFeatureIcon}>✅</Text>
+              <Text style={styles.schoolBannerFeatureText}>Bulk Pricing</Text>
+            </View>
+            <View style={styles.schoolBannerFeature}>
+              <Text style={styles.schoolBannerFeatureIcon}>✅</Text>
+              <Text style={styles.schoolBannerFeatureText}>Training Included</Text>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.schoolBannerCTA}
+            onPress={() => router.push('/(auth)/school-onboarding')}
+          >
+            <Text style={styles.schoolBannerCTAText}>REQUEST SCHOOL ONBOARDING</Text>
+            <IconSymbol name="arrow.right" size={20} color="#000000" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    </View>
+  );
+};
+
 // Society 5.0 Futuristic Marketing Page for EduDash Pro
 export default function FuturisticMarketingPage() {
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -113,6 +162,7 @@ export default function FuturisticMarketingPage() {
           scrollEventThrottle={16}
         >
         <HeroSection />
+        <SchoolOnboardingBanner />
         <RoleBasedBenefitsSection />
         <FeaturesSection setSelectedFeature={setSelectedFeature} />
         <TestimonialsSection activeTestimonial={activeTestimonial} setActiveTestimonial={setActiveTestimonial} />
@@ -252,6 +302,20 @@ const HeroSection = () => {
                 >
                   <Text style={styles.secondaryCtaText}>Access Portal</Text>
                   <IconSymbol name="arrow.right" size={16} color="#00f5ff" />
+                </LinearGradient>
+              </TouchableOpacity>
+              
+              {/* School Onboarding CTA - NEW */}
+              <TouchableOpacity 
+                style={styles.schoolCTA}
+                onPress={() => router.push('/(auth)/school-onboarding')}
+              >
+                <LinearGradient
+                  colors={['rgba(255,128,0,0.2)', 'rgba(255,0,128,0.2)']}
+                  style={styles.schoolGradient}
+                >
+                  <IconSymbol name="building.2.fill" size={18} color="#ff8000" />
+                  <Text style={styles.schoolCtaText}>School Onboarding Request</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -706,6 +770,26 @@ const EnhancedAdSection = () => {
         <Text style={styles.sectionSubtitle}>
           Curated educational resources and tools for your success
         </Text>
+        
+        {/* School Onboarding Call-out - NEW */}
+        <View style={styles.schoolCalloutBox}>
+          <LinearGradient 
+            colors={['rgba(255,128,0,0.15)', 'rgba(255,0,128,0.15)']} 
+            style={styles.schoolCalloutGradient}
+          >
+            <IconSymbol name="building.2.fill" size={24} color="#ff8000" />
+            <Text style={styles.schoolCalloutTitle}>Are you a School Administrator?</Text>
+            <Text style={styles.schoolCalloutText}>
+              Get special institutional pricing and onboarding support
+            </Text>
+            <TouchableOpacity 
+              style={styles.schoolCalloutButton}
+              onPress={() => router.push('/(auth)/school-onboarding')}
+            >
+              <Text style={styles.schoolCalloutButtonText}>Request Onboarding →</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
         
         {/* Revenue Banner */}
         {/* showRevenueBanner && (
@@ -1939,5 +2023,146 @@ const styles = StyleSheet.create({
     color: '#AAAAAA',
     textAlign: 'center',
     lineHeight: 16,
+  },
+  
+  // School CTA Styles - NEW
+  schoolCTA: {
+    borderRadius: 30,
+    overflow: 'hidden',
+    marginTop: 10,
+    width: width < 400 ? '100%' : 'auto',
+  },
+  schoolGradient: {
+    paddingHorizontal: width < 400 ? 24 : 32,
+    paddingVertical: width < 400 ? 14 : 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#ff8000',
+    borderRadius: 30,
+  },
+  schoolCtaText: {
+    fontSize: width < 400 ? 14 : 16,
+    fontWeight: '700',
+    color: '#ff8000',
+    marginLeft: 8,
+  },
+  
+  // School Banner Styles - NEW
+  schoolBannerContainer: {
+    paddingVertical: 40,
+  },
+  schoolBannerGradient: {
+    marginHorizontal: width < 400 ? 16 : 20,
+    borderRadius: 20,
+    padding: width < 400 ? 24 : 32,
+  },
+  schoolBannerContent: {
+    alignItems: 'center',
+  },
+  schoolBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  schoolBannerTitle: {
+    fontSize: width < 400 ? 24 : 28,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  schoolBannerSubtitle: {
+    fontSize: width < 400 ? 16 : 18,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.95)',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  schoolBannerDescription: {
+    fontSize: width < 400 ? 14 : 16,
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
+    lineHeight: width < 400 ? 20 : 22,
+    marginBottom: 20,
+    maxWidth: 500,
+  },
+  schoolBannerFeatures: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: width < 400 ? 12 : 16,
+    marginBottom: 24,
+  },
+  schoolBannerFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  schoolBannerFeatureIcon: {
+    fontSize: 16,
+  },
+  schoolBannerFeatureText: {
+    fontSize: width < 400 ? 14 : 16,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  schoolBannerCTA: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    paddingHorizontal: width < 400 ? 24 : 32,
+    paddingVertical: width < 400 ? 14 : 16,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  schoolBannerCTAText: {
+    fontSize: width < 400 ? 16 : 18,
+    fontWeight: '800',
+    color: '#ff0080',
+    letterSpacing: 0.5,
+  },
+  
+  // School Callout Styles - NEW
+  schoolCalloutBox: {
+    marginVertical: 24,
+    marginHorizontal: width < 400 ? 0 : 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  schoolCalloutGradient: {
+    padding: width < 400 ? 20 : 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,128,0,0.3)',
+    borderRadius: 16,
+  },
+  schoolCalloutTitle: {
+    fontSize: width < 400 ? 18 : 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  schoolCalloutText: {
+    fontSize: width < 400 ? 14 : 16,
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  schoolCalloutButton: {
+    backgroundColor: 'rgba(255,128,0,0.2)',
+    paddingHorizontal: width < 400 ? 20 : 24,
+    paddingVertical: width < 400 ? 10 : 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ff8000',
+  },
+  schoolCalloutButtonText: {
+    fontSize: width < 400 ? 14 : 16,
+    fontWeight: '600',
+    color: '#ff8000',
   },
 });

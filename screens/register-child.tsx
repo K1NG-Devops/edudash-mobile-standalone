@@ -19,6 +19,7 @@ import { Picker } from '@react-native-picker/picker';
 import { AuthConsumer, UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
+import { CompactHeader } from '@/components/navigation/CompactHeader';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
@@ -271,17 +272,12 @@ const RegisterChildContent: React.FC<RegisterChildContentProps> = ({ profile, on
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <MobileHeader
-        user={{
-          name: profile?.name || 'Parent',
-          role: 'parent',
-          avatar: profile?.avatar_url,
-        }}
-        onNotificationsPress={() => { /* TODO: Implement notifications */ }}
-        onSignOut={onSignOut}
-        onNavigate={(route) => router.push(route as any)}
-        notificationCount={0}
+      <CompactHeader
         title="Register Child"
+        subtitle={profile?.preschool_id ? 'Complete the form to enroll' : undefined}
+        avatarInitial={(profile?.name || 'U').charAt(0)}
+        backgroundMode="surface"
+        onBackPress={() => router.back()}
       />
 
       <ScrollView

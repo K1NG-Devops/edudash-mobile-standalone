@@ -19,6 +19,7 @@ import { HomeworkService } from '@/lib/services/homeworkService';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useLocalSearchParams, router } from 'expo-router';
 import { HomeworkAIAssistant } from '@/components/parent/HomeworkAIAssistant';
+import { CompactHeader } from '@/components/navigation/CompactHeader';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -111,32 +112,23 @@ export default function HomeworkScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]}>
-      {/* Modern Header */}
-      <View style={[styles.modernHeader, { backgroundColor: palette.background }]}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => router.back()}
-        >
-          <IconSymbol name="chevron.left" size={20} color={palette.text} />
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, { color: palette.text }]}>Homework</Text>
-          {selectedChild && (
-            <Text style={[styles.headerSubtitle, { color: palette.textSecondary }]}>
-              {selectedChild.full_name || selectedChild.first_name}
-            </Text>
-          )}
-        </View>
-        
-        <TouchableOpacity 
-          style={[styles.aiButton, { backgroundColor: '#8B5CF6' }]}
-          onPress={() => setShowAIAssistant(true)}
-        >
-          <IconSymbol name="brain.head.profile" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.safeArea, { backgroundColor: palette.background }]}>
+      <CompactHeader
+        title="Homework"
+        subtitle={selectedChild ? (selectedChild.full_name || selectedChild.first_name) : undefined}
+        avatarInitial={(profile?.name || 'U').charAt(0)}
+        backgroundMode="surface"
+        onBackPress={() => router.back()}
+        rightActions={(
+          <TouchableOpacity 
+            style={[styles.aiButton, { backgroundColor: '#8B5CF6' }]}
+            onPress={() => setShowAIAssistant(true)}
+            activeOpacity={0.8}
+          >
+            <IconSymbol name="brain.head.profile" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
+      />
 
       {/* Child Selector - Modern Pills */}
       {children.length > 1 && (
@@ -382,7 +374,7 @@ export default function HomeworkScreen() {
           onClose={() => setShowAIAssistant(false)}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

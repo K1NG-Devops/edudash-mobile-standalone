@@ -13,6 +13,15 @@ import { BillingHistoryCard } from '@/components/billing/BillingHistoryCard';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/Colors';
+// Import new design system components
+import { 
+  Card, CardHeader, CardContent,
+  Button, IconButton,
+  Heading, Text as DSText,
+  Badge, StatusBadge,
+  Icon, Icons
+} from '@/src/design-system/components';
 import {
   Alert,
   Dimensions,
@@ -47,6 +56,7 @@ interface PrincipalDashboardProps {
 const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSignOut }) => {
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
+  const palette = Colors[colorScheme];
   const [refreshing, setRefreshing] = useState(false);
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
   const [showSchoolCodeManager, setShowSchoolCodeManager] = useState(false);
@@ -180,7 +190,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
     onPress?: () => void;
   }) => (
     <TouchableOpacity
-      style={[styles.metricCard, { borderTopColor: color, borderTopWidth: 3, backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}
+      style={[styles.metricCard, { borderTopColor: color, borderTopWidth: 3, backgroundColor: palette.surface }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -188,9 +198,9 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         <View style={[styles.metricIcon, { backgroundColor: `${color}20` }]}>
           <IconSymbol name={icon as any} size={28} color={color} />
         </View>
-        <Text style={[styles.metricValue, { color: isDark ? '#FFFFFF' : '#1F2937' }]}>{value}</Text>
-        <Text style={[styles.metricTitle, { color: isDark ? '#E5E7EB' : '#6B7280' }]}>{title}</Text>
-        <Text style={[styles.metricSubtitle, { color: isDark ? '#CBD5E1' : '#9CA3AF' }]}>{subtitle}</Text>
+        <Text style={[styles.metricValue, { color: palette.text }]}>{value}</Text>
+        <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>{title}</Text>
+        <Text style={[styles.metricSubtitle, { color: palette.textSecondary }]}>{subtitle}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -210,8 +220,8 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         <View style={[styles.actionIcon, { backgroundColor: color }]}>
           <IconSymbol name={icon as any} size={28} color="#FFFFFF" />
         </View>
-        <Text style={[styles.actionTitle, { color: isDark ? '#FFFFFF' : '#1F2937' }]}>{title}</Text>
-        <Text style={[styles.actionSubtitle, { color: isDark ? '#E5E7EB' : '#6B7280' }]}>{subtitle}</Text>
+        <Text style={[styles.actionTitle, { color: palette.text }]}>{title}</Text>
+        <Text style={[styles.actionSubtitle, { color: palette.textSecondary }]}>{subtitle}</Text>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -230,7 +240,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#0B1220' : '#F8FAFC' }]} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['bottom', 'left', 'right']}>
       <MobileHeader
         user={{
           name: profile?.name || 'Principal',
@@ -252,30 +262,48 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Overview Header (matches Super Admin look) */}
-        <View style={[styles.welcomeSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-          <Text style={[styles.welcomeTitle, { color: isDark ? '#F8FAFC' : '#1F2937' }]}>📊 School Overview</Text>
-          <Text style={[styles.welcomeSubtitle, { color: isDark ? '#94A3B8' : '#6B7280' }]}>Manage {(schoolInfoQuery.data as any)?.name || 'Your Preschool'}</Text>
-        </View>
+        <View style={styles.contentWrapper}>
+        {/* Overview Header - Using New Design System */}
+        <Card variant="flat" padding="lg" className="mb-4">
+          <CardHeader>
+            <Heading level="h2">📊 School Overview</Heading>
+            <DSText variant="subtitle" className="mt-1">
+              Manage {(schoolInfoQuery.data as any)?.name || 'Your Preschool'}
+            </DSText>
+            {statsQuery.data?.attendanceRate && statsQuery.data.attendanceRate > 0 && (
+              <Badge variant="success" className="mt-2 self-start">
+                {statsQuery.data.attendanceRate}% Attendance Today
+              </Badge>
+            )}
+          </CardHeader>
+        </Card>
 
         {/* Subscription / Plan */}
-        <View style={[styles.actionsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-          {mounted ? (
-            <>
-              <DashboardSubscriptionCard userId={profile?.auth_user_id || ''} />
-              <BillingHistoryCard userId={profile?.auth_user_id || ''} />
-            </>
-          ) : (
-            <View style={{ padding: 16 }} testID="subscription-skeleton">
-              <Text style={{ color: isDark ? '#94A3B8' : '#6B7280' }}>Loading subscription…</Text>
-            </View>
-          )}
-        </View>
+        <Card variant="flat" padding="lg" className="mb-4">
+          <CardHeader>
+            <Heading level="h3">💎 Subscription</Heading>
+          </CardHeader>
+          <CardContent style={{ gap: 12 }}>
+            {mounted ? (
+              <>
+                <DashboardSubscriptionCard userId={profile?.auth_user_id || ''} />
+                <BillingHistoryCard userId={profile?.auth_user_id || ''} />
+              </>
+            ) : (
+              <View style={{ padding: 16 }} testID="subscription-skeleton">
+                <DSText variant="muted">Loading subscription…</DSText>
+              </View>
+            )}
+          </CardContent>
+        </Card>
 
         {/* School Statistics */}
-        <View style={[styles.statsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>🏫 School Overview</Text>
-          <View style={styles.statsGrid}>
+        <Card variant="flat" padding="lg" className="mb-4">
+          <CardHeader>
+            <Heading level="h3">🏫 School Statistics</Heading>
+          </CardHeader>
+          <CardContent>
+            <View style={styles.statsGrid}>
             <MetricCard
               title="Total Students"
               value={statsQuery.data?.totalStudents ?? 0}
@@ -307,13 +335,17 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               color="#EA4335"
               onPress={() => handleNavigate('/screens/principal-reports')}
             />
-          </View>
-        </View>
+            </View>
+          </CardContent>
+        </Card>
 
         {/* Principal Actions */}
-        <View style={[styles.actionsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>⚡ Principal Tools</Text>
-          <View style={styles.actionsGrid}>
+        <Card variant="flat" padding="lg" className="mb-4">
+          <CardHeader>
+            <Heading level="h3">⚡ Principal Tools</Heading>
+          </CardHeader>
+          <CardContent>
+            <View style={styles.actionsGrid}>
             <ActionCard
               title="School Setup"
               subtitle="Classes & assignments"
@@ -370,61 +402,75 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
               color="#34A853"
               onPress={() => handleNavigate('/screens/school-settings')}
             />
-          </View>
-        </View>
+            </View>
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
-        <View style={[styles.quickActionsSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>🚀 Quick Actions</Text>
-          <View style={styles.quickActionsList}>
-            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => handleNavigate('register-child')}>
+        <Card variant="flat" padding="lg" className="mb-4">
+          <CardHeader>
+            <Heading level="h3">🚀 Quick Actions</Heading>
+          </CardHeader>
+          <CardContent>
+            <View style={styles.quickActionsList}>
+            <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => handleNavigate('register-child')}>
               <IconSymbol name="plus.circle.fill" size={20} color="#4285F4" />
-              <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Add New Student</Text>
+              <Text style={[styles.quickActionText, { color: palette.textSecondary }]}>Add New Student</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => handleNavigate('teachers')}>
+            <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => handleNavigate('teachers')}>
               <IconSymbol name="person.badge.plus" size={20} color="#34A853" />
-              <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Hire Teacher</Text>
+              <Text style={[styles.quickActionText, { color: palette.textSecondary }]}>Hire Teacher</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => router.push('/(tabs)/messages')}>
+            <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => router.push('/(tabs)/messages')}>
               <IconSymbol name="envelope.fill" size={20} color="#FBBC05" />
-              <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Send Announcement</Text>
+              <Text style={[styles.quickActionText, { color: palette.textSecondary }]}>Send Announcement</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.quickActionItem, isDark && { backgroundColor: '#0B1220' }]} onPress={() => handleNavigate('/screens/support')}>
+            <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => handleNavigate('/screens/support')}>
               <IconSymbol name="questionmark.circle.fill" size={20} color="#EA4335" />
-              <Text style={[styles.quickActionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Get Support</Text>
+              <Text style={[styles.quickActionText, { color: palette.textSecondary }]}>Get Support</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+            </View>
+          </CardContent>
+        </Card>
 
         {/* Recent Activity */}
-        <View style={[styles.activitySection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>📈 Recent School Activity</Text>
-          <View style={[styles.activityCard, { backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }] }>
+        <Card variant="flat" padding="lg" className="mb-4">
+          <CardHeader>
+            <Heading level="h3">📈 Recent School Activity</Heading>
+          </CardHeader>
+          <CardContent>
+            <View style={[styles.activityCard, { backgroundColor: palette.surface }] }>
             {activityQuery.data && activityQuery.data.length > 0 ? (
               activityQuery.data.map((activity, index) => (
-                <Text key={index} style={[styles.activityItem, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>• {activity}</Text>
+                <Text key={index} style={[styles.activityItem, { color: palette.textSecondary }]}>• {activity}</Text>
               ))
             ) : (
-              <Text style={[styles.activityItem, { color: isDark ? '#94A3B8' : '#4B5563' }]}>No recent activity.</Text>
+              <Text style={[styles.activityItem, { color: palette.textSecondary }]}>No recent activity.</Text>
             )}
-          </View>
-        </View>
+            </View>
+          </CardContent>
+        </Card>
 
         {/* Pending Tasks */}
-        <View style={[styles.tasksSection, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#E5E7EB' : '#1F2937' }]}>📋 Pending Tasks</Text>
-          <View style={styles.tasksList}>
+        <Card variant="flat" padding="lg" className="mb-4">
+          <CardHeader>
+            <Heading level="h3">📋 Pending Tasks</Heading>
+          </CardHeader>
+          <CardContent>
+            <View style={styles.tasksList}>
             {tasksQuery.data && tasksQuery.data.length > 0 ? (
               tasksQuery.data.map((task, index) => (
-                <View key={index} style={[styles.taskItem, isDark && { backgroundColor: '#0B1220' }]}>
+                <View key={index} style={[styles.taskItem, { backgroundColor: palette.surface }]}>
                   <View style={[styles.taskDot, { backgroundColor: task.color }]} />
-                  <Text style={[styles.taskText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>{task.text}</Text>
+                  <Text style={[styles.taskText, { color: palette.textSecondary }]}>{task.text}</Text>
                 </View>
               ))
             ) : (
-              <Text style={[styles.taskText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>No pending tasks.</Text>
+              <Text style={[styles.taskText, { color: palette.textSecondary }]}>No pending tasks.</Text>
             )}
-          </View>
+            </View>
+          </CardContent>
+        </Card>
         </View>
       </ScrollView>
 
@@ -489,6 +535,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
+  contentWrapper: {
+    paddingHorizontal: 16,
+    maxWidth: 768,
+    width: '100%',
+    alignSelf: 'center',
+  },
   welcomeSection: {
     padding: 20,
     backgroundColor: '#FFFFFF',
@@ -534,7 +586,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   metricCard: {
-    width: (screenWidth - 80) / 2, // slightly smaller tiles to match Super Admin
+    width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
@@ -590,7 +642,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   actionCard: {
-    width: (screenWidth - 60) / 2,
+    width: '48%',
     marginBottom: 15,
     borderRadius: 12,
     overflow: 'hidden',
@@ -638,7 +690,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     marginBottom: 8,
-    width: (screenWidth - 60) / 2,
+    width: '48%',
   },
   quickActionText: {
     fontSize: 12,

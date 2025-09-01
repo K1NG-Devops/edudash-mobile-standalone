@@ -20,6 +20,7 @@ import { useSubscription } from '@/lib/hooks/useSubscription';
 import { ParentAIAssistant } from '@/components/ai/ParentAIAssistant';
 import { UsageTrackingService } from '@/lib/services/usageTrackingService';
 import { supabase } from '@/lib/supabase';
+import { CompactHeader } from '@/components/navigation/CompactHeader';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -200,41 +201,35 @@ export default function AITutoringScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <IconSymbol name="chevron.left" size={24} color={palette.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: palette.text }]}>
-            AI Tutoring
-          </Text>
-          <View style={{ width: 24 }} />
-        </View>
+      <View style={[styles.container, { backgroundColor: palette.background }]}>
+        <CompactHeader
+          title="AI Tutoring"
+          subtitle="Personalized help for your child"
+          avatarInitial={(profile?.name || 'U').charAt(0)}
+          backgroundMode="surface"
+          onBackPress={() => router.back()}
+        />
         
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={[styles.loadingText, { color: palette.textSecondary }]}>
-            Loading AI tutoring...
-          </Text>
+          <Text style={[styles.loadingText, { color: palette.textSecondary }]}>Loading AI tutoring...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   const selectedChild = children.find(c => c.id === selectedChildId);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={24} color={palette.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: palette.text }]}>
-          AI Tutoring
-        </Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      {/* Compact Header */}
+      <CompactHeader
+        title="AI Tutoring"
+        subtitle={selectedChild ? `${selectedChild.first_name} (${selectedChild.age})` : 'Select a child'}
+        avatarInitial={(profile?.name || 'U').charAt(0)}
+        backgroundMode="surface"
+        onBackPress={() => router.back()}
+      />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Hero Section */}
@@ -426,7 +421,7 @@ export default function AITutoringScreen() {
           onClose={() => setShowAIAssistant(false)}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

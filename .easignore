@@ -1,5 +1,9 @@
 # .easignore - Exclude unnecessary files from EAS builds
 
+# Native folders for CNG/Prebuild
+/android
+/ios
+
 # Dependencies (will be installed on EAS servers; keep lockfiles for reproducible installs)
 node_modules/
 .npm/

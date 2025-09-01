@@ -45,6 +45,15 @@ export const Colors = {
     surfaceVariant: '#F1F5F9', // Gray-100
     outline: '#E5E7EB', // Gray-200
 
+    // Semantic contrast colors (for text on colored backgrounds)
+    onPrimary: '#FFFFFF', // White text on primary
+    onSecondary: '#FFFFFF', // White text on secondary
+    onSuccess: '#FFFFFF', // White text on success
+    onWarning: '#000000', // Black text on warning (amber is light)
+    onError: '#FFFFFF', // White text on error
+    onSurface: textPrimary, // Dark text on surface
+    onBackground: textPrimary, // Dark text on background
+
     // Role colors
     superadmin: superAdminColor,
     preschool_admin: principalColor,
@@ -78,6 +87,15 @@ export const Colors = {
     surface: '#0F172A', // Slate-900
     surfaceVariant: '#1F2937', // Gray-800
     outline: '#475569', // Slate-600
+
+    // Semantic contrast colors (for text on colored backgrounds)
+    onPrimary: '#000000', // Black text on lighter primary
+    onSecondary: '#000000', // Black text on lighter secondary  
+    onSuccess: '#000000', // Black text on lighter success
+    onWarning: '#000000', // Black text on lighter warning
+    onError: '#000000', // Black text on lighter error
+    onSurface: '#FFFFFF', // White text on dark surface
+    onBackground: '#FFFFFF', // White text on dark background
 
     // Role colors
     superadmin: '#FCA5A5', // Red-300

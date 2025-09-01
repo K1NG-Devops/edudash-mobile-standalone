@@ -9,7 +9,7 @@ import {
     TouchableOpacity,
     View
 , AppState , Appearance, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MobileSidebar } from './MobileSidebar';
 import { NotificationService } from '@/lib/services/notificationService';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -43,6 +43,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   notificationCount,
 }) => {
   const { colorScheme, toggle: toggleGlobalTheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [internalUnreadCount, setInternalUnreadCount] = useState(0);
 
@@ -147,7 +148,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   }, [user?.id]);
 
   const badgeCount = typeof notificationCount === 'number' ? notificationCount : internalUnreadCount;
-  const roleColors = getRoleColors(user?.role || 'default', colorScheme);
+  // Red to blue gradient
+  const redBlueGradient = colorScheme === 'light'
+    ? ['#DC2626', '#2563EB'] as const  // Red-600 to Blue-600
+    : ['#F87171', '#60A5FA'] as const;  // Red-400 to Blue-400
   const firstName = user?.name?.split(' ')[0] || 'User';
   // For superadmin, prefer a short display label over raw email/name
   const displayName = user?.role === 'superadmin'
@@ -157,31 +161,22 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
         : firstName);
   const displayInitial = displayName.charAt(0).toUpperCase();
 
-  // Determine bar style based on the top gradient color brightness for best contrast
-  const isLightColor = (hex: string): boolean => {
-    const h = hex.replace('#','');
-    const r = parseInt(h.substring(0,2),16);
-    const g = parseInt(h.substring(2,4),16);
-    const b = parseInt(h.substring(4,6),16);
-    // Perceived brightness (YIQ)
-    const yiq = (r*299 + g*587 + b*114) / 1000;
-    return yiq > 186; // threshold
-  };
-  const topColor = String(roleColors.gradient[0]);
-  const computedBarStyle = isLightColor(topColor) ? 'dark-content' : 'light-content';
+  // Always use light-content for blue gradient
+  const computedBarStyle = 'light-content';
 
     return (
       <>
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: roleColors.gradient[0] }]} edges={['top', 'left', 'right']}>
+        <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
           <StatusBar 
             barStyle={computedBarStyle as any}
             translucent={true}
+            backgroundColor="transparent"
           />
           <LinearGradient
-            colors={[roleColors.gradient[0], roleColors.gradient[1], 'rgba(0,0,0,0.1)']}
-            style={styles.header}
+            colors={[redBlueGradient[0], redBlueGradient[1]]}
+            style={[styles.header, { paddingTop: insets.top + 8 }]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 1, y: 0 }}
           >
             {/* Modern glass morphism overlay */}
             <View style={styles.glassOverlay} />
@@ -293,24 +288,27 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#6366F1', // Fallback color
+    backgroundColor: 'transparent', // Let gradient fill behind status bar
   },
   header: {
-    paddingHorizontal: 8,
-    paddingVertical: 16,
-    minHeight: 85,
+    paddingHorizontal: 16,
+    paddingTop: 0, // will be overridden by insets.top + 8
+    paddingBottom: 16,
+    minHeight: 84,
+    marginTop: 0,
   },
-headerContent: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
   },
   leftSection: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     paddingRight: 12,
+    paddingTop: 0,
   },
   menuButton: {
     width: 44,
@@ -321,9 +319,10 @@ headerContent: {
     alignItems: 'center',
     marginRight: 16,
   },
-greetingSection: {
+  greetingSection: {
     flex: 1,
-    overflow: 'hidden',
+    overflow: 'visible',
+    minWidth: 0,
   },
 greeting: {
     fontSize: 14,
@@ -336,16 +335,22 @@ userName: {
     fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 2,
+    marginRight: 8,
   },
   roleTitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#FFFFFF',
-    opacity: 0.8,
+    opacity: 0.9,
+    flexShrink: 0,
   },
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 0,
+    paddingTop: 0,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+    gap: 10,
   },
   actionButton: {
     width: 40,
@@ -388,12 +393,12 @@ userName: {
   },
   avatarButton: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: 16,
   },
   avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -417,12 +422,13 @@ userName: {
     borderColor: '#FFFFFF',
   },
   roleContainer: {
-    marginTop: 2,
+    marginTop: 0,
+    marginLeft: 8,
   },
   roleBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderRadius: 8,
     alignSelf: 'flex-start',
   },
@@ -433,7 +439,7 @@ userName: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 0,
     position: 'relative',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -453,20 +459,24 @@ userName: {
   },
   // New styles for redesigned header
   schoolName: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 6,
+    flexShrink: 1,
+  },
+  brandName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  brandName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 2,
+    marginBottom: 6,
+    flexShrink: 0,
   },
   userInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexWrap: 'nowrap',
+    marginTop: 4,
   },
 });

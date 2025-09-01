@@ -9,6 +9,8 @@
           "/reset-password*",
           "/invite/*",
           "/email-verified*",
+          "/payment/success*",
+          "/payment/cancel*",
           "/*"
         ]
       }

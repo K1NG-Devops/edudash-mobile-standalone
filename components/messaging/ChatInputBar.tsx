@@ -24,6 +24,7 @@ interface ChatInputBarProps {
   disabled?: boolean;
   sending?: boolean;
   maxLength?: number;
+  sendOnEnter?: boolean; // If true, Enter key sends instead of newline
 }
 
 export const ChatInputBar: React.FC<ChatInputBarProps> = ({
@@ -35,6 +36,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
   disabled = false,
   sending = false,
   maxLength = 1000,
+  sendOnEnter = false,
 }) => {
   const { colorScheme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -160,12 +162,18 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
               onChangeText={onChangeText}
               placeholder={placeholder}
               placeholderTextColor={getPlaceholderColor()}
-              multiline
+              multiline={!sendOnEnter}
               maxLength={maxLength}
               editable={!disabled}
               scrollEnabled
-              returnKeyType="default"
-              blurOnSubmit={false}
+              returnKeyType={sendOnEnter ? 'send' : 'default'}
+              blurOnSubmit={sendOnEnter}
+              onSubmitEditing={(e) => {
+                if (sendOnEnter) {
+                  // RN leaves trailing newline sometimes; rely on parent to trim
+                  handleSend();
+                }
+              }}
             />
           </View>
 

@@ -16,7 +16,8 @@ export default {
       bundleIdentifier: "com.edudashpro.app",
       // Enable Universal Links for password reset and invitations
       associatedDomains: [
-        "applinks:www.edudashpro.org.za"
+        "applinks:www.edudashpro.org.za",
+        "applinks:edudashpro.org.za"
       ]
     },
     android: {
@@ -39,11 +40,8 @@ export default {
         {
           action: "VIEW",
           data: [
-            {
-              scheme: "https",
-              host: "www.edudashpro.org.za",
-              pathPrefix: "/"
-            }
+            { scheme: "https", host: "www.edudashpro.org.za", pathPrefix: "/" },
+            { scheme: "https", host: "edudashpro.org.za", pathPrefix: "/" }
           ],
           category: ["BROWSABLE", "DEFAULT"]
         }

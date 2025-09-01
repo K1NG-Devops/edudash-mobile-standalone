@@ -22,6 +22,7 @@ import ThemedCard from '@/components/ui/ThemedCard';
 import ThemedButton from '@/components/ui/ThemedButton';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { Colors } from '@/constants/Colors';
+import { CompactHeader } from '@/components/navigation/CompactHeader';
 
 interface Notification {
   id: string;
@@ -169,69 +170,39 @@ export default function NotificationsScreen() {
     );
   }
 
-  // Header section (reused)
-  const HeaderSection = (
-    <View style={[styles.header, { backgroundColor: colorScheme === 'dark' ? '#0F172A' : '#FFFFFF', borderBottomColor: colorScheme === 'dark' ? '#1F2937' : '#E5E7EB' }]}>
-      <View style={styles.headerLeft}>
+  // Header actions (Mark all read / test) will be rendered below CompactHeader
+  const HeaderActions = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 8 }}>
+      {__DEV__ && (
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => {
+          style={[styles.markAllButton, { backgroundColor: '#10B981' }]}
+          onPress={async () => {
             try {
-              // Prefer safe back; if none, go home
-              // @ts-ignore
-              if (router.canGoBack && router.canGoBack()) {
-                router.back();
-              } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
-                window.history.back();
-              } else {
-                router.replace('/screens/principal-dashboard' as any);
-              }
-            } catch {
-              router.replace('/screens/principal-dashboard' as any);
+              if (!user?.id) return;
+              await NotificationService.createNotification(
+                user.id,
+                'Test notification',
+                'This is a test notification for verification.',
+                'activity'
+              );
+              await fetchNotifications();
+            } catch (e: any) {
+              Alert.alert('Not allowed', 'Your current permissions or RLS policies do not allow creating notifications from the client. This is expected in production.');
             }
           }}
         >
-<IconSymbol name="chevron.left" size={24} color={palette.text} />
+          <Text style={styles.markAllText}>Add test</Text>
         </TouchableOpacity>
-        <View>
-<Text style={[styles.headerTitle, { color: palette.text }]}>Notifications</Text>
-<Text style={[styles.headerSubtitle, { color: palette.textSecondary }]}> 
-            {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
-          </Text>
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        {__DEV__ && (
-          <TouchableOpacity
-            style={[styles.markAllButton, { backgroundColor: '#10B981' }]}
-            onPress={async () => {
-              try {
-                if (!user?.id) return;
-                await NotificationService.createNotification(
-                  user.id,
-                  'Test notification',
-                  'This is a test notification for verification.',
-                  'activity'
-                );
-                await fetchNotifications();
-              } catch (e: any) {
-                Alert.alert('Not allowed', 'Your current permissions or RLS policies do not allow creating notifications from the client. This is expected in production.');
-              }
-            }}
-          >
-            <Text style={styles.markAllText}>Add test</Text>
-          </TouchableOpacity>
-        )}
+      )}
 
-        {unreadCount > 0 && (
-          <TouchableOpacity
-            style={styles.markAllButton}
-            onPress={markAllAsRead}
-          >
-            <Text style={styles.markAllText}>Mark all read</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {unreadCount > 0 && (
+        <TouchableOpacity
+          style={styles.markAllButton}
+          onPress={markAllAsRead}
+        >
+          <Text style={styles.markAllText}>Mark all read</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -316,19 +287,37 @@ export default function NotificationsScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#0B1220' : '#F8FAFC' }]}>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <CompactHeader
+        title="Notifications"
+        subtitle={unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+        avatarInitial={(user?.email || 'U').charAt(0).toUpperCase()}
+        backgroundMode="surface"
+        onBackPress={() => {
+          try {
+            // Prefer safe back; if none, go home
+            // @ts-ignore
+            if (router.canGoBack && router.canGoBack()) {
+              router.back();
+            } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+              window.history.back();
+            } else {
+              router.replace('/screens/principal-dashboard' as any);
+            }
+          } catch {
+            router.replace('/screens/principal-dashboard' as any);
+          }
+        }}
+      />
+      {HeaderActions}
       {isFreeTier ? (
         <AdPlacement>
-          {HeaderSection}
           {ContentSection}
         </AdPlacement>
       ) : (
-        <>
-          {HeaderSection}
-          {ContentSection}
-        </>
+        ContentSection
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

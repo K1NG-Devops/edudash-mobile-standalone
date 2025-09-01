@@ -4,6 +4,7 @@
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 const exclusionList = require('metro-config/src/defaults/exclusionList');
+const { withNativeWind } = require('nativewind/metro');
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
@@ -59,4 +60,5 @@ config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 
 // Platform-specific resolver removed - no custom module resolution needed
 
-module.exports = config;
+// Export config with NativeWind
+module.exports = withNativeWind(config, { input: './global.css' });

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { Platform, Linking } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import type { 
   PlatformSubscription, 
   SubscriptionPlan, 
@@ -205,7 +206,15 @@ export function useSubscription(): UseSubscriptionReturn {
           if (typeof window !== 'undefined') {
             try { (window as any).location.href = redirectUrl; } catch {}
           } else {
-            try { await Linking.openURL(redirectUrl); } catch {}
+            try {
+              await WebBrowser.openBrowserAsync(redirectUrl, {
+                enableDefaultShareMenu: false,
+                showTitle: true,
+              });
+            } catch (e) {
+              // Fallback to system handler
+              try { await Linking.openURL(redirectUrl); } catch {}
+            }
           }
         }
 

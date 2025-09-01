@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import { CompactHeader } from '@/components/navigation/CompactHeader';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 
@@ -131,21 +132,23 @@ export default function LessonsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['top']}>
-        <View style={styles.loadingContainer}>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <CompactHeader title="Lessons" subtitle="Loading..." avatarInitial={(profile?.name || 'U').charAt(0)} backgroundMode="surface" onBackPress={() => router.back()} />
+      <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={palette.primary} />
           <Text style={[styles.loadingText, { color: palette.textSecondary }]}>
             Loading lessons...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['top']}>
-        <View style={styles.errorContainer}>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <CompactHeader title="Lessons" subtitle="Error" avatarInitial={(profile?.name || 'U').charAt(0)} backgroundMode="surface" onBackPress={() => router.back()} />
+      <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: palette.error }]}>
             {error}
           </Text>
@@ -156,30 +159,24 @@ export default function LessonsScreen() {
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['top']}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.outline }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <IconSymbol name="chevron.left" size={24} color={palette.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: palette.text }]}>All Lessons</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => {
-            // Navigate to add new lesson
-          }}
-        >
-          <IconSymbol name="plus" size={24} color={palette.primary} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <CompactHeader
+        title="All Lessons"
+        subtitle="Browse and manage lessons"
+        avatarInitial={(profile?.name || 'U').charAt(0)}
+        backgroundMode="surface"
+        onBackPress={() => router.back()}
+        rightActions={(
+          <TouchableOpacity style={styles.addButton} onPress={() => {}}>
+            <IconSymbol name="plus" size={18} color={palette.primary} />
+          </TouchableOpacity>
+        )}
+      />
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -259,7 +256,7 @@ export default function LessonsScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

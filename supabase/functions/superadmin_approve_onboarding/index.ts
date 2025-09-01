@@ -4,7 +4,10 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-type Json = Record<string, any>;
+ type Json = Record<string, any>;
+
+ // Canonical web base URL for links in emails
+ const WEB_BASE_URL = (Deno.env.get("APP_WEB_URL") ?? "https://www.edudashpro.org.za").replace(/\/+$/, "");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -321,7 +324,7 @@ function generateWelcomeEmailTemplate(emailData: {
                     
                     <!-- Login Button -->
                     <div style="text-align: center;">
-                        <a href="https://edudashpro.org.za/sign-in" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                        <a href="${WEB_BASE_URL}/sign-in" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
                             🚀 Login to Your Dashboard
                         </a>
                     </div>
@@ -397,9 +400,9 @@ function generateWelcomeEmailTemplate(emailData: {
                 </p>
                 
                 <div style="margin: 20px 0;">
-                    <a href="https://edudashpro.org.za/dashboard" style="color: #10b981; text-decoration: none; margin: 0 15px;">Dashboard</a>
-                    <a href="https://edudashpro.org.za/support/help" style="color: #10b981; text-decoration: none; margin: 0 15px;">Help Center</a>
-                    <a href="https://edudashpro.org.za" style="color: #10b981; text-decoration: none; margin: 0 15px;">Website</a>
+                    <a href="${WEB_BASE_URL}/dashboard" style="color: #10b981; text-decoration: none; margin: 0 15px;">Dashboard</a>
+                    <a href="${WEB_BASE_URL}/support/help" style="color: #10b981; text-decoration: none; margin: 0 15px;">Help Center</a>
+                    <a href="${WEB_BASE_URL}" style="color: #10b981; text-decoration: none; margin: 0 15px;">Website</a>
                 </div>
                 
                 <p style="color: #9ca3af; margin: 20px 0 0 0; font-size: 12px;">

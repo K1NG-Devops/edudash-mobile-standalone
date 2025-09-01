@@ -60,7 +60,7 @@ class PayFastOveragePaymentService {
   ): PayFastOveragePayment {
     const baseUrl = typeof window !== 'undefined' 
       ? `${window.location.protocol}//${window.location.host}` 
-      : 'https://edudash.pro';
+      : 'https://www.edudashpro.org.za';
 
     // Create descriptive item name
     const quotaTypes = billingRecord.quotaType;

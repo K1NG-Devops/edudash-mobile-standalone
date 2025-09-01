@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { UsageTrackingService, UsageStats } from '@/lib/services/usageTrackingService';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
+import { CompactHeader } from '@/components/navigation/CompactHeader';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -518,9 +519,13 @@ export default function SubscriptionManagementScreen() {
 
   if (loading || subscriptionLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => {
+      <View style={[styles.container, { backgroundColor: palette.background }]}>
+        <CompactHeader
+          title="Subscription"
+          subtitle="Loading..."
+          avatarInitial={profile?.name?.charAt(0) || 'U'}
+          backgroundMode="surface"
+          onBackPress={() => {
             try {
               // Prefer safe back; if none, fall back to a dashboard
               // @ts-ignore - expo-router may expose canGoBack at runtime
@@ -534,14 +539,8 @@ export default function SubscriptionManagementScreen() {
             } catch {
               router.replace('/screens/principal-dashboard' as any);
             }
-          }}>
-            <IconSymbol name="chevron.left" size={24} color={palette.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: palette.text }]}>
-            Subscription Management
-          </Text>
-          <View style={{ width: 24 }} />
-        </View>
+          }}
+        />
         
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={palette.primary} />
@@ -549,15 +548,43 @@ export default function SubscriptionManagementScreen() {
             Loading subscription data...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
+  // Prepare status indicators for the header
+  const headerIndicators = [];
+  if (subscription?.plan?.name && subscription.plan.name !== 'Free Plan') {
+    headerIndicators.push({
+      icon: 'crown.fill',
+      label: subscription.plan.name,
+      color: palette.primary,
+    });
+  }
+  if (isActive && !isTrial) {
+    headerIndicators.push({
+      icon: 'checkmark.circle.fill',
+      label: 'Active',
+      color: palette.success,
+    });
+  } else if (isTrial) {
+    headerIndicators.push({
+      icon: 'clock.fill',
+      label: `Trial: ${daysUntilExpiry} days`,
+      color: palette.warning,
+    });
+  }
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => {
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      {/* Compact Header */}
+      <CompactHeader
+        title={profile?.name || 'Subscription'}
+        subtitle={profile?.preschool_name || 'Manage your plan'}
+        avatarInitial={profile?.name?.charAt(0) || 'U'}
+        statusIndicators={headerIndicators}
+        backgroundMode="surface"
+        onBackPress={() => {
           try {
             // Prefer safe back; if none, fall back to a dashboard
             // @ts-ignore - expo-router may expose canGoBack at runtime
@@ -571,14 +598,8 @@ export default function SubscriptionManagementScreen() {
           } catch {
             router.replace('/screens/principal-dashboard' as any);
           }
-        }}>
-          <IconSymbol name="chevron.left" size={24} color={palette.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: palette.text }]}>
-          Subscription Management
-        </Text>
-        <View style={{ width: 24 }} />
-      </View>
+        }}
+      />
 
       {/* Tab Navigation */}
       <View style={[styles.tabNavigation, { backgroundColor: palette.surface }]}>
@@ -618,7 +639,7 @@ export default function SubscriptionManagementScreen() {
         {activeTab === 'billing' && renderBillingTab()}
         {activeTab === 'settings' && renderSettingsTab()}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
