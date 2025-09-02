@@ -4,6 +4,9 @@
   "version": "1.0.1",
   "scripts": {
     "start": "expo start",
+    "storybook": "expo start",
+    "storybook:ios": "expo run:ios",
+    "storybook:android": "expo run:android",
     "start:log": "bash ./scripts/start-with-logs.sh",
     "start:fresh": "node clear-cache.js && expo start",
     "clear-cache": "node clear-cache.js",
@@ -46,6 +49,8 @@
     "seed:plans": "ALLOW_SERVICE_SEED=true node scripts/seed-subscription-plans.js"
   },
   "dependencies": {
+    "@xstate/react": "^4.1.1",
+    "xstate": "^5.18.0",
     "@anthropic-ai/sdk": "^0.58.0",
     "@expo/config-plugins": "~10.1.1",
     "@expo/prebuild-config": "~9.0.0",
@@ -124,6 +129,13 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@storybook/react-native": "^7.6.20",
+    "@storybook/addon-ondevice-controls": "^7.6.20",
+    "@storybook/addon-ondevice-actions": "^7.6.20",
+    "loki": "^0.33.0",
+    "eslint-plugin-tailwindcss": "^3.15.0",
+    "prettier-plugin-tailwindcss": "^0.6.8",
+    "plop": "^4.0.1",
     "@babel/core": "^7.25.2",
     "@expo/ngrok": "^4.1.3",
     "@testing-library/react-native": "^12.8.1",

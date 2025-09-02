@@ -1,0 +1,32 @@
+import React from 'react'
+import { Platform, View, Text } from 'react-native'
+
+let StorybookUIRoot: React.ComponentType<any>
+
+if (Platform.OS === 'web') {
+  // On-device Storybook does not run on web. Render a friendly placeholder.
+  StorybookUIRoot = function StorybookWebPlaceholder() {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Text style={{ fontSize: 16, textAlign: 'center' }}>
+          Storybook (on-device) is only available on iOS/Android builds.\n\nRun the app on a device/emulator and open the /storybook route.
+        </Text>
+      </View>
+    )
+  }
+} else {
+  // Lazy-require to avoid bundling for the web target
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getStorybookUI } = require('@storybook/react-native')
+
+  // Load example stories on native only
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('../src/design-system/components/__stories__/Button.stories')
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('../src/design-system/components/__stories__/Card.stories')
+
+  StorybookUIRoot = getStorybookUI({ asyncStorage: null })
+}
+
+export default StorybookUIRoot
+

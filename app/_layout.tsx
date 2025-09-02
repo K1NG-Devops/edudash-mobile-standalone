@@ -19,6 +19,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
+import { AppFlowProvider } from '@/contexts/AppFlowProvider';
 // import AdsBootstrapper from '@/components/advertising/AdsBootstrapper';
 // import { GrowthBookProvider } from '@growthbook/growthbook-react';
 // import { growthbook } from '@/lib/growthbook';
@@ -172,10 +173,12 @@ export default function RootLayout() {
                 <ToastProvider>
                   <NavigationProvider>
                     <SubscriptionProviderWithAuth>
-                      <SafeAreaProvider>
-                        <ThemeStatusBar />
-                        <ContainerWithInsets hideBottomNav={hideBottomNav} />
-                      </SafeAreaProvider>
+                      <AppFlowProvider>
+                        <SafeAreaProvider>
+                          <ThemeStatusBar />
+                          <ContainerWithInsets hideBottomNav={hideBottomNav} />
+                        </SafeAreaProvider>
+                      </AppFlowProvider>
                     </SubscriptionProviderWithAuth>
                   </NavigationProvider>
                 </ToastProvider>
