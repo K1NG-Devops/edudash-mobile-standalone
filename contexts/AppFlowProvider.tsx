@@ -18,7 +18,7 @@ export const AppFlowProvider = ({ children }: { children: React.ReactNode }) => 
 
   const [state] = useMachine(appFlowMachine.provide({
     guards: {},
-  }), { context: { role } })
+  }), { input: { role } })
 
   const value = useMemo(() => ({ state: state.value as string, role }), [state.value, role])
 

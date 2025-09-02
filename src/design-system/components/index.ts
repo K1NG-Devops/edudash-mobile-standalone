@@ -10,6 +10,8 @@ export * from './Card';
 export * from './Typography';
 export * from './Icon';
 export * from './Badge';
+export * from './PageHeader';
+export * from './EmptyState';
 
 // Theme Components
 export * from '../theme/ThemeProvider';

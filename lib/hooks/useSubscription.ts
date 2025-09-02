@@ -208,7 +208,7 @@ export function useSubscription(): UseSubscriptionReturn {
           } else {
             try {
               await WebBrowser.openBrowserAsync(redirectUrl, {
-                enableDefaultShareMenu: false,
+                enableDefaultShareMenuItem: false,
                 showTitle: true,
               });
             } catch (e) {

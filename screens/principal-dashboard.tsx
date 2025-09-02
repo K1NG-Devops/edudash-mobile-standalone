@@ -20,7 +20,8 @@ import {
   Button, IconButton,
   Heading, Text as DSText,
   Badge, StatusBadge,
-  Icon, Icons
+  Icon, Icons,
+  PageHeader
 } from '@/src/design-system/components';
 import {
   Alert,
@@ -263,20 +264,17 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         }
       >
         <View style={styles.contentWrapper}>
-        {/* Overview Header - Using New Design System */}
-        <Card variant="flat" padding="lg" className="mb-4">
-          <CardHeader>
-            <Heading level="h2">📊 School Overview</Heading>
-            <DSText variant="subtitle" className="mt-1">
-              Manage {(schoolInfoQuery.data as any)?.name || 'Your Preschool'}
-            </DSText>
-            {statsQuery.data?.attendanceRate && statsQuery.data.attendanceRate > 0 && (
-              <Badge variant="success" className="mt-2 self-start">
-                {statsQuery.data.attendanceRate}% Attendance Today
-              </Badge>
-            )}
-          </CardHeader>
-        </Card>
+        {/* Page Header */}
+        <PageHeader
+          title="📊 School Overview"
+          subtitle={`Manage ${(schoolInfoQuery.data as any)?.name || 'Your Preschool'}`}
+          actions={<Button text="Create Announcement" onPress={() => setShowAnnouncementModal(true)} />}
+        />
+        {statsQuery.data?.attendanceRate && statsQuery.data.attendanceRate > 0 && (
+          <Badge variant="success" className="mt-2 self-start">
+            {statsQuery.data.attendanceRate}% Attendance Today
+          </Badge>
+        )}
 
         {/* Subscription / Plan */}
         <Card variant="flat" padding="lg" className="mb-4">

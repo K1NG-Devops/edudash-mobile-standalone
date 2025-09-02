@@ -142,7 +142,6 @@ export const Heading = React.forwardRef<RNText, HeadingProps>(
     
     // Map heading levels to accessibility roles
     const accessibilityRole = 'header';
-    const accessibilityLevel = level ? parseInt(level.charAt(1)) : 3;
     
     return (
       <RNText
@@ -153,7 +152,6 @@ export const Heading = React.forwardRef<RNText, HeadingProps>(
           style
         ]}
         accessibilityRole={accessibilityRole as any}
-        accessibilityLevel={accessibilityLevel}
         {...props}
       >
         {children}

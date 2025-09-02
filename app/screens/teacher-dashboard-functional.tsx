@@ -17,6 +17,7 @@ import PlanStatus from '@/components/subscription/PlanStatus';
 import UpgradeModal from '@/components/subscription/UpgradeModal';
 import { SubscriptionProvider, useFeatureAccess, useSubscription } from '@/contexts/SubscriptionContext';
 import { shadow } from '@/lib/ui/shadow';
+import { PageHeader, EmptyState, Button } from '@/src/design-system/components';
 
 interface TeacherDashboardProps {
     profile: any;
@@ -431,6 +432,12 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
             </AuthConsumer>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                {/* Page Header */}
+                <PageHeader
+                    title="👩‍🏫 Teacher Dashboard"
+                    subtitle={tenantName ? `Managing ${tenantName}` : 'Your teaching tools at a glance'}
+                    actions={<Button text="Create Lesson" onPress={() => router.push('/screens/lessons')} />}
+                />
                 {/* Subscription Status */}
                 {!subscriptionLoading && (
                     <PlanStatus
@@ -496,25 +503,36 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                 {/* My Classes */}
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>My Classes</Text>
+                    {classes.length === 0 ? (
+                        <EmptyState title="No classes yet" description="Create your first class to get started." primaryAction={{ label: 'Create Class', onPress: () => router.push('/screens/school-setup') }} />
+                    ) : null}
                     {classes.map(renderClassCard)}
                 </View>
 
                 {/* Active Lessons */}
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>Current Lessons</Text>
+                    {lessons.length === 0 ? (
+                        <EmptyState title="No lessons yet" description="Create your first lesson or browse the lesson library." primaryAction={{ label: 'Browse Lessons', onPress: () => router.push('/screens/lessons') }} />
+                    ) : null}
                     {lessons.slice(0, 3).map(renderLessonCard)}
-                    <TouchableOpacity
-                        style={styles.viewAllButton}
-                        onPress={() => router.push('/screens/lessons')}
-                    >
-                        <Text style={[styles.viewAllText, { color: colors.text }]}>View All Lessons</Text>
-                        <IconSymbol name="chevron.right" size={16} color="#3B82F6" />
-                    </TouchableOpacity>
+                    {lessons.length > 0 && (
+                        <TouchableOpacity
+                            style={styles.viewAllButton}
+                            onPress={() => router.push('/screens/lessons')}
+                        >
+                            <Text style={[styles.viewAllText, { color: colors.text }]}>View All Lessons</Text>
+                            <IconSymbol name="chevron.right" size={16} color="#3B82F6" />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* Recent Homework Assignments */}
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Homework Assignments</Text>
+                    {homeworkAssignments.length === 0 ? (
+                        <EmptyState title="No homework assigned" description="Create a homework assignment for your class." primaryAction={{ label: 'Create Assignment', onPress: () => router.push('/screens/analytics') }} />
+                    ) : null}
                     {homeworkAssignments.map((homework) => {
                         const dueDate = homework.due_date ? new Date(homework.due_date) : null;
                         const today = new Date();

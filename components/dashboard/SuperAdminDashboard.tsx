@@ -28,6 +28,7 @@ import {
 } from '@/lib/services/superAdminDataService';
 import { shadow } from '@/lib/ui/shadow';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PageHeader, EmptyState, Button } from '@/src/design-system/components';
 
 interface SuperAdminDashboardProps {
   userId: string;
@@ -469,11 +470,12 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             </View>
           </View>
         ) : (
-          <View style={styles.emptyState}>
-            <IconSymbol name="tray" size={48} color="#9CA3AF" />
-            <Text style={styles.emptyStateTitle}>No Pending Requests</Text>
-            <Text style={styles.emptyStateText}>All school onboarding requests have been processed</Text>
-          </View>
+          <EmptyState
+            icon={<IconSymbol name="tray" size={48} color="#9CA3AF" />}
+            title="No Pending Requests"
+            description="All school onboarding requests have been processed"
+            primaryAction={{ label: 'Create School', onPress: () => setShowCreateSchoolModal(true) }}
+          />
         )}
 
         {/* Quick Actions */}
@@ -621,13 +623,12 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 64 }]}
       >
-        {/* Header Text */}
-        <View style={styles.headerTextSection}>
-          <Text style={styles.greeting}>🔱 Super Admin Dashboard</Text>
-          <Text style={styles.subtitle}>
-            Manage the entire EduDash Pro platform
-          </Text>
-        </View>
+        {/* Page Header */}
+        <PageHeader
+          title="🔱 Super Admin Dashboard"
+          subtitle="Manage the entire EduDash Pro platform"
+          actions={<Button text="Create School" onPress={() => setShowCreateSchoolModal(true)} />}
+        />
 
         {/* Alerts Section */}
         {dashboardData.alerts.length > 0 && (

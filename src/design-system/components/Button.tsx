@@ -80,7 +80,7 @@ export interface ButtonProps
   rightIcon?: React.ReactNode;
 }
 
-export const Button = React.forwardRef<TouchableOpacity, ButtonProps>(
+export const Button = React.forwardRef<React.ElementRef<typeof TouchableOpacity>, ButtonProps>(
   ({ 
     children,
     text,
@@ -162,7 +162,7 @@ export interface IconButtonProps extends Omit<ButtonProps, 'text' | 'children' |
   label?: string; // For accessibility
 }
 
-export const IconButton = React.forwardRef<TouchableOpacity, IconButtonProps>(
+export const IconButton = React.forwardRef<React.ElementRef<typeof TouchableOpacity>, IconButtonProps>(
   ({ icon, label, size = 'md', ...props }, ref) => {
     const padding = {
       sm: 'p-1.5',

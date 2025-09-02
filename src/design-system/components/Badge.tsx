@@ -63,7 +63,7 @@ const badgeTextVariants = cva(
 export interface BadgeProps 
   extends ViewProps,
     VariantProps<typeof badgeVariants> {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   text?: string;
 }
 

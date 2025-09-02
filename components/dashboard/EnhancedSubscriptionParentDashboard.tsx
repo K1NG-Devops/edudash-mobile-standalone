@@ -28,6 +28,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
+import { PageHeader, EmptyState, Button } from '@/src/design-system/components';
 
 interface EnhancedSubscriptionParentDashboardProps {
   userId: string;
@@ -375,20 +376,19 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header Text */}
-        <View style={styles.headerTextSection}>
-          <Text style={[styles.greeting, { color: palette.text }]}>{getGreeting()} 👋</Text>
-          <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-            {selectedChild 
-              ? `Let's see how ${selectedChild.first_name} is doing today`
-              : 'Welcome to your dashboard'}
-          </Text>
-          {tenantName && (
-            <View style={styles.tenantInfo}>
-              <Text style={[styles.tenantLabel, { color: palette.text }]}>🏫 {tenantName}</Text>
-            </View>
-          )}
-        </View>
+        {/* Page Header */}
+        <PageHeader
+          title={`${getGreeting()} 👋`}
+          subtitle={selectedChild ? `Let's see how ${selectedChild.first_name} is doing today` : 'Welcome to your dashboard'}
+          actions={(!selectedChild && dashboardData && dashboardData.children.length === 0)
+            ? <Button text="Register Child" onPress={() => router.push('/(tabs)/register')} />
+            : undefined}
+        />
+        {tenantName && (
+          <View style={styles.tenantInfo}>
+            <Text style={[styles.tenantLabel, { color: palette.text }]}>🏫 {tenantName}</Text>
+          </View>
+        )}
 
         {/* Subscription Management Card */}
         <DashboardSubscriptionCard
@@ -457,41 +457,12 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
           </TouchableOpacity>
         ) : (
           <View style={styles.emptyStateCard}>
-            <LinearGradient
-              colors={['#F3F4F6', '#E5E7EB', '#D1D5DB']}
-              style={styles.childCard}
-            >
-              <View style={styles.emptyStateContent}>
-                {loading ? (
-                  <>
-                    <Text style={[styles.emptyStateTitle, { color: palette.text }]}>Loading...</Text>
-                    <Text style={[styles.emptyStateText, { color: palette.textSecondary }]}>
-                      Fetching your child's information
-                    </Text>
-                  </>
-                ) : dashboardData && dashboardData.children.length === 0 ? (
-                  <>
-                    <Text style={[styles.emptyStateTitle, { color: palette.text }]}>No Children Found</Text>
-                    <Text style={[styles.emptyStateText, { color: palette.textSecondary }]}>
-                      You don't have any children registered
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.registerButton}
-                      onPress={() => router.push('/(tabs)/register')}
-                    >
-                      <Text style={styles.registerButtonText}>Register a Child</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
-                    <Text style={[styles.emptyStateTitle, { color: palette.text }]}>Welcome!</Text>
-                    <Text style={[styles.emptyStateText, { color: palette.textSecondary }]}>
-                      Setting up your dashboard...
-                    </Text>
-                  </>
-                )}
-              </View>
-            </LinearGradient>
+            <EmptyState
+              icon={<IconSymbol name="person.2.fill" size={40} color="#9CA3AF" />}
+              title={loading ? 'Loading...' : (dashboardData && dashboardData.children.length === 0 ? 'No Children Found' : 'Welcome!')}
+              description={loading ? "Fetching your child's information" : (dashboardData && dashboardData.children.length === 0 ? "You don't have any children registered" : 'Setting up your dashboard...')}
+              primaryAction={!loading && dashboardData && dashboardData.children.length === 0 ? { label: 'Register a Child', onPress: () => router.push('/(tabs)/register') } : undefined}
+            />
           </View>
         )}
 

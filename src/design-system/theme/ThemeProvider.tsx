@@ -69,7 +69,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         // Only works on Android - set navigation bar style
         if (Platform.OS === 'android') {
           // Navigation bar button color
-          SystemUI.setNavigationBarStyleAsync?.(isDark ? 'light' : 'dark').catch(() => {});
+          (SystemUI as any).setNavigationBarStyleAsync?.(isDark ? 'light' : 'dark')?.catch?.(() => {});
         }
       } catch (error) {
         console.error('Failed to apply system UI theme:', error);

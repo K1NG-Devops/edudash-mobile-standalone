@@ -580,7 +580,7 @@ export default function SubscriptionManagementScreen() {
       {/* Compact Header */}
       <CompactHeader
         title={profile?.name || 'Subscription'}
-        subtitle={profile?.preschool_name || 'Manage your plan'}
+        subtitle={'Manage your plan'}
         avatarInitial={profile?.name?.charAt(0) || 'U'}
         statusIndicators={headerIndicators}
         backgroundMode="surface"
