@@ -434,6 +434,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 {/* Page Header */}
                 <PageHeader
+                    spacing="sm"
                     title="👩‍🏫 Teacher Dashboard"
                     subtitle={tenantName ? `Managing ${tenantName}` : 'Your teaching tools at a glance'}
                     actions={<Button text="Create Lesson" onPress={() => router.push('/screens/lessons')} />}

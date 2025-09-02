@@ -252,6 +252,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         onNotificationsPress={() => handleNavigate('notifications')}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
+        onPrimaryAction={() => setShowEventModal(true)}
         notificationCount={statsQuery.data?.pendingPayments || 0}
       />
 
@@ -275,7 +276,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
                 variant="secondary"
                 size="sm"
                 label="New Event"
-                icon={<Icon name="calendar" />}
+                icon={<Icon name="Calendar" />}
                 onPress={() => setShowEventModal(true)}
               />
               <Button size="sm" text="Create Announcement" onPress={() => setShowAnnouncementModal(true)} />

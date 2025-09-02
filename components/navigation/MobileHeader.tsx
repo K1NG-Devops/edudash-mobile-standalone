@@ -26,6 +26,7 @@ interface MobileHeaderProps {
   onNavigate?: (route: string) => void;
   onSignOut?: () => void;
   notificationCount?: number; // if provided, overrides internal fetch
+  onPrimaryAction?: () => void; // optional primary action (e.g., create event for principals)
 }
 
 interface MobileHeaderState {
@@ -41,6 +42,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onNavigate,
   onSignOut,
   notificationCount,
+  onPrimaryAction,
 }) => {
   const { colorScheme, toggle: toggleGlobalTheme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -153,6 +155,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     ? ['#DC2626', '#2563EB'] as const  // Red-600 to Blue-600
     : ['#F87171', '#60A5FA'] as const;  // Red-400 to Blue-400
   const firstName = user?.name?.split(' ')[0] || 'User';
+  const isPrincipal = user?.role === 'preschool_admin' || user?.role === 'principal';
   // For superadmin, prefer a short display label over raw email/name
   const displayName = user?.role === 'superadmin'
     ? 'Super Admin'
@@ -227,39 +230,51 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               </View>
 
               {/* Right side - Actions */}
-              <View style={styles.rightSection}>
+              <View style={[styles.rightSection, isPrincipal && styles.rightSectionCompact]}>
                 {/* Theme Toggle Button */}
                 <TouchableOpacity
-                  style={styles.modernActionButton}
+                  style={[styles.modernActionButton, isPrincipal && styles.compactActionButton]}
                   onPress={toggleGlobalTheme}
                   activeOpacity={0.7}
                 >
                   <IconSymbol 
                     name={colorScheme === 'light' ? 'moon.fill' : 'sun.max.fill'} 
-                    size={18} 
+                    size={isPrincipal ? 16 : 18} 
                     color="#FFFFFF" 
                   />
                 </TouchableOpacity>
 
+                {/* Principal Primary Action (e.g., Create Event) */}
+                {isPrincipal && onPrimaryAction && (
+                  <TouchableOpacity
+                    style={[styles.modernActionButton, styles.compactActionButton]}
+                    onPress={onPrimaryAction}
+                    activeOpacity={0.7}
+                    accessibilityLabel="Create Event"
+                  >
+                    <IconSymbol name="calendar" size={16} color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
+
                 {/* Manage Subscription Button */}
                 {onNavigate && (
                   <TouchableOpacity
-                    style={styles.modernActionButton}
+                    style={[styles.modernActionButton, isPrincipal && styles.compactActionButton]}
                     onPress={() => onNavigate('/pricing')}
                     activeOpacity={0.7}
                   >
-                    <IconSymbol name="creditcard.fill" size={18} color="#FFFFFF" />
+                    <IconSymbol name="creditcard.fill" size={isPrincipal ? 16 : 18} color="#FFFFFF" />
                   </TouchableOpacity>
                 )}
 
                 {/* Notifications Button */}
                 {onNotificationsPress && (
                   <TouchableOpacity
-                    style={styles.modernActionButton}
+                    style={[styles.modernActionButton, isPrincipal && styles.compactActionButton]}
                     onPress={onNotificationsPress}
                     activeOpacity={0.7}
                   >
-                    <IconSymbol name="bell" size={18} color="#FFFFFF" />
+                    <IconSymbol name="bell" size={isPrincipal ? 16 : 18} color="#FFFFFF" />
                     {badgeCount > 0 && (
                       <View style={styles.modernNotificationBadge}>
                         <Text style={styles.notificationBadgeText}>
@@ -352,6 +367,9 @@ userName: {
     marginTop: 2,
     gap: 10,
   },
+  rightSectionCompact: {
+    gap: 6,
+  },
   actionButton: {
     width: 40,
     height: 40,
@@ -443,6 +461,11 @@ userName: {
     position: 'relative',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  compactActionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   modernNotificationBadge: {
     position: 'absolute',

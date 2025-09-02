@@ -378,6 +378,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
       >
         {/* Page Header */}
         <PageHeader
+          spacing="sm"
           title={`${getGreeting()} 👋`}
           subtitle={selectedChild ? `Let's see how ${selectedChild.first_name} is doing today` : 'Welcome to your dashboard'}
           actions={(!selectedChild && dashboardData && dashboardData.children.length === 0)
