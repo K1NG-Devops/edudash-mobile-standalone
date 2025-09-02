@@ -17,6 +17,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
+// Design system components
+import { Card, CardHeader, CardContent } from '@/src/design-system/components';
+import { Heading, Text as DSText } from '@/src/design-system/components';
 
 interface TeacherProfile {
   id: string;
@@ -259,58 +262,59 @@ const canEdit = profile?.role === 'preschool_admin' || profile?.role === 'supera
       />
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* Header with Edit Controls */}
-        <View style={[styles.header, { backgroundColor: palette.surface }]}>
-          <View style={styles.headerInfo}>
-            <Text style={[styles.teacherName, { color: palette.text }]}>{teacher.name}</Text>
-            <Text style={[styles.teacherRole, { color: palette.textSecondary }]}>
+        {/* Header with Edit Controls (standardized) */}
+        <Card variant="flat" padding="lg" className="mb-4">
+          <CardHeader>
+            <Heading level="h2">👩‍🏫 Teacher Profile</Heading>
+            <DSText variant="subtitle" className="mt-1">
               {teacher.position_title || teacher.role || 'Teacher'}
-            </Text>
-            <View style={styles.statusBadge}>
-              <View style={[styles.statusIndicator, { 
-                backgroundColor: teacher.is_active ? '#10B981' : '#EF4444' 
-              }]} />
-              <Text style={[styles.statusText, { color: palette.textSecondary }]}>
-                {teacher.is_active ? 'Active' : 'Inactive'}
-              </Text>
+            </DSText>
+          </CardHeader>
+          <CardContent>
+            <View style={styles.headerInfo}>
+              <DSText weight="semibold" className="text-xl">{teacher.name}</DSText>
+              <View style={styles.statusBadge}>
+                <View style={[styles.statusIndicator, { backgroundColor: teacher.is_active ? '#10B981' : '#EF4444' }]} />
+                <DSText variant="muted">{teacher.is_active ? 'Active' : 'Inactive'}</DSText>
+              </View>
             </View>
-          </View>
-          
-          {canEdit && (
-            <View style={styles.editControls}>
-              {editMode ? (
-                <View style={styles.editButtons}>
+
+            {canEdit && (
+              <View style={styles.editControls}>
+                {editMode ? (
+                  <View style={styles.editButtons}>
+                    <TouchableOpacity
+                      style={[styles.cancelButton, { borderColor: palette.outline }]}
+                      onPress={handleCancel}
+                      disabled={saving}
+                    >
+                      <Text style={[styles.cancelButtonText, { color: palette.textSecondary }]}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.saveButton, { backgroundColor: '#10B981' }]}
+                      onPress={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.saveButtonText}>Save</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ) : (
                   <TouchableOpacity
-                    style={[styles.cancelButton, { borderColor: palette.outline }]}
-                    onPress={handleCancel}
-                    disabled={saving}
+                    style={[styles.editButton, { backgroundColor: palette.primary }]}
+                    onPress={() => setEditMode(true)}
                   >
-                    <Text style={[styles.cancelButtonText, { color: palette.textSecondary }]}>Cancel</Text>
+                    <IconSymbol name="pencil" size={16} color="#FFFFFF" />
+                    <Text style={styles.editButtonText}>Edit</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.saveButton, { backgroundColor: '#10B981' }]}
-                    onPress={handleSave}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text style={styles.saveButtonText}>Save</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.editButton, { backgroundColor: palette.primary }]}
-                  onPress={() => setEditMode(true)}
-                >
-                  <IconSymbol name="pencil" size={16} color="#FFFFFF" />
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
+                )}
+              </View>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Basic Information */}
         {renderSection('Basic Information', (
