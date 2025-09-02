@@ -22,11 +22,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   ...props
 }) => {
   return (
-    <View className={`items-center justify-center rounded-xl p-6 border border-border ${className || ''}`} style={style} {...props}>
+    <View className={`items-center justify-center rounded-xl border border-border p-6 ${className || ''}`} style={style} {...props}>
       {icon ? <View className="mb-3">{icon}</View> : null}
       <Heading level="h4" className="mb-1 text-center">{title}</Heading>
       {description ? (
-        <Text variant="muted" className="text-center mb-4">{description}</Text>
+        <Text variant="muted" className="mb-4 text-center">{description}</Text>
       ) : null}
       <View className="flex-row items-center justify-center gap-3">
         {secondaryAction ? (

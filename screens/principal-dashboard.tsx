@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-raw-text */
 import { SchoolCodeManager } from '@/components/admin/SchoolCodeManager';
 import { TeacherManagement } from '@/components/admin/TeacherManagement';
 import { IconSymbol } from '@/components/ui/IconSymbol';

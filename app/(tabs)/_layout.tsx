@@ -1,10 +1,10 @@
 import { Tabs } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useTheme } from '@/contexts/ThemeContext';
+import { Appearance } from 'react-native';
 
 export default function TabLayout() {
-  const { colorScheme } = useTheme();
-  const isDark = colorScheme === 'dark';
+  const scheme = Appearance.getColorScheme?.() || 'light';
+  const isDark = scheme === 'dark';
 
   return (
     <Tabs

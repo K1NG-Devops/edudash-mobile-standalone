@@ -18,8 +18,8 @@ const textVariants = cva(
         caption: 'text-xs',
         subtitle: 'text-sm',
         label: 'text-sm font-medium',
-        error: 'text-destructive text-sm',
-        success: 'text-success text-sm',
+        error: 'text-sm text-destructive',
+        success: 'text-sm text-success',
         muted: 'text-foreground-muted',
       },
       size: {
@@ -91,7 +91,7 @@ Text.displayName = 'Text';
 
 // Heading variants
 const headingVariants = cva(
-  'text-foreground font-bold',
+  'font-bold text-foreground',
   {
     variants: {
       level: {

@@ -9,7 +9,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { shadows } from '../tokens';
 
 const cardVariants = cva(
-  'bg-background rounded-lg',
+  'rounded-lg bg-background',
   {
     variants: {
       variant: {

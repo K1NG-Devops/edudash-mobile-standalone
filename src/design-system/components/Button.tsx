@@ -45,7 +45,7 @@ const buttonVariants = cva(
 );
 
 const buttonTextVariants = cva(
-  'font-semibold text-center',
+  'text-center font-semibold',
   {
     variants: {
       variant: {

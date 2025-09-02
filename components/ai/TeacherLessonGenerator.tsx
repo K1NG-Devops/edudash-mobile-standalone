@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { lessonGenerator, LESSON_TEMPLATES, LessonTemplate } from '@/lib/ai/lessonGenerator';
 import { LessonContent, isAIAvailable } from '@/lib/ai/claudeService';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Colors } from '@/constants/Colors';
 import { TOPIC_CATEGORIES, Topic, getFilteredTopics, getTopicsByCategory, searchTopics } from '@/lib/constants/topicLibrary';
 
@@ -41,6 +42,7 @@ export const TeacherLessonGenerator: React.FC<TeacherLessonGeneratorProps> = ({
   onClose,
 }) => {
   const { colorScheme } = useTheme();
+  const { language } = useLanguage();
   const palette = Colors[colorScheme];
   
   const [currentStep, setCurrentStep] = useState(0);
@@ -230,6 +232,7 @@ export const TeacherLessonGenerator: React.FC<TeacherLessonGeneratorProps> = ({
           customObjectives: validObjectives,
           userId,
           preschoolId,
+          languageCode: language,
         });
       } else {
         result = await lessonGenerator.generateCustomLesson({
@@ -241,6 +244,7 @@ export const TeacherLessonGenerator: React.FC<TeacherLessonGeneratorProps> = ({
           difficulty,
           userId,
           preschoolId,
+          languageCode: language,
         });
       }
 

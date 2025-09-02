@@ -592,7 +592,7 @@ export const useAuth = (): AuthContextType => {
   if (!context) {
     // Do not crash the whole app; return a safe fallback and log for diagnostics
     try {
-      // eslint-disable-next-line no-console
+       
       console.error('[Auth] useAuth called outside AuthProvider. Using fallback context.');
     } catch {}
     return AuthContextFallback;

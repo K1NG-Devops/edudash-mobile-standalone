@@ -313,7 +313,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
   // If loading initially, show loading indicator
   if (loading && !refreshing && !dashboardData) {
     return (
-      <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <View style={[styles.container, { backgroundColor: palette.background }]} className="flex-1 bg-background">
         <MobileHeader
           user={userProfile}
           schoolName={tenantName}
@@ -335,7 +335,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
   // If there's an error, show error message
   if (error && !loading && !refreshing) {
     return (
-      <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <View style={[styles.container, { backgroundColor: palette.background }]} className="flex-1 bg-background">
         <MobileHeader
           user={userProfile}
           schoolName={tenantName}
@@ -357,7 +357,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.background }]}>
+    <View style={[styles.container, { backgroundColor: palette.background }]} className="flex-1 bg-background">
       {/* Mobile Header */}
       <MobileHeader
         user={userProfile}
@@ -587,10 +587,10 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                   </View>
                 )}
               </View>
-              <Text style={[
-                styles.quickActionLabel, 
-                { color: profileComplete ? palette.textSecondary : '#EF4444' }
-              ]}>
+              <Text
+                style={styles.quickActionLabel}
+                className={profileComplete ? 'text-muted-foreground' : 'text-red-500'}
+              >
                 {profileComplete ? 'Profile Complete' : 'Complete Profile'}
               </Text>
             </TouchableOpacity>
@@ -608,7 +608,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                   </View>
                 )}
               </View>
-              <Text style={[styles.quickActionLabel, { color: '#8B5CF6' }]}>AI Lessons</Text>
+              <Text style={styles.quickActionLabel} className="text-violet-500">AI Lessons</Text>
               {usageStats?.quotas.ai_lessons_per_month && (
                 <Text style={styles.usageIndicator}>
                   {usageStats.ai_lessons_used_this_month}/{usageStats.quotas.ai_lessons_per_month}
@@ -628,7 +628,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                   </View>
                 )}
               </View>
-              <Text style={[styles.quickActionLabel, { color: '#8B5CF6' }]}>AI Grading</Text>
+              <Text style={styles.quickActionLabel} className="text-violet-500">AI Grading</Text>
               {usageStats?.quotas.homework_grading_per_month && (
                 <Text style={styles.usageIndicator}>
                   {usageStats.homework_graded_this_month}/{usageStats.quotas.homework_grading_per_month}

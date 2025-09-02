@@ -160,7 +160,7 @@ export default function NotificationsScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} className="flex-1 bg-background">
         <View style={styles.errorContainer}>
           <IconSymbol name="person.slash" size={48} color="#EF4444" />
           <Text style={styles.errorTitle}>Authentication Required</Text>

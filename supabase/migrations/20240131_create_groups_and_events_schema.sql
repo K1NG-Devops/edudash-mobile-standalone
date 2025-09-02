@@ -42,10 +42,13 @@ CREATE TABLE IF NOT EXISTS public.event_audiences (
   audience_type text CHECK (audience_type IN ('role', 'group', 'user', 'preschool')) NOT NULL,
   target_id uuid,
   target_value text,
-  created_at timestamptz DEFAULT now(),
-  
-  UNIQUE(event_id, audience_type, COALESCE(target_id::text, target_value))
+  created_at timestamptz DEFAULT now()
 );
+
+-- Create a unique index to enforce uniqueness across (event_id, type, coalesced target)
+-- Note: Postgres does not allow expressions in a table-level UNIQUE constraint; use an index instead.
+CREATE UNIQUE INDEX IF NOT EXISTS event_audiences_unique_idx
+  ON public.event_audiences (event_id, audience_type, (COALESCE(target_id::text, target_value)));
 
 -- Event Invitations Table
 CREATE TABLE IF NOT EXISTS public.event_invitations (
@@ -140,6 +143,7 @@ ALTER TABLE public.activity_feed ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_history ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for Principal Groups
+DROP POLICY IF EXISTS "Users can view groups in their preschool" ON public.principal_groups;
 CREATE POLICY "Users can view groups in their preschool" ON public.principal_groups
   FOR SELECT USING (
     preschool_id IN (
@@ -147,6 +151,7 @@ CREATE POLICY "Users can view groups in their preschool" ON public.principal_gro
     )
   );
 
+DROP POLICY IF EXISTS "Principals can create groups" ON public.principal_groups;
 CREATE POLICY "Principals can create groups" ON public.principal_groups
   FOR INSERT WITH CHECK (
     created_by = auth.uid() AND
@@ -157,17 +162,20 @@ CREATE POLICY "Principals can create groups" ON public.principal_groups
     )
   );
 
+DROP POLICY IF EXISTS "Group creators can update their groups" ON public.principal_groups;
 CREATE POLICY "Group creators can update their groups" ON public.principal_groups
   FOR UPDATE USING (
     created_by = auth.uid()
   );
 
+DROP POLICY IF EXISTS "Group creators can delete their groups" ON public.principal_groups;
 CREATE POLICY "Group creators can delete their groups" ON public.principal_groups
   FOR DELETE USING (
     created_by = auth.uid()
   );
 
 -- RLS Policies for Group Members
+DROP POLICY IF EXISTS "Users can view group members" ON public.group_members;
 CREATE POLICY "Users can view group members" ON public.group_members
   FOR SELECT USING (
     group_id IN (
@@ -178,6 +186,7 @@ CREATE POLICY "Users can view group members" ON public.group_members
     )
   );
 
+DROP POLICY IF EXISTS "Group admins can manage members" ON public.group_members;
 CREATE POLICY "Group admins can manage members" ON public.group_members
   FOR ALL USING (
     EXISTS (
@@ -189,6 +198,7 @@ CREATE POLICY "Group admins can manage members" ON public.group_members
   );
 
 -- RLS Policies for Event Audiences
+DROP POLICY IF EXISTS "Event creators can manage audiences" ON public.event_audiences;
 CREATE POLICY "Event creators can manage audiences" ON public.event_audiences
   FOR ALL USING (
     event_id IN (
@@ -197,6 +207,7 @@ CREATE POLICY "Event creators can manage audiences" ON public.event_audiences
     )
   );
 
+DROP POLICY IF EXISTS "Users can view event audiences" ON public.event_audiences;
 CREATE POLICY "Users can view event audiences" ON public.event_audiences
   FOR SELECT USING (
     event_id IN (
@@ -208,32 +219,38 @@ CREATE POLICY "Users can view event audiences" ON public.event_audiences
   );
 
 -- RLS Policies for Event Invitations
+DROP POLICY IF EXISTS "Users can view their invitations" ON public.event_invitations;
 CREATE POLICY "Users can view their invitations" ON public.event_invitations
   FOR SELECT USING (
     invitee_id = auth.uid() OR inviter_id = auth.uid()
   );
 
+DROP POLICY IF EXISTS "Users can create invitations" ON public.event_invitations;
 CREATE POLICY "Users can create invitations" ON public.event_invitations
   FOR INSERT WITH CHECK (
     inviter_id = auth.uid()
   );
 
+DROP POLICY IF EXISTS "Users can respond to their invitations" ON public.event_invitations;
 CREATE POLICY "Users can respond to their invitations" ON public.event_invitations
   FOR UPDATE USING (
     invitee_id = auth.uid()
   );
 
+DROP POLICY IF EXISTS "Inviters can cancel invitations" ON public.event_invitations;
 CREATE POLICY "Inviters can cancel invitations" ON public.event_invitations
   FOR DELETE USING (
     inviter_id = auth.uid()
   );
 
 -- RLS Policies for Group Invitations
+DROP POLICY IF EXISTS "Users can view their group invitations" ON public.group_invitations;
 CREATE POLICY "Users can view their group invitations" ON public.group_invitations
   FOR SELECT USING (
     invitee_id = auth.uid() OR inviter_id = auth.uid()
   );
 
+DROP POLICY IF EXISTS "Group admins can invite users" ON public.group_invitations;
 CREATE POLICY "Group admins can invite users" ON public.group_invitations
   FOR INSERT WITH CHECK (
     inviter_id = auth.uid() AND
@@ -245,12 +262,14 @@ CREATE POLICY "Group admins can invite users" ON public.group_invitations
     )
   );
 
+DROP POLICY IF EXISTS "Users can respond to group invitations" ON public.group_invitations;
 CREATE POLICY "Users can respond to group invitations" ON public.group_invitations
   FOR UPDATE USING (
     invitee_id = auth.uid()
   );
 
 -- RLS Policies for Activity Feed
+DROP POLICY IF EXISTS "Users can view activity in their preschool" ON public.activity_feed;
 CREATE POLICY "Users can view activity in their preschool" ON public.activity_feed
   FOR SELECT USING (
     preschool_id IN (
@@ -265,12 +284,14 @@ CREATE POLICY "Users can view activity in their preschool" ON public.activity_fe
     )
   );
 
+DROP POLICY IF EXISTS "Users can create activity" ON public.activity_feed;
 CREATE POLICY "Users can create activity" ON public.activity_feed
   FOR INSERT WITH CHECK (
     actor_id = auth.uid()
   );
 
 -- RLS Policies for Notification History
+DROP POLICY IF EXISTS "Users can view their notifications" ON public.notification_history;
 CREATE POLICY "Users can view their notifications" ON public.notification_history
   FOR SELECT USING (
     auth.uid()::text = ANY(recipient_ids)

@@ -51,7 +51,7 @@ export default function AttendanceScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: palette.background }}>
+    <View style={{ flex: 1, backgroundColor: palette.background }} className="flex-1 bg-background">
       <View style={{ padding: 16 }}>
         <Text style={[styles.title, { color: palette.text }]}>Attendance</Text>
         {!!selectedChild && (

@@ -9,12 +9,15 @@ import {
   Modal,
   ActivityIndicator,
   StyleSheet,
+  Switch,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { claudeAI, isAIAvailable } from '@/lib/ai/claudeService';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { TOPIC_CATEGORIES, getFilteredTopics } from '@/lib/constants/topicLibrary';
 import * as DocumentPicker from 'expo-document-picker';
 import { MediaService } from '@/lib/services/mediaService';
@@ -49,6 +52,9 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
   preschoolId,
   profileUserId,
 }) => {
+  const { profile, user } = useAuth();
+  const { language } = useLanguage();
+  const parentName = (profile as any)?.name || (user as any)?.user_metadata?.name || (user as any)?.email || undefined;
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
 
@@ -63,6 +69,7 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
   }>>([]);
   const [attachments, setAttachments] = useState<Array<{ uri: string; fileName: string; mimeType: string; fileSize?: number }>>([]);
   const [uploading, setUploading] = useState(false);
+  const [hintsOnly, setHintsOnly] = useState(false);
 
   useEffect(() => {
     if (!isAIAvailable()) {
@@ -126,6 +133,7 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
     }
 
     setIsLoading(true);
+    let handled = false;
     
     try {
       switch (activeFeature) {
@@ -173,9 +181,12 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
           const help = await claudeAI.askHomeworkHelp({
             question: userInput,
             childName,
+            parentName,
             childAge,
             userId,
             preschoolId: schoolId || 'parent-assistant',
+            languageCode: language,
+            hintsOnly,
             attachments: uploaded,
           });
 
@@ -197,6 +208,7 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
           } else {
             throw new Error(help.error || 'Failed to get AI response');
           }
+          handled = true;
           break;
         }
 
@@ -211,16 +223,18 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
       }
 
       // Default flows for other features (use lesson content generator)
-      const result = await claudeAI.generateLessonContent({
-        topic: userInput,
-        ageGroup: `${childAge} years`,
-        duration: 30,
-        learningObjectives: ['Provide helpful parent guidance'],
-        userId,
-        preschoolId: 'parent-assistant'
-      });
+      if (!handled) {
+        const result = await claudeAI.generateLessonContent({
+          topic: userInput,
+          ageGroup: `${childAge} years`,
+          duration: 30,
+          learningObjectives: ['Provide helpful parent guidance'],
+          userId,
+          preschoolId: 'parent-assistant',
+          languageCode: language,
+        });
 
-      if (result.success && result.content) {
+        if (result.success && result.content) {
         const response: AIResponse = {
           title: result.content.title,
           content: result.content.description + '\n\n' + result.content.content,
@@ -241,6 +255,7 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
       } else {
         throw new Error(result.error || 'Failed to get AI response');
       }
+    }
     } catch (error) {
       Alert.alert(
         'Unable to Get Response',
@@ -604,6 +619,16 @@ export const ParentAIAssistant: React.FC<ParentAIAssistantProps> = ({
                         )}
                       </View>
                     )}
+                    {/* Hints only toggle */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 }}>
+                      <Switch
+                        value={hintsOnly}
+                        onValueChange={setHintsOnly}
+                        thumbColor={hintsOnly ? '#8B5CF6' : (colorScheme === 'dark' ? '#111827' : '#FFFFFF')}
+                        trackColor={{ false: colorScheme === 'dark' ? '#374151' : '#E5E7EB', true: '#DDD6FE' }}
+                      />
+                      <Text style={{ color: palette.text, fontSize: 13, fontWeight: '600' }}>Hints only</Text>
+                    </View>
                   </View>
                 )}
                 

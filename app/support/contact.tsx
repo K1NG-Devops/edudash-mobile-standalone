@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -7,317 +7,316 @@ import {
   StyleSheet, 
   Dimensions,
   TextInput,
-  Alert
+  Alert,
+  Platform,
+  Linking,
+  Image
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { supabase } from '@/lib/supabase';
+import * as ImagePicker from 'expo-image-picker';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+import { analytics } from '@/lib/services/analyticsService';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
+
+type Category = 'bug' | 'feature' | 'confusion' | 'other';
 
 export default function ContactSupportPage() {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [message, setMessage] = useState('');
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
+  const params = useLocalSearchParams<{ screen?: string }>();
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [description, setDescription] = useState('');
+  const [steps, setSteps] = useState('');
+  const [severity, setSeverity] = useState<'low' | 'medium' | 'high' | 'critical' | ''>('');
+  const [consent, setConsent] = useState(false);
+  const [screenshot, setScreenshot] = useState<{ uri: string; mimeType?: string } | null>(null);
+
+  const externalFormUrl = process.env.EXPO_PUBLIC_EXTERNAL_FEEDBACK_FORM_URL;
 
   const supportCategories = [
-    {
-      id: 'technical',
-      title: 'Technical Issues',
-      description: 'App crashes, login problems, sync issues',
-      icon: 'wrench.and.screwdriver.fill',
-      color: ['#ff0080', '#ff8000']
-    },
-    {
-      id: 'account',
-      title: 'Account & Billing',
-      description: 'Subscription, payments, account settings',
-      icon: 'creditcard.fill',
-      color: ['#00f5ff', '#0080ff']
-    },
-    {
-      id: 'educational',
-      title: 'Educational Support',
-      description: 'Curriculum questions, teaching strategies',
-      icon: 'graduationcap.fill',
-      color: ['#8000ff', '#ff0080']
-    },
-    {
-      id: 'safety',
-      title: 'Child Safety',
-      description: 'Privacy concerns, safety reports',
-      icon: 'shield.fill',
-      color: ['#ff8000', '#80ff00']
-    }
-  ];
+    { id: 'bug', title: 'Bug', description: 'Crashes, broken flows, errors', icon: 'exclamationmark.triangle.fill', color: ['#ff0080', '#ff8000'] },
+    { id: 'feature', title: 'Feature Request', description: 'New functionality or improvements', icon: 'lightbulb.fill', color: ['#00f5ff', '#0080ff'] },
+    { id: 'confusion', title: 'Confusing UX', description: 'Hard to find or understand', icon: 'questionmark.circle.fill', color: ['#8000ff', '#ff0080'] },
+    { id: 'other', title: 'Other', description: 'Anything else', icon: 'ellipsis.circle.fill', color: ['#ff8000', '#80ff00'] },
+  ] as const;
 
-  const contactMethods = [
-    {
-      title: 'Email Support',
-      description: 'Get detailed help via email',
-      detail: 'support@edudashpro.com',
-      icon: 'envelope.fill',
-      color: ['#00f5ff', '#0080ff'],
-      responseTime: '24 hours'
-    },
-    {
-      title: 'Phone Support',
-      description: 'Speak directly with our team',
-      detail: '+27 67 477 0975',
-      icon: 'phone.fill',
-      color: ['#8000ff', '#ff0080'],
-      responseTime: 'Immediate'
-    },
-    {
-      title: 'WhatsApp Chat',
-      description: 'Quick help via WhatsApp',
-      detail: '+27 67 477 0975',
-      icon: 'message.fill',
-      color: ['#25D366', '#20B858'],
-      responseTime: '1-2 hours'
-    },
-    {
-      title: 'Help Center',
-      description: 'Browse FAQs and guides',
-      detail: 'Visit Help Center',
-      icon: 'questionmark.circle.fill',
-      color: ['#ff0080', '#ff8000'],
-      responseTime: 'Instant'
-    }
-  ];
+  const severities = [
+    { id: 'low', title: 'Low' },
+    { id: 'medium', title: 'Medium' },
+    { id: 'high', title: 'High' },
+    { id: 'critical', title: 'Critical' },
+  ] as const;
 
-  const handleSubmitTicket = () => {
-    if (!name.trim() || !email.trim() || !message.trim() || !selectedCategory) {
-      Alert.alert('Missing Information', 'Please fill in all fields and select a category.');
-      return;
-    }
+  const prefilledScreen = useMemo(() => {
+    return typeof params?.screen === 'string' ? params.screen : '';
+  }, [params]);
 
-    // Here you would typically send the support ticket to your backend
-    Alert.alert(
-      'Support Ticket Submitted',
-      'Thank you for contacting us! We\'ll get back to you within 24 hours.',
-      [{ text: 'OK', onPress: () => router.back() }]
-    );
+  const pickScreenshot = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+      if (!res.canceled && res.assets?.[0]?.uri) {
+        const asset = res.assets[0];
+        setScreenshot({ uri: asset.uri, mimeType: asset.mimeType || undefined });
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to pick image');
+    }
+  };
+
+  const removeScreenshot = () => setScreenshot(null);
+
+  const handleSubmitTicket = async () => {
+    try {
+      // Validate required
+      if (!selectedCategory) return Alert.alert('Missing information', 'Please choose a category.');
+      if (!description || description.trim().length < 15) return Alert.alert('Add more detail', 'Please provide at least 15 characters describing the issue.');
+
+      // Get auth user and profile
+      const { data: userData } = await supabase.auth.getUser();
+      const authUserId = userData?.user?.id;
+      if (!authUserId) return Alert.alert('Not signed in', 'Please sign in to submit feedback.');
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('id, role, email, name, preschool_id')
+        .eq('auth_user_id', authUserId)
+        .maybeSingle();
+
+      const persona = (() => {
+        const role = (profile as any)?.role || '';
+        if (role === 'principal' || role === 'preschool_admin') return 'principal';
+        if (role === 'teacher') return 'teacher';
+        if (role === 'parent') return 'parent';
+        return 'parent';
+      })();
+
+      const app_version = Constants.expoConfig?.version || 'unknown';
+      const build_channel = process.env.EXPO_PUBLIC_ENVIRONMENT || 'preview';
+      const platform = Platform.OS;
+      const device_info = consent
+        ? {
+            modelName: Device.modelName,
+            osName: Device.osName,
+            osVersion: Device.osVersion,
+            manufacturer: Device.manufacturer,
+          }
+        : null;
+
+      // 1) Insert feedback
+      const insertPayload: any = {
+        auth_user_id: authUserId,
+        user_id: (profile as any)?.id || null,
+        role: (profile as any)?.role || null,
+        persona,
+        category: selectedCategory,
+        screen: prefilledScreen || null,
+        description: description.trim(),
+        steps: steps.trim() || null,
+        severity: severity || null,
+        consent_diagnostics: !!consent,
+        device_info,
+        app_version,
+        build_channel,
+        platform,
+      };
+
+      const { data: feedbackRow, error: insertErr } = await supabase
+        .from('beta_feedback' as any)
+        .insert(insertPayload as any)
+        .select('id')
+        .single();
+      if (insertErr) throw insertErr;
+
+      const feedbackId = (feedbackRow as any)?.id as string | undefined;
+
+      // 2) Upload screenshot
+      if (screenshot?.uri && feedbackId) {
+        const extGuess = (screenshot.mimeType || 'image/jpeg').split('/').pop()?.toLowerCase() || 'jpeg';
+        const fileExt = extGuess === 'jpg' ? 'jpeg' : extGuess;
+        const path = `feedback/${feedbackId}/${Date.now()}.${fileExt}`;
+        const blob = await fetch(screenshot.uri).then(r => r.blob());
+        const { error: upErr } = await supabase.storage
+          .from('feedback_attachments')
+          .upload(path, blob, { contentType: `image/${fileExt}` });
+        if (!upErr) {
+          await supabase.from('beta_feedback_attachments' as any).insert({ feedback_id: feedbackId, file_path: path } as any);
+        }
+      }
+
+      // 3) Email support via Edge Function
+      const summaryHtml = `
+        <h3>New Beta Feedback</h3>
+        <p><strong>ID:</strong> ${feedbackId || 'unknown'}</p>
+        <p><strong>Persona:</strong> ${persona}</p>
+        <p><strong>Category:</strong> ${selectedCategory}${severity ? ` (${severity})` : ''}</p>
+        <p><strong>Screen:</strong> ${prefilledScreen || 'n/a'}</p>
+        <p><strong>App:</strong> ${app_version} • <strong>Channel:</strong> ${build_channel} • <strong>Platform:</strong> ${platform}</p>
+        <p><strong>Description:</strong><br/>${description.replace(/\n/g, '<br/>')}</p>
+        ${steps ? `<p><strong>Steps:</strong><br/>${steps.replace(/\n/g, '<br/>')}</p>` : ''}
+      `;
+      await supabase.functions.invoke('send-email', {
+        body: {
+          to: 'support@edudashpro.com',
+          subject: `[Beta Feedback] ${persona} ${selectedCategory} ${severity || ''}`.trim(),
+          html: summaryHtml,
+        },
+      });
+
+      // 4) Analytics
+      analytics.track({
+        name: 'feedback_submitted',
+        properties: {
+          persona,
+          category: selectedCategory,
+          screen: prefilledScreen || 'n/a',
+          severity: severity || 'n/a',
+        },
+      });
+
+      Alert.alert('Thank you!', 'Your feedback was submitted.');
+      router.back();
+    } catch (e: any) {
+      Alert.alert('Submission failed', e?.message || 'Please try again later.');
+    }
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#0a0a0f', '#1a0a2e', '#16213e']}
-        style={styles.gradient}
-      >
+      <LinearGradient colors={['#0a0a0f', '#1a0a2e', '#16213e']} style={styles.gradient}>
         <SafeAreaView style={styles.safeArea}>
-          {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <LinearGradient
-                colors={['rgba(0,245,255,0.2)', 'rgba(128,0,255,0.2)']}
-                style={styles.backButtonGradient}
-              >
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <LinearGradient colors={['rgba(0,245,255,0.2)', 'rgba(128,0,255,0.2)']} style={styles.backButtonGradient}>
                 <IconSymbol name="chevron.left" size={20} color="#00f5ff" />
               </LinearGradient>
             </TouchableOpacity>
-            
             <View style={styles.titleContainer}>
-              <Text style={styles.title}>Contact Support</Text>
-              <Text style={styles.subtitle}>We're here to help you 24/7</Text>
+              <Text style={styles.title}>Send Feedback (Beta)</Text>
+              <Text style={styles.subtitle}>Help us improve EduDash Pro</Text>
             </View>
           </View>
 
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             <View style={styles.content}>
-              
-              {/* Contact Methods */}
+              {/* Category */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>📞 Contact Methods</Text>
-                <View style={styles.contactMethodsGrid}>
-                  {contactMethods.map((method, index) => (
-                    <TouchableOpacity 
-                      key={index} 
-                      style={styles.contactMethodCard}
-                      onPress={() => {
-                        if (method.title === 'Help Center') {
-router.push('/support/help' as any);
-                        } else if (method.title === 'Email Support') {
-                          // Open email client
-                        } else if (method.title === 'Phone Support' || method.title === 'WhatsApp Chat') {
-                          // Open phone or WhatsApp
-                        }
-                      }}
-                    >
-                      <LinearGradient 
-                        colors={method.color as [string, string]} 
-                        style={styles.contactMethodGradient}
-                      >
-                        <IconSymbol name={method.icon} size={28} color="#000000" />
-                        <Text style={styles.contactMethodTitle}>{method.title}</Text>
-                        <Text style={styles.contactMethodDescription}>{method.description}</Text>
-                        <Text style={styles.contactMethodDetail}>{method.detail}</Text>
-                        <View style={styles.responseTimeContainer}>
-                          <Text style={styles.responseTimeText}>⏱️ {method.responseTime}</Text>
-                        </View>
+                <Text style={styles.sectionTitle}>🗂️ Category</Text>
+                <View style={styles.categoriesGrid}>
+                  {supportCategories.map((c) => (
+                    <TouchableOpacity key={c.id} style={[styles.categoryCard, selectedCategory === (c.id as Category) && styles.categoryCardSelected]} onPress={() => setSelectedCategory(c.id as Category)}>
+                      <LinearGradient colors={selectedCategory === c.id ? (c.color as [string, string]) : ['rgba(0,245,255,0.05)', 'rgba(128,0,255,0.05)']} style={styles.categoryGradient}>
+                        <IconSymbol name={c.icon as any} size={24} color={selectedCategory === c.id ? '#000000' : '#00f5ff'} />
+                        <Text style={[styles.categoryTitle, selectedCategory === c.id && styles.categoryTitleSelected]}>{c.title}</Text>
+                        <Text style={[styles.categoryDescription, selectedCategory === c.id && styles.categoryDescriptionSelected]}>{c.description}</Text>
                       </LinearGradient>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
 
-              {/* Support Ticket Form */}
+              {/* Description */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>📝 Submit Support Ticket</Text>
-                
-                {/* Category Selection */}
-                <Text style={styles.formLabel}>Select Category</Text>
-                <View style={styles.categoriesGrid}>
-                  {supportCategories.map((category) => (
-                    <TouchableOpacity 
-                      key={category.id}
-                      style={[
-                        styles.categoryCard,
-                        selectedCategory === category.id && styles.categoryCardSelected
-                      ]}
-                      onPress={() => setSelectedCategory(category.id)}
-                    >
-                      <LinearGradient 
-                        colors={selectedCategory === category.id 
-                          ? category.color as [string, string]
-                          : ['rgba(0,245,255,0.05)', 'rgba(128,0,255,0.05)']
-                        } 
-                        style={styles.categoryGradient}
-                      >
-                        <IconSymbol 
-                          name={category.icon} 
-                          size={24} 
-                          color={selectedCategory === category.id ? '#000000' : '#00f5ff'} 
-                        />
-                        <Text style={[
-                          styles.categoryTitle,
-                          selectedCategory === category.id && styles.categoryTitleSelected
-                        ]}>
-                          {category.title}
-                        </Text>
-                        <Text style={[
-                          styles.categoryDescription,
-                          selectedCategory === category.id && styles.categoryDescriptionSelected
-                        ]}>
-                          {category.description}
-                        </Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Form Fields */}
+                <Text style={styles.sectionTitle}>📝 What happened?</Text>
                 <View style={styles.formContainer}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.formLabel}>Your Name</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={name}
-                      onChangeText={setName}
-                      placeholder="Enter your full name"
-                      placeholderTextColor="#666666"
-                    />
-                  </View>
-
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.formLabel}>Email Address</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={email}
-                      onChangeText={setEmail}
-                      placeholder="your@email.com"
-                      placeholderTextColor="#666666"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                    />
-                  </View>
-
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.formLabel}>Describe Your Issue</Text>
+                    <Text style={styles.formLabel}>Description (required)</Text>
                     <TextInput
                       style={[styles.textInput, styles.messageInput]}
-                      value={message}
-                      onChangeText={setMessage}
-                      placeholder="Please provide as much detail as possible about your issue..."
+                      value={description}
+                      onChangeText={setDescription}
+                      placeholder="Describe the issue or suggestion..."
+                      placeholderTextColor="#666666"
+                      multiline
+                      numberOfLines={5}
+                    />
+                    <Text style={styles.helperText}>{Math.max(0, 15 - (description?.trim().length || 0))} more characters for minimum</Text>
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.formLabel}>Steps to reproduce (optional)</Text>
+                    <TextInput
+                      style={[styles.textInput, styles.messageInput]}
+                      value={steps}
+                      onChangeText={setSteps}
+                      placeholder="1) ... 2) ... 3) ..."
                       placeholderTextColor="#666666"
                       multiline
                       numberOfLines={4}
                     />
                   </View>
 
+                  {/* Severity */}
+                  <Text style={styles.formLabel}>Severity (optional)</Text>
+                  <View style={styles.severityRow}>
+                    {severities.map(s => (
+                      <TouchableOpacity key={s.id} style={[styles.severityChip, severity === (s.id as any) && styles.severityChipActive]} onPress={() => setSeverity(s.id as any)}>
+                        <Text style={[styles.severityText, severity === (s.id as any) && styles.severityTextActive]}>{s.title}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Screenshot */}
+                  <Text style={styles.formLabel}>Screenshot (optional)</Text>
+                  <View style={styles.attachmentRow}>
+                    {!screenshot ? (
+                      <TouchableOpacity style={styles.attachButton} onPress={pickScreenshot}>
+                        <IconSymbol name="paperclip" size={18} color="#00f5ff" />
+                        <Text style={styles.attachText}>Attach image</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.previewRow}>
+                        <Image source={{ uri: screenshot.uri }} style={styles.previewImage} />
+                        <TouchableOpacity onPress={removeScreenshot} style={styles.removeButton}>
+                          <IconSymbol name="xmark.circle.fill" size={18} color="#ff4d4f" />
+                          <Text style={styles.removeText}>Remove</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Consent */}
+                  <TouchableOpacity style={styles.consentRow} onPress={() => setConsent(v => !v)}>
+                    <IconSymbol name={consent ? 'checkmark.square.fill' : 'square'} size={18} color={consent ? '#22C55E' : '#9CA3AF'} />
+                    <Text style={styles.consentText}>
+                      I consent to include basic device info. Screenshots may contain student information.
+                    </Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.policyText}>
+                    By submitting feedback you agree to our testing feedback policy. We purge feedback data after 180 days.
+                  </Text>
+
+                  {/* External form */}
+                  {externalFormUrl ? (
+                    <TouchableOpacity style={styles.externalLink} onPress={() => {
+                      const url = `${externalFormUrl}?persona=${encodeURIComponent('unknown')}&version=${encodeURIComponent(Constants.expoConfig?.version || '')}&platform=${Platform.OS}`;
+                      Linking.openURL(url);
+                    }}>
+                      <Text style={styles.externalLinkText}>Prefer a longer form? Open external feedback form</Text>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {/* Submit */}
                   <TouchableOpacity style={styles.submitButton} onPress={handleSubmitTicket}>
-                    <LinearGradient
-                      colors={['#00f5ff', '#0080ff']}
-                      style={styles.submitGradient}
-                    >
+                    <LinearGradient colors={['#00f5ff', '#0080ff']} style={styles.submitGradient}>
                       <IconSymbol name="paperplane.fill" size={20} color="#000000" />
-                      <Text style={styles.submitText}>Submit Support Ticket</Text>
+                      <Text style={styles.submitText}>Submit Feedback</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Emergency Support */}
-              <View style={styles.emergencySection}>
-                <Text style={styles.emergencyTitle}>🚨 Emergency Support</Text>
-                <Text style={styles.emergencyText}>
-                  For urgent child safety matters or critical system issues that affect student safety, 
-                  contact us immediately:
-                </Text>
-                <TouchableOpacity style={styles.emergencyButton}>
-                  <LinearGradient
-                    colors={['rgba(255,0,128,0.2)', 'rgba(255,128,0,0.2)']}
-                    style={styles.emergencyGradient}
-                  >
-                    <IconSymbol name="phone.fill" size={24} color="#ff0080" />
-                    <View style={styles.emergencyInfo}>
-                      <Text style={styles.emergencyContact}>+27 67 477 0975</Text>
-                      <Text style={styles.emergencySubtext}>Available 24/7 for emergencies</Text>
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-
-              {/* Office Hours */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>🕒 Support Hours</Text>
-                <View style={styles.hoursContainer}>
-                  <View style={styles.hoursRow}>
-                    <Text style={styles.hoursDay}>Monday - Friday</Text>
-                    <Text style={styles.hoursTime}>8:00 AM - 6:00 PM SAST</Text>
-                  </View>
-                  <View style={styles.hoursRow}>
-                    <Text style={styles.hoursDay}>Weekends</Text>
-                    <Text style={styles.hoursTime}>10:00 AM - 4:00 PM SAST</Text>
-                  </View>
-                  <View style={styles.hoursRow}>
-                    <Text style={styles.hoursDay}>Emergency</Text>
-                    <Text style={styles.hoursTime}>24/7 Available</Text>
-                  </View>
-                </View>
-                
-                <Text style={styles.text}>
-                  We aim to respond to all support requests within 24 hours during business days, 
-                  and within 48 hours on weekends. Emergency issues are handled immediately.
-                </Text>
-              </View>
-
               {/* Contact Information */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>📍 Our Office</Text>
-                <Text style={styles.contactText}>📧 support@edudashpro.com</Text>
-                <Text style={styles.contactText}>📞 +27 67 477 0975</Text>
-                <Text style={styles.contactText}>🏢 848 Shabangu Avenue, Mamelodi, Pretoria 0122</Text>
-                <Text style={styles.contactText}>🇿🇦 South Africa</Text>
+                <Text style={styles.sectionTitle}>📧 Need direct support?</Text>
+                <Text style={styles.contactText}>support@edudashpro.com</Text>
+                <Text style={styles.contactText}>+27 67 477 0975</Text>
               </View>
 
-              {/* Footer Space */}
               <View style={styles.footer} />
             </View>
           </ScrollView>
@@ -328,282 +327,53 @@ router.push('/support/help' as any);
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a0f',
-  },
-  gradient: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  backButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginRight: 15,
-  },
-  backButtonGradient: {
-    padding: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#00f5ff',
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#00f5ff',
-    marginBottom: 15,
-  },
-  text: {
-    fontSize: 14,
-    color: '#CCCCCC',
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  
-  // Contact Methods
-  contactMethodsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 15,
-  },
-  contactMethodCard: {
-    width: width < 400 ? (width - 50) : (width - 70) / 2,
-    borderRadius: 15,
-    overflow: 'hidden',
-  },
-  contactMethodGradient: {
-    padding: 20,
-    alignItems: 'center',
-    minHeight: 160,
-  },
-  contactMethodTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#000000',
-    marginVertical: 8,
-    textAlign: 'center',
-  },
-  contactMethodDescription: {
-    fontSize: 12,
-    color: 'rgba(0,0,0,0.7)',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  contactMethodDetail: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  responseTimeContainer: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginTop: 'auto',
-  },
-  responseTimeText: {
-    fontSize: 10,
-    color: '#000000',
-    fontWeight: '600',
-  },
-  
-  // Categories
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 20,
-  },
-  categoryCard: {
-    width: width < 400 ? (width - 50) : (width - 70) / 2,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  categoryCardSelected: {
-    borderWidth: 2,
-    borderColor: '#00f5ff',
-  },
-  categoryGradient: {
-    padding: 16,
-    alignItems: 'center',
-    minHeight: 100,
-  },
-  categoryTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginVertical: 6,
-    textAlign: 'center',
-  },
-  categoryTitleSelected: {
-    color: '#000000',
-  },
-  categoryDescription: {
-    fontSize: 11,
-    color: '#CCCCCC',
-    textAlign: 'center',
-    lineHeight: 14,
-  },
-  categoryDescriptionSelected: {
-    color: 'rgba(0,0,0,0.7)',
-  },
-  
-  // Form
-  formContainer: {
-    gap: 20,
-  },
-  inputContainer: {
-    gap: 8,
-  },
-  formLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  textInput: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.3)',
-  },
-  messageInput: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  submitButton: {
-    borderRadius: 15,
-    overflow: 'hidden',
-    marginTop: 10,
-  },
-  submitGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 10,
-  },
-  submitText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#000000',
-  },
-  
-  // Emergency Support
-  emergencySection: {
-    backgroundColor: 'rgba(255, 0, 128, 0.1)',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 30,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 0, 128, 0.3)',
-  },
-  emergencyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#ff0080',
-    marginBottom: 10,
-  },
-  emergencyText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    lineHeight: 22,
-    marginBottom: 15,
-  },
-  emergencyButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  emergencyGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 15,
-  },
-  emergencyInfo: {
-    flex: 1,
-  },
-  emergencyContact: {
-    fontSize: 18,
-    color: '#ff0080',
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  emergencySubtext: {
-    fontSize: 12,
-    color: '#CCCCCC',
-  },
-  
-  // Hours
-  hoursContainer: {
-    backgroundColor: 'rgba(0,245,255,0.05)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.1)',
-  },
-  hoursRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  hoursDay: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  hoursTime: {
-    fontSize: 14,
-    color: '#00f5ff',
-    fontWeight: '600',
-  },
-  
-  // Contact
-  contactText: {
-    fontSize: 14,
-    color: '#00f5ff',
-    lineHeight: 22,
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  footer: {
-    height: 50,
-  },
+  container: { flex: 1, backgroundColor: '#0a0a0f' },
+  gradient: { flex: 1 },
+  safeArea: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 15 },
+  backButton: { borderRadius: 12, overflow: 'hidden', marginRight: 15 },
+  backButtonGradient: { padding: 10, alignItems: 'center', justifyContent: 'center' },
+  titleContainer: { flex: 1 },
+  title: { fontSize: 24, fontWeight: '900', color: '#FFFFFF', marginBottom: 4 },
+  subtitle: { fontSize: 14, color: '#00f5ff', fontWeight: '600' },
+  scrollView: { flex: 1 },
+  content: { paddingHorizontal: 20 },
+  section: { marginBottom: 30 },
+  sectionTitle: { fontSize: 20, fontWeight: '800', color: '#00f5ff', marginBottom: 15 },
+  formContainer: {},
+  inputContainer: { marginBottom: 12 },
+  formLabel: { fontSize: 14, color: '#9CA3AF', marginBottom: 6 },
+  textInput: { borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,245,255,0.2)', padding: 12, color: '#FFFFFF' },
+  messageInput: { minHeight: 120, textAlignVertical: 'top' },
+  helperText: { fontSize: 12, color: '#9CA3AF', marginTop: 4 },
+  categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15 },
+  categoryCard: { width: width < 400 ? (width - 50) : (width - 70) / 2, borderRadius: 12, overflow: 'hidden' },
+  categoryGradient: { padding: 14, minHeight: 110 },
+  categoryTitle: { fontSize: 16, fontWeight: '800', color: '#00f5ff', marginTop: 6 },
+  categoryTitleSelected: { color: '#000000' },
+  categoryDescription: { fontSize: 12, color: '#9CA3AF', marginTop: 4 },
+  categoryDescriptionSelected: { color: 'rgba(0,0,0,0.7)' },
+  categoryCardSelected: { borderWidth: 1, borderColor: 'rgba(0,245,255,0.5)' },
+  severityRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
+  severityChip: { borderRadius: 9999, borderWidth: 1, borderColor: '#334155', paddingHorizontal: 12, paddingVertical: 6 },
+  severityChipActive: { backgroundColor: 'rgba(0,245,255,0.15)', borderColor: '#00f5ff' },
+  severityText: { color: '#9CA3AF', fontWeight: '700' },
+  severityTextActive: { color: '#00f5ff' },
+  attachmentRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4, marginBottom: 8 },
+  attachButton: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,245,255,0.25)' },
+  attachText: { color: '#00f5ff', fontWeight: '700' },
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  previewImage: { width: 60, height: 60, borderRadius: 8, borderWidth: 1, borderColor: '#334155' },
+  removeButton: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  removeText: { color: '#ff4d4f', fontWeight: '700' },
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 8 },
+  consentText: { color: '#E5E7EB', flex: 1 },
+  policyText: { marginTop: 8, color: '#9CA3AF', fontSize: 12 },
+  submitButton: { marginTop: 14 },
+  submitGradient: { padding: 14, alignItems: 'center', flexDirection: 'row', gap: 10, justifyContent: 'center', borderRadius: 12 },
+  submitText: { fontSize: 16, fontWeight: '800', color: '#000000' },
+  contactText: { color: '#E5E7EB', marginBottom: 4 },
+  footer: { height: 40 },
+  externalLink: { marginTop: 10 },
+  externalLinkText: { color: '#60A5FA', textDecorationLine: 'underline' },
 });

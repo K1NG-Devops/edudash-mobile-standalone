@@ -11,12 +11,16 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { HomeworkService } from '@/lib/services/homeworkService';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 interface HomeworkAIAssistantProps {
   studentId: string;
@@ -51,12 +55,17 @@ export const HomeworkAIAssistant: React.FC<HomeworkAIAssistantProps> = ({
 }) => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
+  const { profile, user } = useAuth();
+  const { language } = useLanguage();
+  const parentName = (profile as any)?.name || (user as any)?.user_metadata?.name || (user as any)?.email || undefined;
   
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [userQuestion, setUserQuestion] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showQuickHelp, setShowQuickHelp] = useState(true);
+  const [hintsOnly, setHintsOnly] = useState(false);
+  const { aiUsage } = useSubscription();
 
   // Initialize with welcome message
   useEffect(() => {
@@ -107,14 +116,24 @@ export const HomeworkAIAssistant: React.FC<HomeworkAIAssistantProps> = ({
         aiResponse = await HomeworkService.getHomeworkHelp(
           selectedAssignment.title,
           userMessage.content,
-          `${studentAge} years old`
+          `${studentAge} years old`,
+          studentId,
+          studentName,
+          parentName,
+          language,
+          hintsOnly
         );
       } else {
         // Get general educational guidance
         aiResponse = await HomeworkService.getHomeworkHelp(
           'General Learning Support',
           userMessage.content,
-          `${studentAge} years old`
+          `${studentAge} years old`,
+          studentId,
+          studentName,
+          parentName,
+          language,
+          hintsOnly
         );
       }
 
@@ -287,6 +306,23 @@ export const HomeworkAIAssistant: React.FC<HomeworkAIAssistantProps> = ({
 
         {/* Input Section */}
         <View style={[styles.inputSection, { backgroundColor: palette.surface, borderTopColor: palette.outline }]}>
+          {/* Controls row: Hints-only toggle and AI usage */}
+          <View style={styles.controlsRow}>
+            <View style={styles.hintsRow}>
+              <Switch
+                value={hintsOnly}
+                onValueChange={setHintsOnly}
+                thumbColor={hintsOnly ? '#8B5CF6' : (colorScheme === 'dark' ? '#111827' : '#FFFFFF')}
+                trackColor={{ false: colorScheme === 'dark' ? '#374151' : '#E5E7EB', true: '#DDD6FE' }}
+              />
+              <Text style={[styles.hintsLabel, { color: palette.text }]}>Hints only</Text>
+            </View>
+            {aiUsage && (
+              <Text style={[styles.usageText, { color: palette.textSecondary }]}>
+                AI: {aiUsage.monthlyLimit === -1 ? `${aiUsage.currentUsage} used (Unlimited)` : `${aiUsage.currentUsage} / ${aiUsage.monthlyLimit} used`}
+              </Text>
+            )}
+          </View>
           <View style={[styles.inputContainer, { backgroundColor: palette.background, borderColor: palette.outline }]}>
             <TextInput
               style={[styles.textInput, { color: palette.text }]}
@@ -437,6 +473,24 @@ const styles = StyleSheet.create({
   quickHelpText: {
     fontSize: 12,
     textAlign: 'center',
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  hintsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  hintsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  usageText: {
+    fontSize: 12,
   },
   inputSection: {
     paddingHorizontal: 16,

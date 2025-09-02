@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
@@ -19,7 +20,13 @@ import {
   TouchableOpacity,
   View,
   Platform,
+  Modal,
+  FlatList,
 } from 'react-native';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useT } from '@/src/i18n';
+import { formatDate, formatCurrencyZAR, formatNumber } from '@/src/i18n/format';
+import { getLocalizedName } from '@/src/i18n/languages';
 
 interface UserSettings {
   notifications_enabled: boolean;
@@ -32,16 +39,19 @@ interface UserSettings {
 export default function SettingsScreen() {
   const { colorScheme, setColorScheme } = useTheme();
   const { user, signOut } = useAuth();
+  const { language, setLanguage, languages, isInitialized } = useLanguage();
+  const { t } = useT();
   const [settings, setSettings] = useState<UserSettings>({
     notifications_enabled: true,
     email_notifications: true,
     push_notifications: true,
     dark_mode: colorScheme === 'dark',
-    language: 'en'
+    language: language || 'en'
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentRole, setCurrentRole] = useState<string | undefined>(undefined);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -181,7 +191,7 @@ export default function SettingsScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderBottomColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
-          <Text style={[styles.headerTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Settings</Text>
+          <Text style={[styles.headerTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>{t('settings.title')}</Text>
           <Text style={[styles.headerSubtitle, { color: colorScheme === 'dark' ? '#E5E7EB' : '#6B7280' }]}>Customize your app experience</Text>
         </View>
 
@@ -228,9 +238,46 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Language Section */}
+        <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
+          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>{t('settings.language')}</Text>
+          
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} 
+            onPress={() => setShowLanguageModal(true)}
+          >
+            <IconSymbol name="globe" size={20} color={colorScheme === 'dark' ? '#93C5FD' : '#0EA5E9'} />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>
+                {t('settings.selectLanguage')}
+              </Text>
+              <Text style={[styles.settingDescription, { color: colorScheme === 'dark' ? '#E5E7EB' : '#6B7280', marginTop: 2 }]}>
+                {languages.find(l => l.code === language)?.nativeName || 'English'}
+              </Text>
+            </View>
+            <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
+          </TouchableOpacity>
+
+          {/* Locale Format Examples */}
+          <View style={[styles.formatExamples, { backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#F3F4F6', marginTop: 12, padding: 12, borderRadius: 8 }]}>
+            <Text style={[styles.formatTitle, { color: colorScheme === 'dark' ? '#E5E7EB' : '#6B7280', fontSize: 12, fontWeight: '600', marginBottom: 8 }]}>
+              {t('settings.formats.sectionTitle')}
+            </Text>
+            <Text style={[styles.formatExample, { color: colorScheme === 'dark' ? '#FFFFFF' : '#111827', fontSize: 11 }]}>
+              {t('settings.formats.dateExample')}: {formatDate(new Date(), 'medium', language)}
+            </Text>
+            <Text style={[styles.formatExample, { color: colorScheme === 'dark' ? '#FFFFFF' : '#111827', fontSize: 11, marginTop: 4 }]}>
+              {t('settings.formats.numberExample')}: {formatNumber(1234567.89, undefined, language)}
+            </Text>
+            <Text style={[styles.formatExample, { color: colorScheme === 'dark' ? '#FFFFFF' : '#111827', fontSize: 11, marginTop: 4 }]}>
+              {t('settings.formats.currencyExample')}: {formatCurrencyZAR(1234.56, undefined, language)}
+            </Text>
+          </View>
+        </View>
+
         {/* Appearance Section */}
         <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
-          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Appearance</Text>
+          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>{t('settings.appearance')}</Text>
 
           <View style={[styles.settingItem, { borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
             <View style={styles.settingInfo}>
@@ -349,17 +396,25 @@ const { data: { session } } = await supabase.auth.getSession();
         <View style={[styles.section, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF', borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]}>
           <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>Support</Text>
 
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => Alert.alert('Help', 'Help documentation would be shown here')}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => router.push('/support/help' as any)}>
             <IconSymbol name="questionmark.circle" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Help & FAQ</Text>
             <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => Alert.alert('Contact', 'Contact support form would be shown here')}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => router.push('/support/contact' as any)}>
             <IconSymbol name="envelope" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
             <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Contact Support</Text>
             <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
           </TouchableOpacity>
+
+          {process.env.EXPO_PUBLIC_BETA_MODE === 'true' && (
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]} onPress={() => router.push('/support/contact' as any)}>
+              <IconSymbol name="pencil.and.outline" size={20} color={colorScheme === 'dark' ? '#C4B5FD' : '#8B5CF6'} />
+              <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937' }]}>Send Feedback (Beta)</Text>
+              <IconSymbol name="chevron.right" size={16} color={colorScheme === 'dark' ? '#E5E7EB' : '#9CA3AF'} />
+            </TouchableOpacity>
+          )}
 
           {Platform.OS !== 'web' && (
             <TouchableOpacity
@@ -399,6 +454,99 @@ const { data: { session } } = await supabase.auth.getSession();
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={showLanguageModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowLanguageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colorScheme === 'dark' ? palette.surface : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? palette.text : '#111827' }]}>
+                {t('settings.selectLanguage')}
+              </Text>
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                <IconSymbol name="xmark.circle.fill" size={24} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
+              </TouchableOpacity>
+            </View>
+            
+            <FlatList
+              data={languages}
+              keyExtractor={(item) => item.code}
+              renderItem={({ item }) => {
+                const isSelected = item.code === language;
+                const localizedName = getLocalizedName(item.code, language);
+                
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.languageItem,
+                      { 
+                        backgroundColor: isSelected 
+                          ? (colorScheme === 'dark' ? '#374151' : '#EEF2FF')
+                          : 'transparent',
+                        borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB'
+                      }
+                    ]}
+                    onPress={async () => {
+                      await setLanguage(item.code);
+                      setSettings(prev => ({ ...prev, language: item.code }));
+                      setShowLanguageModal(false);
+                      // Show success toast or alert
+                      Alert.alert(
+                        t('common.done'),
+                        t('settings.languageChanged', { language: item.nativeName }),
+                        [{ text: t('common.ok') }]
+                      );
+                    }}
+                    accessibilityLabel={`${t('settings.selectLanguage')}: ${item.nativeName}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    <View style={styles.languageItemContent}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[
+                          styles.languageName,
+                          { 
+                            color: isSelected 
+                              ? (colorScheme === 'dark' ? '#60A5FA' : '#2563EB')
+                              : (colorScheme === 'dark' ? palette.text : '#111827'),
+                            fontWeight: isSelected ? '600' : '500'
+                          }
+                        ]}>
+                          {item.nativeName}
+                        </Text>
+                        {localizedName !== item.nativeName && (
+                          <Text style={[
+                            styles.languageSubtitle,
+                            { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }
+                          ]}>
+                            {localizedName}
+                          </Text>
+                        )}
+                      </View>
+                      {isSelected && (
+                        <IconSymbol 
+                          name="checkmark.circle.fill" 
+                          size={20} 
+                          color={colorScheme === 'dark' ? '#60A5FA' : '#2563EB'} 
+                        />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+              ItemSeparatorComponent={() => (
+                <View style={[styles.separator, { backgroundColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB' }]} />
+              )}
+              contentContainerStyle={styles.languageList}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -498,5 +646,57 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 32,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    ...shadow(4),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  languageList: {
+    paddingVertical: 8,
+  },
+  languageItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: 'transparent',
+  },
+  languageItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  languageName: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  languageSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  separator: {
+    height: 1,
+    marginHorizontal: 20,
   },
 });

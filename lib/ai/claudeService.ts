@@ -115,6 +115,7 @@ export class ClaudeAIService {
     learningObjectives: string[];
     userId: string;
     preschoolId: string;
+    languageCode?: string;
   }): Promise<{
     success: boolean;
     content?: {
@@ -137,6 +138,7 @@ export class ClaudeAIService {
     quota_charged?: boolean;
   }> {
     try {
+      const langInstruction = params.languageCode && params.languageCode !== 'en' ? `\n\nPlease write your response in ${params.languageCode}.` : '';
       const prompt = `Create an engaging preschool lesson plan for ${params.ageGroup} children on the topic "${params.topic}".
 
 REQUIREMENTS:
@@ -169,13 +171,12 @@ Format as JSON with this structure:
   "homeExtension": ["activity1", "activity2"]
 }
 
-Make it educational, fun, and age-appropriate with hands-on learning experiences.`;
+Make it educational, fun, and age-appropriate with hands-on learning experiences.${langInstruction}`;
 
       const { data, error } = await supabase.functions.invoke('ai-proxy', {
         body: {
           feature: 'lesson_generation',
           prompt,
-          model: DEFAULT_MODEL,
         },
       });
 
@@ -246,6 +247,7 @@ Make it educational, fun, and age-appropriate with hands-on learning experiences
     emphasis?: Array<'Robotics' | 'AI' | 'STEM' | 'Engineering' | 'Technology' | 'Computer Science'>;
     userId: string;
     preschoolId: string;
+    languageCode?: string;
   }): Promise<{
     success: boolean;
     content?: {
@@ -288,7 +290,8 @@ Make it educational, fun, and age-appropriate with hands-on learning experiences
         return 'Secondary';
       })();
 
-      const prompt = `Create a cross-curricular lesson that integrates ${integrations.join(', ')} with traditional subjects (${params.subjects.join(', ')}) on the topic "${params.topic}" for ${params.ageGroup}.
+      const langInstruction2 = params.languageCode && params.languageCode !== 'en' ? `\n\nPlease write your response in ${params.languageCode}.` : '';
+      const prompt = `Create a cross-curricular lesson that integrates ${integrations.join(', ')} with traditional subjects
 
 REQUIREMENTS:
 - Duration: ${params.duration} minutes
@@ -320,13 +323,12 @@ Return JSON with this exact structure:
   "homeExtension": ["home idea 1 (low/no tech where possible)", "home idea 2"]
 }
 
-Ensure the activities demonstrate the integration focus (${integrations.join(', ')}), while staying age-appropriate.`;
+Ensure the activities demonstrate the integration focus (${integrations.join(', ')}), while staying age-appropriate.${langInstruction2}`;
 
       const { data, error } = await supabase.functions.invoke('ai-proxy', {
         body: {
           feature: 'lesson_generation',
           prompt,
-          model: DEFAULT_MODEL,
         },
       });
 
@@ -429,7 +431,6 @@ Format as JSON:
         body: {
           feature: 'homework_grading',
           prompt,
-          model: DEFAULT_MODEL,
         },
       });
 
@@ -520,7 +521,6 @@ Format as JSON:
         body: {
           feature: 'stem_activity',
           prompt,
-          model: DEFAULT_MODEL,
         },
       });
 
@@ -565,9 +565,12 @@ const activityParsed = extractJsonFromText(String(text));
   async askHomeworkHelp(params: {
     question: string;
     childName?: string;
+    parentName?: string;
     childAge: number;
     userId: string;
     preschoolId: string;
+    languageCode?: string; // ISO 639 code to influence response language
+    hintsOnly?: boolean;
     attachments?: { url: string; mimeType: string; name?: string }[];
   }): Promise<{
     success: boolean;
@@ -579,14 +582,19 @@ const activityParsed = extractJsonFromText(String(text));
     quota_charged?: boolean;
   }> {
     try {
-      const prompt = `You are a warm, practical AI tutor helping a parent support ${params.childName || 'their child'}, age ${params.childAge}, with homework.\n\nQuestion: "${params.question}"\n\nUse any provided attachments as context. Provide a step-by-step plan, tips, and point out when to involve the teacher.`;
+      const who = params.parentName ? `${params.parentName} (the parent)` : 'the parent';
+      const childRef = params.childName || 'their child';
+      const langInstruction = params.languageCode && params.languageCode !== 'en'
+        ? `\n\nPlease write your response in ${params.languageCode}.`
+        : '';
+      const hintsInstruction = params.hintsOnly ? `\n\nImportant: Provide hints and gentle guidance without giving the full solution outright. Ask guiding questions and suggest next steps.` : '';
+      const prompt = `You are a warm, practical AI tutor helping ${who} support ${childRef}, age ${params.childAge}, with homework.\n\nQuestion: "${params.question}"\n\nUse any provided attachments as context. Provide a step-by-step plan, tips, and point out when to involve the teacher.${langInstruction}${hintsInstruction}`;
 
       const { data, error } = await supabase.functions.invoke('ai-proxy', {
         body: {
           feature: 'homework_help',
           prompt,
-          model: DEFAULT_MODEL,
-          params: { question: params.question, childAge: params.childAge, childName: params.childName || 'child' },
+          params: { question: params.question, childAge: params.childAge, childName: params.childName || 'child', parentName: params.parentName, languageCode: params.languageCode },
           attachments: (params.attachments || []).map(a => ({ url: a.url, mime_type: a.mimeType, name: a.name })),
         },
       });
@@ -605,19 +613,18 @@ const activityParsed = extractJsonFromText(String(text));
         return { success: false, error: message, errorCode: data?.code, errorType: data?.error_type, quota_charged: data?.quota_charged };
       }
 
-      // Try to parse JSON, fall back to plain text
+      // Try to parse JSON robustly, fall back to plain text
       let answer = '';
       let suggestions: string[] = [];
-      try {
-        const parsed = JSON.parse(String(text).replace(/[\u0000-\u001F]/g, ''));
-        if (typeof parsed === 'object' && parsed) {
-          answer = parsed.answer || parsed.content || '';
-          suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
-        }
-      } catch (e) {
+      const sanitized = String(text).replace(/[\u0000-\u001F]/g, '');
+      const parsed = extractJsonFromText(sanitized);
+      if (parsed && typeof parsed === 'object') {
+        answer = (parsed as any).answer || (parsed as any).content || '';
+        suggestions = Array.isArray((parsed as any).suggestions) ? (parsed as any).suggestions : [];
+      } else {
         if (__DEV__) {
           console.log('[ai-proxy] JSON parse failed: homework_help', {
-            snippet: String(text).slice(0, 200),
+            snippet: sanitized.slice(0, 200),
           });
         }
         answer = text;
@@ -642,6 +649,7 @@ const activityParsed = extractJsonFromText(String(text));
   async analyzeStudentProgress(params: {
     studentName: string;
     age: number;
+    languageCode?: string;
     recentActivities: {
       activity: string;
       performance: string;
@@ -671,6 +679,7 @@ const activityParsed = extractJsonFromText(String(text));
 
       const notesText = params.teacherNotes.join('\n');
 
+      const langInstruction3 = params.languageCode && params.languageCode !== 'en' ? `\n\nPlease write your response in ${params.languageCode}.` : '';
       const prompt = `Analyze the learning progress for ${params.studentName}, a ${params.age}-year-old preschooler.
 
 RECENT ACTIVITIES:
@@ -694,14 +703,12 @@ Format as JSON:
   "keyStrengths": ["strength1", "strength2"],
   "developmentAreas": ["area1", "area2"],
   "recommendations": ["rec1", "rec2"],
-  "parentSuggestions": ["suggestion1", "suggestion2"]
-}`;
+  \"parentSuggestions\": [\"suggestion1\", \"suggestion2\"]\n}\n${langInstruction3}`;
 
       const { data, error } = await supabase.functions.invoke('ai-proxy', {
         body: {
           feature: 'progress_analysis',
           prompt,
-          model: DEFAULT_MODEL,
         },
       });
 
@@ -775,7 +782,7 @@ export const claudeService = {
     const { prompt } = args;
     try {
       const { data, error } = await supabase.functions.invoke('ai-proxy', {
-        body: { feature: 'content', prompt, model: DEFAULT_MODEL },
+        body: { feature: 'content', prompt },
       });
       if (error) {
         const pe = parseFunctionsError(error);

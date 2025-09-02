@@ -4,8 +4,11 @@
  */
 
 import React from 'react';
-import { View, ViewProps } from 'react-native';
+import { View, ViewProps, Platform } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
+// Use DOM-based lucide icons on web to avoid react-native-svg issues
+ 
+const LucideWeb: Record<string, any> | null = Platform.OS === 'web' ? require('lucide-react') : null;
 import { useTheme } from '../theme/ThemeProvider';
 
 export interface IconProps extends ViewProps {
@@ -34,23 +37,31 @@ export const Icon: React.FC<IconProps> = ({
   ...props 
 }) => {
   const { colors } = useTheme();
+  const iconSize = typeof size === 'number' ? size : sizeMap[size];
+  const iconColor = color || colors.foreground;
+
+  if (Platform.OS === 'web' && LucideWeb) {
+    const WebIcon = (LucideWeb as any)[name];
+    if (!WebIcon) {
+      console.warn(`Icon "${name}" not found in lucide-react (web)`);
+      return null;
+    }
+    return (
+      <View className={className} style={style} {...props}>
+        <WebIcon size={iconSize} color={iconColor} strokeWidth={strokeWidth} />
+      </View>
+    );
+  }
+
+  // eslint-disable-next-line import/namespace
   const IconComponent = LucideIcons[name] as React.ComponentType<any>;
-  
   if (!IconComponent) {
     console.warn(`Icon "${name}" not found in lucide-react-native`);
     return null;
   }
-  
-  const iconSize = typeof size === 'number' ? size : sizeMap[size];
-  const iconColor = color || colors.foreground;
-  
   return (
     <View className={className} style={style} {...props}>
-      <IconComponent 
-        size={iconSize} 
-        color={iconColor}
-        strokeWidth={strokeWidth}
-      />
+      <IconComponent size={iconSize} color={iconColor} strokeWidth={strokeWidth} />
     </View>
   );
 };

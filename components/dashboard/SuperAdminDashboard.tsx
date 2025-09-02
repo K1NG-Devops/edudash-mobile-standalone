@@ -265,7 +265,10 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     <View style={styles.healthCard}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>🖥️ System Health</Text>
-        <View style={[styles.healthStatus, { backgroundColor: health.database_status === 'healthy' ? '#10B981' : '#EF4444' }]}>
+        <View
+          style={styles.healthStatus}
+          className={health.database_status === 'healthy' ? 'bg-emerald-500' : 'bg-red-500'}
+        >
           <Text style={styles.healthStatusText}>
             {health.database_status === 'healthy' ? 'Healthy' : 'Issues'}
           </Text>
@@ -492,7 +495,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             onPress={() => setShowCreateSchoolModal(true)}
           >
             <IconSymbol name="plus.circle" size={20} color="#8B5CF6" />
-            <Text style={[styles.onboardingActionText, { color: '#8B5CF6' }]}>Create School Manually</Text>
+            <Text style={styles.onboardingActionText} className="text-violet-500">Create School Manually</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -528,11 +531,11 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
   // Tab navigation (bottom bar)
   const renderTabNavigation = () => (
+    // eslint-disable-next-line react-native/no-inline-styles
     <View style={[styles.tabNavigationBottom, { paddingBottom: insets.bottom, borderTopWidth: 0 }]}>
       {[
         { key: 'overview', label: 'Overview', icon: 'chart.bar' },
         { key: 'schools', label: 'Schools', icon: 'building.2' },
-        { key: 'onboarding', label: 'Onboarding', icon: 'person.badge.plus' },
         { key: 'users', label: 'Users', icon: 'person.3' },
         { key: 'activity', label: 'Activity', icon: 'clock' },
         { key: 'system', label: 'System', icon: 'gear' }
@@ -706,7 +709,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         )}
 
         {selectedTab === 'schools' && renderSchoolsList(dashboardData.recent_schools)}
-        {selectedTab === 'onboarding' && renderOnboardingSection()}
         {selectedTab === 'users' && renderUsersList(dashboardData.recent_users)}
         {selectedTab === 'activity' && renderActivityFeed(dashboardData.platform_activity)}
 

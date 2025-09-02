@@ -121,6 +121,9 @@ export const ProtectedComponent: React.FC<ProtectedComponentProps> = ({
   );
 };
 
+// Explicit display name for linting
+ProtectedComponent.displayName = 'ProtectedComponent';
+
 /**
  * HOC version of ProtectedComponent for wrapping entire components
  * 
@@ -136,11 +139,14 @@ export const withPermission = <P extends object>(
   Component: React.ComponentType<P>,
   options: Omit<ProtectedComponentProps, 'children'>
 ) => {
-  return (props: P) => (
+  const Wrapped: React.FC<P> = (props: P) => (
     <ProtectedComponent {...options}>
       <Component {...props} />
     </ProtectedComponent>
   );
+  const name = (Component as any).displayName || (Component as any).name || 'Component';
+  Wrapped.displayName = `withPermission(${name})`;
+  return Wrapped;
 };
 
 /**

@@ -10,7 +10,7 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
 
 const inputContainerVariants = cva(
-  'flex-row items-center border rounded-lg',
+  'flex-row items-center rounded-lg border',
   {
     variants: {
       variant: {
@@ -30,7 +30,7 @@ const inputContainerVariants = cva(
         focused: 'border-primary',
       },
       disabled: {
-        true: 'opacity-50 bg-background-subtle',
+        true: 'bg-background-subtle opacity-50',
         false: '',
       },
     },
@@ -116,7 +116,7 @@ export const Input = forwardRef<TextInput, InputProps>(
     return (
       <View className={containerClassName}>
         {label && (
-          <Text className="text-foreground text-sm font-medium mb-1">
+          <Text className="mb-1 text-sm font-medium text-foreground">
             {label}
           </Text>
         )}
@@ -169,13 +169,13 @@ export const Input = forwardRef<TextInput, InputProps>(
         </View>
         
         {error && (
-          <Text className="text-destructive text-sm mt-1">
+          <Text className="mt-1 text-sm text-destructive">
             {error}
           </Text>
         )}
         
         {helperText && !error && (
-          <Text className="text-foreground-muted text-sm mt-1">
+          <Text className="mt-1 text-sm text-foreground-muted">
             {helperText}
           </Text>
         )}

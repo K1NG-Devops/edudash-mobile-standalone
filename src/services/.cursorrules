@@ -1,4 +1,19 @@
-# Service Layer Rules for EduDash Pro
+# .cursorrules - Service Layer Rules
+
+## 🚨 RULES-FIRST PRECEDENCE
+**WARP.md > rules.md > .cursorrules > code**  
+This file provides service-specific guidance. Conflicts resolve upward in the chain.  
+Golden Rule and Non-negotiables from WARP.md apply to all services.  
+Tags: [NONNEGOTIABLE], [PROTECTED], [AI-GUIDE], [CHECKLIST]
+
+---
+
+## ✨ GOLDEN RULE [NONNEGOTIABLE]
+> **Always design EduDash Pro with students, teachers, and parents at the center of every decision.**  
+> **Every feature must make education simpler, smarter, and more engaging.**  
+> **Optimize for their learning outcomes, clarity, and safety.**
+
+---
 
 ## API Service Standards
 

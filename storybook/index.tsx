@@ -16,14 +16,14 @@ if (Platform.OS === 'web') {
   }
 } else {
   // Lazy-require to avoid bundling for the web target
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const SB = require('@storybook/react-native')
   const getStorybookUI = (SB && (SB.getStorybookUI || SB.default?.getStorybookUI || SB.default)) as any
 
   // Load example stories on native only
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   require('../src/design-system/components/__stories__/Button.stories')
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   require('../src/design-system/components/__stories__/Card.stories')
 
   if (typeof getStorybookUI === 'function') {

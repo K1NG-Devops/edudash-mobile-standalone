@@ -31,7 +31,7 @@ export function ThemeToggle({
   ];
 
   return (
-    <View className={`flex-row bg-background-subtle rounded-lg p-1 ${className}`}>
+    <View className={`flex-row rounded-lg bg-background-subtle p-1 ${className}`}>
       {themes.map(({ value, icon: Icon, label }) => {
         const isActive = theme === value;
         
@@ -40,7 +40,7 @@ export function ThemeToggle({
             key={value}
             onPress={() => setTheme(value)}
             className={`
-              flex-row items-center justify-center px-3 py-2 rounded-md
+              flex-row items-center justify-center rounded-md px-3 py-2
               ${isActive ? 'bg-primary' : 'bg-transparent'}
             `}
             style={{ 
@@ -83,7 +83,7 @@ export function CompactThemeToggle() {
   return (
     <TouchableOpacity
       onPress={nextTheme}
-      className="p-2 rounded-lg bg-background-element"
+      className="rounded-lg bg-background-element p-2"
       accessibilityLabel="Toggle theme"
       accessibilityRole="button"
     >

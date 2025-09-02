@@ -265,7 +265,7 @@ const canEdit = profile?.role === 'preschool_admin' || profile?.role === 'supera
         {/* Header with Edit Controls (standardized) */}
         <Card variant="flat" padding="lg" className="mb-4">
           <CardHeader>
-            <Heading level="h2">👩‍🏫 Teacher Profile</Heading>
+            <Heading level="h2"><Text>👩‍🏫 Teacher Profile</Text></Heading>
             <DSText variant="subtitle" className="mt-1">
               {teacher.position_title || teacher.role || 'Teacher'}
             </DSText>

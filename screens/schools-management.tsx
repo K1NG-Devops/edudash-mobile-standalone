@@ -2,7 +2,8 @@
 // @ts-nocheck
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { approveOnboardingRequest, rejectOnboardingRequest } from '@/lib/services/onboardingService';
 import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import {
@@ -142,159 +143,42 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
   };
 
   const approveRequest = async (requestId: string) => {
-    console.log('Approve button clicked for request:', requestId);
-    
     // Use React Native's Alert for confirmation
     Alert.alert(
       'Approve Onboarding Request',
-      'This will create a new school on the platform and send login credentials to the admin. Continue?',
+      'This will provision a new school and send login credentials to the admin via email. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Continue',
           style: 'default',
           onPress: async () => {
-            console.log('User confirmed approval');
-            
-            // Check if we have admin client
-            if (!supabaseAdmin) {
-              console.error('No admin client available');
-              Alert.alert('Error', 'Admin operations not available - service role key missing.\n\nPlease ensure EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY is set in your environment.');
-              return;
-            }
-
             try {
               setState(prev => ({ ...prev, loading: true }));
 
-              // Get the request details first
+              // Ensure the request exists in local state for context
               const request = state.onboardingRequests.find(r => r.id === requestId);
               if (!request) {
-                console.error('Request not found:', requestId);
                 Alert.alert('Error', 'Request not found');
                 setState(prev => ({ ...prev, loading: false }));
                 return;
               }
-              
-              console.log('Processing request for:', request.preschool_name);
 
-              // Step 1: Create the preschool
-              const tenantSlug = request.preschool_name
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '')
-                .substring(0, 50);
+              // Route approval through secure Edge Function
+              const result: any = await approveOnboardingRequest(requestId);
 
-              console.log('Creating preschool with slug:', tenantSlug);
-
-              const { data: preschoolData, error: preschoolError } = await supabase
-                .from('preschools')
-                .insert({
-                  name: request.preschool_name,
-                  email: request.admin_email,
-                  phone: request.phone,
-                  address: request.address,
-                  tenant_slug: tenantSlug,
-                  subscription_plan: 'basic',
-                  subscription_status: 'active',
-                  max_students: request.number_of_students || 50,
-                  billing_email: request.admin_email,
-                  onboarding_status: 'approved',
-                  setup_completed: false,
-                  created_at: new Date().toISOString()
-                })
-                .select()
-                .single();
-
-              if (preschoolError) {
-                console.error('Error creating preschool:', preschoolError);
-                Alert.alert('Error', 'Failed to create preschool - ' + preschoolError.message);
-                setState(prev => ({ ...prev, loading: false }));
-                return;
-              }
-              
-              console.log('Preschool created successfully:', preschoolData.id);
-
-              // Step 2: Create admin user in Supabase Auth using admin client
-              const tempPassword = Math.random().toString(36).slice(-8) + 'A1!'; // Temporary password
-              
-              console.log('Creating auth user for:', request.admin_email);
-
-              const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-                email: request.admin_email,
-                password: tempPassword,
-                email_confirm: true,
-                user_metadata: {
-                  name: request.admin_name,
-                  role: 'preschool_admin'
-                }
-              });
-
-              if (authError) {
-                console.error('Error creating auth user:', authError);
-                // If auth user creation fails, we should delete the preschool
-                await supabase.from('preschools').delete().eq('id', preschoolData.id);
-                Alert.alert('Error', 'Failed to create admin account - ' + authError.message);
-                setState(prev => ({ ...prev, loading: false }));
-                return;
-              }
-              
-              console.log('Auth user created successfully:', authData.user.id);
-
-              // Step 3: Create user profile in users table
-              console.log('Creating user profile for:', request.admin_name);
-              
-              const { error: userError } = await supabase
-                .from('users')
-                .insert({
-                  auth_user_id: authData.user.id,
-                  preschool_id: preschoolData.id,
-                  name: request.admin_name,
-                  email: request.admin_email,
-                  phone: request.phone,
-                  role: 'preschool_admin',
-                  is_active: true,
-                  created_at: new Date().toISOString()
-                });
-
-              if (userError) {
-                console.error('Error creating user profile:', userError);
-                // Cleanup: delete auth user and preschool using admin client
-                await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-                await supabase.from('preschools').delete().eq('id', preschoolData.id);
-                Alert.alert('Error', 'Failed to create user profile - ' + userError.message);
-                setState(prev => ({ ...prev, loading: false }));
-                return;
-              }
-              
-              console.log('User profile created successfully');
-
-              // Step 4: Update the onboarding request status
-              const { error: updateError } = await supabase
-                .from('preschool_onboarding_requests')
-                .update({ 
-                  status: 'approved', 
-                  reviewed_at: new Date().toISOString(),
-                  reviewed_by: profile?.id // Assuming profile has the super admin's ID
-                })
-                .eq('id', requestId);
-
-              if (updateError) {
-                // Removed debug statement: console.error('Error updating request status:', updateError);
-                Alert.alert('Warning', 'School created but failed to update request status');
-              }
-
-              // Step 5: Show success message with credentials
-              const successMessage = `SUCCESS! School "${request.preschool_name}" has been created.\n\nAdmin Login Details:\nEmail: ${request.admin_email}\nTemporary Password: ${tempPassword}\n\nThe admin will need to change this password on first login.`;
-
-              Alert.alert('Success', successMessage);
+              // Success UX
+              const successText = result?.success
+                ? `School "${request.preschool_name}" approved successfully.\n\nThe administrator (${request.admin_email}) will receive login instructions by email.`
+                : 'The request was processed.';
+              Alert.alert('Success', successText);
 
               // Refresh data and close modal
               await loadData();
               setState(prev => ({ ...prev, showRequestModal: false, selectedRequest: null }));
-            } catch (error) {
-              console.error('Error in approve request process:', error);
-              const msg = error instanceof Error ? error.message : String(error);
-              Alert.alert('Error', 'An unexpected error occurred while approving the request - ' + msg);
+            } catch (error: any) {
+              const msg = error?.message || 'Failed to approve request';
+              Alert.alert('Error', msg);
             } finally {
               setState(prev => ({ ...prev, loading: false }));
             }
@@ -315,21 +199,12 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase
-                .from('preschool_onboarding_requests')
-                .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
-                .eq('id', requestId);
-
-              if (error) {
-                Alert.alert('Error', 'Failed to reject request');
-                return;
-              }
-
+              await rejectOnboardingRequest(requestId, String(profile?.id || ''));
               Alert.alert('Success', 'Request rejected successfully.');
               await loadData();
               setState(prev => ({ ...prev, showRequestModal: false, selectedRequest: null }));
-            } catch (error) {
-              Alert.alert('Error', 'Failed to reject request');
+            } catch (error: any) {
+              Alert.alert('Error', error?.message || 'Failed to reject request');
             }
           }
         }
@@ -447,101 +322,102 @@ const SchoolsManagementContent = ({ profile }: { profile: any }) => {
   const renderRequestModal = () => (
     <Modal
       visible={state.showRequestModal}
-      animationType="slide"
-      presentationStyle="pageSheet"
+      animationType="fade"
+      transparent={true}
+      onRequestClose={() => setState(prev => ({ ...prev, showRequestModal: false, selectedRequest: null }))}
     >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity
-            onPress={() => setState(prev => ({ 
-              ...prev, 
-              showRequestModal: false, 
-              selectedRequest: null 
-            }))}
-          >
-            <IconSymbol name="xmark" size={24} color="#374151" />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Review Request</Text>
-          <View style={{ width: 24 }} />
-        </View>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              onPress={() => setState(prev => ({ 
+                ...prev, 
+                showRequestModal: false, 
+                selectedRequest: null 
+              }))}
+            >
+              <IconSymbol name="xmark" size={24} color="#374151" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Review Request</Text>
+            <View style={{ width: 24 }} />
+          </View>
 
-        {state.selectedRequest && (
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>School Information</Text>
-              <Text style={styles.modalLabel}>School Name</Text>
-              <Text style={styles.modalValue}>{state.selectedRequest.preschool_name}</Text>
-              
-              <Text style={styles.modalLabel}>Admin Name</Text>
-              <Text style={styles.modalValue}>{state.selectedRequest.admin_name}</Text>
-              
-              <Text style={styles.modalLabel}>Admin Email</Text>
-              <Text style={styles.modalValue}>{state.selectedRequest.admin_email}</Text>
-              
-              {state.selectedRequest.phone && (
-                <>
-                  <Text style={styles.modalLabel}>Phone</Text>
-                  <Text style={styles.modalValue}>{state.selectedRequest.phone}</Text>
-                </>
-              )}
-              
-              {state.selectedRequest.address && (
-                <>
-                  <Text style={styles.modalLabel}>Address</Text>
-                  <Text style={styles.modalValue}>{state.selectedRequest.address}</Text>
-                </>
-              )}
-              
-              <Text style={styles.modalLabel}>Expected Students</Text>
-              <Text style={styles.modalValue}>
-                {state.selectedRequest.number_of_students || 'Not specified'}
-              </Text>
-              
-              <Text style={styles.modalLabel}>Expected Teachers</Text>
-              <Text style={styles.modalValue}>
-                {state.selectedRequest.number_of_teachers || 'Not specified'}
-              </Text>
-              
-              {state.selectedRequest.message && (
-                <>
-                  <Text style={styles.modalLabel}>Message</Text>
-                  <Text style={styles.modalValue}>{state.selectedRequest.message}</Text>
-                </>
-              )}
-              
-              <Text style={styles.modalLabel}>Submitted</Text>
-              <Text style={styles.modalValue}>
-                {new Date(state.selectedRequest.created_at).toLocaleDateString()} at{' '}
-                {new Date(state.selectedRequest.created_at).toLocaleTimeString()}
-              </Text>
-            </View>
-
-            {state.selectedRequest.status === 'pending' && (
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.approveButton}
-                  onPress={() => {
-
-                    approveRequest(state.selectedRequest!.id);
-                  }}
-                >
-                  <IconSymbol name="checkmark" size={20} color="#FFFFFF" />
-                  <Text style={styles.approveButtonText}>Approve</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.rejectButton}
-                  onPress={() => {
-
-                    rejectRequest(state.selectedRequest!.id);
-                  }}
-                >
-                  <IconSymbol name="xmark" size={20} color="#FFFFFF" />
-                  <Text style={styles.rejectButtonText}>Reject</Text>
-                </TouchableOpacity>
+          {state.selectedRequest && (
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>School Information</Text>
+                <Text style={styles.modalLabel}>School Name</Text>
+                <Text style={styles.modalValue}>{state.selectedRequest.preschool_name}</Text>
+                
+                <Text style={styles.modalLabel}>Admin Name</Text>
+                <Text style={styles.modalValue}>{state.selectedRequest.admin_name}</Text>
+                
+                <Text style={styles.modalLabel}>Admin Email</Text>
+                <Text style={styles.modalValue}>{state.selectedRequest.admin_email}</Text>
+                
+                {state.selectedRequest.phone && (
+                  <>
+                    <Text style={styles.modalLabel}>Phone</Text>
+                    <Text style={styles.modalValue}>{state.selectedRequest.phone}</Text>
+                  </>
+                )}
+                
+                {state.selectedRequest.address && (
+                  <>
+                    <Text style={styles.modalLabel}>Address</Text>
+                    <Text style={styles.modalValue}>{state.selectedRequest.address}</Text>
+                  </>
+                )}
+                
+                <Text style={styles.modalLabel}>Expected Students</Text>
+                <Text style={styles.modalValue}>
+                  {state.selectedRequest.number_of_students || 'Not specified'}
+                </Text>
+                
+                <Text style={styles.modalLabel}>Expected Teachers</Text>
+                <Text style={styles.modalValue}>
+                  {state.selectedRequest.number_of_teachers || 'Not specified'}
+                </Text>
+                
+                {state.selectedRequest.message && (
+                  <>
+                    <Text style={styles.modalLabel}>Message</Text>
+                    <Text style={styles.modalValue}>{state.selectedRequest.message}</Text>
+                  </>
+                )}
+                
+                <Text style={styles.modalLabel}>Submitted</Text>
+                <Text style={styles.modalValue}>
+                  {new Date(state.selectedRequest.created_at).toLocaleDateString()} at{' '}
+                  {new Date(state.selectedRequest.created_at).toLocaleTimeString()}
+                </Text>
               </View>
-            )}
-          </ScrollView>
-        )}
+
+              {state.selectedRequest.status === 'pending' && (
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={styles.approveButton}
+                    onPress={() => {
+                      approveRequest(state.selectedRequest!.id);
+                    }}
+                  >
+                    <IconSymbol name="checkmark" size={20} color="#FFFFFF" />
+                    <Text style={styles.approveButtonText}>Approve</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.rejectButton}
+                    onPress={() => {
+                      rejectRequest(state.selectedRequest!.id);
+                    }}
+                  >
+                    <IconSymbol name="xmark" size={20} color="#FFFFFF" />
+                    <Text style={styles.rejectButtonText}>Reject</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          )}
+        </View>
       </View>
     </Modal>
   );
@@ -722,15 +598,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    gap: 8,
+    flexWrap: 'wrap',
   },
   tabButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: '#F3F4F6',
+    flex: 1,
+    minWidth: 0,
   },
   activeTabButton: {
     backgroundColor: '#3B82F6',
@@ -775,6 +655,9 @@ const styles = StyleSheet.create({
   },
   section: {
     padding: 20,
+    width: '100%',
+    alignSelf: 'center',
+    maxWidth: 900,
   },
   sectionTitle: {
     fontSize: 18,
@@ -901,6 +784,22 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+    padding: 12,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '90%',
+    overflow: 'hidden',
+    width: '100%',
+    alignSelf: 'center',
+    maxWidth: 720,
   },
   modalHeader: {
     flexDirection: 'row',

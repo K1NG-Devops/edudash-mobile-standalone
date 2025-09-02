@@ -135,10 +135,10 @@ export default function EventsEnhancedScreen() {
   const pendingInvitations = invitations.filter(inv => inv.status === 'pending');
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
+    <View style={styles.container} className="flex-1 bg-background">
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
-        <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+      <View style={styles.header} className="bg-card">
+        <Text style={styles.title} className="text-foreground">
           Events
         </Text>
         
@@ -153,15 +153,12 @@ export default function EventsEnhancedScreen() {
       </View>
 
       {/* Tabs */}
-      <View style={[styles.tabs, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+      <View style={styles.tabs} className="bg-card">
         <TouchableOpacity
           style={[styles.tab, activeTab === 'all' && styles.activeTab]}
           onPress={() => setActiveTab('all')}
         >
-          <Text style={[
-            styles.tabText,
-            { color: activeTab === 'all' ? '#3B82F6' : (isDark ? '#94A3B8' : '#64748B') }
-          ]}>
+          <Text style={styles.tabText} className={activeTab === 'all' ? 'text-blue-600' : 'text-muted-foreground'}>
             All Events
           </Text>
         </TouchableOpacity>
@@ -170,10 +167,7 @@ export default function EventsEnhancedScreen() {
           style={[styles.tab, activeTab === 'invitations' && styles.activeTab]}
           onPress={() => setActiveTab('invitations')}
         >
-          <Text style={[
-            styles.tabText,
-            { color: activeTab === 'invitations' ? '#3B82F6' : (isDark ? '#94A3B8' : '#64748B') }
-          ]}>
+          <Text style={styles.tabText} className={activeTab === 'invitations' ? 'text-blue-600' : 'text-muted-foreground'}>
             Invitations
             {pendingInvitations.length > 0 && (
               <View style={styles.badge}>
@@ -187,10 +181,7 @@ export default function EventsEnhancedScreen() {
           style={[styles.tab, activeTab === 'my-events' && styles.activeTab]}
           onPress={() => setActiveTab('my-events')}
         >
-          <Text style={[
-            styles.tabText,
-            { color: activeTab === 'my-events' ? '#3B82F6' : (isDark ? '#94A3B8' : '#64748B') }
-          ]}>
+          <Text style={styles.tabText} className={activeTab === 'my-events' ? 'text-blue-600' : 'text-muted-foreground'}>
             My Events
           </Text>
         </TouchableOpacity>
@@ -210,7 +201,7 @@ export default function EventsEnhancedScreen() {
           </View>
         ) : error ? (
           <View style={styles.centerContainer}>
-            <Text style={[styles.errorText, { color: isDark ? '#EF4444' : '#DC2626' }]}>
+            <Text style={styles.errorText} className="text-red-600 dark:text-red-500">
               {error}
             </Text>
           </View>
@@ -224,7 +215,7 @@ export default function EventsEnhancedScreen() {
                     size={48} 
                     color={isDark ? '#475569' : '#94A3B8'} 
                   />
-                  <Text style={[styles.emptyText, { color: isDark ? '#64748B' : '#94A3B8' }]}>
+                  <Text style={styles.emptyText} className="text-muted-foreground">
                     No pending invitations
                   </Text>
                 </View>
@@ -247,7 +238,7 @@ export default function EventsEnhancedScreen() {
                     size={48} 
                     color={isDark ? '#475569' : '#94A3B8'} 
                   />
-                  <Text style={[styles.emptyText, { color: isDark ? '#64748B' : '#94A3B8' }]}>
+                  <Text style={styles.emptyText} className="text-muted-foreground">
                     No events found
                   </Text>
                   {canCreateEvent() && (

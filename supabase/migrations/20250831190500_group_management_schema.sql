@@ -52,9 +52,7 @@ CREATE TABLE IF NOT EXISTS public.event_audiences (
   audience_type text CHECK (audience_type IN ('role', 'group', 'user', 'preschool')) NOT NULL,
   target_id uuid,
   target_value text,
-  created_at timestamptz DEFAULT now(),
-  
-  UNIQUE(event_id, audience_type, COALESCE(target_id::text, target_value))
+  created_at timestamptz DEFAULT now()
 );
 
 -- =====================================================
@@ -145,6 +143,7 @@ CREATE INDEX IF NOT EXISTS idx_event_audiences_event_id ON public.event_audience
 CREATE INDEX IF NOT EXISTS idx_event_audiences_target_id ON public.event_audiences(target_id) WHERE target_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_event_audiences_target_value ON public.event_audiences(target_value) WHERE target_value IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_event_audiences_type ON public.event_audiences(audience_type);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_event_audiences_unique_target ON public.event_audiences (event_id, audience_type, (COALESCE(target_id::text, target_value)));
 
 -- Event invitations indexes
 CREATE INDEX IF NOT EXISTS idx_event_invitations_event_id ON public.event_invitations(event_id);
@@ -179,6 +178,35 @@ ALTER TABLE public.notification_history ENABLE ROW LEVEL SECURITY;
 -- =====================================================
 -- PRINCIPAL GROUPS POLICIES
 -- =====================================================
+
+-- Ensure policies are idempotent by dropping any existing ones before creation
+DROP POLICY IF EXISTS "Users can view groups in their preschool" ON public.principal_groups;
+DROP POLICY IF EXISTS "Principals can create groups" ON public.principal_groups;
+DROP POLICY IF EXISTS "Group creators can update their groups" ON public.principal_groups;
+DROP POLICY IF EXISTS "Group admins can delete groups" ON public.principal_groups;
+
+DROP POLICY IF EXISTS "Users can view group members" ON public.group_members;
+DROP POLICY IF EXISTS "Users can join groups" ON public.group_members;
+DROP POLICY IF EXISTS "Group admins can manage members" ON public.group_members;
+DROP POLICY IF EXISTS "Users can leave groups" ON public.group_members;
+
+DROP POLICY IF EXISTS "Event creators can manage audiences" ON public.event_audiences;
+DROP POLICY IF EXISTS "Users can view event audiences" ON public.event_audiences;
+
+DROP POLICY IF EXISTS "Users can view their invitations" ON public.event_invitations;
+DROP POLICY IF EXISTS "Event organizers can send invitations" ON public.event_invitations;
+DROP POLICY IF EXISTS "Users can respond to their invitations" ON public.event_invitations;
+DROP POLICY IF EXISTS "Inviters can cancel invitations" ON public.event_invitations;
+
+DROP POLICY IF EXISTS "Users can view their group invitations" ON public.group_invitations;
+DROP POLICY IF EXISTS "Group admins can send invitations" ON public.group_invitations;
+DROP POLICY IF EXISTS "Invitees can respond to invitations" ON public.group_invitations;
+DROP POLICY IF EXISTS "Inviters can cancel invitations" ON public.group_invitations;
+
+DROP POLICY IF EXISTS "Users can view preschool activity" ON public.activity_feed;
+DROP POLICY IF EXISTS "Users can create activity entries" ON public.activity_feed;
+
+DROP POLICY IF EXISTS "Service role can manage notifications" ON public.notification_history;
 
 -- Users can view groups in their preschool
 CREATE POLICY "Users can view groups in their preschool" ON public.principal_groups
@@ -469,9 +497,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_principal_groups_updated_at ON public.principal_groups;
 CREATE TRIGGER update_principal_groups_updated_at BEFORE UPDATE ON public.principal_groups
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_group_members_updated_at ON public.group_members;
 CREATE TRIGGER update_group_members_updated_at BEFORE UPDATE ON public.group_members
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -572,3 +602,4 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 -- Success message
 SELECT 'Group Management and Event Targeting schema created successfully!' as status;
+

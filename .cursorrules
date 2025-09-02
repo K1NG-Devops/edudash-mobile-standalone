@@ -1,4 +1,19 @@
-# EduDash Pro — Cursor AI Assistant Rules
+# WARP.md - EduDash Pro Master Rules Document
+
+## 🚨 RULES-FIRST PRECEDENCE
+**WARP.md > rules.md > .cursorrules > code**  
+This file is the highest authority. Conflicts resolve upward in the chain.  
+Golden Rule and Non-negotiables apply to all changes, all environments.  
+Tags: [NONNEGOTIABLE], [PROTECTED], [AI-GUIDE], [CHECKLIST]
+
+---
+
+## ✨ GOLDEN RULE [NONNEGOTIABLE]
+> **Always design EduDash Pro with students, teachers, and parents at the center of every decision.**  
+> **Every feature must make education simpler, smarter, and more engaging.**  
+> **Optimize for their learning outcomes, clarity, and safety.**
+
+---
 
 ## 🚨 CRITICAL: PRODUCTION DATABASE STATUS
 **DATABASE STATE: PRODUCTION READY ✅**  

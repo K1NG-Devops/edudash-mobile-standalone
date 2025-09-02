@@ -22,11 +22,3 @@ export * from '../theme/NativeWindTheme';
 export * from '../tokens';
 export * from '../tokens/colors';
 
-// Re-export commonly used types
-export type { ButtonProps, IconButtonProps } from './Button';
-export type { InputProps, SearchInputProps } from './Input';
-export type { CardProps, CardHeaderProps, CardContentProps, CardFooterProps } from './Card';
-export type { TextProps, HeadingProps, LabelProps, HelperTextProps } from './Typography';
-export type { IconProps } from './Icon';
-export type { BadgeProps, NotificationBadgeProps, StatusBadgeProps } from './Badge';
-export type { Theme, ResolvedTheme } from '../theme/ThemeProvider';

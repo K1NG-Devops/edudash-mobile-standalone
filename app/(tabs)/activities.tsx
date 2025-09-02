@@ -167,7 +167,7 @@ export default function ActivitiesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top','left','right']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} className="flex-1 bg-background" edges={['top','left','right']}>
         <View style={[styles.center, { backgroundColor: bg }]}> 
           <ActivityIndicator size="large" color="#8B5CF6" />
           <Text style={{ marginTop: 12, color: sub }}>Loading activities…</Text>
@@ -179,7 +179,7 @@ export default function ActivitiesScreen() {
   if (profile?.role !== 'teacher') {
     // Parent/Admin view with toggle between Events and Announcements
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top','left','right']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} className="flex-1 bg-background" edges={['top','left','right']}>
         <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 12, borderBottomWidth: 1, borderBottomColor: border }}>
           <TouchableOpacity 
             onPress={() => {

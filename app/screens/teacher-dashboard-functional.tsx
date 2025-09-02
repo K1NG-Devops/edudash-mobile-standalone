@@ -371,13 +371,13 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                     {title}
                 </Text>
                 {remainingText && !needsUpgrade && !isLimited && (
-                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{remainingText}</Text>
+                    <Text className="mt-0.5 text-xs text-muted-foreground">{remainingText}</Text>
                 )}
                 {needsUpgrade && (
-                    <Text style={[styles.premiumText, { color: colors.textSecondary }]}>Premium</Text>
+                    <Text style={styles.premiumText} className="text-muted-foreground">Premium</Text>
                 )}
                 {isLimited && !needsUpgrade && (
-                    <Text style={[styles.premiumText, { color: '#EF4444' }]}>Limit Reached</Text>
+                    <Text style={styles.premiumText} className="text-red-500">Limit Reached</Text>
                 )}
             </TouchableOpacity>
         );
@@ -385,7 +385,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
 
     if (loading) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.background }, styles.centered]}>
+            <View style={[styles.container, { backgroundColor: colors.background }, styles.centered]} className="flex-1 bg-background">
                 <ActivityIndicator size="large" color="#3B82F6" />
                 <Text style={[styles.loadingText, { color: colors.text }]}>Loading dashboard...</Text>
             </View>
@@ -394,7 +394,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
 
     if (error) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.background }, styles.centered]}>
+            <View style={[styles.container, { backgroundColor: colors.background }, styles.centered]} className="flex-1 bg-background">
                 <Text style={[styles.errorText, { color: colors.text }]}>Error: {error}</Text>
                 <TouchableOpacity
                     style={styles.retryButton}
@@ -407,7 +407,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]} className="flex-1 bg-background">
             <AuthConsumer>
                 {({ signOut }) => (
                     <MobileHeader

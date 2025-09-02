@@ -11,8 +11,10 @@ import {
 , AppState , Appearance, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MobileSidebar } from './MobileSidebar';
+import AiLanguageSelector from '@/components/ai/AiLanguageSelector';
 import { NotificationService } from '@/lib/services/notificationService';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useWindowDimensions } from 'react-native';
 
 interface MobileHeaderProps {
   user: {
@@ -46,6 +48,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 }) => {
   const { colorScheme, toggle: toggleGlobalTheme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [internalUnreadCount, setInternalUnreadCount] = useState(0);
 
@@ -156,6 +159,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     : ['#F87171', '#60A5FA'] as const;  // Red-400 to Blue-400
   const firstName = user?.name?.split(' ')[0] || 'User';
   const isPrincipal = user?.role === 'preschool_admin' || user?.role === 'principal';
+  const isNarrow = width <= 380; // compact on small phones
   // For superadmin, prefer a short display label over raw email/name
   const displayName = user?.role === 'superadmin'
     ? 'Super Admin'
@@ -169,7 +173,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
     return (
       <>
-        <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+        <SafeAreaView style={styles.safeArea} edges={['left', 'right']} className="bg-transparent">
           <StatusBar 
             barStyle={computedBarStyle as any}
             translucent={true}
@@ -182,40 +186,41 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             end={{ x: 1, y: 0 }}
           >
             {/* Modern glass morphism overlay */}
-            <View style={styles.glassOverlay} />
+            <View style={styles.glassOverlay} className="absolute inset-0 bg-white/5" />
             
-            <View style={styles.headerContent}>
+            <View style={styles.headerContent} className="flex-row items-center justify-between px-0">
               {/* Left side - Avatar & User Info */}
-              <View style={styles.leftSection}>
+              <View style={styles.leftSection} className="flex-1 flex-row items-center pr-3">
                 <TouchableOpacity
                   style={styles.avatarButton}
+                  className="relative mr-4"
                   onPress={toggleSidebar}
                   activeOpacity={0.8}
                 >
-                  <View style={styles.avatarContainer}>
-                    <Text style={styles.avatarText}>
+                  <View style={styles.avatarContainer} className="h-11 w-11 items-center justify-center rounded-full border-2 border-white/30 bg-white/20">
+                    <Text style={styles.avatarText} className="text-[20px] font-bold text-white">
                       {displayInitial}
                     </Text>
                   </View>
-                  <View style={styles.statusIndicator} />
+                  <View style={styles.statusIndicator} className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
                 </TouchableOpacity>
                 
-                <View style={styles.greetingSection}>
+                <View style={styles.greetingSection} className="flex-1">
                   {/* Show EduDash Pro for superadmin, otherwise school name */}
                   {user?.role === 'superadmin' ? (
-                    <Text style={styles.brandName}>EduDash Pro</Text>
+                    <Text style={styles.brandName} className="mb-1.5 text-[18px] font-bold text-white">EduDash Pro</Text>
                   ) : (
-                    <Text style={styles.schoolName}>
+                    <Text style={styles.schoolName} className="mb-1.5 text-[17px] font-bold text-white">
                       {schoolName || 'EduDash Pro'}
                     </Text>
                   )}
                   
                   {/* User info below */}
-                  <View style={styles.userInfoRow}>
-                    <Text style={styles.userName}>{displayName}</Text>
-                    <View style={styles.roleContainer}>
-                      <View style={styles.roleBadge}>
-                        <Text style={styles.roleTitle}>
+                  <View style={styles.userInfoRow} className="mt-1 flex-row items-center">
+                    <Text style={styles.userName} className="mb-0.5 mr-2 text-[18px] font-semibold text-white">{displayName}</Text>
+                    <View style={styles.roleContainer} className="ml-2">
+                      <View style={styles.roleBadge} className="self-start rounded-lg bg-white/15 px-2.5 py-[3px]">
+                        <Text style={styles.roleTitle} className="text-[13px] text-white opacity-90">
                           {user?.role === 'preschool_admin' ? 'Principal' : 
                            user?.role === 'principal' ? 'Principal' :
                            user?.role === 'school_admin' ? 'School Admin' :
@@ -230,24 +235,29 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               </View>
 
               {/* Right side - Actions */}
-              <View style={[styles.rightSection, isPrincipal && styles.rightSectionCompact]}>
+              <View style={[styles.rightSection, (isPrincipal || isNarrow) && styles.rightSectionCompact]} className={isPrincipal || isNarrow ? 'mt-0.5 flex-row items-center gap-1 self-start' : 'mt-0.5 flex-row items-center gap-2 self-start'}>
                 {/* Theme Toggle Button */}
                 <TouchableOpacity
-                  style={[styles.modernActionButton, isPrincipal && styles.compactActionButton]}
+                  style={[styles.modernActionButton, (isPrincipal || isNarrow) && styles.compactActionButton]}
+                  className="h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/20"
                   onPress={toggleGlobalTheme}
                   activeOpacity={0.7}
                 >
                   <IconSymbol 
                     name={colorScheme === 'light' ? 'moon.fill' : 'sun.max.fill'} 
-                    size={isPrincipal ? 16 : 18} 
+                    size={(isPrincipal || isNarrow) ? 16 : 18} 
                     color="#FFFFFF" 
                   />
                 </TouchableOpacity>
+
+                {/* AI Language Selector */}
+                <AiLanguageSelector compact={true} />
 
                 {/* Principal Primary Action (e.g., Create Event) */}
                 {isPrincipal && onPrimaryAction && (
                   <TouchableOpacity
                     style={[styles.modernActionButton, styles.compactActionButton]}
+                    className="h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/20"
                     onPress={onPrimaryAction}
                     activeOpacity={0.7}
                     accessibilityLabel="Create Event"
@@ -259,11 +269,12 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 {/* Manage Subscription Button */}
                 {onNavigate && (
                   <TouchableOpacity
-                    style={[styles.modernActionButton, isPrincipal && styles.compactActionButton]}
+                    style={[styles.modernActionButton, (isPrincipal || isNarrow) && styles.compactActionButton]}
+                    className={isPrincipal || isNarrow ? 'h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/20' : 'h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/20'}
                     onPress={() => onNavigate('/pricing')}
                     activeOpacity={0.7}
                   >
-                    <IconSymbol name="creditcard.fill" size={isPrincipal ? 16 : 18} color="#FFFFFF" />
+                    <IconSymbol name="creditcard.fill" size={(isPrincipal || isNarrow) ? 16 : 18} color="#FFFFFF" />
                   </TouchableOpacity>
                 )}
 
@@ -271,13 +282,14 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 {onNotificationsPress && (
                   <TouchableOpacity
                     style={[styles.modernActionButton, isPrincipal && styles.compactActionButton]}
+                    className={isPrincipal || isNarrow ? 'h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/20' : 'h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/20'}
                     onPress={onNotificationsPress}
                     activeOpacity={0.7}
                   >
-                    <IconSymbol name="bell" size={isPrincipal ? 16 : 18} color="#FFFFFF" />
+                    <IconSymbol name="bell" size={(isPrincipal || isNarrow) ? 16 : 18} color="#FFFFFF" />
                     {badgeCount > 0 && (
-                      <View style={styles.modernNotificationBadge}>
-                        <Text style={styles.notificationBadgeText}>
+                      <View style={styles.modernNotificationBadge} className="absolute -right-1 -top-1 h-4 min-w-[16px] items-center justify-center rounded-md border border-white bg-red-500">
+                        <Text style={styles.notificationBadgeText} className="text-center text-[10px] font-bold text-white">
                           {badgeCount > 99 ? '99+' : badgeCount.toString()}
                         </Text>
                       </View>

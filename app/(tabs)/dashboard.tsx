@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import EnhancedSubscriptionParentDashboard from '@/components/dashboard/EnhancedSubscriptionParentDashboard';
 import SchoolAdminDashboard from '@/components/dashboard/SchoolAdminDashboard';
 // SuperAdminDashboard now located at app/screens/super-admin-dashboard.tsx

@@ -1,3 +1,5 @@
+/* eslint-disable react-native/no-inline-styles */
+
  
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';

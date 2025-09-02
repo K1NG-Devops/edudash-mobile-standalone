@@ -1,3 +1,5 @@
+/* eslint-disable react-native/no-inline-styles */
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { FlashList } from '@shopify/flash-list';

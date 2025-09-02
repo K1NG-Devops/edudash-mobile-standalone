@@ -1,4 +1,4 @@
-// import '@/lib/monitoring';
+import '@/lib/monitoring';
 import '../global.css'; // NativeWind styles
 import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary';
 import { AuthProvider } from '@/contexts/SimpleWorkingAuth';
@@ -17,12 +17,14 @@ import RevenueCatProvider from '@/components/payments/RevenueCatProvider';
 import { QueryProvider } from '@/contexts/QueryProvider';
 import { ToastProvider } from '@/components/ui/Toast';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
 import { AppFlowProvider } from '@/contexts/AppFlowProvider';
 // import AdsBootstrapper from '@/components/advertising/AdsBootstrapper';
 // import { GrowthBookProvider } from '@growthbook/growthbook-react';
 // import { growthbook } from '@/lib/growthbook';
+import ShakeToReport from '@/components/feedback/ShakeToReport';
 
 // Error boundary for route-level errors
 function RouteErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -159,7 +161,22 @@ export default function RootLayout() {
           <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
         </Stack>
         {!shouldHideNav && <GlobalBottomNav />}
+        {/* Shake-to-report, gated to beta builds and authenticated users */}
+        {process.env.EXPO_PUBLIC_BETA_MODE === 'true' && process.env.EXPO_PUBLIC_SHAKE_TO_REPORT === 'true' && profile && (
+          <ShakeToReport />
+        )}
       </SafeAreaView>
+    );
+  };
+
+  // Wrapper to apply NativeWind dark class on React Native
+  const RootThemeWrapper = ({ children }: { children: React.ReactNode }) => {
+    const { colorScheme } = useTheme();
+    // Apply "dark" class at the root so `dark:` variants work across the app on native
+    return (
+      <View className={colorScheme === 'dark' ? 'dark flex-1' : 'flex-1'} style={{ flex: 1 }}>
+        {children}
+      </View>
     );
   };
 
@@ -175,8 +192,12 @@ export default function RootLayout() {
                     <SubscriptionProviderWithAuth>
                       <AppFlowProvider>
                         <SafeAreaProvider>
-                          <ThemeStatusBar />
-                          <ContainerWithInsets hideBottomNav={hideBottomNav} />
+                          <LanguageProvider>
+                            <RootThemeWrapper>
+                              <ThemeStatusBar />
+                              <ContainerWithInsets hideBottomNav={hideBottomNav} />
+                            </RootThemeWrapper>
+                          </LanguageProvider>
                         </SafeAreaProvider>
                       </AppFlowProvider>
                     </SubscriptionProviderWithAuth>

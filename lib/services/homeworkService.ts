@@ -352,7 +352,16 @@ export class HomeworkService {
   }
 
   // AI-powered homework assistance (uses structured AI proxy with optional attachments support)
-  static async getHomeworkHelp(assignmentTitle: string, question: string, gradeLevel: string): Promise<{
+  static async getHomeworkHelp(
+    assignmentTitle: string,
+    question: string,
+    gradeLevelOrAge: string | number,
+    studentId?: string,
+    childName?: string,
+    parentName?: string,
+    languageCode?: string,
+    hintsOnly?: boolean,
+  ): Promise<{
     explanation: string;
     hints: string[];
     examples: string[];
@@ -366,9 +375,35 @@ export class HomeworkService {
         };
       }
 
-      // Derive a rough student age from gradeLevel (if possible)
-      const ageMatch = String(gradeLevel || '').match(/(\d{1,2})/);
-      const studentAge = ageMatch ? Math.max(3, Math.min(12, parseInt(ageMatch[1], 10))) : 5;
+      // Resolve student age with priority: studentId -> numeric param -> parsed from string
+      let studentAge = 5;
+      try {
+        if (studentId) {
+          const { data: studentRow } = await supabase
+            .from('students')
+            .select('date_of_birth')
+            .eq('id', studentId)
+            .maybeSingle();
+          if (studentRow?.date_of_birth) {
+            const dob = new Date(studentRow.date_of_birth);
+            const now = new Date();
+            let ageYears = now.getFullYear() - dob.getFullYear();
+            const m = now.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) ageYears--;
+            if (Number.isFinite(ageYears)) studentAge = ageYears;
+          }
+        }
+      } catch {}
+      if (!Number.isFinite(studentAge) || studentAge <= 0) {
+        if (typeof gradeLevelOrAge === 'number') {
+          studentAge = gradeLevelOrAge;
+        } else {
+          const ageMatch = String(gradeLevelOrAge || '').match(/(\d{1,2})/);
+          studentAge = ageMatch ? parseInt(ageMatch[1], 10) : 5;
+        }
+      }
+      // Clamp to a reasonable band for school-aged children
+      studentAge = Math.max(3, Math.min(17, Math.round(studentAge)));
 
       // Resolve current auth user and preschool for logging/association
       let internalUserId: string | null = null;
@@ -397,6 +432,10 @@ export class HomeworkService {
       // Call the structured homework help pathway (supports attachments via other UIs)
       const result = await claudeAI.askHomeworkHelp({
         question: combinedQuestion,
+        childName: childName,
+        parentName: parentName,
+        languageCode: languageCode,
+        hintsOnly: !!hintsOnly,
         childAge: studentAge,
         userId: internalUserId || 'unknown',
         preschoolId: preschoolId || 'unknown',

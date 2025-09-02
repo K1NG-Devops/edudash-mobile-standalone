@@ -1,3 +1,5 @@
+/* eslint-env jest */
+/* eslint-disable import/no-unresolved, no-undef */
 import '@testing-library/jest-native/extend-expect';
 
 // Mock Supabase
