@@ -17,7 +17,8 @@ if (Platform.OS === 'web') {
 } else {
   // Lazy-require to avoid bundling for the web target
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { getStorybookUI } = require('@storybook/react-native')
+  const SB = require('@storybook/react-native')
+  const getStorybookUI = (SB && (SB.getStorybookUI || SB.default?.getStorybookUI || SB.default)) as any
 
   // Load example stories on native only
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -25,7 +26,20 @@ if (Platform.OS === 'web') {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   require('../src/design-system/components/__stories__/Card.stories')
 
-  StorybookUIRoot = getStorybookUI({ asyncStorage: null })
+  if (typeof getStorybookUI === 'function') {
+    StorybookUIRoot = getStorybookUI({ asyncStorage: null })
+  } else {
+    // Fallback placeholder to avoid runtime crash if API shape changes
+    StorybookUIRoot = function StorybookFallback() {
+      return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ fontSize: 16, textAlign: 'center' }}>
+            Storybook failed to initialize. Please ensure @storybook/react-native is installed and compatible.
+          </Text>
+        </View>
+      )
+    }
+  }
 }
 
 export default StorybookUIRoot

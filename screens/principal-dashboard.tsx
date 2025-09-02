@@ -266,9 +266,21 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
         <View style={styles.contentWrapper}>
         {/* Page Header */}
         <PageHeader
+          spacing="sm"
           title="📊 School Overview"
           subtitle={`Manage ${(schoolInfoQuery.data as any)?.name || 'Your Preschool'}`}
-          actions={<Button text="Create Announcement" onPress={() => setShowAnnouncementModal(true)} />}
+          actions={(
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <IconButton
+                variant="secondary"
+                size="sm"
+                label="New Event"
+                icon={<Icon name="calendar" />}
+                onPress={() => setShowEventModal(true)}
+              />
+              <Button size="sm" text="Create Announcement" onPress={() => setShowAnnouncementModal(true)} />
+            </View>
+          )}
         />
         {statsQuery.data?.attendanceRate && statsQuery.data.attendanceRate > 0 && (
           <Badge variant="success" className="mt-2 self-start">
