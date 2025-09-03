@@ -1,4 +1,3 @@
- 
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
@@ -9,10 +8,12 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
@@ -20,6 +21,7 @@ import { StudentDataService, EnhancedStudent, ParentDashboardData } from '@/lib/
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { shadow } from '@/lib/ui/shadow';
+import { useT } from '@/i18n';
 
 interface ParentDashboardProps {
   userId: string;
@@ -32,7 +34,9 @@ interface ParentDashboardProps {
   onSignOut: () => Promise<void>;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const isSmallScreen = screenWidth < 375;
+const isVerySmallScreen = screenWidth < 320;
 
 const ParentDashboard: React.FC<ParentDashboardProps> = ({
   userId,
@@ -42,6 +46,8 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
 }) => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const [dashboardData, setDashboardData] = useState<ParentDashboardData | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [selectedChild, setSelectedChild] = useState<EnhancedStudent | null>(null);
@@ -51,6 +57,8 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [todaysMood, setTodaysMood] = useState(0);
   const [weeklyProgress, setWeeklyProgress] = useState(0);
+
+  const { t } = useT();
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
@@ -103,7 +111,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
       }
     } catch (err) {
       // Removed debug statement: console.error('Error fetching parent dashboard data:', err);
-      setError('Failed to load dashboard data. Please try again.');
+      setError(t('errors.somethingWentWrong'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -147,9 +155,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning!';
-    if (hour < 17) return 'Good afternoon!';
-    return 'Good evening!';
+    if (hour < 12) return t('dashboard.goodMorning');
+    if (hour < 17) return t('dashboard.goodAfternoon');
+    return t('dashboard.goodEvening');
   };
 
   const renderStars = (rating: number) => {
@@ -168,12 +176,12 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
     const then = new Date(isoDate).getTime();
     const diff = Math.max(0, now - then);
     const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 1) return t('relative.justNow');
+    if (minutes < 60) return t('relative.minutes', { count: minutes });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return t('relative.hours', { count: hours });
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return t('relative.days', { count: days });
   };
 
   // Navigation handlers
@@ -202,7 +210,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         router.push('/screens/lessons');
         break;
       case 'messages':
-        router.push('/(tabs)/messages');
+        router.push('/messages');
         break;
       default:
 
@@ -213,6 +221,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
   if (loading && !refreshing && !dashboardData) {
     return (
       <View style={[styles.container, { backgroundColor: palette.background }]}>
+        {Platform.OS === 'android' && (
+          <View style={{ height: insets.top, backgroundColor: palette.background }} />
+        )}
         <MobileHeader
           user={userProfile}
           schoolName={tenantName}
@@ -220,10 +231,11 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
+          actionsPlacement="below"
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Loading your dashboard...</Text>
+          <ActivityIndicator size="large" color="#4285F4" />
+          <Text style={[styles.loadingText, { color: palette.textSecondary }]}>{t('dashboard.loading')}</Text>
         </View>
       </View>
     );
@@ -233,6 +245,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
   if (error && !loading && !refreshing) {
     return (
       <View style={[styles.container, { backgroundColor: palette.background }]}>
+        {Platform.OS === 'android' && (
+          <View style={{ height: insets.top, backgroundColor: palette.background }} />
+        )}
         <MobileHeader
           user={userProfile}
           schoolName={tenantName}
@@ -240,13 +255,14 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
+          actionsPlacement="below"
         />
         <View style={styles.errorContainer}>
-          <IconSymbol name="exclamationmark.triangle.fill" size={48} color="#EF4444" />
-          <Text style={styles.errorTitle}>Something went wrong</Text>
-          <Text style={styles.errorMessage}>{error}</Text>
+          <IconSymbol name="exclamationmark.triangle.fill" size={48} color="#EA4335" />
+          <Text style={[styles.errorTitle, { color: palette.text }]}>{t('errors.somethingWentWrong')}</Text>
+          <Text style={[styles.errorMessage, { color: palette.textSecondary }]}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchDashboardData}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('errors.tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -255,7 +271,10 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
-      {/* Mobile Header */}
+      {Platform.OS === 'android' && (
+        <View style={{ height: insets.top, backgroundColor: palette.background }} />
+      )}
+      
       <MobileHeader
         user={userProfile}
         schoolName={tenantName}
@@ -263,40 +282,80 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
         notificationCount={dashboardData?.recent_updates.length || 0}
+        actionsPlacement="below"
       />
 
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4285F4']} />
         }
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(100, insets.bottom + 80) }
+        ]}
       >
-        {/* Header Text */}
-        <View style={styles.headerTextSection}>
-          <Text style={[styles.greeting, { color: palette.text }]}>{getGreeting()} 👋</Text>
-          <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-            {selectedChild 
-              ? `Let's see how ${selectedChild.first_name} is doing today`
-              : 'Welcome to your dashboard'}
-          </Text>
-          {tenantName && (
-            <View style={styles.tenantInfo}>
-              <Text style={[styles.tenantLabel, { color: palette.text }]}>🏫 {tenantName}</Text>
-            </View>
-          )}
+        {/* Modern Header Section */}
+        <View style={[
+          styles.modernHeaderSection,
+          { 
+            paddingLeft: Math.max(12, insets.left + (isSmallScreen ? 12 : 16)),
+            paddingRight: Math.max(12, insets.right + (isSmallScreen ? 12 : 16))
+          }
+        ]}>
+          <View style={styles.titleSection}>
+            <Text style={[
+              styles.modernTitle, 
+              { 
+                color: palette.text,
+                fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 28 : 32,
+                lineHeight: isVerySmallScreen ? 30 : isSmallScreen ? 34 : 40,
+              }
+            ]}>
+              {getGreeting()} 👋
+            </Text>
+            <Text style={[
+              styles.modernSubtitle, 
+              { 
+                color: palette.textSecondary,
+                fontSize: isSmallScreen ? 13 : 14,
+              }
+            ]}>
+              {selectedChild 
+                ? t('dashboard.parent.seeHowChildDoing', { name: selectedChild.first_name })
+                : t('dashboard.parent.welcome')}
+            </Text>
+            {tenantName && (
+              <View style={[
+                styles.tenantBadge,
+                { backgroundColor: isDark ? 'rgba(66, 133, 244, 0.2)' : 'rgba(66, 133, 244, 0.1)' }
+              ]}>
+                <Text style={[styles.tenantLabel, { color: '#4285F4' }]} numberOfLines={1} ellipsizeMode="tail">🏫 {tenantName}</Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Child Selector Card or Empty State */}
+        {/* Child Selector Card */}
         {selectedChild ? (
           <TouchableOpacity 
-            style={styles.childSelectorCard}
+            style={[
+              styles.childSelectorCard,
+              { marginHorizontal: isSmallScreen ? 12 : 16 }
+            ]}
             onPress={() => setShowChildSelector(!showChildSelector)}
+            activeOpacity={0.7}
           >
             <LinearGradient
-              colors={['#8B5CF6', '#A855F7', '#C084FC']}
-              style={styles.childCard}
+              colors={['#4285F4', '#5E9BFF', '#7EB0FF']}
+              style={[
+                styles.childCard,
+                { 
+                  borderRadius: isSmallScreen ? 10 : 12,
+                  padding: isSmallScreen ? 16 : 20
+                }
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
@@ -313,10 +372,10 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     )}
                   </View>
                   <Text style={styles.childDetails}>
-                    🎂 {selectedChild.age} years old
+                    🎂 {t('age.years', { count: selectedChild.age })}
                   </Text>
                   <Text style={styles.childDetails}>
-                    👩‍🏫 {selectedChild.teacher_name || 'No Teacher Assigned'}
+                    👩‍🏫 {selectedChild.teacher_name || t('dashboard.parent.noTeacherAssigned')}
                   </Text>
                 </View>
                 <View style={styles.childEmoji}>
@@ -326,10 +385,10 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
               
               <View style={styles.childCardFooter}>
                 <View style={styles.childBadge}>
-                  <Text style={styles.childBadgeText}>{selectedChild.class_name || selectedChild.age_group_name || 'Unassigned'}</Text>
+                  <Text style={styles.childBadgeText}>{selectedChild.class_name || selectedChild.age_group_name || t('common.unassigned')}</Text>
                 </View>
                 <View style={styles.attendanceButton}>
-                  <Text style={styles.attendanceText}>Attendance: {selectedChild.attendance_percentage}%</Text>
+                  <Text style={styles.attendanceText}>{t('education.attendance')}: {selectedChild.attendance_percentage}%</Text>
                 </View>
               </View>
             </LinearGradient>
@@ -345,24 +404,24 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
               <View style={styles.emptyStateContent}>
                 {loading ? (
                   <>
-                    <Text style={styles.emptyStateTitle}>Loading...</Text>
-                    <Text style={styles.emptyStateText}>Fetching your child's information</Text>
+                    <Text style={styles.emptyStateTitle}>{t('common.loading')}</Text>
+                    <Text style={styles.emptyStateText}>{t('dashboard.loading')}</Text>
                   </>
                 ) : dashboardData && dashboardData.children.length === 0 ? (
                   <>
-                    <Text style={styles.emptyStateTitle}>No Children Found</Text>
-                    <Text style={styles.emptyStateText}>You don't have any children registered</Text>
+                    <Text style={styles.emptyStateTitle}>{t('dashboard.parent.noChildrenTitle')}</Text>
+                    <Text style={styles.emptyStateText}>{t('dashboard.parent.noChildrenDescription')}</Text>
                     <TouchableOpacity 
                       style={styles.registerButton}
                       onPress={() => router.push('/(tabs)/register')}
                     >
-                      <Text style={styles.registerButtonText}>Register a Child</Text>
+                      <Text style={styles.registerButtonText}>{t('dashboard.parent.registerChild')}</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
                   <>
-                    <Text style={styles.emptyStateTitle}>Welcome!</Text>
-                    <Text style={styles.emptyStateText}>Setting up your dashboard...</Text>
+                    <Text style={styles.emptyStateTitle}>{t('dashboard.parent.welcome')}</Text>
+                    <Text style={styles.emptyStateText}>{t('dashboard.loading')}</Text>
                   </>
                 )}
               </View>
@@ -389,7 +448,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 <View style={styles.childDropdownInfo}>
                   <Text style={[styles.childDropdownName, { color: palette.text }]}>{child.full_name}</Text>
                   <Text style={[styles.childDropdownDetails, { color: palette.textSecondary }]}>
-                    {child.age} years • {child.class_name || child.age_group_name || 'Unassigned'} • {child.teacher_name || 'No Teacher'}
+                    {t('age.years', { count: child.age })} • {child.class_name || child.age_group_name || t('common.unassigned')} • {child.teacher_name || t('dashboard.parent.noTeacher')}
                   </Text>
                 </View>
                 {child.id === selectedChildId && (
@@ -400,48 +459,142 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
           </View>
         )}
 
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity 
-            style={styles.quickAction}
-            onPress={() => handleQuickAction('calendar')}
+        {/* Horizontal Scrollable Quick Actions */}
+        <View style={styles.quickActionsSection}>
+          <Text style={[
+            styles.sectionTitle,
+            { 
+              color: palette.text,
+              fontSize: isSmallScreen ? 16 : 18,
+              marginHorizontal: isSmallScreen ? 12 : 16
+            }
+          ]}>
+            {t('dashboard.quickActions')}
+          </Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.quickActionsScrollContent,
+              { paddingHorizontal: isSmallScreen ? 12 : 16 }
+            ]}
+            style={styles.quickActionsContainer}
           >
-            <View style={styles.quickActionIcon}>
-              <IconSymbol name="book.fill" size={24} color="#6B7280" />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Lessons</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip,
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+                  borderColor: isDark ? palette.border : '#E8EAED',
+                  paddingHorizontal: isSmallScreen ? 14 : 16,
+                  paddingVertical: isSmallScreen ? 8 : 10,
+                }
+              ]}
+              onPress={() => handleQuickAction('calendar')}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="book.fill" size={isSmallScreen ? 14 : 16} color="#34A853" />
+              <Text style={[
+                styles.quickActionText,
+                { 
+                  color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+]}>{t('education.lessons')}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.quickAction}
-            onPress={() => handleQuickAction('homework')}
-          >
-            <View style={styles.quickActionIcon}>
-              <IconSymbol name="doc.text.fill" size={24} color="#6B7280" />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Homework</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip,
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+                  borderColor: isDark ? palette.border : '#E8EAED',
+                  paddingHorizontal: isSmallScreen ? 14 : 16,
+                  paddingVertical: isSmallScreen ? 8 : 10,
+                }
+              ]}
+              onPress={() => handleQuickAction('homework')}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="doc.text.fill" size={isSmallScreen ? 14 : 16} color="#EA4335" />
+              <Text style={[
+                styles.quickActionText,
+                { 
+                  color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+]}>{t('education.homework')}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.quickAction}
-            onPress={() => handleQuickAction('activities')}
-          >
-            <View style={styles.quickActionIcon}>
-              <IconSymbol name="location.fill" size={24} color="#6B7280" />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Activities</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip,
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+                  borderColor: isDark ? palette.border : '#E8EAED',
+                  paddingHorizontal: isSmallScreen ? 14 : 16,
+                  paddingVertical: isSmallScreen ? 8 : 10,
+                }
+              ]}
+              onPress={() => handleQuickAction('activities')}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="gamecontroller.fill" size={isSmallScreen ? 14 : 16} color="#FBBC05" />
+              <Text style={[
+                styles.quickActionText,
+                { 
+                  color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+]}>{t('education.activities')}</Text>
+            </TouchableOpacity>
 
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip,
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+                  borderColor: isDark ? palette.border : '#E8EAED',
+                  paddingHorizontal: isSmallScreen ? 14 : 16,
+                  paddingVertical: isSmallScreen ? 8 : 10,
+                }
+              ]}
+              onPress={() => handleQuickAction('messages')}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="message.fill" size={isSmallScreen ? 14 : 16} color="#4285F4" />
+              <Text style={[
+                styles.quickActionText,
+                { 
+                  color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+]}>{t('nav.messages')}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.quickAction}
-            onPress={() => handleQuickAction('messages')}
-          >
-            <View style={styles.quickActionIcon}>
-              <IconSymbol name="message.fill" size={24} color="#6B7280" />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Messages</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip,
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+                  borderColor: isDark ? palette.border : '#E8EAED',
+                  paddingHorizontal: isSmallScreen ? 14 : 16,
+                  paddingVertical: isSmallScreen ? 8 : 10,
+                }
+              ]}
+              onPress={() => router.push('/(tabs)/profile')}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="person.fill" size={isSmallScreen ? 14 : 16} color="#6366F1" />
+              <Text style={[
+                styles.quickActionText,
+                { 
+                  color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+]}>{t('nav.profile')}</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         {/* Key Metrics Section - Only show for selected child */}
@@ -457,7 +610,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     <IconSymbol name="figure.run" size={20} color="#FFFFFF" />
                   </LinearGradient>
                   <Text style={[styles.metricValue, { color: palette.text }]}>{selectedChild.completed_activities || 0}</Text>
-                  <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>Activities</Text>
+                  <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>{t('education.activities')}</Text>
                 </View>
               </TouchableOpacity>
               
@@ -470,7 +623,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     <IconSymbol name="doc.text" size={20} color="#FFFFFF" />
                   </LinearGradient>
                   <Text style={[styles.metricValue, { color: palette.text }]}>{selectedChild.pending_homework || 0}</Text>
-                  <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>Pending</Text>
+                  <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>{t('dashboard.cards.pending')}</Text>
                 </View>
               </TouchableOpacity>
               
@@ -483,7 +636,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     <IconSymbol name="checkmark.circle" size={20} color="#FFFFFF" />
                   </LinearGradient>
                   <Text style={[styles.metricValue, { color: palette.text }]}>{selectedChild.attendance_percentage}%</Text>
-                  <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>Attendance</Text>
+                  <Text style={[styles.metricTitle, { color: palette.textSecondary }]}>{t('education.attendance')}</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -493,7 +646,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         {/* Recent Activity for selected child */}
         {selectedChild && dashboardData && dashboardData.recent_updates && (
           <View style={styles.activitySection}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>🕒 Recent Activity</Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>🕒 {t('dashboard.recentActivity')}</Text>
             {dashboardData.recent_updates
               .filter((u) => !selectedChild || u.student_id === selectedChild.id)
               .slice(0, 5)
@@ -519,7 +672,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         {/* Recent Achievements - Only show if there are achievements */}
         {selectedChild && selectedChild.recent_achievements && selectedChild.recent_achievements.length > 0 && (
           <View style={styles.achievementsSection}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>🏆 Recent Achievements</Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>🏆 {t('dashboard.achievements.recent')}</Text>
             <View style={styles.achievementsList}>
               {selectedChild.recent_achievements.map((achievement, index) => (
                 <View key={index} style={styles.achievementBadge}>
@@ -533,7 +686,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         {/* Recent Updates */}
         {dashboardData && dashboardData.recent_updates.length > 0 && (
           <View style={styles.updatesSection}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>📢 Recent Updates</Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>📢 {t('dashboard.updates.recent')}</Text>
             {dashboardData.recent_updates.slice(0, 3).map((update) => (
               <TouchableOpacity key={update.id} style={[styles.updateItem, { backgroundColor: palette.surface }] }>
                 <View style={styles.updateIcon}>
@@ -552,7 +705,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         {/* Upcoming Events */}
         {dashboardData && dashboardData.upcoming_events.length > 0 && (
           <View style={styles.eventsSection}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>📅 Upcoming Events</Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>📅 {t('dashboard.upcomingEvents')}</Text>
             {dashboardData.upcoming_events.slice(0, 3).map((event) => (
               <TouchableOpacity key={event.id} style={[styles.eventItem, { backgroundColor: palette.surface }]}>
                 <View style={styles.eventDate}>
@@ -574,7 +727,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         {selectedChild && (
           <View style={[styles.moodCard, { backgroundColor: palette.surface }]}>
             <View style={styles.cardHeader}>
-              <Text style={[styles.cardTitle, { color: palette.text }]}>Today's Mood</Text>
+              <Text style={[styles.cardTitle, { color: palette.text }]}>{t('dashboard.mood.today')}</Text>
               <TouchableOpacity>
                 <IconSymbol name="heart.fill" size={20} color="#EF4444" />
               </TouchableOpacity>
@@ -589,7 +742,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({
         {selectedChild && (
           <View style={[styles.progressCard, { backgroundColor: palette.surface }]}>
             <View style={styles.cardHeader}>
-              <Text style={[styles.cardTitle, { color: palette.text }]}>Weekly Progress</Text>
+              <Text style={[styles.cardTitle, { color: palette.text }]}>{t('dashboard.progress.weekly')}</Text>
               <View style={styles.progressTrend}>
                 <IconSymbol name="arrow.up.right" size={16} color="#10B981" />
                 <Text style={styles.progressPercentage}>{weeklyProgress}%</Text>
@@ -617,32 +770,55 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // Space for tab bar
+    paddingBottom: 100, // Dynamic padding added in component
   },
-  headerTextSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 16,
+  
+  // Modern Header Section - Google Style
+  modernHeaderSection: {
+    paddingHorizontal: 4,
+    paddingVertical: 20,
+    marginBottom: 8,
   },
-  greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 22,
-  },
-  childSelectorCard: {
-    marginHorizontal: 20,
+  titleSection: {
     marginBottom: 20,
   },
+  modernTitle: {
+    fontSize: 32, // Responsive in component
+    fontWeight: '300', // Light weight for Google style
+    letterSpacing: -0.5,
+    lineHeight: 40,
+    marginBottom: 8,
+    color: '#1F2937',
+  },
+  modernSubtitle: {
+    fontSize: 14, // Responsive in component
+    lineHeight: 20,
+    opacity: 0.7,
+    color: '#6B7280',
+  },
+  tenantBadge: {
+    backgroundColor: 'rgba(66, 133, 244, 0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  tenantLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4285F4',
+  },
+  // Child Selector Card - Updated with responsive design
+  childSelectorCard: {
+    marginHorizontal: 16, // Responsive in component
+    marginBottom: 16,
+  },
   childCard: {
-    borderRadius: 20,
-    padding: 24,
-    minHeight: 160,
+    borderRadius: 12, // Responsive in component
+    padding: 20, // Responsive in component
+    minHeight: 140,
+    ...shadow(3),
   },
   childCardHeader: {
     flexDirection: 'row',
@@ -681,44 +857,67 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   childBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 20, // Pill shape
   },
   childBadgeText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
   },
   attendanceButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20, // Pill shape
   },
   attendanceText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  // Quick Actions - Horizontal Scrollable Google-style Chips
+  quickActionsSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18, // Responsive in component
     fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
-  quickActions: {
+  quickActionsContainer: {
+    flexGrow: 0,
+  },
+  quickActionsScrollContent: {
+    paddingRight: 20,
+    gap: 8,
+  },
+  quickActionChip: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 40,
-    marginBottom: 24,
-  },
-  quickAction: {
     alignItems: 'center',
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    paddingHorizontal: 16, // Responsive in component
+    paddingVertical: 10, // Responsive in component
     backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadow(3),
+    borderRadius: 20, // Pill shape
+    borderWidth: 1,
+    borderColor: '#E8EAED',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    minHeight: 44, // Accessibility
+    marginRight: 8,
+  },
+  quickActionText: {
+    fontSize: 14, // Responsive in component
+    fontWeight: '500',
+    color: '#1F2937',
+    marginLeft: 8,
   },
   moodCard: {
     backgroundColor: '#FFFFFF',
@@ -775,56 +974,69 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 20,
   },
-  // New styles for enhanced features
+  // Metrics Section - Google-style with responsive design
   metricsSection: {
-    marginHorizontal: 20,
+    marginHorizontal: 16, // Responsive in component
     marginBottom: 20,
   },
-  metricsRow: {
+  statsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 10,
+    columnGap: 12, // Responsive in component
+    rowGap: 12, // Responsive in component
   },
   metricCard: {
-    flex: 1,
+    width: '48%',
+    minWidth: 160, // Responsive in component
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 0,
-    ...shadow(4),
+    borderRadius: 12, // Responsive in component
+    padding: 16, // Responsive in component
+    marginBottom: 0, // Using gap instead
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  metricCardTopBorder: {
+    borderTopWidth: 3, // Responsive in component
   },
   metricContent: {
     alignItems: 'center',
-    padding: 18,
-  },
-  metricIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     justifyContent: 'center',
+  },
+  metricIcon: {
+    width: 40, // Responsive in component
+    height: 40, // Responsive in component
+    borderRadius: 20, // Responsive in component
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'center',
+    marginBottom: 8, // Responsive in component
+    // backgroundColor set dynamically with 20% opacity
   },
   metricValue: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 20, // Responsive in component
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 2,
     color: '#1F2937',
-    marginBottom: 6,
   },
   metricTitle: {
-    fontSize: 13,
-    color: '#6B7280',
+    fontSize: 13, // Responsive in component
+    fontWeight: '600',
     textAlign: 'center',
-    fontWeight: '500',
+    marginBottom: 4,
+    color: '#6B7280',
+  },
+  metricSubtitle: {
+    fontSize: 11, // Responsive in component
+    textAlign: 'center',
+    color: '#9CA3AF',
   },
   achievementsSection: {
     marginHorizontal: 20,
     marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 12,
   },
   achievementsList: {
     flexDirection: 'row',
@@ -884,24 +1096,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#9CA3AF',
   },
-  // Activity timeline styles
+  // Activity Section - Google-style cards
   activitySection: {
-    marginHorizontal: 20,
+    marginHorizontal: 16, // Responsive in component
     marginBottom: 20,
+  },
+  sectionCard: {
+    marginBottom: 16, // Responsive in component
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12, // Responsive in component
+    padding: 20, // Responsive in component
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   activityItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    ...shadow(2),
+    paddingHorizontal: 16, // Responsive in component
+    paddingVertical: 12, // Responsive in component
   },
   activityIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#EFF6FF',
+    width: 36, // Responsive in component
+    height: 36, // Responsive in component
+    borderRadius: 18, // Responsive in component
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -910,17 +1130,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityTitleText: {
-    fontSize: 14,
+    fontSize: 14, // Responsive in component
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 2,
   },
   activityDescText: {
-    fontSize: 12,
+    fontSize: 12, // Responsive in component
     color: '#6B7280',
   },
   activityTimeText: {
-    fontSize: 11,
+    fontSize: 11, // Responsive in component
     color: '#9CA3AF',
     marginLeft: 8,
   },
@@ -966,23 +1186,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
   },
-  // Child dropdown styles
+  // Child dropdown styles - Google Material Design
   childDropdown: {
-    marginHorizontal: 20,
+    marginHorizontal: 16, // Responsive in component
     marginBottom: 20,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    ...shadow(3),
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   childDropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#E8EAED',
   },
   childDropdownItemSelected: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: 'rgba(66, 133, 244, 0.08)',
   },
   childDropdownEmoji: {
     width: 40,
@@ -1044,6 +1268,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   // Loading and error states
+  // Loading and Error states - Google Material Design
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1051,65 +1276,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   loadingText: {
-    fontSize: 16,
-    color: '#6B7280',
+    fontSize: 14,
+    color: '#5F6368', // Google Grey
     marginTop: 16,
+    fontWeight: '400',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   errorTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
+    fontWeight: '500',
+    color: '#202124',
     marginTop: 16,
     marginBottom: 8,
   },
   errorMessage: {
-    fontSize: 16,
-    color: '#6B7280',
+    fontSize: 14,
+    color: '#5F6368',
     textAlign: 'center',
     marginBottom: 24,
+    lineHeight: 20,
   },
   retryButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 20,
+    backgroundColor: '#4285F4', // Google Blue
+    paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 24, // Pill shape
+    elevation: 2,
   },
   retryButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: 0.25,
   },
-  // Register button
+  // Register button - Google Material Design
   registerButton: {
-    backgroundColor: '#8B5CF6',
-    paddingHorizontal: 20,
+    backgroundColor: '#34A853', // Google Green
+    paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 24, // Pill shape
+    elevation: 2,
   },
   registerButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Tenant info
-  tenantInfo: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 8,
-    alignSelf: 'flex-start',
-  },
-  tenantLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1E40AF',
+    fontWeight: '500',
+    letterSpacing: 0.25,
   },
 });
 

@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, ViewProps } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { useTheme } from '../theme/ThemeProvider';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const badgeVariants = cva(
   'inline-flex items-center justify-center rounded-full',

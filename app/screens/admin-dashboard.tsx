@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useT } from '@/i18n';
 
 export default function AdminDashboardScreen() {
+  const { t } = useT();
   return (
     <SafeAreaView style={styles.container} edges={['top','left','right']}>
-      <Text style={styles.text}>Admin Dashboard Screen - Coming Soon</Text>
+      <Text style={styles.text}>{t('nav.dashboard')} — {t('common.comingSoon')}</Text>
     </SafeAreaView>
   );
 }

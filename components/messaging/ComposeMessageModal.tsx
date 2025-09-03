@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
-  Modal,
   TouchableOpacity,
   TextInput,
   ScrollView,
@@ -13,8 +11,11 @@ import {
   Dimensions,
   ActionSheetIOS,
   Platform,
+  Modal,
 } from 'react-native';
+import BottomSheetModal from '@/components/ui/BottomSheetModal';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import ChatViewModal from '@/components/messaging/ChatViewModal';
 import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { MediaService } from '@/lib/services/mediaService';
@@ -38,6 +39,7 @@ interface ComposeMessageModalProps {
   profile: UserProfile | null;
   childrenList: any[];
   onMessageSent: () => void;
+  mode?: 'sheet' | 'modal';
 }
 
 const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
@@ -46,6 +48,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   profile,
   childrenList,
   onMessageSent,
+  mode = 'sheet',
 }) => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
@@ -94,7 +97,10 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
   };
 
   const loadContacts = async () => {
-    if (!profile?.preschool_id) return;
+    if (!profile?.preschool_id) {
+      Alert.alert('Setup Required', 'Please complete your preschool setup to access messaging.');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -107,7 +113,10 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         p_limit: 500,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Contact loading error:', error);
+        throw error;
+      }
 
       const mapped: Contact[] = (data || []).map((row: any) => ({
         id: row.id,
@@ -119,9 +128,11 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({
         is_online: false,
       }));
 
+      console.log('Loaded contacts:', mapped.length, 'contacts');
       setContacts(mapped);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load contacts');
+      console.error('Failed to load contacts:', error);
+      Alert.alert('Error', 'Failed to load contacts. Please try again or contact support.');
     } finally {
       setLoading(false);
     }
@@ -306,87 +317,110 @@ const handleAddPhoto = () => {
     setAttachedMedia(prev => prev.filter((_, i) => i !== index));
   };
 
-  const renderContactItem = (contact: Contact) => (
-    <TouchableOpacity
-      key={contact.id}
-      style={[
-        styles.contactItem,
-        { backgroundColor: palette.surface, borderBottomColor: palette.outline },
-        selectedContact?.id === contact.id && { backgroundColor: selectionBg }
-      ]}
-      onPress={() => setSelectedContact(contact)}
-    >
-      <View style={styles.contactAvatar}>
-        {contact.avatar_url ? (
-          <Image source={{ uri: contact.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.defaultAvatar, { backgroundColor: isDark ? '#334155' : '#E5E7EB' }]}>
-            <Text style={[styles.avatarText, { color: isDark ? '#CBD5E1' : '#6B7280' }]}>
-              {contact.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
-        {contact.is_online && <View style={styles.onlineIndicator} />}
-      </View>
+  const getEmptyStateMessage = () => {
+    const isParent = profile?.role === 'parent';
+    
+    switch (activeTab) {
+      case 'teachers':
+        return 'No teachers found. Teachers may not be set up in your preschool yet.';
+      case 'admin':
+        return 'No administrators found. Admin staff may not be set up yet.';
+      case 'parents':
+        if (isParent) {
+          return 'No other parents found. You can only message parents whose children share a class with your child.';
+        } else {
+          return 'No parents found in your preschool.';
+        }
+      default:
+        return 'No contacts available at this time.';
+    }
+  };
 
-      <View style={styles.contactInfo}>
-        <Text style={[styles.contactName, { color: palette.text }]}>{contact.name}</Text>
-        <Text style={[styles.contactRole, { color: palette.textSecondary }]}>
-          {contact.role === 'teacher' ? '👩‍🏫 Teacher' :
-           (contact.role === 'admin' || contact.role === 'principal' || contact.role === 'preschool_admin') ? '👨‍💼 Admin' : '👨‍👩‍👧‍👦 Parent'}
-          {contact.class_name && ` • ${contact.class_name}`}
-        </Text>
-        {contact.email && (
-          <Text style={[styles.contactEmail, { color: palette.textSecondary }]}>{contact.email}</Text>
-        )}
-      </View>
+  const renderContactItem = (contact: Contact) => {
+    const bg = selectedContact?.id === contact.id ? selectionBg : palette.surface;
+    return (
+      <TouchableOpacity
+        key={contact.id}
+        className="flex-row items-center border-b"
+        style={{ backgroundColor: bg, borderBottomColor: palette.outline, paddingHorizontal: 16, paddingVertical: 12 }}
+        onPress={() => setSelectedContact(contact)}
+      >
+        <View className="relative mr-3">
+          {contact.avatar_url ? (
+            <Image source={{ uri: contact.avatar_url }} className="w-12 h-12 rounded-full" />
+          ) : (
+            <View className="w-12 h-12 rounded-full justify-center items-center" style={{ backgroundColor: isDark ? '#334155' : '#E5E7EB' }}>
+              <Text className="text-lg font-semibold" style={{ color: isDark ? '#CBD5E1' : '#6B7280' }}>
+                {contact.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+          {contact.is_online && (
+            <View className="absolute w-3 h-3 rounded-full" style={{ bottom: 2, right: 2, backgroundColor: '#10B981', borderWidth: 2, borderColor: '#FFFFFF' }} />
+          )}
+        </View>
 
-      {selectedContact?.id === contact.id && (
-        <IconSymbol name="checkmark.circle.fill" size={20} color="#10B981" />
-      )}
-    </TouchableOpacity>
-  );
+        <View className="flex-1">
+          <Text className="text-base font-semibold" style={{ color: palette.text }}>{contact.name}</Text>
+          <Text className="text-sm" style={{ color: palette.textSecondary }}>
+            {contact.role === 'teacher' ? '👩‍🏫 Teacher' :
+             (contact.role === 'admin' || contact.role === 'principal' || contact.role === 'preschool_admin') ? '👨‍💼 Admin' : '👨‍👩‍👧‍👦 Parent'}
+            {contact.class_name && ` • ${contact.class_name}`}
+          </Text>
+          {contact.email && (
+            <Text className="text-xs" style={{ color: palette.textSecondary }}>{contact.email}</Text>
+          )}
+        </View>
+
+        {selectedContact?.id === contact.id && (
+          <IconSymbol name="checkmark.circle.fill" size={20} color="#10B981" />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const renderMessageComposer = () => (
-    <View style={[styles.composerContainer, { backgroundColor: 'transparent' }]}>
-      <View style={[styles.selectedContactHeader, { backgroundColor: palette.surface }]}>
-        <View style={styles.selectedContactInfo}>
-          <Text style={[styles.composerTitle, { color: palette.textSecondary }]}>Send message to:</Text>
-          <Text style={[styles.selectedContactName, { color: palette.text }]}>{selectedContact?.name}</Text>
-          <Text style={[styles.selectedContactRole, { color: palette.textSecondary }]}> 
+    <View className="flex-1 p-5">
+      <View className="flex-row justify-between items-start rounded-xl px-4 py-3 mb-4" style={{ backgroundColor: palette.surface }}>
+        <View className="flex-1">
+          <Text className="text-sm mb-1" style={{ color: palette.textSecondary }}>Send message to:</Text>
+          <Text className="text-lg font-semibold mb-0.5" style={{ color: palette.text }}>{selectedContact?.name}</Text>
+          <Text className="text-sm" style={{ color: palette.textSecondary }}>
             {selectedContact?.role === 'teacher' ? 'Teacher' :
              (selectedContact?.role === 'admin' || selectedContact?.role === 'principal' || selectedContact?.role === 'preschool_admin') ? 'Administrator' : 'Parent'}
             {selectedContact?.class_name && ` • ${selectedContact.class_name}`}
           </Text>
         </View>
         <TouchableOpacity
-          style={[styles.changeContactButton, { borderColor: palette.primary }]}
+          className="px-3 py-1.5 rounded-md border"
+          style={{ borderColor: palette.primary }}
           onPress={() => setSelectedContact(null)}
         >
-          <Text style={[styles.changeContactText, { color: palette.primary }]}>Change</Text>
+          <Text className="text-sm font-medium" style={{ color: palette.primary }}>Change</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.messageInputContainer, { backgroundColor: palette.surface }]}>
-        <Text style={[styles.messageInputLabel, { color: palette.textSecondary }]}>Message</Text>
+      <View className="rounded-xl px-4 py-3 mb-4" style={{ backgroundColor: palette.surface }}>
+        <Text className="text-sm font-medium mb-2" style={{ color: palette.textSecondary }}>Message</Text>
         <TextInput
-          style={[styles.messageInput, { borderColor: palette.outline, color: palette.text }]}
+          className="border rounded-lg p-2.5 text-base"
+          style={{ borderColor: palette.outline, color: palette.text, height: 120, textAlignVertical: 'top' as any, paddingBottom: 8 }}
           value={messageContent}
           onChangeText={setMessageContent}
           placeholder="Type your message here..."
           placeholderTextColor={placeholderColor}
           multiline
-          textAlignVertical="top"
           maxLength={1000}
         />
-        <Text style={[styles.characterCount, { color: palette.textSecondary }]}>
+        <Text className="text-xs text-right mt-1" style={{ color: palette.textSecondary }}>
           {messageContent.length}/1000
         </Text>
         
         {/* Media Attachment Controls */}
-        <View style={styles.mediaControls}>
+        <View className="flex-row mt-3">
           <TouchableOpacity
-            style={[styles.addPhotoButton, { borderColor: palette.primary, backgroundColor: isDark ? 'rgba(59,130,246,0.12)' : '#EBF4FF' }]}
+            className="flex-row items-center px-4 py-2 rounded-lg border gap-2"
+            style={{ borderColor: palette.primary, backgroundColor: isDark ? 'rgba(59,130,246,0.12)' : '#EBF4FF' }}
             onPress={handleAddPhoto}
             disabled={uploadingMedia}
           >
@@ -395,7 +429,7 @@ const handleAddPhoto = () => {
             ) : (
               <IconSymbol name="camera.fill" size={20} color={palette.primary} />
             )}
-            <Text style={[styles.addPhotoText, { color: palette.primary }]}>
+            <Text className="text-sm font-medium" style={{ color: palette.primary }}>
               {uploadingMedia ? 'Adding...' : 'Add Photo'}
             </Text>
           </TouchableOpacity>
@@ -403,14 +437,15 @@ const handleAddPhoto = () => {
         
         {/* Attached Media Preview */}
         {attachedMedia.length > 0 && (
-          <View style={[styles.attachedMediaContainer, { borderTopColor: palette.outline }]}>
-            <Text style={[styles.attachedMediaLabel, { color: palette.text }]}>Attached Photos ({attachedMedia.length})</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaPreviewScroll}>
+          <View className="mt-4 pt-4 border-t" style={{ borderTopColor: palette.outline }}>
+            <Text className="text-sm font-medium mb-2" style={{ color: palette.text }}>Attached Photos ({attachedMedia.length})</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {attachedMedia.map((media, index) => (
-                <View key={index} style={styles.mediaPreviewItem}>
-                  <Image source={{ uri: media.uri }} style={[styles.mediaPreviewImage, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]} />
+                <View key={index} className="relative mr-3">
+                  <Image source={{ uri: media.uri }} className="w-20 h-20 rounded-lg" style={{ backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }} />
                   <TouchableOpacity
-                    style={[styles.removeMediaButton, { backgroundColor: isDark ? palette.surface : '#FFFFFF' }]}
+                    className="absolute -top-1.5 -right-1.5 rounded-full"
+                    style={{ backgroundColor: isDark ? palette.surface : '#FFFFFF' }}
                     onPress={() => removeMedia(index)}
                   >
                     <IconSymbol name="xmark.circle.fill" size={20} color="#EF4444" />
@@ -422,24 +457,22 @@ const handleAddPhoto = () => {
         )}
       </View>
 
-      <View style={styles.composerActions}>
+      <View className="flex-row gap-3">
         <TouchableOpacity
-          style={[styles.cancelButton, { borderColor: palette.outline }]}
+          className="flex-1 py-3 rounded-lg border items-center"
+          style={{ borderColor: palette.outline }}
           onPress={() => {
             setSelectedContact(null);
             setMessageContent('');
             setAttachedMedia([]);
           }}
         >
-          <Text style={[styles.cancelButtonText, { color: palette.textSecondary }]}>Cancel</Text>
+          <Text className="text-base font-medium" style={{ color: palette.textSecondary }}>Cancel</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[
-            styles.sendMessageButton,
-            { backgroundColor: palette.primary },
-            ((!messageContent.trim() && attachedMedia.length === 0) || sending) && { opacity: 0.6 }
-          ]}
+          className="flex-1 flex-row items-center justify-center py-3 rounded-lg gap-2"
+          style={{ backgroundColor: palette.primary, opacity: ((!messageContent.trim() && attachedMedia.length === 0) || sending) ? 0.6 : 1 }}
           onPress={sendMessage}
           disabled={(!messageContent.trim() && attachedMedia.length === 0) || sending}
         >
@@ -448,7 +481,7 @@ const handleAddPhoto = () => {
           ) : (
             <>
               <IconSymbol name="paperplane.fill" size={16} color="#FFFFFF" />
-              <Text style={styles.sendButtonText}>Send Message</Text>
+              <Text className="text-base font-medium text-white">Send Message</Text>
             </>
           )}
         </TouchableOpacity>
@@ -456,448 +489,127 @@ const handleAddPhoto = () => {
     </View>
   );
 
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View style={[styles.container, { backgroundColor: palette.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.outline }]}>
-          <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]} onPress={onClose}>
+  const content = (
+    <View className="pb-1" style={{ flex: 1, padding: 0, backgroundColor: palette.background }}>
+      {!selectedContact && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.outline }}>
+          <TouchableOpacity 
+            className="w-8 h-8 rounded-full items-center justify-center bg-background-subtle"
+            onPress={onClose}
+            accessibilityLabel="Close"
+          >
             <IconSymbol name="xmark" size={20} color={palette.textSecondary} />
           </TouchableOpacity>
-          
-          <Text style={[styles.headerTitle, { color: palette.text }]}>New Message</Text>
-          
-          <View style={styles.headerSpacer} />
+
+          <Text style={{ fontSize: 16, fontWeight: '600', color: palette.text }}>New Message</Text>
+
+          <View style={{ width: 32 }} />
         </View>
+      )}
 
-        {selectedContact ? (
-          renderMessageComposer()
-        ) : (
-          <>
-            {/* Search */}
-            <View style={[styles.searchContainer, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
-              <IconSymbol name="magnifyingglass" size={16} color={placeholderColor} />
-              <TextInput
-                style={[styles.searchInput, { color: palette.text }]}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Search contacts..."
-                placeholderTextColor={placeholderColor}
-              />
-            </View>
+      {/* ChatView overlay when a contact is selected - this should close the compose modal */}
+      {selectedContact && (
+        <ChatViewModal
+          visible={true}
+          onClose={() => {
+            setSelectedContact(null);
+            onClose(); // Close the entire compose modal
+          }}
+          contact={{ id: selectedContact.id, name: selectedContact.name }}
+          profile={profile as any}
+          onMessageSent={() => {
+            onMessageSent?.();
+            onClose(); // Close compose modal after message sent
+          }}
+        />
+      )}
 
-            {/* Tabs */}
-            <View style={[styles.tabsContainer, { backgroundColor: palette.surface }]}>
-              <TouchableOpacity
-                style={[styles.tab, activeTab === 'teachers' && [styles.activeTab, { backgroundColor: palette.primary }]]}
-                onPress={() => setActiveTab('teachers')}
-              >
-                <Text style={[
-                  styles.tabText,
-                  { color: palette.textSecondary },
-                  activeTab === 'teachers' && styles.activeTabText
-                ]}>
-                  Teachers
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.tab, activeTab === 'admin' && [styles.activeTab, { backgroundColor: palette.primary }]]}
-                onPress={() => setActiveTab('admin')}
-              >
-                <Text style={[
-                  styles.tabText,
-                  { color: palette.textSecondary },
-                  activeTab === 'admin' && styles.activeTabText
-                ]}>
-                  Staff
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.tab, activeTab === 'parents' && [styles.activeTab, { backgroundColor: palette.primary }]]}
-                onPress={() => setActiveTab('parents')}
-              >
-                <Text style={[
-                  styles.tabText,
-                  { color: palette.textSecondary },
-                  activeTab === 'parents' && styles.activeTabText
-                ]}>
-                  Parents
-                </Text>
-              </TouchableOpacity>
-            </View>
+      {!selectedContact && (
+        <>
+          {/* Search */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, borderRadius: 12, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.outline, paddingHorizontal: 12, paddingVertical: 8 }}>
+            <IconSymbol name="magnifyingglass" size={16} color={placeholderColor} />
+            <TextInput
+              style={{ flex: 1, fontSize: 16, marginLeft: 12, color: palette.text }}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search contacts..."
+              placeholderTextColor={placeholderColor}
+            />
+          </View>
 
-            {/* Contacts List */}
-            <ScrollView style={styles.contactsList}>
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={palette.primary} />
-                  <Text style={[styles.loadingText, { color: palette.textSecondary }]}>Loading contacts...</Text>
-                </View>
-              ) : filteredContacts.length > 0 ? (
-                filteredContacts.map(renderContactItem)
-              ) : (
-                <View style={styles.emptyState}>
-                  <IconSymbol name="person.2" size={48} color={placeholderColor} />
-                  <Text style={[styles.emptyStateTitle, { color: palette.text }]}>No contacts found</Text>
-                  <Text style={[styles.emptyStateText, { color: palette.textSecondary }]}>
-                    {searchQuery ? 
-                      'Try adjusting your search terms' : 
-                      `No ${activeTab} available to message`
-                    }
+          {/* Tabs */}
+          <View style={{ flexDirection: 'row', marginTop: 12, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: palette.outline, backgroundColor: isDark ? '#0F172A' : '#F1F5F9' }}>
+            {[
+              { key: 'teachers', label: 'Teachers' },
+              { key: 'admin', label: 'Staff' },
+              { key: 'parents', label: 'Parents' },
+            ].map(tab => {
+              const isActive = activeTab === (tab.key as 'teachers' | 'admin' | 'parents');
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, backgroundColor: isActive ? Colors[colorScheme].primary : 'transparent' }}
+                  onPress={() => setActiveTab(tab.key as any)}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: isActive ? Colors[colorScheme].onPrimary : palette.textSecondary }}>
+                    {tab.label}
                   </Text>
-                </View>
-              )}
-            </ScrollView>
-          </>
-        )}
-      </View>
-    </Modal>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Contacts List */}
+          <ScrollView style={{ maxHeight: Dimensions.get('window').height * 0.8, backgroundColor: palette.background }}>
+            {loading ? (
+              <View className="items-center justify-center py-10">
+                <ActivityIndicator size="large" color={palette.primary} />
+                <Text className="mt-4 text-base text-foreground-muted">Loading contacts...</Text>
+              </View>
+            ) : filteredContacts.length > 0 ? (
+              filteredContacts.map(renderContactItem)
+            ) : (
+              <View className="items-center justify-center py-14 px-6">
+                <IconSymbol name="person.2" size={48} color={placeholderColor} />
+                <Text className="mt-3 text-base font-semibold text-foreground text-center">No contacts found</Text>
+                <Text className="mt-2 text-sm text-foreground-muted text-center leading-relaxed">
+                  {searchQuery ? 
+                    'Try adjusting your search terms or checking a different tab.' : 
+                    getEmptyStateMessage()}
+                </Text>
+                {!searchQuery && (
+                  <TouchableOpacity 
+                    className="mt-4 px-4 py-2 rounded-lg border" 
+                    style={{ borderColor: palette.primary }}
+                    onPress={() => loadContacts()}
+                  >
+                    <Text className="text-sm font-medium" style={{ color: palette.primary }}>Refresh</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </ScrollView>
+        </>
+      )}
+    </View>
+  );
+
+  if (mode === 'modal') {
+    return (
+      <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+        <View style={{ flex: 1, backgroundColor: palette.background, padding: 16 }}>
+          {content}
+        </View>
+      </Modal>
+    );
+  }
+
+  return (
+    <BottomSheetModal visible={visible} onClose={onClose} testID="compose-message">
+      {content}
+    </BottomSheetModal>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  headerSpacer: {
-    width: 32,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    marginVertical: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1F2937',
-    marginLeft: 12,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  activeTab: {
-    backgroundColor: '#3B82F6',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  activeTabText: {
-    color: '#FFFFFF',
-  },
-  contactsList: {
-    flex: 1,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  selectedContact: {
-    backgroundColor: '#EBF4FF',
-  },
-  contactAvatar: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  defaultAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#10B981',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  contactRole: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 2,
-  },
-  contactEmail: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  composerContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  selectedContactHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  selectedContactInfo: {
-    flex: 1,
-  },
-  composerTitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  selectedContactName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  selectedContactRole: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  changeContactButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-  },
-  changeContactText: {
-    fontSize: 14,
-    color: '#3B82F6',
-    fontWeight: '500',
-  },
-  messageInputContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  messageInputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  messageInput: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#1F2937',
-    height: 120,
-    textAlignVertical: 'top',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'right',
-    marginTop: 4,
-  },
-  composerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  sendMessageButton: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingVertical: 14,
-    borderRadius: 8,
-    backgroundColor: '#3B82F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#9CA3AF',
-  },
-  sendButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#FFFFFF',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingVertical: 60,
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  // Media Controls Styles
-  mediaControls: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    marginTop: 12,
-  },
-  addPhotoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-    backgroundColor: '#EBF4FF',
-    gap: 8,
-  },
-  addPhotoText: {
-    fontSize: 14,
-    color: '#3B82F6',
-    fontWeight: '500',
-  },
-  attachedMediaContainer: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  attachedMediaLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  mediaPreviewScroll: {
-    flexDirection: 'row',
-  },
-  mediaPreviewItem: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  mediaPreviewImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  removeMediaButton: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-});
 
 export default ComposeMessageModal;

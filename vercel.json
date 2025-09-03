@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "name": "edudash-pro",
   "version": 2,
   "buildCommand": "npx expo export -p web",
   "outputDirectory": "dist",

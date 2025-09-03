@@ -1,9 +1,13 @@
 import React, { useEffect } from 'react';
-import { router } from 'expo-router';
+import { router, useRootNavigationState } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 export default function IndexScreen() {
+  // Wait until the root navigation tree is mounted to avoid REPLACE warnings
+  const navState = useRootNavigationState();
+
   useEffect(() => {
+    if (!navState?.key) return; // navigation container not ready yet
     // Check authentication and route accordingly
     (async () => {
       try {
@@ -42,7 +46,7 @@ export default function IndexScreen() {
         router.replace('/landing');
       }
     })();
-  }, []);
+  }, [navState?.key]);
 
   // Show loading state while routing
   return null;

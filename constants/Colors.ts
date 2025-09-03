@@ -67,7 +67,7 @@ export const Colors = {
   dark: {
     // Primary text and background  
     text: '#FFFFFF', // Pure white for maximum contrast
-    textSecondary: '#E5E7EB', // Light gray for secondary text in dark mode
+    textSecondary: '#E2E8F0', // Slightly brighter for better contrast on dark surfaces
     background: '#0B1220', // Slightly darker for stronger contrast
 
     // Tab bar colors

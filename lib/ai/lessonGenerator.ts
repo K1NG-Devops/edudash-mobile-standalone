@@ -81,6 +81,7 @@ export class LessonGeneratorService {
     userId: string;
     preschoolId: string;
     languageCode?: string;
+    modelIdentifier?: string;
   }): Promise<{
     success: boolean;
     lesson?: LessonContent & { template: LessonTemplate };
@@ -110,6 +111,7 @@ export class LessonGeneratorService {
       userId: params.userId,
       preschoolId: params.preschoolId,
       languageCode: params.languageCode,
+      modelIdentifier: params.modelIdentifier,
     });
 
     if (result.success && result.content) {
@@ -139,6 +141,7 @@ export class LessonGeneratorService {
     userId: string;
     preschoolId: string;
     languageCode?: string;
+    modelIdentifier?: string;
   }): Promise<{
     success: boolean;
     lesson?: LessonContent;
@@ -172,6 +175,7 @@ export class LessonGeneratorService {
           userId: params.userId,
           preschoolId: params.preschoolId,
           languageCode: params.languageCode,
+          modelIdentifier: params.modelIdentifier,
         })
       : await claudeAI.generateLessonContent({
           topic: params.topic,
@@ -181,6 +185,7 @@ export class LessonGeneratorService {
           userId: params.userId,
           preschoolId: params.preschoolId,
           languageCode: params.languageCode,
+          modelIdentifier: params.modelIdentifier,
         });
 
     if (result.success && result.content) {

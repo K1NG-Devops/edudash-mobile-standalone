@@ -20,6 +20,7 @@ import { useSubscription } from '@/lib/hooks/useSubscription';
 import { UsageTrackingService, UsageStats } from '@/lib/services/usageTrackingService';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { CompactHeader } from '@/components/navigation/CompactHeader';
+import AdZone from '@/components/ui/AdZone';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -632,12 +633,20 @@ export default function SubscriptionManagementScreen() {
         ))}
       </View>
 
+      {/* Banner for billing pages (top) */}
+      <AdZone showForAll>
+        <View />
+      </AdZone>
       {/* Tab Content */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {activeTab === 'overview' && renderOverviewTab()}
         {activeTab === 'usage' && renderUsageTab()}
         {activeTab === 'billing' && renderBillingTab()}
         {activeTab === 'settings' && renderSettingsTab()}
+        {/* Banner for billing pages */}
+        <AdZone showForAll>
+          <View />
+        </AdZone>
       </ScrollView>
     </View>
   );

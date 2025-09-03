@@ -78,6 +78,59 @@ export class ConversationService {
     }
   }
 
+  static async createCommunity(params: {
+    authUserId: string;
+    preschoolId: string;
+    name: string;
+    description?: string;
+    adminsOnly?: boolean;
+    locked?: boolean;
+    allowMemberPosting?: boolean;
+  }): Promise<{ id?: string; error?: string }> {
+    try {
+      const currentId = await this.getCurrentUserId(params.authUserId);
+      if (!currentId) return { error: 'Current user not found' };
+
+      const settings = {
+        admins_only: !!params.adminsOnly,
+        locked: !!params.locked,
+        allow_member_posting: params.allowMemberPosting ?? true,
+        is_community: true,
+      } as any;
+
+      const { data: conv, error: convErr } = await supabase
+        .from('conversations')
+        .insert({
+          preschool_id: params.preschoolId,
+          class_id: null,
+          type: 'group',
+          name: params.name,
+          description: params.description || null,
+          created_by: currentId,
+          settings,
+        } as any)
+        .select('id')
+        .single();
+
+      if (convErr) return { error: convErr.message };
+
+      const owner: Partial<ConversationMember> = {
+        conversation_id: conv.id,
+        user_id: currentId,
+        role: 'owner' as any,
+      } as any;
+
+      const { error: memErr } = await supabase
+        .from('conversation_members')
+        .insert(owner as any);
+      if (memErr) return { error: memErr.message };
+
+      return { id: conv.id };
+    } catch (e: any) {
+      return { error: e?.message || 'Failed to create community' };
+    }
+  }
+
   static async addMembers(params: {
     authUserId: string;
     conversationId: string;

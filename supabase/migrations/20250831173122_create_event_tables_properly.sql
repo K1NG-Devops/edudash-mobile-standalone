@@ -162,6 +162,7 @@ ALTER TABLE public.event_reactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.event_notifications ENABLE ROW LEVEL SECURITY;
 
 -- Basic RLS policies for event_updates
+DROP POLICY IF EXISTS "Users can view event updates in their preschool" ON public.event_updates;
 CREATE POLICY "Users can view event updates in their preschool" ON public.event_updates
     FOR SELECT USING (
         event_id IN (
@@ -173,6 +174,7 @@ CREATE POLICY "Users can view event updates in their preschool" ON public.event_
         )
     );
 
+DROP POLICY IF EXISTS "Teachers can create event updates" ON public.event_updates;
 CREATE POLICY "Teachers can create event updates" ON public.event_updates
     FOR INSERT WITH CHECK (
         author_id IN (
@@ -183,6 +185,7 @@ CREATE POLICY "Teachers can create event updates" ON public.event_updates
     );
 
 -- Basic RLS policies for other tables
+DROP POLICY IF EXISTS "Users can view event media" ON public.event_media;
 CREATE POLICY "Users can view event media" ON public.event_media
     FOR SELECT USING (
         event_id IN (
@@ -194,6 +197,7 @@ CREATE POLICY "Users can view event media" ON public.event_media
         )
     );
 
+DROP POLICY IF EXISTS "Users can view event participants" ON public.event_participants;
 CREATE POLICY "Users can view event participants" ON public.event_participants
     FOR SELECT USING (
         event_id IN (
@@ -205,6 +209,7 @@ CREATE POLICY "Users can view event participants" ON public.event_participants
         )
     );
 
+DROP POLICY IF EXISTS "Users can manage their own participation" ON public.event_participants;
 CREATE POLICY "Users can manage their own participation" ON public.event_participants
     FOR ALL USING (
         user_id IN (
@@ -213,6 +218,7 @@ CREATE POLICY "Users can manage their own participation" ON public.event_partici
         )
     );
 
+DROP POLICY IF EXISTS "Users can view event reactions" ON public.event_reactions;
 CREATE POLICY "Users can view event reactions" ON public.event_reactions
     FOR SELECT USING (
         event_id IN (
@@ -233,6 +239,7 @@ CREATE POLICY "Users can view event reactions" ON public.event_reactions
         )
     );
 
+DROP POLICY IF EXISTS "Users can manage their own reactions" ON public.event_reactions;
 CREATE POLICY "Users can manage their own reactions" ON public.event_reactions
     FOR ALL USING (
         user_id IN (
@@ -241,6 +248,7 @@ CREATE POLICY "Users can manage their own reactions" ON public.event_reactions
         )
     );
 
+DROP POLICY IF EXISTS "Users can view their own notifications" ON public.event_notifications;
 CREATE POLICY "Users can view their own notifications" ON public.event_notifications
     FOR SELECT USING (
         recipient_id IN (

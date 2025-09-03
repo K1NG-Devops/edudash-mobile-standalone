@@ -7,7 +7,7 @@ import React, { forwardRef, useState } from 'react';
 import { TextInput, View, Text, TouchableOpacity, TextInputProps } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Eye, EyeOff } from 'lucide-react-native';
-import { useTheme } from '../theme/ThemeProvider';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const inputContainerVariants = cva(
   'flex-row items-center rounded-lg border',
@@ -90,7 +90,7 @@ export const Input = forwardRef<TextInput, InputProps>(
     onBlur,
     ...props 
   }, ref) => {
-    const { colors, isDark } = useTheme();
+    const { theme } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -131,8 +131,8 @@ export const Input = forwardRef<TextInput, InputProps>(
           <TextInput
             ref={ref}
             className={inputTextVariants({ size, className })}
-            style={[{ color: colors.foreground }, style]}
-            placeholderTextColor={colors.foregroundMuted}
+            style={[{ color: theme.colors.text }, style]}
+            placeholderTextColor={theme.colors.textSecondary}
             editable={!disabled}
             secureTextEntry={shouldObscure}
             keyboardType={getKeyboardType()}
@@ -154,9 +154,9 @@ export const Input = forwardRef<TextInput, InputProps>(
               accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (
-                <EyeOff size={20} color={colors.foregroundMuted} />
+                <EyeOff size={20} color={theme.colors.textSecondary} />
               ) : (
-                <Eye size={20} color={colors.foregroundMuted} />
+                <Eye size={20} color={theme.colors.textSecondary} />
               )}
             </TouchableOpacity>
           )}
@@ -194,7 +194,7 @@ export interface SearchInputProps extends Omit<InputProps, 'type' | 'leftIcon'> 
 
 export const SearchInput = forwardRef<TextInput, SearchInputProps>(
   ({ onSearch, SearchIcon, ...props }, ref) => {
-    const { colors } = useTheme();
+    const { theme } = useTheme();
     const LucideSearch = require('lucide-react-native').Search;
     const Icon = SearchIcon || LucideSearch;
 
@@ -202,7 +202,7 @@ export const SearchInput = forwardRef<TextInput, SearchInputProps>(
       <Input
         ref={ref}
         {...props}
-        leftIcon={<Icon size={20} color={colors.foregroundMuted} />}
+        leftIcon={<Icon size={20} color={theme.colors.textSecondary} />}
         returnKeyType="search"
         onSubmitEditing={(e) => {
           onSearch?.(e.nativeEvent.text);

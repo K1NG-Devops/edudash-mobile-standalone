@@ -125,6 +125,119 @@ export class HomeworkService {
     }
   }
 
+  /**
+   * Stream homework grading in real-time. Calls onDelta with JSON text chunks as they arrive.
+   * On final, attempts to parse JSON and returns normalized grading.
+   */
+  static async streamGradeHomework(
+    submissionId: string,
+    submissionContent: string,
+    assignmentTitle: string,
+    gradeLevel: string,
+    handlers: {
+      onDelta?: (chunk: string) => void;
+      onFinal?: (payload: { score: number; feedback: string; suggestions: string[]; strengths: string[]; areasForImprovement: string[] }) => void;
+      onError?: (err: { message: string; code?: string }) => void;
+    }
+  ): Promise<void> {
+    try {
+      if (!AI_ENABLED) {
+        handlers.onFinal?.({
+          score: 75,
+          feedback: 'Good effort on this assignment. Keep working hard!',
+          suggestions: ['Review the material again', 'Practice more examples'],
+          strengths: ['Shows understanding of basic concepts'],
+          areasForImprovement: ['Attention to detail', 'Following instructions'],
+        });
+        return;
+      }
+
+      const ageMatch = String(gradeLevel || '').match(/(\d{1,2})/);
+      const studentAge = ageMatch ? Math.max(3, Math.min(12, parseInt(ageMatch[1], 10))) : 5;
+
+      await claudeAI.streamHomeworkGrading({
+        assignmentTitle,
+        assignmentInstructions: '',
+        studentSubmission: submissionContent,
+        studentAge,
+      }, {
+        onDelta: (chunk) => handlers.onDelta?.(chunk),
+        onFinal: async ({ content }) => {
+          // Local robust JSON extractor (subset) to avoid importing internals
+          const extract = (raw: string): any | null => {
+            if (!raw) return null;
+            const text = String(raw).trim();
+            const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+            if (fence && fence[1]) {
+              const inside = fence[1].replace(/[\u0000-\u001F]/g, '');
+              try { return JSON.parse(inside); } catch {}
+              try { return JSON.parse(inside.replace(/,\s*([}\]])/g, '$1')); } catch {}
+            }
+            const first = text.indexOf('{');
+            if (first !== -1) {
+              let depth = 0;
+              for (let i = first; i < text.length; i++) {
+                const ch = text[i];
+                if (ch === '{') depth++;
+                else if (ch === '}') {
+                  depth--;
+                  if (depth === 0) {
+                    const candidate = text.slice(first, i + 1).replace(/[\u0000-\u001F]/g, '');
+                    try { return JSON.parse(candidate); } catch {}
+                    try { return JSON.parse(candidate.replace(/,\s*([}\]])/g, '$1')); } catch {}
+                    break;
+                  }
+                }
+              }
+            }
+            try { return JSON.parse(text.replace(/[\u0000-\u001F]/g, '')); } catch {}
+            return null;
+          };
+
+          // Parse grading JSON robustly and normalize to legacy shape
+          let score = 80;
+          let feedback = 'Great effort! Keep practicing.';
+          let strengths: string[] = [];
+          let areasForImprovement: string[] = [];
+          let suggestions: string[] = [];
+          try {
+            const parsed: any = extract(String(content || ''));
+            if (parsed) {
+              const category = parsed.grade || 'Good';
+              const scoreMap: Record<string, number> = { 'Excellent': 95, 'Good': 85, 'Needs Improvement': 65, 'Incomplete': 40 };
+              score = scoreMap[category] ?? 80;
+              feedback = parsed.feedback || feedback;
+              strengths = Array.isArray(parsed.strengths) ? parsed.strengths : [];
+              areasForImprovement = Array.isArray(parsed.areasForImprovement) ? parsed.areasForImprovement : [];
+              suggestions = Array.isArray(parsed.nextSteps) ? parsed.nextSteps : [];
+            }
+          } catch {}
+          handlers.onFinal?.({ score, feedback, suggestions, strengths, areasForImprovement });
+
+          // Best-effort DB update mirroring non-streaming path
+          try {
+            await supabase
+              .from('homework_submissions')
+              .update({
+                grade: Number(score),
+                feedback: feedback,
+                graded_at: new Date().toISOString(),
+                graded_by: 'ai',
+                status: 'reviewed'
+              })
+              .eq('id', submissionId);
+          } catch (dbErr) {
+            log.warn('Failed to update submission with streamed AI grade:', dbErr);
+          }
+        },
+        onError: (err) => handlers.onError?.(err),
+      });
+    } catch (e: any) {
+      log.error('Stream AI homework grading error:', e);
+      handlers.onError?.({ message: e?.message || 'Streaming error' });
+    }
+  }
+
   static async getAssignments(filter?: HomeworkFilter): Promise<HomeworkAssignment[]> {
     try {
       let query = supabase
@@ -497,6 +610,82 @@ export class HomeworkService {
         hints: ['Read the problem carefully', 'Take your time to understand'],
         examples: ['Practice makes perfect']
       };
+    }
+  }
+
+  /**
+   * Stream homework help chat. Provides incremental text updates via onDelta.
+   */
+  static async streamHomeworkHelp(
+    assignmentTitle: string,
+    question: string,
+    gradeLevelOrAge: string | number,
+    studentId: string | undefined,
+    childName: string | undefined,
+    parentName: string | undefined,
+    languageCode: string | undefined,
+    hintsOnly: boolean | undefined,
+    handlers: {
+      onDelta?: (chunk: string) => void;
+      onFinal?: (payload: { explanation: string }) => void;
+      onError?: (err: { message: string; code?: string }) => void;
+    }
+  ): Promise<void> {
+    try {
+      if (!AI_ENABLED) {
+        handlers.onFinal?.({ explanation: 'For help with this assignment, please ask your teacher or parent.' });
+        return;
+      }
+
+      // Resolve student age
+      let studentAge = 5;
+      try {
+        if (studentId) {
+          const { data: studentRow } = await supabase
+            .from('students')
+            .select('date_of_birth')
+            .eq('id', studentId)
+            .maybeSingle();
+          if (studentRow?.date_of_birth) {
+            const dob = new Date(studentRow.date_of_birth);
+            const now = new Date();
+            let ageYears = now.getFullYear() - dob.getFullYear();
+            const m = now.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) ageYears--;
+            if (Number.isFinite(ageYears)) studentAge = ageYears;
+          }
+        }
+      } catch {}
+      if (!Number.isFinite(studentAge) || studentAge <= 0) {
+        if (typeof gradeLevelOrAge === 'number') studentAge = gradeLevelOrAge;
+        else {
+          const ageMatch = String(gradeLevelOrAge || '').match(/(\d{1,2})/);
+          studentAge = ageMatch ? parseInt(ageMatch[1], 10) : 5;
+        }
+      }
+      studentAge = Math.max(3, Math.min(17, Math.round(studentAge)));
+
+      // Provide assignment context inline within the question
+      const combinedQuestion = assignmentTitle ? `[Assignment: ${assignmentTitle}] ${question}` : question;
+
+      await claudeAI.streamHomeworkHelp({
+        question: combinedQuestion,
+        childAge: studentAge,
+        childName,
+        parentName,
+        languageCode,
+        hintsOnly,
+      }, {
+        onDelta: (chunk) => handlers.onDelta?.(chunk),
+        onFinal: ({ content }) => {
+          const text = String(content || '');
+          handlers.onFinal?.({ explanation: text });
+        },
+        onError: (err) => handlers.onError?.(err),
+      });
+    } catch (e: any) {
+      log.error('Stream AI homework help error:', e);
+      handlers.onError?.({ message: e?.message || 'Streaming error' });
     }
   }
 

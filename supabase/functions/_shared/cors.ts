@@ -7,11 +7,13 @@ function isOriginAllowed(origin: string, allowedList: string[]): boolean {
 
   try {
     const url = new URL(origin);
-    const host = url.host; // e.g., foo.vercel.app
+    const host = url.host; // e.g., localhost:19006, foo.vercel.app
+    const hostname = url.hostname; // without port
     const protocol = url.protocol; // e.g., https:
+    const port = url.port; // may be empty
 
     for (const entry of allowedList) {
-      // Support entries like https://*.vercel.app or http://localhost:8081
+      // Support entries like https://*.vercel.app
       if (entry.includes('*')) {
         // Split into protocol and host pattern
         const [entryProtocol, entryHost] = entry.split('://');
@@ -24,6 +26,27 @@ function isOriginAllowed(origin: string, allowedList: string[]): boolean {
               return true;
             }
           }
+        }
+      } else {
+        // Support localhost/127.0.0.1 with any port via :* suffix, or match ignoring port if entry omits a port
+        try {
+          // Special port-wildcard pattern (e.g., http://localhost:*)
+          if (entry.endsWith(':*')) {
+            const base = entry.slice(0, -2); // remove :*
+            const baseUrl = new URL(base);
+            if (baseUrl.protocol === protocol && baseUrl.hostname === hostname) {
+              return true;
+            }
+          } else {
+            const e = new URL(entry);
+            const sameHostIgnoringPort = e.protocol === protocol && e.hostname === hostname;
+            const exactHostPort = e.protocol === protocol && e.host === host; // includes port comparison if present
+            if (exactHostPort || (sameHostIgnoringPort && e.port === '')) {
+              return true;
+            }
+          }
+        } catch {
+          // ignore malformed entries
         }
       }
     }

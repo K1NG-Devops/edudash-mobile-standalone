@@ -56,7 +56,7 @@ export default function AddChildScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top','left','right']}>
+    <SafeAreaView style={styles.screen} edges={['top','left','right']}>
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.card}>
         <Text style={styles.title}>Add your child</Text>
@@ -76,6 +76,7 @@ export default function AddChildScreen() {
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 16 },
   card: { width: '100%', maxWidth: 420, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 },
   title: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 6 },

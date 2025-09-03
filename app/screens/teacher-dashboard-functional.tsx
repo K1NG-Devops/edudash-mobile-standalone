@@ -11,13 +11,17 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Dimensions
 } from 'react-native';
 import PlanStatus from '@/components/subscription/PlanStatus';
 import UpgradeModal from '@/components/subscription/UpgradeModal';
 import { SubscriptionProvider, useFeatureAccess, useSubscription } from '@/contexts/SubscriptionContext';
 import { shadow } from '@/lib/ui/shadow';
 import { PageHeader, EmptyState, Button } from '@/src/design-system/components';
+import { useT } from '@/i18n';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AdZone from '@/components/ui/AdZone';
 
 interface TeacherDashboardProps {
     profile: any;
@@ -72,7 +76,12 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
     const { theme } = useTheme();
     const isDark = theme.isDark;
     const { subscription, loading: subscriptionLoading, aiUsage, trackAIUsage } = useSubscription();
-
+    const { t } = useT();
+    const insets = useSafeAreaInsets();
+    const { width: screenWidth } = Dimensions.get('window');
+    const isSmallScreen = screenWidth < 375;
+    const isVerySmallScreen = screenWidth < 320;
+    
     // Pre-compute feature access for all features to avoid calling hooks in event handlers
     const aiLessonAccess = useFeatureAccess('ai_lesson_generator');
     const homeworkGraderAccess = useFeatureAccess('homework_grader');
@@ -87,6 +96,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
     const [homeworkAssignments, setHomeworkAssignments] = useState<HomeworkAssignment[]>([]);
     const [totalStudents, setTotalStudents] = useState(0);
     const [tenantName, setTenantName] = useState<string | null>(null);
+    const [tenantSlug, setTenantSlug] = useState<string | null>(null);
     const [upgradeModal, setUpgradeModal] = useState<{ visible: boolean, featureName: string, description: string }>({
         visible: false,
         featureName: '',
@@ -158,11 +168,16 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
             const preschoolData = await safeSelect(async () => (
                 await supabase
                     .from('preschools')
-                    .select('name')
+                    .select('name, id')
                     .eq('id', preschoolId)
                     .single()
             ));
-            if (preschoolData) setTenantName((preschoolData as any).name);
+            if (preschoolData) {
+                const t: any = preschoolData as any;
+                setTenantName(t.name);
+                const slug = t.id || (t.name ? String(t.name).toLowerCase().replace(/\s+/g, '-') : null) || 'unknown';
+                setTenantSlug(slug);
+            }
 
             // Load classes (safe; return [] on recursion)
             const classesData = await safeSelect(async () => (
@@ -257,7 +272,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                     <Text style={[styles.lessonTitle, { color: colors.text }]}>{lesson.title}</Text>
                     <View style={[styles.lessonStatus, { backgroundColor: statusBg }]}>
                         <Text style={[styles.lessonStatusText, { color: statusColor }]}>
-                            {isPublic ? 'Public' : 'Private'}
+{isPublic ? t('dashboard.lesson.public') : t('dashboard.lesson.private')}
                         </Text>
                     </View>
                 </View>
@@ -267,11 +282,11 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                     </Text>
                 )}
                 <View style={styles.lessonMeta}>
-                    <Text style={[styles.lessonDuration, { color: colors.textSecondary }]}>
-                        Duration: {lesson.duration_minutes || 'N/A'} min
+                    <Text style={[styles.lessonDuration, { color: colors.textSecondary }]}> 
+{t('dashboard.lesson.durationMinutes', { minutes: lesson.duration_minutes || 'N/A' })}
                     </Text>
-                    <Text style={[styles.lessonDifficulty, { color: colors.textSecondary }]}>
-                        Level: {lesson.difficulty_level || 'N/A'}
+                    <Text style={[styles.lessonDifficulty, { color: colors.textSecondary }]}> 
+{t('dashboard.lesson.level', { level: lesson.difficulty_level || 'N/A' })}
                     </Text>
                 </View>
             </TouchableOpacity>
@@ -388,9 +403,13 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
             <View style={[styles.container, { backgroundColor: colors.background }, styles.centered]} className="flex-1 bg-background">
                 <ActivityIndicator size="large" color="#3B82F6" />
                 <Text style={[styles.loadingText, { color: colors.text }]}>Loading dashboard...</Text>
-            </View>
-        );
-    }
+          {/* Banner placement for dashboard */}
+          <AdZone>
+            <View />
+          </AdZone>
+        </View>
+    );
+}
 
     if (error) {
         return (
@@ -432,13 +451,41 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
             </AuthConsumer>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Page Header */}
-                <PageHeader
-                    spacing="sm"
-                    title="👩‍🏫 Teacher Dashboard"
-                    subtitle={tenantName ? `Managing ${tenantName}` : 'Your teaching tools at a glance'}
-                    actions={<Button text="Create Lesson" onPress={() => router.push('/screens/lessons')} />}
-                />
+                {/* Modern Responsive Header Section (Google-style) */}
+                <View style={[
+                    styles.modernHeaderSection,
+                    { 
+                        paddingLeft: Math.max(12, insets.left + (isSmallScreen ? 12 : 16)),
+                        paddingRight: Math.max(12, insets.right + (isSmallScreen ? 12 : 16))
+                    }
+                ]}>
+                    <View style={styles.titleSection}>
+                        <Text style={[
+                            styles.modernTitle,
+                            (isVerySmallScreen ? styles.modernTitleVerySmall : (isSmallScreen ? styles.modernTitleSmall : styles.modernTitleDefault)),
+                            { color: colors.text }
+                        ]}>
+{(() => { const h = new Date().getHours(); return h < 12 ? t('dashboard.goodMorning') : h < 17 ? t('dashboard.goodAfternoon') : t('dashboard.goodEvening'); })()} 👋</Text>
+                        <Text style={[
+                            styles.modernSubtitle,
+                            (isSmallScreen ? styles.modernSubtitleSmall : styles.modernSubtitleDefault),
+                            { color: colors.textSecondary }
+                        ]}>
+{tenantName ? t('dashboard.teachingAt', { name: tenantName }) : t('dashboard.teacherTagline')}
+                        </Text>
+                        {tenantName && (
+                            <View style={[
+                                styles.tenantBadge,
+                                isDark ? styles.tenantBadgeDark : styles.tenantBadgeLight
+                            ]}>
+                                <Text style={styles.tenantLabel}>🏫 {tenantName}</Text>
+                            </View>
+                        )}
+                    </View>
+                    <View>
+<Button text={t('dashboard.actions.createLesson')} onPress={() => router.push('/screens/lessons')} />
+                    </View>
+                </View>
                 {/* Subscription Status */}
                 {!subscriptionLoading && (
                     <PlanStatus
@@ -456,65 +503,65 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
 
                 {/* Metrics Overview */}
                 <View style={styles.metricsGrid}>
-                    {renderMetricCard('Classes', classes.length, 'book.closed', '#3B82F6')}
-                    {renderMetricCard('Students', totalStudents, 'person.2', '#10B981')}
-                    {renderMetricCard('Lessons', lessons.length, 'graduationcap', '#F59E0B')}
-                    {renderMetricCard('Homework', homeworkAssignments.length, 'doc.text', '#EF4444')}
+{renderMetricCard(t('nav.classes'), classes.length, 'book.closed', '#3B82F6')}
+{renderMetricCard(t('nav.students'), totalStudents, 'person.2', '#10B981')}
+{renderMetricCard(t('education.lessons'), lessons.length, 'graduationcap', '#F59E0B')}
+{renderMetricCard(t('education.homework'), homeworkAssignments.length, 'doc.text', '#EF4444')}
                 </View>
 
                 {/* Quick Actions */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
+<Text style={[styles.sectionTitle, { color: colors.text }]}>{t('dashboard.quickActions')}</Text>
                     <View style={styles.quickActionsGrid}>
                         {renderQuickAction(
-                            'AI Lesson Generator',
+t('dashboard.actions.aiLessonGenerator'),
                             'plus.circle',
                             () => router.push('/screens/ai-lesson-generator'),
                             '#3B82F6',
                             'ai_lesson_generator',
-                            'Generate custom lessons using AI technology'
+t('dashboard.actions.aiLessonGenerator_description')
                         )}
                         {renderQuickAction(
-                            'Grade Homework',
+t('dashboard.actions.gradeHomework'),
                             'doc.badge.plus',
-                            () => router.push('/screens/analytics'),
+                            () => router.push('/screens/ai-homework-grader-live'),
                             '#10B981',
                             'homework_grader',
-                            'Automatically grade homework assignments with AI'
+t('dashboard.actions.gradeHomework_description')
                         )}
                         {renderQuickAction(
-                            'STEM Activities',
+t('dashboard.actions.stemActivities'),
                             'lightbulb',
                             () => router.push('/(tabs)/activities'),
                             '#F59E0B',
                             'stem_activities',
-                            'Access premium STEM activity library'
+t('dashboard.actions.stemActivities_description')
                         )}
                         {renderQuickAction(
-                            'Progress Analysis',
+t('dashboard.actions.progressAnalysis'),
                             'chart.bar',
                             () => router.push('/screens/analytics'),
                             '#8B5CF6',
                             'progress_analysis',
-                            'Advanced analytics and progress tracking'
+t('dashboard.actions.progressAnalysis_description')
                         )}
                     </View>
                 </View>
 
                 {/* My Classes */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>My Classes</Text>
+<Text style={[styles.sectionTitle, { color: colors.text }]}>{t('dashboard.myClasses.title')}</Text>
                     {classes.length === 0 ? (
-                        <EmptyState title="No classes yet" description="Create your first class to get started." primaryAction={{ label: 'Create Class', onPress: () => router.push('/screens/school-setup') }} />
+<EmptyState title={t('dashboard.empty.noClassesTitle')} description={t('dashboard.empty.noClassesDescription')} primaryAction={{ label: t('dashboard.actions.createClass'), onPress: () => router.push('/screens/school-setup') }} />
                     ) : null}
                     {classes.map(renderClassCard)}
                 </View>
 
                 {/* Active Lessons */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Current Lessons</Text>
+<Text style={[styles.sectionTitle, { color: colors.text }]}>{t('dashboard.currentLessons')}</Text>
                     {lessons.length === 0 ? (
-                        <EmptyState title="No lessons yet" description="Create your first lesson or browse the lesson library." primaryAction={{ label: 'Browse Lessons', onPress: () => router.push('/screens/lessons') }} />
+<EmptyState title={t('dashboard.empty.noLessonsTitle')} description={t('dashboard.empty.noLessonsDescription')} primaryAction={{ label: t('dashboard.actions.browseLessons'), onPress: () => router.push('/screens/lessons') }} />
                     ) : null}
                     {lessons.slice(0, 3).map(renderLessonCard)}
                     {lessons.length > 0 && (
@@ -522,7 +569,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                             style={styles.viewAllButton}
                             onPress={() => router.push('/screens/lessons')}
                         >
-                            <Text style={[styles.viewAllText, { color: colors.text }]}>View All Lessons</Text>
+<Text style={[styles.viewAllText, { color: colors.text }]}>{t('dashboard.viewAllLessons')}</Text>
                             <IconSymbol name="chevron.right" size={16} color="#3B82F6" />
                         </TouchableOpacity>
                     )}
@@ -530,9 +577,9 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
 
                 {/* Recent Homework Assignments */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Homework Assignments</Text>
+<Text style={[styles.sectionTitle, { color: colors.text }]}>{t('dashboard.recentHomeworkAssignments')}</Text>
                     {homeworkAssignments.length === 0 ? (
-                        <EmptyState title="No homework assigned" description="Create a homework assignment for your class." primaryAction={{ label: 'Create Assignment', onPress: () => router.push('/screens/analytics') }} />
+<EmptyState title={t('dashboard.empty.noHomeworkTitle')} description={t('dashboard.empty.noHomeworkDescription')} primaryAction={{ label: t('dashboard.actions.createAssignment'), onPress: () => router.push('/screens/analytics') }} />
                     ) : null}
                     {homeworkAssignments.map((homework) => {
                         const dueDate = homework.due_date ? new Date(homework.due_date) : null;
@@ -549,10 +596,11 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                                 <View style={styles.assignmentHeader}>
                                     <Text style={[styles.assignmentTitle, { color: colors.text }]}>{homework.title}</Text>
                                     <Text style={[styles.assignmentDue, isOverdue && styles.overdue, { color: colors.textSecondary }]}>
-                                        {daysUntilDue === null ? 'No due date' :
-                                            daysUntilDue > 0 ? `Due in ${daysUntilDue} days` :
-                                                daysUntilDue === 0 ? 'Due today' :
-                                                    `Overdue by ${Math.abs(daysUntilDue)} days`}
+{daysUntilDue === null ? t('dashboard.noDueDate') :
+                                            daysUntilDue > 1 ? t('dashboard.dueInDays_other', { count: daysUntilDue }) :
+                                            daysUntilDue === 1 ? t('dashboard.dueInDays_one', { count: daysUntilDue }) :
+                                            daysUntilDue === 0 ? t('dashboard.dueToday') :
+                                            Math.abs(daysUntilDue) === 1 ? t('dashboard.overdueByDays_one', { count: Math.abs(daysUntilDue) }) : t('dashboard.overdueByDays_other', { count: Math.abs(daysUntilDue) })}
                                     </Text>
                                 </View>
                                 {homework.description && (
@@ -801,6 +849,51 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '500',
         marginTop: 4,
+    },
+    // Modern Google-style header section
+    modernHeaderSection: {
+        paddingHorizontal: 4,
+        paddingVertical: 20,
+        marginBottom: 8,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between'
+    },
+    titleSection: {
+        marginBottom: 12,
+        flex: 1,
+        paddingRight: 12,
+        minWidth: 0,
+    },
+    modernTitle: {
+        fontWeight: '300',
+        letterSpacing: -0.5,
+        marginBottom: 8,
+    },
+    modernTitleDefault: { fontSize: 32, lineHeight: 40 },
+    modernTitleSmall: { fontSize: 28, lineHeight: 34 },
+    modernTitleVerySmall: { fontSize: 24, lineHeight: 30 },
+    modernSubtitle: {
+        opacity: 0.7,
+    },
+    modernSubtitleDefault: { fontSize: 14, lineHeight: 20 },
+    modernSubtitleSmall: { fontSize: 13, lineHeight: 20 },
+    tenantBadge: {
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        marginTop: 12,
+        alignSelf: 'flex-start',
+        maxWidth: '100%',
+    },
+    tenantBadgeLight: { backgroundColor: 'rgba(66, 133, 244, 0.1)' },
+    tenantBadgeDark: { backgroundColor: 'rgba(66, 133, 244, 0.2)' },
+    tenantLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#4285F4',
+        flexShrink: 1,
+        flexWrap: 'wrap',
     },
 });
 

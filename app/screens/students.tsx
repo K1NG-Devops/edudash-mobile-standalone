@@ -180,6 +180,7 @@ export default function StudentsScreen() {
         />
       </View>
       <FlashList
+        style={{ flex: 1 }}
         data={filtered}
         keyExtractor={(s) => s.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}

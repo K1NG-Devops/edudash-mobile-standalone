@@ -15,6 +15,29 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// --- Conditional Google Services plugin application ---
+// Apply Google Services only if google-services.json exists. If building with the
+// EAS production profile and the file is missing, fail fast with a clear error.
+
+def googleServicesFile = file("${project.projectDir}/google-services.json")
+
+def easProfile = System.getenv("EAS_BUILD_PROFILE") ?: ""
+
+def requireGoogleInProd = easProfile.equalsIgnoreCase("production")
+
+if (googleServicesFile.exists()) {
+    if (!project.plugins.hasPlugin('com.google.gms.google-services')) {
+        apply plugin: 'com.google.gms.google-services'
+        println("[Gradle] Applied Google Services plugin (google-services.json present)")
+    } else {
+        println("[Gradle] Google Services plugin already applied")
+    }
+} else if (requireGoogleInProd) {
+    throw new GradleException("Missing android/app/google-services.json for production build. Add the file or adjust config.")
+} else {
+    println("[Gradle] google-services.json not found; skipping Google Services plugin for non-production build")
+}
+
 // Load additional local secrets from user home or project-local (never committed)
 def secretsProps = new Properties()
 def userHome = System.properties['user.home']

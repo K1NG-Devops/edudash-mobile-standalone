@@ -15,7 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem, getRoleColors } from '@/constants/DesignSystem';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
@@ -30,6 +30,7 @@ export default function PricingPage() {
   const roleStr = (profile?.role ?? undefined) as string | undefined;
   const isPrincipal = !!(roleStr === 'preschool_admin' || roleStr === 'principal');
   const floatingAnimation = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     // Floating animation
@@ -171,6 +172,9 @@ export default function PricingPage() {
           </LinearGradient>
         </View>
         </ScrollView>
+
+        {/* Safe area bottom spacer to avoid overlapping with system UI */}
+        <View style={{ height: Math.max(0, insets.bottom) }} />
 
       </View>
     </AdZone>

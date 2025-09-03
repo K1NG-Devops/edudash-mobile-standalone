@@ -1,6 +1,7 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
+import { useT } from '@/i18n';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -26,6 +27,7 @@ export default function SignIn() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const { signIn } = useAuth();
   const params = useLocalSearchParams();
+  const { t } = useT();
 
   // Check for password reset success parameter
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function SignIn() {
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('auth.fillAllFields', {defaultValue: 'Please fill in all fields'}));
       return;
     }
 
@@ -50,7 +52,7 @@ export default function SignIn() {
     try {
       const result = await signIn(email.trim(), password);
       if (result.error) {
-        Alert.alert('Sign In Failed', result.error);
+        Alert.alert(t('auth.signInFailed', {defaultValue: 'Sign In Failed'}), result.error);
       } else {
         // After sign-in, decide destination by role and check if password reset is needed
         // Wait briefly for profile to be available to avoid race with auth listener/RLS
@@ -94,11 +96,11 @@ export default function SignIn() {
             // Check if user needs to reset their password
             if (profileData?.passwordResetRequired) {
               Alert.alert(
-                'Password Reset Required',
-                'Please set a new password to continue.',
+                t('auth.passwordResetRequired'),
+                t('auth.passwordResetRequiredMessage'),
                 [
                   {
-                    text: 'Set New Password',
+                    text: t('auth.setNewPassword'),
                     onPress: () => router.replace('/reset-password')
                   }
                 ]
@@ -116,7 +118,7 @@ export default function SignIn() {
         router.replace('/(tabs)/dashboard');
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      Alert.alert(t('common.error'), t('auth.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -140,11 +142,11 @@ export default function SignIn() {
               <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                 <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
               </TouchableOpacity>
-              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.title}>{t('auth.welcomeBack', {defaultValue: 'Welcome Back'})}</Text>
             </View>
 
             <View style={styles.content}>
-              <Text style={styles.subtitle}>Sign in to your EduDash Pro account</Text>
+              <Text style={styles.subtitle}>{t('auth.signInSubtitle', { defaultValue: 'Sign in to your EduDash Pro account' })}</Text>
 
               {/* Success Message Banner */}
               {showSuccessMessage && (
@@ -152,9 +154,9 @@ export default function SignIn() {
                   <View style={styles.successContent}>
                     <IconSymbol name="checkmark.circle.fill" size={24} color="#10b981" />
                     <View style={styles.successTextContainer}>
-                      <Text style={styles.successTitle}>Password Updated! 🎉</Text>
+                      <Text style={styles.successTitle}>{t('auth.passwordUpdatedTitle', { defaultValue: 'Password Updated! 🎉' })}</Text>
                       <Text style={styles.successMessage}>
-                        Your password has been successfully updated. You can now sign in with your new password.
+                        {t('auth.passwordUpdatedMessage', { defaultValue: 'Your password has been successfully updated. You can now sign in with your new password.' })}
                       </Text>
                     </View>
                   </View>
@@ -171,7 +173,7 @@ export default function SignIn() {
                 <IconSymbol name="envelope.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Email Address"
+                  placeholder={t('auth.emailPlaceholder', {defaultValue: 'Email Address'})}
                   placeholderTextColor="#FFFFFF80"
                   value={email}
                   onChangeText={setEmail}
@@ -184,19 +186,19 @@ export default function SignIn() {
                 <IconSymbol name="lock.fill" size={20} color="#FFFFFF80" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Password"
+                  placeholder={t('auth.passwordPlaceholder', {defaultValue: 'Password'})}
                   placeholderTextColor="#FFFFFF80"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                 />
                 <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
-                  <Text style={styles.toggleText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                  <Text style={styles.toggleText}>{showPassword ? t('auth.hidePassword', { defaultValue: 'Hide' }) : t('auth.showPassword', { defaultValue: 'Show' })}</Text>
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity style={styles.forgotPasswordButton} onPress={() => router.push('/(auth)/forgot-password')}>
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -208,13 +210,13 @@ export default function SignIn() {
                 {loading ? (
                   <ActivityIndicator color="#1e3c72" size="small" />
                 ) : (
-                  <Text style={styles.buttonText}>Sign In</Text>
+                  <Text style={styles.buttonText}>{t('auth.signIn')}</Text>
                 )}
               </TouchableOpacity>
             </View>
 
             <View style={styles.footer}>
-              <Text style={styles.linkText}>Contact your administrator for account setup</Text>
+              <Text style={styles.linkText}>{t('auth.contactAdminForSetup', {defaultValue: 'Contact your administrator for account setup'})}</Text>
             </View>
           </SafeAreaView>
         </KeyboardAvoidingView>

@@ -14,7 +14,8 @@ import { MobileSidebar } from './MobileSidebar';
 import AiLanguageSelector from '@/components/ai/AiLanguageSelector';
 import { NotificationService } from '@/lib/services/notificationService';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useWindowDimensions } from 'react-native';
+import { useWindowDimensions, ScrollView } from 'react-native';
+import { useT } from '@/i18n';
 
 interface MobileHeaderProps {
   user: {
@@ -29,6 +30,7 @@ interface MobileHeaderProps {
   onSignOut?: () => void;
   notificationCount?: number; // if provided, overrides internal fetch
   onPrimaryAction?: () => void; // optional primary action (e.g., create event for principals)
+  actionsPlacement?: 'header' | 'below'; // where to render non-notification action icons
 }
 
 interface MobileHeaderState {
@@ -45,10 +47,12 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onSignOut,
   notificationCount,
   onPrimaryAction,
+  actionsPlacement = 'header',
 }) => {
   const { colorScheme, toggle: toggleGlobalTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { t } = useT();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [internalUnreadCount, setInternalUnreadCount] = useState(0);
 
@@ -60,25 +64,25 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     
     switch (role) {
       case 'superadmin':
-        return 'Platform Admin';
+        return t('roles.superadmin');
       case 'preschool_admin':
-        return 'School Principal';
+        return t('roles.principal');
       case 'principal':
-        return 'School Principal';
+        return t('roles.principal');
       case 'teacher':
-        return 'Teacher';
+        return t('roles.teacher');
       case 'parent':
-        return schoolName || 'Parent Dashboard';
+        return schoolName || t('roles.parent');
       default:
-        return 'EduDash Pro';
+        return t('common.appName');
     }
   };
 
   const getGreeting = (): string => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return t('dashboard.goodMorning');
+    if (hour < 17) return t('dashboard.goodAfternoon');
+    return t('dashboard.goodEvening');
   };
 
   const toggleSidebar = () => {
@@ -181,7 +185,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           />
           <LinearGradient
             colors={[redBlueGradient[0], redBlueGradient[1]]}
-            style={[styles.header, { paddingTop: insets.top + 8 }]}
+            style={[styles.header, { paddingTop: insets.top }]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
@@ -221,12 +225,12 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                     <View style={styles.roleContainer} className="ml-2">
                       <View style={styles.roleBadge} className="self-start rounded-lg bg-white/15 px-2.5 py-[3px]">
                         <Text style={styles.roleTitle} className="text-[13px] text-white opacity-90">
-                          {user?.role === 'preschool_admin' ? 'Principal' : 
-                           user?.role === 'principal' ? 'Principal' :
-                           user?.role === 'school_admin' ? 'School Admin' :
-                           user?.role === 'teacher' ? 'Teacher' :
-                           user?.role === 'parent' ? 'Parent' :
-                           user?.role === 'superadmin' ? 'Platform Admin' : 'User'}
+                          {user?.role === 'preschool_admin' ? t('roles.principal') : 
+                           user?.role === 'principal' ? t('roles.principal') :
+                           user?.role === 'school_admin' ? t('roles.admin') :
+                           user?.role === 'teacher' ? t('roles.teacher') :
+                           user?.role === 'parent' ? t('roles.parent') :
+                           user?.role === 'superadmin' ? t('roles.superadmin') : t('roles.admin')}
                         </Text>
                       </View>
                     </View>
@@ -236,7 +240,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
               {/* Right side - Actions */}
               <View style={[styles.rightSection, (isPrincipal || isNarrow) && styles.rightSectionCompact]} className={isPrincipal || isNarrow ? 'mt-0.5 flex-row items-center gap-1 self-start' : 'mt-0.5 flex-row items-center gap-2 self-start'}>
-                {/* Theme Toggle Button */}
+                {/* Always show theme toggle and notifications in header */}
                 <TouchableOpacity
                   style={[styles.modernActionButton, (isPrincipal || isNarrow) && styles.compactActionButton]}
                   className="h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/20"
@@ -249,36 +253,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                     color="#FFFFFF" 
                   />
                 </TouchableOpacity>
-
-                {/* AI Language Selector */}
-                <AiLanguageSelector compact={true} />
-
-                {/* Principal Primary Action (e.g., Create Event) */}
-                {isPrincipal && onPrimaryAction && (
-                  <TouchableOpacity
-                    style={[styles.modernActionButton, styles.compactActionButton]}
-                    className="h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/20"
-                    onPress={onPrimaryAction}
-                    activeOpacity={0.7}
-                    accessibilityLabel="Create Event"
-                  >
-                    <IconSymbol name="calendar" size={16} color="#FFFFFF" />
-                  </TouchableOpacity>
-                )}
-
-                {/* Manage Subscription Button */}
-                {onNavigate && (
-                  <TouchableOpacity
-                    style={[styles.modernActionButton, (isPrincipal || isNarrow) && styles.compactActionButton]}
-                    className={isPrincipal || isNarrow ? 'h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/20' : 'h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/20'}
-                    onPress={() => onNavigate('/pricing')}
-                    activeOpacity={0.7}
-                  >
-                    <IconSymbol name="creditcard.fill" size={(isPrincipal || isNarrow) ? 16 : 18} color="#FFFFFF" />
-                  </TouchableOpacity>
-                )}
-
-                {/* Notifications Button */}
+                
                 {onNotificationsPress && (
                   <TouchableOpacity
                     style={[styles.modernActionButton, isPrincipal && styles.compactActionButton]}
@@ -296,10 +271,88 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                     )}
                   </TouchableOpacity>
                 )}
+                
+                {/* If actions are NOT placed below, show all other actions here too */}
+                {actionsPlacement !== 'below' && (
+                  <>
+                    {/* AI Language Selector */}
+                    <AiLanguageSelector compact={true} tone="onDark" />
+
+                    {/* Principal Primary Action (e.g., Create Event) */}
+                    {isPrincipal && onPrimaryAction && (
+                      <TouchableOpacity
+                        style={[styles.modernActionButton, styles.compactActionButton]}
+                        className="h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/20"
+                        onPress={onPrimaryAction}
+                        activeOpacity={0.7}
+                        accessibilityLabel="Create Event"
+                      >
+                        <IconSymbol name="calendar" size={16} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Manage Subscription Button */}
+                    {onNavigate && (
+                      <TouchableOpacity
+                        style={[styles.modernActionButton, (isPrincipal || isNarrow) && styles.compactActionButton]}
+                        className={isPrincipal || isNarrow ? 'h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/20' : 'h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/20'}
+                        onPress={() => onNavigate('/pricing')}
+                        activeOpacity={0.7}
+                      >
+                        <IconSymbol name="creditcard.fill" size={(isPrincipal || isNarrow) ? 16 : 18} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
               </View>
             </View>
           </LinearGradient>
         </SafeAreaView>
+
+        {/* Below-header actions bar (optional) */}
+        {actionsPlacement === 'below' && (
+          <View style={[
+            styles.belowActionsContainer,
+            colorScheme === 'dark' ? styles.belowDarkBG : styles.belowLightBG
+          ]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.belowActionsRow}
+            >
+              <AiLanguageSelector compact={true} tone={colorScheme === 'dark' ? 'onDark' : 'onLight'} />
+
+              {isPrincipal && onPrimaryAction && (
+                <TouchableOpacity
+                  style={[
+                    styles.modernActionButton,
+                    styles.compactActionButton,
+                    colorScheme === 'dark' ? styles.lowContrastButtonDark : styles.lowContrastButtonLight
+                  ]}
+                  onPress={onPrimaryAction}
+                  activeOpacity={0.7}
+                  accessibilityLabel="Create Event"
+                >
+                  <IconSymbol name="calendar" size={16} color={colorScheme === 'light' ? '#111827' : '#F9FAFB'} />
+                </TouchableOpacity>
+              )}
+
+              {onNavigate && (
+                <TouchableOpacity
+                  style={[
+                    styles.modernActionButton,
+                    styles.compactActionButton,
+                    colorScheme === 'dark' ? styles.lowContrastButtonDark : styles.lowContrastButtonLight
+                  ]}
+                  onPress={() => onNavigate('/pricing')}
+                  activeOpacity={0.7}
+                >
+                  <IconSymbol name="creditcard.fill" size={16} color={colorScheme === 'light' ? '#111827' : '#F9FAFB'} />
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Mobile Sidebar */}
         <MobileSidebar
@@ -323,6 +376,38 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     minHeight: 84,
     marginTop: 0,
+  },
+  belowActionsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+  },
+  belowDarkBG: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)'
+  },
+  belowLightBG: {
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)'
+  },
+  belowActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 12,
+  },
+  lowContrastButton: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  lowContrastButtonLight: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  lowContrastButtonDark: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   headerContent: {
     flexDirection: 'row',

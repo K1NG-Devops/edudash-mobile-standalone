@@ -148,6 +148,7 @@ ALTER TABLE public.group_invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_feed ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for Principal Groups
+DROP POLICY IF EXISTS "Users can view groups in their preschool" ON public.principal_groups;
 CREATE POLICY "Users can view groups in their preschool" ON public.principal_groups
     FOR SELECT USING (
         preschool_id IN (
@@ -156,6 +157,7 @@ CREATE POLICY "Users can view groups in their preschool" ON public.principal_gro
         )
     );
 
+DROP POLICY IF EXISTS "Users can create groups in their preschool" ON public.principal_groups;
 CREATE POLICY "Users can create groups in their preschool" ON public.principal_groups
     FOR INSERT WITH CHECK (
         created_by IN (
@@ -169,6 +171,7 @@ CREATE POLICY "Users can create groups in their preschool" ON public.principal_g
         )
     );
 
+DROP POLICY IF EXISTS "Group creators can manage their groups" ON public.principal_groups;
 CREATE POLICY "Group creators can manage their groups" ON public.principal_groups
     FOR ALL USING (
         created_by IN (
@@ -178,6 +181,7 @@ CREATE POLICY "Group creators can manage their groups" ON public.principal_group
     );
 
 -- RLS Policies for Group Members
+DROP POLICY IF EXISTS "Users can view group members in their preschool" ON public.group_members;
 CREATE POLICY "Users can view group members in their preschool" ON public.group_members
     FOR SELECT USING (
         group_id IN (
@@ -189,6 +193,7 @@ CREATE POLICY "Users can view group members in their preschool" ON public.group_
         )
     );
 
+DROP POLICY IF EXISTS "Users can manage their own group memberships" ON public.group_members;
 CREATE POLICY "Users can manage their own group memberships" ON public.group_members
     FOR ALL USING (
         user_id IN (
@@ -197,6 +202,7 @@ CREATE POLICY "Users can manage their own group memberships" ON public.group_mem
         )
     );
 
+DROP POLICY IF EXISTS "Group admins can manage group members" ON public.group_members;
 CREATE POLICY "Group admins can manage group members" ON public.group_members
     FOR ALL USING (
         group_id IN (
@@ -216,6 +222,7 @@ CREATE POLICY "Group admins can manage group members" ON public.group_members
     );
 
 -- RLS Policies for Event Audiences
+DROP POLICY IF EXISTS "Users can view event audiences in their preschool" ON public.event_audiences;
 CREATE POLICY "Users can view event audiences in their preschool" ON public.event_audiences
     FOR SELECT USING (
         event_id IN (
@@ -227,6 +234,7 @@ CREATE POLICY "Users can view event audiences in their preschool" ON public.even
         )
     );
 
+DROP POLICY IF EXISTS "Event creators can manage event audiences" ON public.event_audiences;
 CREATE POLICY "Event creators can manage event audiences" ON public.event_audiences
     FOR ALL USING (
         event_id IN (
@@ -239,6 +247,7 @@ CREATE POLICY "Event creators can manage event audiences" ON public.event_audien
     );
 
 -- RLS Policies for Event Invitations
+DROP POLICY IF EXISTS "Users can view their own event invitations" ON public.event_invitations;
 CREATE POLICY "Users can view their own event invitations" ON public.event_invitations
     FOR SELECT USING (
         invitee_id IN (
@@ -251,6 +260,7 @@ CREATE POLICY "Users can view their own event invitations" ON public.event_invit
         )
     );
 
+DROP POLICY IF EXISTS "Users can manage their own event invitations" ON public.event_invitations;
 CREATE POLICY "Users can manage their own event invitations" ON public.event_invitations
     FOR UPDATE USING (
         invitee_id IN (
@@ -259,6 +269,7 @@ CREATE POLICY "Users can manage their own event invitations" ON public.event_inv
         )
     );
 
+DROP POLICY IF EXISTS "Users can create event invitations for their events" ON public.event_invitations;
 CREATE POLICY "Users can create event invitations for their events" ON public.event_invitations
     FOR INSERT WITH CHECK (
         inviter_id IN (
@@ -275,6 +286,7 @@ CREATE POLICY "Users can create event invitations for their events" ON public.ev
     );
 
 -- RLS Policies for Group Invitations
+DROP POLICY IF EXISTS "Users can view their group invitations" ON public.group_invitations;
 CREATE POLICY "Users can view their group invitations" ON public.group_invitations
     FOR SELECT USING (
         invitee_id IN (
@@ -287,6 +299,7 @@ CREATE POLICY "Users can view their group invitations" ON public.group_invitatio
         )
     );
 
+DROP POLICY IF EXISTS "Users can respond to their group invitations" ON public.group_invitations;
 CREATE POLICY "Users can respond to their group invitations" ON public.group_invitations
     FOR UPDATE USING (
         invitee_id IN (
@@ -295,6 +308,7 @@ CREATE POLICY "Users can respond to their group invitations" ON public.group_inv
         )
     );
 
+DROP POLICY IF EXISTS "Group admins can create invitations" ON public.group_invitations;
 CREATE POLICY "Group admins can create invitations" ON public.group_invitations
     FOR INSERT WITH CHECK (
         inviter_id IN (
@@ -311,6 +325,7 @@ CREATE POLICY "Group admins can create invitations" ON public.group_invitations
     );
 
 -- RLS Policies for Activity Feed
+DROP POLICY IF EXISTS "Users can view activity in their preschool" ON public.activity_feed;
 CREATE POLICY "Users can view activity in their preschool" ON public.activity_feed
     FOR SELECT USING (
         preschool_id IN (
@@ -319,6 +334,7 @@ CREATE POLICY "Users can view activity in their preschool" ON public.activity_fe
         )
     );
 
+DROP POLICY IF EXISTS "Users can create their own activities" ON public.activity_feed;
 CREATE POLICY "Users can create their own activities" ON public.activity_feed
     FOR INSERT WITH CHECK (
         actor_id IN (

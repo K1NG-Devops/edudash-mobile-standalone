@@ -26,7 +26,7 @@ const WebSafeModal: React.FC<WebSafeModalProps> = ({
   testID,
   accessibilityLabel,
 }) => {
-  // Always call hooks at the top-level. Guard web-only behavior inside the effect.
+  // Prevent background scroll on web while visible
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!blockBackgroundScroll) return;
@@ -43,16 +43,21 @@ const WebSafeModal: React.FC<WebSafeModalProps> = ({
   }, [visible, blockBackgroundScroll]);
 
   if (Platform.OS === 'web') {
-    if (!visible) return null;
-
+    // On web, rely on React Native's Modal which already portals to the body.
+    // We retain the scroll lock effect above.
     return (
-      <View
-        testID={testID}
-        accessibilityLabel={accessibilityLabel}
-        style={styles.webContainer}
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType={animationType}
+        onRequestClose={onRequestClose}
+        statusBarTranslucent={statusBarTranslucent}
+        hardwareAccelerated={hardwareAccelerated}
       >
-        {children}
-      </View>
+        <View style={styles.webContainer} testID={testID} accessibilityLabel={accessibilityLabel}>
+          {children}
+        </View>
+      </Modal>
     );
   }
 
@@ -72,14 +77,16 @@ const WebSafeModal: React.FC<WebSafeModalProps> = ({
 
 const styles = StyleSheet.create({
   webContainer: {
-    position: 'fixed',
+    position: 'absolute',
     top: 0,
     right: 0,
     bottom: 0,
     left: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
+    justifyContent: 'flex-end',
+    alignItems: 'stretch',
+    zIndex: 2147483646,
+    width: '100%',
+    height: '100%',
   },
 });
 

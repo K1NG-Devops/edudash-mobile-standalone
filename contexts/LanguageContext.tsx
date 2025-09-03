@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import * as Localization from 'expo-localization';
-import { changeAppLanguage, initI18n } from '@/src/i18n';
+import { changeAppLanguage, initI18n } from '../src/i18n/index';
 import { LanguageCode, SA_LANGUAGES, toSupportedLang, getLanguage } from '@/src/i18n/languages';
 
 // Re-export types for backward compatibility

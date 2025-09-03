@@ -89,6 +89,7 @@ const MAPPING: IconMapping = {
   'photo': 'photo',
   'play.fill': 'play-arrow',
   'dot.radiowaves.left.and.right': 'wifi-tethering',
+  'paintbrush.fill': 'brush',
 
   // Actions
   'flag.fill': 'flag',
@@ -105,7 +106,7 @@ const MAPPING: IconMapping = {
   'clock.fill': 'schedule',
   'qrcode.viewfinder': 'qr-code-scanner',
   'sparkles': 'auto-awesome',
-  'wand.and.stars': 'auto-awesome',
+'wand.and.stars': 'auto-awesome',
   'trash': 'delete',
   'trash.fill': 'delete-forever',
   'trash.circle': 'delete-forever',
@@ -115,6 +116,10 @@ const MAPPING: IconMapping = {
   'lock': 'lock',
   'mic': 'mic',
   'mic.fill': 'mic',
+  'stop': 'stop',
+  'smiley': 'insert-emoticon',
+  'face.smiling': 'insert-emoticon',
+  'face.smiling.fill': 'insert-emoticon',
   'person.2': 'people',
   'person.badge.plus': 'person-add',
   'person.3.sequence.fill': 'groups',
@@ -148,6 +153,7 @@ const MAPPING: IconMapping = {
   'gearshape.fill': 'settings',
   'gearshape': 'settings',
   'gear': 'settings',
+  'gear.fill': 'settings',
   'creditcard.fill': 'payment',
   'creditcard': 'payment',
   'location.fill': 'place',
@@ -164,7 +170,8 @@ const MAPPING: IconMapping = {
   'ellipsis.vertical': 'more-vert',
 
   // AI & Brain
-'brain.head.profile': 'psychology',
+  'brain': 'psychology',
+  'brain.head.profile': 'psychology',
   'cpu': 'memory',
   // Medical/diagnostics
   'stethoscope': 'medical-services',
@@ -194,6 +201,10 @@ const MAPPING: IconMapping = {
   'rectangle.and.pencil.and.ellipsis': 'edit',
   'shield.checkered': 'security',
   'shield.fill': 'security',
+'square.grid.2x2': 'grid-view',
+  'square.grid.2x2.fill': 'grid-view',
+  'square.grid2x2': 'grid-view',
+  'square.grid2x2.fill': 'grid-view',
   'ticket': 'confirmation-number',
   'paperclip': 'attach-file',
   'eye': 'visibility',

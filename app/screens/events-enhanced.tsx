@@ -24,6 +24,7 @@ import { JoinEventModal } from '@/components/events/JoinEventModal';
 import { ProtectedComponent } from '@/components/auth/ProtectedComponent';
 import { PERMISSIONS } from '@/lib/utils/permissions';
 import type { Event } from '@/lib/hooks/useEvents';
+import AdZone from '@/components/ui/AdZone';
 
 export default function EventsEnhancedScreen() {
   const { colorScheme } = useTheme();
@@ -195,6 +196,10 @@ export default function EventsEnhancedScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
+        {/* Top banner placement for events */}
+        <AdZone showForAll>
+          <View />
+        </AdZone>
         {loading && !refreshing ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#3B82F6" />
@@ -266,6 +271,10 @@ export default function EventsEnhancedScreen() {
             )}
           </>
         )}
+        {/* Bottom banner placement for events */}
+        <AdZone showForAll>
+          <View />
+        </AdZone>
       </ScrollView>
 
       {/* Modals */}

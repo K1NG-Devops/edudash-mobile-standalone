@@ -11,10 +11,14 @@ import {
   StyleSheet,
   Dimensions,
   FlatList,
+  Platform,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { lessonGenerator, LESSON_TEMPLATES, LessonTemplate } from '@/lib/ai/lessonGenerator';
+import { claudeAI } from '@/lib/ai/claudeService';
+import { useFeatureAccess } from '@/contexts/SubscriptionContext';
+import { CLAUDE_MODELS } from '@/lib/utils/aiCostCalculator';
 import { LessonContent , isAIAvailable } from '@/lib/ai/claudeService';
 import { 
   SUBJECTS, 
@@ -25,6 +29,7 @@ import {
   CurriculumTopic 
 } from '@/lib/data/curriculumData';
 import { useTheme } from '@/contexts/ThemeContext';
+import { getTopicsBySubject as getLibTopicsBySubject } from '@/lib/constants/topicLibrary';
 import { Colors } from '@/constants/Colors';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -61,6 +66,10 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   const [selectedTemplate, setSelectedTemplate] = useState<LessonTemplate | null>(null);
   const [customMode, setCustomMode] = useState(false);
   
+  // Subscription-tier aware model selection
+  const { currentTier } = useFeatureAccess('ai_lesson_generator');
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+
   // Enhanced form data with smart defaults
   const [topic, setTopic] = useState('');
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
@@ -69,6 +78,7 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   const [subjects, setSubjects] = useState<string[]>([]);
   const [learningObjectives, setLearningObjectives] = useState<string[]>([]);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'challenging'>('medium');
+  const [liveUpdates, setLiveUpdates] = useState<boolean>(false);
   
   // Smart dropdown states
   const [showTopicDropdown, setShowTopicDropdown] = useState(false);
@@ -85,6 +95,42 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
   const [lastQuotaCharged, setLastQuotaCharged] = useState<boolean | null>(null);
+  
+  // Fine-grained generating progress
+  const [genProgress, setGenProgress] = useState<{
+    analyzing: 'idle' | 'active' | 'done';
+    activities: 'idle' | 'active' | 'done';
+    assessment: 'idle' | 'active' | 'done';
+    home: 'idle' | 'active' | 'done';
+  }>({ analyzing: 'idle', activities: 'idle', assessment: 'idle', home: 'idle' });
+  const genTimers = React.useRef<number[]>([]);
+
+  // Live streaming state
+  const [streamingText, setStreamingText] = useState<string>("");
+
+  function resetGenProgress() {
+    setGenProgress({ analyzing: 'idle', activities: 'idle', assessment: 'idle', home: 'idle' });
+    // clear timers
+    genTimers.current.forEach((t) => clearTimeout(t));
+    genTimers.current = [];
+    setStreamingText("");
+  }
+
+  function startGenProgress() {
+    resetGenProgress();
+    setGenProgress({ analyzing: 'active', activities: 'idle', assessment: 'idle', home: 'idle' });
+    // Stagger progress for better UX while waiting for server
+    genTimers.current.push(setTimeout(() => setGenProgress((p) => ({ ...p, analyzing: 'done', activities: 'active' })), 900) as unknown as number);
+    genTimers.current.push(setTimeout(() => setGenProgress((p) => ({ ...p, activities: 'done', assessment: 'active' })), 1800) as unknown as number);
+    genTimers.current.push(setTimeout(() => setGenProgress((p) => ({ ...p, assessment: 'done', home: 'active' })), 2700) as unknown as number);
+  }
+
+  function finishGenProgress(success: boolean) {
+    // Mark all as done on success; on failure, leave current states
+    setGenProgress((p) => success ? { analyzing: 'done', activities: 'done', assessment: 'done', home: 'done' } : p);
+    genTimers.current.forEach((t) => clearTimeout(t));
+    genTimers.current = [];
+  }
   
   // Update available topics when subjects or age group changes
   useEffect(() => {
@@ -138,8 +184,31 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({
       return;
     }
     
-    // Get topics for the primary subject and age group
-    const topics = filterForAudience(getSubjectTopics(subjects[0], ageKey));
+    // Get topics for the primary subject and age group from curriculum DB
+    const core = getSubjectTopics(subjects[0], ageKey);
+
+    // Supplement with curated topic library, mapped to curriculum shape
+    const curatedRaw = getLibTopicsBySubject(subjects[0]);
+    const curatedMapped: CurriculumTopic[] = curatedRaw
+      .filter(t => t.ageGroups.includes(AGE_GROUPS[ageKey as keyof typeof AGE_GROUPS] || ageGroup))
+      .map(t => ({
+        id: `lib-${t.id}`,
+        name: t.name,
+        description: t.description,
+        objectives: t.learningObjectives,
+        keywords: [],
+        difficulty: t.difficulty === 'easy' ? 2 : t.difficulty === 'medium' ? 3 : 4,
+        estimatedDuration: t.duration,
+        materials: [],
+      } as unknown as CurriculumTopic));
+
+    // Merge, de-duplicate by name
+    const merged = [...core, ...curatedMapped].reduce<CurriculumTopic[]>((acc, item) => {
+      if (!acc.find(x => x.name.toLowerCase() === item.name.toLowerCase())) acc.push(item);
+      return acc;
+    }, []);
+
+    const topics = filterForAudience(merged);
     setAvailableTopics(topics);
     setFilteredTopics(topics);
     
@@ -288,6 +357,46 @@ setFormError(null);
     return true;
   };
 
+  const allowedModels = (() => {
+    // Always allow Haiku; allow Sonnet for premium/enterprise; optionally Opus for enterprise
+    const ids = new Set<string>();
+    ids.add('claude-3-haiku-20240307');
+    if (currentTier === 'premium' || currentTier === 'enterprise') ids.add('claude-3-5-sonnet-20241022');
+    if (currentTier === 'enterprise') ids.add('claude-3-opus-20240229');
+    return CLAUDE_MODELS.filter(m => ids.has(m.identifier));
+  })();
+
+  // Lightweight JSON extractor for streaming final payloads
+  function extractJsonLoose(raw: string): any | null {
+    try { return JSON.parse(raw); } catch {}
+    if (!raw) return null;
+    const text = String(raw);
+    const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fence && fence[1]) {
+      const inside = fence[1].replace(/[\u0000-\u001F]/g, '');
+      try { return JSON.parse(inside); } catch {}
+      try { return JSON.parse(inside.replace(/,\s*([}\]])/g, '$1')); } catch {}
+    }
+    const first = text.indexOf('{');
+    if (first !== -1) {
+      let depth = 0;
+      for (let i = first; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '{') depth++;
+        else if (ch === '}') {
+          depth--;
+          if (depth === 0) {
+            const candidate = text.slice(first, i + 1).replace(/[\u0000-\u001F]/g, '');
+            try { return JSON.parse(candidate); } catch {}
+            try { return JSON.parse(candidate.replace(/,\s*([}\]])/g, '$1')); } catch {}
+            break;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   const generateLesson = async () => {
     // Basic client-side rate limit: 1 request every 2 seconds
     const now = Date.now();
@@ -304,8 +413,70 @@ if (!validateForm()) return;
     setIsGenerating(true);
     setCurrentStep(2);
     updateSteps(2);
+    startGenProgress();
 
     try {
+      // Streaming path (optional toggle)
+      if (liveUpdates) {
+        const validObjectives = learningObjectives.filter(obj => obj.trim().length > 0);
+        setStreamingText("");
+        await claudeAI.streamLessonContent({
+          topic,
+          ageGroup,
+          duration,
+          learningObjectives: validObjectives,
+          modelIdentifier: selectedModel || undefined,
+        }, {
+          onProgress: (stage) => {
+            setGenError(null);
+            setIsGenerating(true);
+            setCurrentStep(2);
+            updateSteps(2);
+            // Map stages to UI progress
+            setGenProgress(prev => {
+              if (stage === 'analyzing') {
+                return { analyzing: 'active', activities: 'idle', assessment: 'idle', home: 'idle' };
+              }
+              if (stage === 'activities') {
+                return { analyzing: 'done', activities: 'active', assessment: 'idle', home: 'idle' };
+              }
+              if (stage === 'assessment') {
+                return { analyzing: 'done', activities: 'done', assessment: 'active', home: 'idle' };
+              }
+              return prev;
+            });
+          },
+          onDelta: (chunk) => {
+            setStreamingText((prev) => prev + chunk);
+          },
+          onFinal: (payload) => {
+            try {
+              const raw = String(payload?.content || streamingText || '');
+              const parsed = extractJsonLoose(raw);
+              if (!parsed) throw new Error('Unexpected AI response format');
+              setGeneratedLesson(parsed);
+              setLastQuotaCharged(payload?.quota_charged === true);
+              finishGenProgress(true);
+              setCurrentStep(3);
+              updateSteps(3);
+            } catch (e:any) {
+              setGenError(e?.message || 'Failed to parse AI response');
+              finishGenProgress(false);
+            } finally {
+              setIsGenerating(false);
+              setStreamingText("");
+            }
+          },
+          onError: (err) => {
+            setGenError(err?.message || 'Streaming error');
+            setLastQuotaCharged(false);
+            setIsGenerating(false);
+            finishGenProgress(false);
+            setStreamingText("");
+          }
+        });
+        return;
+      }
       const validObjectives = learningObjectives.filter(obj => obj.trim().length > 0);
 
       let result: any;
@@ -317,6 +488,7 @@ if (!validateForm()) return;
           customObjectives: validObjectives,
           userId,
           preschoolId,
+          modelIdentifier: selectedModel || undefined,
         });
       } else {
         result = await lessonGenerator.generateCustomLesson({
@@ -328,12 +500,14 @@ if (!validateForm()) return;
           difficulty,
           userId,
           preschoolId,
+          modelIdentifier: selectedModel || undefined,
         });
       }
 
       if (result.success && result.lesson) {
         setGeneratedLesson(result.lesson);
         setLastQuotaCharged(result.quota_charged === true);
+        finishGenProgress(true);
         setCurrentStep(3);
         updateSteps(3);
       } else {
@@ -353,6 +527,7 @@ if (!validateForm()) return;
       const msg = error instanceof Error ? error.message : 'Failed to generate lesson. Please try again.';
       setGenError(msg);
       setLastQuotaCharged(false);
+      finishGenProgress(false);
     } finally {
       setIsGenerating(false);
     }
@@ -606,6 +781,44 @@ if (!validateForm()) return;
         </ScrollView>
       </View>
 
+      {/* Model selection (optional override) */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>AI Model</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 4 }}>
+          {allowedModels.map((m) => (
+            <TouchableOpacity
+              key={m.identifier}
+              style={[styles.segmentButton, selectedModel === m.identifier && styles.segmentButtonActive, { marginRight: 8 }]}
+              onPress={() => setSelectedModel(prev => prev === m.identifier ? null : m.identifier)}
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${m.name}`}
+            >
+              <Text style={[styles.segmentText, selectedModel === m.identifier && styles.segmentTextActive]}>
+                {m.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <Text style={styles.helperText}>
+          {selectedModel ? `Using ${CLAUDE_MODELS.find(x => x.identifier === selectedModel)?.name}` : 'Using default model for your subscription tier'}
+        </Text>
+      </View>
+
+      {/* Live updates (beta) */}
+      <View style={[styles.inputGroup, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}> 
+        <View>
+          <Text style={styles.inputLabel}>Live updates (beta)</Text>
+          <Text style={styles.helperText}>See in-flight progress via streaming</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => setLiveUpdates(v => !v)}
+          accessibilityRole="switch"
+          accessibilityLabel="Toggle live updates"
+          style={[styles.segmentButton, liveUpdates && styles.segmentButtonActive, { paddingHorizontal: 14 }]}>
+          <Text style={[styles.segmentText, liveUpdates && styles.segmentTextActive]}>{liveUpdates ? 'On' : 'Off'}</Text>
+        </TouchableOpacity>
+      </View>
+
       {customMode && (
         <>
           <View style={styles.inputGroup}>
@@ -716,13 +929,35 @@ if (!validateForm()) return;
         Our AI is crafting a personalized lesson plan based on your requirements. This may take a moment.
       </Text>
       <View style={styles.generatingSteps}>
-        <Text style={styles.generatingStep}>• Analyzing age-appropriate content</Text>
-        <Text style={styles.generatingStep}>• Creating engaging activities</Text>
-        <Text style={styles.generatingStep}>• Generating assessment questions</Text>
-        <Text style={styles.generatingStep}>• Adding home extension ideas</Text>
+        {renderGenItem('Analyzing age-appropriate content', genProgress.analyzing)}
+        {renderGenItem('Creating engaging activities', genProgress.activities)}
+        {renderGenItem('Generating assessment questions', genProgress.assessment)}
+        {renderGenItem('Adding home extension ideas', genProgress.home)}
       </View>
+      {liveUpdates && streamingText.length > 0 && (
+        <View style={styles.streamingPreviewBox}>
+          <Text style={styles.previewSectionTitle}>Live preview (raw JSON)</Text>
+          <ScrollView style={{ maxHeight: 200 }}>
+            <Text style={styles.streamingPreviewText}>
+              {streamingText}
+            </Text>
+          </ScrollView>
+          <Text style={styles.helperText}>This will convert to the formatted preview once the stream completes.</Text>
+        </View>
+      )}
     </View>
   );
+
+  const renderGenItem = (label: string, state: 'idle' | 'active' | 'done') => {
+    const color = state === 'done' ? '#10B981' : state === 'active' ? '#3B82F6' : '#6B7280';
+    const prefix = state === 'done' ? 'checkmark.circle.fill' : state === 'active' ? 'clock' : 'circle';
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }} key={label}>
+        <IconSymbol name={prefix as any} size={16} color={color} />
+        <Text style={[styles.generatingStep, { color, marginLeft: 8 }]}>• {label}</Text>
+      </View>
+    );
+  };
 
   const renderGenerationError = () => (
     <View style={styles.generatingContainer}>
@@ -1355,6 +1590,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#3B82F6',
     fontStyle: 'italic',
+  },
+  streamingPreviewBox: {
+    marginTop: 16,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    alignSelf: 'stretch',
+  },
+  streamingPreviewText: {
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) as any,
+    fontSize: 12,
+    color: '#111827',
+    lineHeight: 18,
   },
   previewActions: {
     flexDirection: 'row',

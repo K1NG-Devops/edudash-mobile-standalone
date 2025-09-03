@@ -22,12 +22,22 @@ interface AdPlacementProps {
 
 const AdPlacement = ({ children }: AdPlacementProps) => {
   const enableAds = process.env.EXPO_PUBLIC_ENABLE_ADS === 'true';
-  const unitId = process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER_UNIT_ID || 'ca-app-pub-3940256099942544/6300978111'; // test id
 
   // Don't show ads on web or if not enabled or components not available
   if (Platform.OS === 'web' || !enableAds || !BannerAd || !BannerAdSize) {
     return <>{children}</>;
   }
+
+  const appEnv = String(process.env.EXPO_PUBLIC_ENVIRONMENT || '').toLowerCase();
+  const isProd = appEnv === 'production' || process.env.NODE_ENV === 'production';
+
+  const testId = Platform.OS === 'ios'
+    ? 'ca-app-pub-3940256099942544/2934735716'
+    : 'ca-app-pub-3940256099942544/6300978111';
+  const prodId = Platform.OS === 'ios'
+    ? (process.env.EXPO_PUBLIC_ADMOB_IOS_BANNER_UNIT_ID || testId)
+    : (process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER_UNIT_ID || testId);
+  const unitId = isProd ? prodId : testId;
 
   return (
     <View>

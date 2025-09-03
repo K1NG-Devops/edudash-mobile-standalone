@@ -6,7 +6,7 @@
 import React from 'react';
 import { Text as RNText, TextProps as RNTextProps } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { useTheme } from '../theme/ThemeProvider';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Text variants
 const textVariants = cva(
@@ -69,14 +69,14 @@ export const Text = React.forwardRef<RNText, TextProps>(
     style,
     ...props 
   }, ref) => {
-    const { colors } = useTheme();
+    const { theme } = useTheme();
     
     return (
       <RNText
         ref={ref}
         className={textVariants({ variant, size, weight, align, className })}
         style={[
-          color ? { color } : { color: colors.foreground },
+          color ? { color } : { color: theme.colors.text },
           style
         ]}
         {...props}
@@ -138,7 +138,7 @@ export const Heading = React.forwardRef<RNText, HeadingProps>(
     style,
     ...props 
   }, ref) => {
-    const { colors } = useTheme();
+    const { theme } = useTheme();
     
     // Map heading levels to accessibility roles
     const accessibilityRole = 'header';
@@ -148,7 +148,7 @@ export const Heading = React.forwardRef<RNText, HeadingProps>(
         ref={ref}
         className={headingVariants({ level, weight, align, className })}
         style={[
-          color ? { color } : { color: colors.foreground },
+          color ? { color } : { color: theme.colors.text },
           style
         ]}
         accessibilityRole={accessibilityRole as any}

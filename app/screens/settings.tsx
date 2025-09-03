@@ -24,9 +24,9 @@ import {
   FlatList,
 } from 'react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useT } from '@/src/i18n';
+import { useT } from '@/i18n';
 import { formatDate, formatCurrencyZAR, formatNumber } from '@/src/i18n/format';
-import { getLocalizedName } from '@/src/i18n/languages';
+import { getLocalizedName, LanguageCode } from '@/src/i18n/languages';
 
 interface UserSettings {
   notifications_enabled: boolean;
@@ -478,7 +478,8 @@ const { data: { session } } = await supabase.auth.getSession();
               keyExtractor={(item) => item.code}
               renderItem={({ item }) => {
                 const isSelected = item.code === language;
-                const localizedName = getLocalizedName(item.code, language);
+                const localizedName = getLocalizedName(item.code as LanguageCode, language as LanguageCode);
+                const supported = item.code === 'en' || item.code === 'af' || item.code === 'zu';
                 
                 return (
                   <TouchableOpacity
@@ -488,23 +489,26 @@ const { data: { session } } = await supabase.auth.getSession();
                         backgroundColor: isSelected 
                           ? (colorScheme === 'dark' ? '#374151' : '#EEF2FF')
                           : 'transparent',
-                        borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB'
+                        borderColor: colorScheme === 'dark' ? palette.outline : '#E5E7EB',
+                        opacity: supported ? 1 : 0.6
                       }
                     ]}
+                    disabled={!supported}
                     onPress={async () => {
+                      if (!supported) return;
                       await setLanguage(item.code);
                       setSettings(prev => ({ ...prev, language: item.code }));
                       setShowLanguageModal(false);
                       // Show success toast or alert
                       Alert.alert(
                         t('common.done'),
-                        t('settings.languageChanged', { language: item.nativeName }),
+                        t('settings.languageChanged'),
                         [{ text: t('common.ok') }]
                       );
                     }}
                     accessibilityLabel={`${t('settings.selectLanguage')}: ${item.nativeName}`}
                     accessibilityRole="button"
-                    accessibilityState={{ selected: isSelected }}
+                    accessibilityState={{ selected: isSelected, disabled: !supported }}
                   >
                     <View style={styles.languageItemContent}>
                       <View style={{ flex: 1 }}>
@@ -526,6 +530,20 @@ const { data: { session } } = await supabase.auth.getSession();
                           ]}>
                             {localizedName}
                           </Text>
+                        )}
+                        {!supported && (
+                          <View style={{
+                            marginTop: 6,
+                            alignSelf: 'flex-start',
+                            backgroundColor: colorScheme === 'dark' ? '#334155' : '#E5E7EB',
+                            paddingHorizontal: 8,
+                            paddingVertical: 4,
+                            borderRadius: 999
+                          }}>
+                            <Text style={{ fontSize: 12, color: colorScheme === 'dark' ? '#E5E7EB' : '#111827' }}>
+                              {t('common.comingSoon')}
+                            </Text>
+                          </View>
                         )}
                       </View>
                       {isSelected && (
@@ -698,5 +716,21 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     marginHorizontal: 20,
+  },
+  formatExamples: {
+    backgroundColor: '#F3F4F6',
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+  },
+  formatTitle: {
+    color: '#6B7280',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  formatExample: {
+    color: '#111827',
+    fontSize: 11,
   },
 });

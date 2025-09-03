@@ -16,14 +16,8 @@ import React, { useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 // Import new design system components
-import { 
-  Card, CardHeader, CardContent,
-  Button, IconButton,
-  Heading, Text as DSText,
-  Badge, StatusBadge,
-  Icon, Icons,
-  PageHeader
-} from '@/src/design-system/components';
+import { Card, CardHeader, CardContent, Button, IconButton, Heading, Text as DSText, Badge, StatusBadge, Icon, Icons, PageHeader } from '@/design-system';
+import i18n, { getCurrentLocaleTag } from '@/i18n';
 import {
   Alert,
   Dimensions,
@@ -33,11 +27,15 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import AdZone from '@/components/ui/AdZone';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const isSmallScreen = screenWidth < 375; // iPhone SE and smaller
+const isVerySmallScreen = screenWidth < 320; // Very small devices
 
 interface PrincipalStats {
   totalStudents: number;
@@ -59,11 +57,14 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
   const palette = Colors[colorScheme];
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
   const [showSchoolCodeManager, setShowSchoolCodeManager] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [announcementIncludeStaffDefault, setAnnouncementIncludeStaffDefault] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  const localeTag = getCurrentLocaleTag();
   const queryClient = useQueryClient();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
@@ -115,10 +116,10 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   const schoolInfoQuery = useQuery({
     queryKey: ['schoolInfo', activePreschoolId],
     queryFn: async () => {
-      if (!activePreschoolId) return { name: 'Your Preschool' } as any;
+      if (!activePreschoolId) return { name: i18n.t('common.noSchool') } as any;
       const res = await PrincipalService.getSchoolInfo(activePreschoolId);
       if (res.error) throw res.error;
-      return res.data || { name: 'Your Preschool' };
+      return res.data || { name: i18n.t('common.noSchool') };
     },
     enabled: !!activePreschoolId,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -192,7 +193,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
     onPress?: () => void;
   }) => (
     <TouchableOpacity
-      style={[styles.metricCard, { borderTopColor: color, borderTopWidth: 3, backgroundColor: palette.surface }]}
+      style={[styles.metricCard, styles.metricCardTopBorder, { borderTopColor: color, backgroundColor: palette.surface }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -242,261 +243,449 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['bottom', 'left', 'right']}>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      {/* Status bar height compensation for Android */}
+      {Platform.OS === 'android' && <View style={{ height: insets.top, backgroundColor: palette.background }} />}
+      
       <MobileHeader
         user={{
           name: profile?.name || 'Principal',
           role: profile?.role || 'preschool_admin',
           avatar: profile?.avatar_url || undefined,
         }}
-        schoolName={(schoolInfoQuery.data as any)?.name || 'Your Preschool'}
+        schoolName={(schoolInfoQuery.data as any)?.name || i18n.t('common.noSchool')}
         onNotificationsPress={() => handleNavigate('notifications')}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
         onPrimaryAction={() => setShowEventModal(true)}
         notificationCount={statsQuery.data?.pendingPayments || 0}
+        actionsPlacement="below"
       />
 
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(100, insets.bottom + 80) } // Dynamic bottom padding
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.contentWrapper}>
+        <View style={[
+          styles.contentWrapper,
+          { 
+            paddingHorizontal: isSmallScreen ? 12 : 16,
+            paddingLeft: Math.max(12, insets.left + (isSmallScreen ? 12 : 16)),
+            paddingRight: Math.max(12, insets.right + (isSmallScreen ? 12 : 16))
+          }
+        ]}>
         {/* Page Header */}
-        <PageHeader
-          spacing="sm"
-          title="📊 School Overview"
-          subtitle={`Manage ${(schoolInfoQuery.data as any)?.name || 'Your Preschool'}`}
-          actions={(
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <IconButton
-                variant="secondary"
-                size="sm"
-                label="New Event"
-                icon={<Icon name="Calendar" />}
-                onPress={() => setShowEventModal(true)}
-              />
-              <Button size="sm" text="Create Announcement" onPress={() => setShowAnnouncementModal(true)} />
-            </View>
-          )}
-        />
+        {/* Modern Google-style Header Section - Responsive */}
+        <View style={[
+          styles.modernHeaderSection,
+          { 
+            paddingHorizontal: isSmallScreen ? 2 : 4,
+            paddingVertical: isSmallScreen ? 16 : 20 
+          }
+        ]}>
+          <View style={styles.titleSection}>
+            <Heading 
+              level="h1" 
+              style={[
+                styles.modernTitle,
+                {
+                  fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 28 : 32,
+                  lineHeight: isVerySmallScreen ? 30 : isSmallScreen ? 34 : 40,
+                  color: palette.text
+                }
+              ]}
+            >
+              {i18n.t('dashboard.schoolOverviewTitle')}
+            </Heading>
+            <DSText 
+              variant="muted" 
+              style={[
+                styles.modernSubtitle,
+                {
+                  fontSize: isSmallScreen ? 13 : 14,
+                  color: palette.textSecondary
+                }
+              ]}
+            >
+              {`${i18n.t('dashboard.managingSchool', { name: (schoolInfoQuery.data as any)?.name || i18n.t('common.noSchool') })}${isVerySmallScreen ? '' : ` • ${new Date().toLocaleDateString(localeTag, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}` }
+            </DSText>
+          </View>
+          
+          {/* Horizontal Scrollable Quick Actions */}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickActionsScrollContent}
+            style={styles.quickActionsContainer}
+          >
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip, 
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+borderColor: isDark ? palette.outline : '#E8EAED'
+                }
+              ]} 
+              onPress={() => setShowEventModal(true)}
+            >
+              <IconSymbol name="calendar" size={isSmallScreen ? 14 : 16} color="#4285F4" />
+              <Text style={[
+                styles.quickActionText,
+                {
+color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+              ]}>{i18n.t('dashboard.actions.newEvent')}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip,
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+borderColor: isDark ? palette.outline : '#E8EAED'
+                }
+              ]} 
+              onPress={() => { setAnnouncementIncludeStaffDefault(false); setShowAnnouncementModal(true); }}
+            >
+              <IconSymbol name="megaphone.fill" size={isSmallScreen ? 14 : 16} color="#34A853" />
+              <Text style={[
+                styles.quickActionText,
+                {
+color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+              ]}>{i18n.t('dashboard.actions.announce')}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip,
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+borderColor: isDark ? palette.outline : '#E8EAED'
+                }
+              ]} 
+              onPress={() => { setAnnouncementIncludeStaffDefault(true); setShowAnnouncementModal(true); }}
+            >
+              <IconSymbol name="person.2.fill" size={isSmallScreen ? 14 : 16} color="#FBBC05" />
+              <Text style={[
+                styles.quickActionText,
+                {
+color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+              ]}>{i18n.t('dashboard.actions.messageAll')}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip,
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+borderColor: isDark ? palette.outline : '#E8EAED'
+                }
+              ]} 
+onPress={() => router.push('/messages')}
+            >
+              <IconSymbol name="envelope.fill" size={isSmallScreen ? 14 : 16} color="#FBBC05" />
+              <Text style={[
+                styles.quickActionText,
+                {
+color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+              ]}>{i18n.t('nav.messages')}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.quickActionChip,
+                { 
+                  backgroundColor: isDark ? palette.surface : '#FFFFFF',
+borderColor: isDark ? palette.outline : '#E8EAED'
+                }
+              ]} 
+              onPress={() => handleNavigate('/screens/support')}
+            >
+              <IconSymbol name="questionmark.circle.fill" size={isSmallScreen ? 14 : 16} color="#EA4335" />
+              <Text style={[
+                styles.quickActionText,
+                {
+color: palette.text,
+                  fontSize: isSmallScreen ? 13 : 14
+                }
+              ]}>{i18n.t('dashboard.actions.support')}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+        {/* Attendance Badge - Responsive */}
         {statsQuery.data?.attendanceRate && statsQuery.data.attendanceRate > 0 && (
-          <Badge variant="success" className="mt-2 self-start">
-            {statsQuery.data.attendanceRate}% Attendance Today
-          </Badge>
+          <View style={styles.attendanceBadgeContainer}>
+            <Badge 
+              variant="success" 
+              className="self-start"
+              style={[
+                styles.attendanceBadge,
+                {
+                  backgroundColor: '#10B981',
+                  paddingHorizontal: isSmallScreen ? 10 : 12,
+                  paddingVertical: isSmallScreen ? 4 : 6
+                }
+              ]}
+            >
+              <Text style={[
+                styles.attendanceText,
+                { fontSize: isSmallScreen ? 11 : 12 }
+              ]}>
+                {i18n.t('dashboard.attendanceToday', { percent: statsQuery.data.attendanceRate })}
+              </Text>
+            </Badge>
+          </View>
         )}
 
         {/* Subscription / Plan */}
-        <Card variant="flat" padding="lg" className="mb-4">
-          <CardHeader>
-            <Heading level="h3">💎 Subscription</Heading>
-          </CardHeader>
-          <CardContent style={{ gap: 12 }}>
-            {mounted ? (
-              <>
-                <DashboardSubscriptionCard userId={profile?.auth_user_id || ''} />
-                <BillingHistoryCard userId={profile?.auth_user_id || ''} />
-              </>
-            ) : (
-              <View style={{ padding: 16 }} testID="subscription-skeleton">
-                <DSText variant="muted">Loading subscription…</DSText>
-              </View>
-            )}
-          </CardContent>
-        </Card>
+          <Card variant="flat" padding="lg" className="mb-4" style={styles.sectionCard}>
+            <CardHeader>
+              <Heading level="h3">{`💎 ${i18n.t('subscription.title')}`}</Heading>
+            </CardHeader>
+            <CardContent style={styles.cardContentGap12}>
+              {mounted ? (
+                <>
+                  <DashboardSubscriptionCard userId={profile?.auth_user_id || ''} />
+                  <BillingHistoryCard userId={profile?.auth_user_id || ''} />
+                </>
+              ) : (
+                <View style={styles.subscriptionSkeleton} testID="subscription-skeleton">
+                  <DSText variant="muted">{i18n.t('subscription.loading')}</DSText>
+                </View>
+              )}
+            </CardContent>
+          </Card>
 
         {/* School Statistics */}
-        <Card variant="flat" padding="lg" className="mb-4">
-          <CardHeader>
-            <Heading level="h3">🏫 School Statistics</Heading>
-          </CardHeader>
-          <CardContent>
-            <View style={styles.statsGrid}>
-            <MetricCard
-              title="Total Students"
-              value={statsQuery.data?.totalStudents ?? 0}
-              subtitle={`${statsQuery.data?.newEnrollments ?? 0} new this month`}
-              icon="graduationcap.fill"
-              color="#EA4335"
-              onPress={() => handleNavigate('students')}
-            />
-            <MetricCard
-              title="Teaching Staff"
-              value={statsQuery.data?.totalTeachers ?? 0}
-              subtitle={`${statsQuery.data?.activeClasses ?? 0} active classes`}
-              icon="person.2.fill"
-              color="#EA4335"
-              onPress={() => handleNavigate('teachers')}
-            />
-            <MetricCard
-              title="Parent Community"
-              value={statsQuery.data?.totalParents ?? 0}
-              subtitle="Engaged families"
-              icon="heart.fill"
-              color="#EA4335"
-            />
-            <MetricCard
-              title="Monthly Revenue"
-              value={`R${(((statsQuery.data?.monthlyRevenue ?? 0) / 1000) | 0).toFixed(0)}k`}
-              subtitle={`${statsQuery.data?.pendingPayments ?? 0} pending payments`}
-              icon="creditcard.fill"
-              color="#EA4335"
-              onPress={() => handleNavigate('/screens/principal-reports')}
-            />
-            </View>
-          </CardContent>
-        </Card>
+          <Card variant="flat" padding="lg" className="mb-4" style={styles.sectionCard}>
+            <CardHeader>
+              <Heading level="h3">{`🏫 ${i18n.t('dashboard.schoolStatisticsTitle')}`}</Heading>
+            </CardHeader>
+            <CardContent>
+              <View style={[
+                styles.statsGrid,
+                {
+                  columnGap: isSmallScreen ? 8 : 12,
+                  rowGap: isSmallScreen ? 8 : 12
+                }
+              ]}>
+              <MetricCard
+                title={i18n.t('admin.stats.totalStudents')}
+                value={statsQuery.data?.totalStudents ?? 0}
+                subtitle={`${statsQuery.data?.newEnrollments ?? 0} ${i18n.t('dashboard.newThisMonth')}`}
+                icon="graduationcap.fill"
+                color="#EA4335"
+                onPress={() => handleNavigate('students')}
+              />
+              <MetricCard
+                title={i18n.t('admin.stats.totalTeachers')}
+                value={statsQuery.data?.totalTeachers ?? 0}
+                subtitle={`${statsQuery.data?.activeClasses ?? 0} ${i18n.t('dashboard.activeClasses')}`}
+                icon="person.2.fill"
+                color="#EA4335"
+                onPress={() => handleNavigate('teachers')}
+              />
+              <MetricCard
+                title={i18n.t('admin.stats.totalParents')}
+                value={statsQuery.data?.totalParents ?? 0}
+                subtitle={i18n.t('dashboard.engagedFamilies')}
+                icon="heart.fill"
+                color="#EA4335"
+              />
+              <MetricCard
+                title={i18n.t('dashboard.metrics.monthlyRevenue')}
+                value={`R${(((statsQuery.data?.monthlyRevenue ?? 0) / 1000) | 0).toFixed(0)}k`}
+                subtitle={`${statsQuery.data?.pendingPayments ?? 0} ${i18n.t('finance.pendingPayments')}`}
+                icon="creditcard.fill"
+                color="#EA4335"
+                onPress={() => handleNavigate('/screens/principal-reports')}
+              />
+              </View>
+            </CardContent>
+          </Card>
 
         {/* Principal Actions */}
-        <Card variant="flat" padding="lg" className="mb-4">
-          <CardHeader>
-            <Heading level="h3">⚡ Principal Tools</Heading>
-          </CardHeader>
-          <CardContent>
-            <View style={styles.actionsGrid}>
-            <ActionCard
-              title="School Setup"
-              subtitle="Classes & assignments"
-              icon="rectangle.and.pencil.and.ellipsis"
-              color="#6366F1"
-              onPress={() => handleNavigate('/screens/school-setup')}
-            />
-            <ActionCard
-              title="Teacher Management"
-              subtitle="Invite & manage teachers"
-              icon="person.badge.plus"
-              color="#4285F4"
-              onPress={() => setShowTeacherManagement(true)}
-            />
-            <ActionCard
-              title="School Code"
-              subtitle="Parent invitation codes"
-              icon="qrcode.viewfinder"
-              color="#34A853"
-              onPress={() => setShowSchoolCodeManager(true)}
-            />
-            <ActionCard
-              title="Financial Reports"
-              subtitle="Revenue & expenses"
-              icon="chart.bar.fill"
-              color="#FBBC05"
-              onPress={() => handleNavigate('/screens/principal-reports')}
-            />
-            <ActionCard
-              title="Diagnostics"
-              subtitle="Verify counts & RLS"
-              icon="stethoscope"
-              color="#10B981"
-              onPress={() => handleNavigate('/screens/diagnostics')}
-            />
-            <ActionCard
-              title="School Analytics"
-              subtitle="Performance insights"
-              icon="chart.line.uptrend.xyaxis"
-              color="#4285F4"
-              onPress={() => handleNavigate('/screens/principal-reports')}
-            />
-            <ActionCard
-              title="Create Announcement"
-              subtitle="Notify all parents"
-              icon="megaphone.fill"
-              color="#10B981"
-              onPress={() => setShowAnnouncementModal(true)}
-            />
-            <ActionCard
-              title="School Settings"
-              subtitle="Configure policies"
-              icon="gearshape.fill"
-              color="#34A853"
-              onPress={() => handleNavigate('/screens/school-settings')}
-            />
-            </View>
-          </CardContent>
-        </Card>
+          <Card variant="flat" padding="lg" className="mb-4" style={styles.sectionCard}>
+            <CardHeader>
+              <Heading level="h3">{`⚡ ${i18n.t('dashboard.principalTools')}`}</Heading>
+            </CardHeader>
+            <CardContent>
+              <View style={[
+                styles.actionsGrid,
+                {
+                  columnGap: isSmallScreen ? 8 : 12,
+                  rowGap: isSmallScreen ? 12 : 15
+                }
+              ]}>
+              <ActionCard
+                title={i18n.t('principal.tools.schoolSetup')}
+                subtitle={i18n.t('principal.tools.schoolSetupSubtitle')}
+                icon="rectangle.and.pencil.and.ellipsis"
+                color="#6366F1"
+                onPress={() => handleNavigate('/screens/school-setup')}
+              />
+              <ActionCard
+                title={i18n.t('principal.tools.teacherManagement')}
+                subtitle={i18n.t('principal.tools.teacherManagementSubtitle')}
+                icon="person.badge.plus"
+                color="#4285F4"
+                onPress={() => setShowTeacherManagement(true)}
+              />
+              <ActionCard
+                title={i18n.t('principal.tools.schoolCode')}
+                subtitle={i18n.t('principal.tools.schoolCodeSubtitle')}
+                icon="qrcode.viewfinder"
+                color="#34A853"
+                onPress={() => setShowSchoolCodeManager(true)}
+              />
+              <ActionCard
+                title={i18n.t('finance.overview')}
+                subtitle={i18n.t('admin.quick.financialReportsSubtitle')}
+                icon="chart.bar.fill"
+                color="#FBBC05"
+                onPress={() => handleNavigate('/screens/principal-reports')}
+              />
+              <ActionCard
+                title={i18n.t('principal.tools.diagnostics')}
+                subtitle={i18n.t('principal.tools.diagnosticsSubtitle')}
+                icon="stethoscope"
+                color="#10B981"
+                onPress={() => handleNavigate('/screens/diagnostics')}
+              />
+              <ActionCard
+                title={i18n.t('principal.tools.schoolAnalytics')}
+                subtitle={i18n.t('principal.tools.schoolAnalyticsSubtitle')}
+                icon="chart.line.uptrend.xyaxis"
+                color="#4285F4"
+                onPress={() => handleNavigate('/screens/principal-reports')}
+              />
+              <ActionCard
+                title={i18n.t('principal.tools.createAnnouncement')}
+                subtitle={i18n.t('principal.tools.createAnnouncementSubtitle')}
+                icon="megaphone.fill"
+                color="#10B981"
+                onPress={() => setShowAnnouncementModal(true)}
+              />
+              <ActionCard
+                title={i18n.t('settings.schoolSettings')}
+                subtitle={i18n.t('principal.tools.schoolSettingsSubtitle')}
+                icon="gearshape.fill"
+                color="#34A853"
+                onPress={() => handleNavigate('/screens/school-settings')}
+              />
+              </View>
+            </CardContent>
+          </Card>
 
         {/* Quick Actions */}
-        <Card variant="flat" padding="lg" className="mb-4">
-          <CardHeader>
-            <Heading level="h3">🚀 Quick Actions</Heading>
-          </CardHeader>
-          <CardContent>
-            <View style={styles.quickActionsList}>
-            <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => handleNavigate('register-child')}>
-              <IconSymbol name="plus.circle.fill" size={20} color="#4285F4" />
-              <Text style={[styles.quickActionText, { color: palette.textSecondary }]}>Add New Student</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => handleNavigate('teachers')}>
-              <IconSymbol name="person.badge.plus" size={20} color="#34A853" />
-              <Text style={[styles.quickActionText, { color: palette.textSecondary }]}>Hire Teacher</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => router.push('/(tabs)/messages')}>
-              <IconSymbol name="envelope.fill" size={20} color="#FBBC05" />
-              <Text style={[styles.quickActionText, { color: palette.textSecondary }]}>Send Announcement</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => handleNavigate('/screens/support')}>
-              <IconSymbol name="questionmark.circle.fill" size={20} color="#EA4335" />
-              <Text style={[styles.quickActionText, { color: palette.textSecondary }]}>Get Support</Text>
-            </TouchableOpacity>
-            </View>
-          </CardContent>
-        </Card>
+          <Card variant="flat" padding="lg" className="mb-4" style={styles.sectionCard}>
+            <CardHeader>
+              <Heading level="h3">{`🚀 ${i18n.t('dashboard.quickActions')}`}</Heading>
+            </CardHeader>
+            <CardContent>
+              <View style={[
+                styles.quickActionsList,
+                {
+                  columnGap: isSmallScreen ? 6 : 8,
+                  rowGap: isSmallScreen ? 6 : 8
+                }
+              ]}>
+              <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => handleNavigate('register-child')}>
+                <IconSymbol name="plus.circle.fill" size={20} color="#4285F4" />
+                <Text style={[styles.quickActionItemText, { color: palette.textSecondary }]}>{i18n.t('dashboard.actions.addNewStudent')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => handleNavigate('teachers')}>
+                <IconSymbol name="person.badge.plus" size={20} color="#34A853" />
+                <Text style={[styles.quickActionItemText, { color: palette.textSecondary }]}>{i18n.t('dashboard.actions.hireTeacher')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => { setAnnouncementIncludeStaffDefault(true); setShowAnnouncementModal(true); }}>
+                <IconSymbol name="megaphone.fill" size={20} color="#10B981" />
+                <Text style={[styles.quickActionItemText, { color: palette.textSecondary }]}>{i18n.t('dashboard.actions.messageAllParentsStaff')}</Text>
+              </TouchableOpacity>
+<TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => router.push('/messages')}>
+                <IconSymbol name="envelope.fill" size={20} color="#FBBC05" />
+                <Text style={[styles.quickActionItemText, { color: palette.textSecondary }]}>{i18n.t('dashboard.actions.openMessages')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.quickActionItem, { backgroundColor: palette.surface }]} onPress={() => handleNavigate('/screens/support')}>
+                <IconSymbol name="questionmark.circle.fill" size={20} color="#EA4335" />
+                <Text style={[styles.quickActionItemText, { color: palette.textSecondary }]}>{i18n.t('dashboard.actions.getSupport')}</Text>
+              </TouchableOpacity>
+              </View>
+            </CardContent>
+          </Card>
 
         {/* Recent Activity */}
-        <Card variant="flat" padding="lg" className="mb-4">
-          <CardHeader>
-            <Heading level="h3">📈 Recent School Activity</Heading>
-          </CardHeader>
-          <CardContent>
-            <View style={[styles.activityCard, { backgroundColor: palette.surface }] }>
-            {activityQuery.data && activityQuery.data.length > 0 ? (
-              activityQuery.data.map((activity, index) => (
-                <Text key={index} style={[styles.activityItem, { color: palette.textSecondary }]}>• {activity}</Text>
-              ))
-            ) : (
-              <Text style={[styles.activityItem, { color: palette.textSecondary }]}>No recent activity.</Text>
-            )}
-            </View>
-          </CardContent>
-        </Card>
+          <Card variant="flat" padding="lg" className="mb-4" style={styles.sectionCard}>
+            <CardHeader>
+              <Heading level="h3">{`📈 ${i18n.t('dashboard.recentActivity')}`}</Heading>
+            </CardHeader>
+            <CardContent>
+              <View style={[styles.activityCard, { backgroundColor: palette.surface }] }>
+              {activityQuery.data && activityQuery.data.length > 0 ? (
+                activityQuery.data.map((activity, index) => (
+                  <Text key={index} style={[styles.activityItem, { color: palette.textSecondary }]}>• {activity}</Text>
+                ))
+              ) : (
+                <Text style={[styles.activityItem, { color: palette.textSecondary }]}>{i18n.t('dashboard.noRecentActivity')}</Text>
+              )}
+              </View>
+            </CardContent>
+          </Card>
 
         {/* Pending Tasks */}
-        <Card variant="flat" padding="lg" className="mb-4">
-          <CardHeader>
-            <Heading level="h3">📋 Pending Tasks</Heading>
-          </CardHeader>
-          <CardContent>
-            <View style={styles.tasksList}>
-            {tasksQuery.data && tasksQuery.data.length > 0 ? (
-              tasksQuery.data.map((task, index) => (
-                <View key={index} style={[styles.taskItem, { backgroundColor: palette.surface }]}>
-                  <View style={[styles.taskDot, { backgroundColor: task.color }]} />
-                  <Text style={[styles.taskText, { color: palette.textSecondary }]}>{task.text}</Text>
-                </View>
-              ))
-            ) : (
-              <Text style={[styles.taskText, { color: palette.textSecondary }]}>No pending tasks.</Text>
-            )}
-            </View>
-          </CardContent>
-        </Card>
+          <Card variant="flat" padding="lg" className="mb-4" style={styles.sectionCard}>
+            <CardHeader>
+              <Heading level="h3">{`📋 ${i18n.t('dashboard.pendingTasks')}`}</Heading>
+            </CardHeader>
+            <CardContent>
+              <View style={styles.tasksList}>
+              {tasksQuery.data && tasksQuery.data.length > 0 ? (
+                tasksQuery.data.map((task, index) => (
+                  <View key={index} style={[styles.taskItem, { backgroundColor: palette.surface }] }>
+                    <View style={[styles.taskDot, { backgroundColor: task.color }]} />
+                    <Text style={[styles.taskText, { color: palette.textSecondary }]}>{task.text}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={[styles.taskText, { color: palette.textSecondary }]}>{i18n.t('dashboard.noPendingTasks')}</Text>
+              )}
+              </View>
+            </CardContent>
+          </Card>
         </View>
       </ScrollView>
-
-      {/* Bottom nav removed; now rendered globally in RootLayout */}
-
+      {/* Banner placement for principal dashboard */}
+      <AdZone>
+        <View />
+      </AdZone>
+      
+      {/* Safe area bottom padding for gesture navigation */}
+      <View style={{ height: Math.max(0, insets.bottom), backgroundColor: palette.background }} />
+      
       {/* Management Modals */}
       {activePreschoolId && profile?.id && (
         <>
           <CreateAnnouncementModal
             visible={showAnnouncementModal}
+            defaultIncludeStaff={announcementIncludeStaffDefault}
             onClose={() => setShowAnnouncementModal(false)}
             onPosted={() => {
               // Optionally navigate to Messages announcements
-              try { router.push('/(tabs)/messages' as any); } catch {}
+try { router.push('/messages' as any); } catch {}
             }}
           />
           <CreateEventModal
@@ -532,7 +721,7 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ profile, onSign
           />
         </>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -549,6 +738,7 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     paddingHorizontal: 16,
+    paddingTop: 12,
     maxWidth: 768,
     width: '100%',
     alignSelf: 'center',
@@ -596,6 +786,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    rowGap: 12,
   },
   metricCard: {
     width: '48%',
@@ -611,6 +802,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  metricCardTopBorder: {
+    borderTopWidth: 3,
   },
   metricContent: {
     alignItems: 'center',
@@ -693,6 +887,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    rowGap: 8,
   },
   quickActionItem: {
     flexDirection: 'row',
@@ -704,7 +899,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     width: '48%',
   },
-  quickActionText: {
+  quickActionItemText: {
     fontSize: 12,
     color: '#4B5563',
     marginLeft: 8,
@@ -732,7 +927,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tasksList: {
-    gap: 10,
+    rowGap: 10,
   },
   taskItem: {
     flexDirection: 'row',
@@ -740,6 +935,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     padding: 12,
     borderRadius: 8,
+    marginBottom: 8,
   },
   taskDot: {
     width: 8,
@@ -751,6 +947,130 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4B5563',
     flex: 1,
+  },
+  // New spacing helpers
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 8,
+  },
+  pageHeader: {
+    marginBottom: 16,
+  },
+  sectionCard: {
+    marginBottom: 16,
+  },
+  cardContentGap12: {
+    rowGap: 12,
+  },
+  subscriptionSkeleton: {
+    padding: 16,
+  },
+  // Modern Google-style header styles
+  modernHeaderSection: {
+    paddingHorizontal: 4,
+    paddingVertical: 20,
+    marginBottom: 8,
+  },
+  titleSection: {
+    marginBottom: 20,
+  },
+  modernTitle: {
+    fontSize: 32,
+    fontWeight: '300',
+    letterSpacing: -0.5,
+    lineHeight: 40,
+    marginBottom: 8,
+  },
+  modernSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.7,
+  },
+  quickActionsBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickActionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E8EAED',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#3C4043',
+    marginLeft: 8,
+  },
+  // Quick Actions horizontal scroll styles
+  quickActionsContainer: {
+    flexGrow: 0,
+  },
+  quickActionsScrollContent: {
+    paddingRight: 20,
+    gap: 8,
+  },
+  // Attendance badge container
+  attendanceBadgeContainer: {
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  // Responsive metric card styles for small screens
+  metricCardSmall: {
+    width: '48%',
+    minWidth: 140,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  // Responsive action card styles for small screens
+  actionCardSmall: {
+    width: '48%',
+    minWidth: 140,
+    marginBottom: 12,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  actionGradientSmall: {
+    padding: 16,
+    alignItems: 'center',
+    minHeight: 100,
+  },
+  // Quick action item responsive styles for small screens
+  quickActionItemSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginBottom: 6,
+    width: '100%',
+    minHeight: 44, // Minimum touch target
   },
 });
 

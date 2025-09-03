@@ -53,6 +53,7 @@ export default function ParentsScreen() {
         <TextInput placeholder="Search parents" value={q} onChangeText={setQ} style={styles.search} />
       </View>
       <FlashList
+        style={{ flex: 1 }}
         data={filtered}
         keyExtractor={(p) => p.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}

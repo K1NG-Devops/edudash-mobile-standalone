@@ -18,8 +18,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 // Design system components
-import { Card, CardHeader, CardContent } from '@/src/design-system/components';
-import { Heading, Text as DSText } from '@/src/design-system/components';
+import { Card, CardHeader, CardContent, Heading, Text as DSText } from '@/design-system';
 
 interface TeacherProfile {
   id: string;

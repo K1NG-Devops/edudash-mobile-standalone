@@ -12,6 +12,10 @@ module.exports = function (api) {
         {
           root: ['./'],
           alias: {
+            // Specific overrides first
+            '@/i18n': './src/i18n/index',
+            '@/design-system': './src/design-system',
+            // General root alias
             '@': './',
           },
           extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],

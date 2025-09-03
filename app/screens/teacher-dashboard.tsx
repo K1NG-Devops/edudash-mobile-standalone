@@ -10,6 +10,7 @@ import { AuthConsumer } from '@/contexts/SimpleWorkingAuth';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import React from 'react';
+import i18n from '@/i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -370,11 +371,11 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
     >
       <View style={styles.classHeader}>
         <Text style={styles.className}>{classItem.name}</Text>
-        <Text style={styles.classRoom}>Room {classItem.room_number || 'N/A'}</Text>
+        <Text style={styles.classRoom}>{i18n.t('dashboard.roomLabel')} {classItem.room_number || i18n.t('common.unknown')}</Text>
       </View>
       <View style={styles.classFooter}>
-        <Text style={styles.classStudentCount}>{classItem.current_enrollment || 0} Students</Text>
-        <Text style={styles.classCapacity}>Max: {classItem.max_capacity || 'N/A'}</Text>
+        <Text style={styles.classStudentCount}>{classItem.current_enrollment || 0} {i18n.t('nav.students')}</Text>
+        <Text style={styles.classCapacity}>{i18n.t('dashboard.maxCapacity', { max: (classItem.max_capacity ?? i18n.t('common.unknown')) })}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -394,7 +395,7 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
           <Text style={styles.lessonTitle}>{lesson.title}</Text>
           <View style={[styles.lessonStatus, { backgroundColor: statusBg }]}>
             <Text style={[styles.lessonStatusText, { color: statusColor }]}>
-              {isPublic ? 'Public' : 'Private'}
+              {isPublic ? i18n.t('dashboard.lesson.public') : i18n.t('dashboard.lesson.private')}
             </Text>
           </View>
         </View>
@@ -405,10 +406,10 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
         )}
         <View style={styles.lessonMeta}>
           <Text style={styles.lessonDuration}>
-            Duration: {lesson.duration_minutes || 'N/A'} min
+            {i18n.t('dashboard.lesson.durationMinutes', { minutes: (lesson.duration_minutes ?? i18n.t('common.unknown')) })}
           </Text>
           <Text style={styles.lessonDifficulty}>
-            Level: {lesson.difficulty_level || 'N/A'}
+            {i18n.t('dashboard.lesson.level', { level: (lesson.difficulty_level ?? i18n.t('common.unknown')) })}
           </Text>
         </View>
       </TouchableOpacity>
@@ -435,7 +436,7 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
       return (
         <View style={[styles.container, styles.centered]}>
           <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading dashboard...</Text>
+          <Text style={styles.loadingText}>{i18n.t('dashboard.loading')}</Text>
         </View>
       );
     }
@@ -483,14 +484,14 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
           {/* AI Insights */}
           {aiInsights && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>AI Insights</Text>
+              <Text style={styles.sectionTitle}>{i18n.t('dashboard.ai.insights')}</Text>
               <View style={styles.aiInsightsCard}>
-                <Text style={styles.aiInsightsTitle}>Class Performance Summary</Text>
+                <Text style={styles.aiInsightsTitle}>{i18n.t('dashboard.ai.classSummary')}</Text>
                 <Text style={styles.aiInsightsText}>{aiInsights.classPerformance}</Text>
 
                 {aiInsights.upcomingTasks.length > 0 && (
                   <View style={styles.aiSection}>
-                    <Text style={styles.aiSectionTitle}>Priority Tasks</Text>
+                    <Text style={styles.aiSectionTitle}>{i18n.t('dashboard.ai.priorityTasks')}</Text>
                     {aiInsights.upcomingTasks.map((task, index) => (
                       <Text key={index} style={styles.aiTaskText}>• {task}</Text>
                     ))}
@@ -499,7 +500,7 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
 
                 {aiInsights.recommendations.length > 0 && (
                   <View style={styles.aiSection}>
-                    <Text style={styles.aiSectionTitle}>Recommendations</Text>
+                    <Text style={styles.aiSectionTitle}>{i18n.t('dashboard.ai.recommendations')}</Text>
                     {aiInsights.recommendations.map((rec, index) => (
                       <Text key={index} style={styles.aiRecommendationText}>• {rec}</Text>
                     ))}
@@ -511,36 +512,36 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
 
           {/* Metrics Overview */}
           <View style={styles.metricsGrid}>
-            {this.renderMetricCard('Classes', classes.length, 'book.closed', '#3B82F6')}
-            {this.renderMetricCard('Students', totalStudents, 'person.2', '#10B981')}
-            {this.renderMetricCard('Lessons', lessons.length, 'graduationcap', '#F59E0B')}
-            {this.renderMetricCard('Homework', homeworkAssignments.length, 'doc.text', '#EF4444')}
+            {this.renderMetricCard(i18n.t('nav.classes'), classes.length, 'book.closed', '#3B82F6')}
+            {this.renderMetricCard(i18n.t('nav.students'), totalStudents, 'person.2', '#10B981')}
+            {this.renderMetricCard(i18n.t('education.lessons'), lessons.length, 'graduationcap', '#F59E0B')}
+            {this.renderMetricCard(i18n.t('education.homework'), homeworkAssignments.length, 'doc.text', '#EF4444')}
           </View>
 
           {/* Quick Actions */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('dashboard.quickActions')}</Text>
             <View style={styles.quickActionsGrid}>
               {this.renderQuickAction(
-                'AI Lesson Generator',
+                i18n.t('dashboard.actions.aiLessonGenerator'),
                 'plus.circle',
                 () => router.push('/screens/ai/lesson-generator' as any),
                 '#3B82F6'
               )}
               {this.renderQuickAction(
-                'Grade Homework',
+                i18n.t('dashboard.actions.gradeHomework'),
                 'doc.badge.plus',
-                () => router.push('/screens/ai/homework-grader' as any),
+                () => router.push('/screens/ai-homework-grader-live' as any),
                 '#10B981'
               )}
               {this.renderQuickAction(
-                'STEM Activities',
+                i18n.t('dashboard.actions.stemActivities'),
                 'lightbulb',
                 () => router.push('/screens/ai/stem-activities' as any),
                 '#F59E0B'
               )}
               {this.renderQuickAction(
-                'Progress Analysis',
+                i18n.t('dashboard.actions.progressAnalysis'),
                 'chart.bar',
                 () => router.push('/screens/analytics' as any),
                 '#8B5CF6'
@@ -550,26 +551,26 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
 
           {/* My Classes */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>My Classes</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('dashboard.myClasses.title')}</Text>
             {classes.map(classItem => this.renderClassCard(classItem))}
           </View>
 
           {/* Active Lessons */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current Lessons</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('dashboard.currentLessons')}</Text>
             {lessons.slice(0, 3).map(lesson => this.renderLessonCard(lesson))}
             <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => router.push('/(tabs)/lessons')}
             >
-              <Text style={styles.viewAllText}>View All Lessons</Text>
+              <Text style={styles.viewAllText}>{i18n.t('dashboard.viewAllLessons')}</Text>
               <IconSymbol name="chevron.right" size={16} color="#3B82F6" />
             </TouchableOpacity>
           </View>
 
           {/* Recent Homework Assignments */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent Homework Assignments</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('dashboard.recentHomeworkAssignments')}</Text>
             {homeworkAssignments.map((homework) => {
               const dueInDays = homework.due_date_offset_days;
               const isOverdue = dueInDays < 0;
@@ -583,7 +584,11 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
                   <View style={styles.assignmentHeader}>
                     <Text style={styles.assignmentTitle}>{homework.title}</Text>
                     <Text style={[styles.assignmentDue, isOverdue && styles.overdue]}>
-                      {dueInDays > 0 ? `Due in ${dueInDays} days` : dueInDays === 0 ? 'Due today' : `Overdue by ${Math.abs(dueInDays)} days`}
+                      {dueInDays > 0 
+                        ? i18n.t('dashboard.dueInDays', { count: dueInDays }) 
+                        : dueInDays === 0 
+                          ? i18n.t('dashboard.dueToday') 
+                          : i18n.t('dashboard.overdueByDays', { count: Math.abs(dueInDays) })}
                     </Text>
                   </View>
                   {homework.description && (
@@ -593,7 +598,7 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
                   )}
                   <View style={styles.assignmentStats}>
                     <Text style={styles.assignmentSubmissions}>
-                      Class: {homework.class_id ? 'Assigned' : 'General'}
+                      {i18n.t('dashboard.classLabel')}: {homework.class_id ? i18n.t('dashboard.assigned') : i18n.t('dashboard.general')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -603,7 +608,7 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
 
           {/* Recent Activities */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent Activities</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('dashboard.recentActivities')}</Text>
             {recentActivities.map((activity) => {
               const activityColors = {
                 learning: { bg: '#E0E7FF', text: '#3730A3' },
@@ -630,8 +635,8 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
                       {activity.description}
                     </Text>
                   )}
-                  <Text style={styles.announcementDate}>
-                    Lesson: {activity.lesson_id} • Created: {new Date(activity.created_at).toLocaleDateString()}
+                    <Text style={styles.announcementDate}>
+                    {i18n.t('education.lesson')}: {activity.lesson_id} • {new Date(activity.created_at).toLocaleDateString()}
                   </Text>
                 </View>
               );

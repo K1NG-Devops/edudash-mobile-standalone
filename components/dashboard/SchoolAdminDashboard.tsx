@@ -21,6 +21,7 @@ import { router } from 'expo-router';
 import PlanStatus from '@/components/subscription/PlanStatus';
 import UpgradeModal from '@/components/subscription/UpgradeModal';
 import { SubscriptionProvider, useSubscription } from '@/contexts/SubscriptionContext';
+import { useT, getCurrentLocaleTag } from '@/i18n';
 import {
   Dimensions,
   RefreshControl,
@@ -57,6 +58,8 @@ export default function SchoolAdminDashboard({
 }: SchoolAdminDashboardProps) {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
+  const { t } = useT();
+  const localeTag = getCurrentLocaleTag();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [dashboardData, setDashboardData] = useState<SchoolAdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +81,7 @@ export default function SchoolAdminDashboard({
       setDashboardData(data);
     } catch (err: any) {
       // Removed debug statement: console.error('❌ [SchoolAdminDashboard] Error loading data:', err);
-      setError(err.message || 'Failed to load dashboard data');
+      setError(t('dashboard.loadingFailed'));
     } finally {
       setLoading(false);
     }
@@ -100,9 +103,9 @@ export default function SchoolAdminDashboard({
 
   const getGreeting = (): string => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning!';
-    if (hour < 17) return 'Good afternoon!';
-    return 'Good evening!';
+    if (hour < 12) return t('dashboard.goodMorning');
+    if (hour < 17) return t('dashboard.goodAfternoon');
+    return t('dashboard.goodEvening');
   };
 
   const handleNavigate = (route: string) => {
@@ -164,14 +167,14 @@ export default function SchoolAdminDashboard({
       <View style={styles.tabContent}>
         {/* Overview Header (compact, matches Super Admin) */}
         <View style={[styles.overviewHeaderLite]}>
-          <Text style={styles.overviewTitleLite}>📊 School Overview</Text>
-          <Text style={styles.overviewSubtitleLite}>Real-time insights into your school</Text>
+          <Text style={styles.overviewTitleLite}>📊 {t('dashboard.schoolOverviewTitle')}</Text>
+          <Text style={styles.overviewSubtitleLite}>{t('dashboard.schoolOverviewSubtitle')}</Text>
         </View>
 
         {/* Free-tier Upgrade CTA (Overview) */}
         <UpgradeCTA
-          title="Upgrade your school"
-          description="Unlock premium analytics, priority support, and more for your school."
+          title={t('dashboard.upgradeYourSchoolTitle')}
+          description={t('dashboard.upgradeYourSchoolDescription')}
         />
 
         {/* Stats Grid - Responsive Layout */}
@@ -184,7 +187,7 @@ export default function SchoolAdminDashboard({
                   <IconSymbol name="person.3.fill" size={20} color="#EA4335" />
                 </View>
                 <Text style={styles.statValueLite}>{stats.total_students}</Text>
-                <Text style={styles.statLabelLite}>Students</Text>
+                <Text style={styles.statLabelLite}>{t('nav.students')}</Text>
               </View>
             </View>
 
@@ -195,7 +198,7 @@ export default function SchoolAdminDashboard({
                   <IconSymbol name="person.badge.plus" size={20} color="#EA4335" />
                 </View>
                 <Text style={styles.statValueLite}>{stats.total_teachers}</Text>
-                <Text style={styles.statLabelLite}>Teachers</Text>
+                <Text style={styles.statLabelLite}>{t('nav.teachers')}</Text>
               </View>
             </View>
           </View>
@@ -208,7 +211,7 @@ export default function SchoolAdminDashboard({
                   <IconSymbol name="building.2" size={20} color="#EA4335" />
                 </View>
                 <Text style={styles.statValueLite}>{stats.total_classes}</Text>
-                <Text style={styles.statLabelLite}>Classes</Text>
+                <Text style={styles.statLabelLite}>{t('nav.classes')}</Text>
               </View>
             </View>
 
@@ -219,7 +222,7 @@ export default function SchoolAdminDashboard({
                   <IconSymbol name="person.2.fill" size={20} color="#EA4335" />
                 </View>
                 <Text style={styles.statValueLite}>{stats.total_parents}</Text>
-                <Text style={styles.statLabelLite}>Parents</Text>
+                <Text style={styles.statLabelLite}>{t('nav.parents')}</Text>
               </View>
             </View>
           </View>
@@ -233,12 +236,12 @@ export default function SchoolAdminDashboard({
                 <IconSymbol name="creditcard.fill" size={20} color="#FFFFFF" />
               </View>
               <View style={styles.metricInfo}>
-                <Text style={styles.metricTitle}>Monthly Revenue</Text>
+                <Text style={styles.metricTitle}>{t('dashboard.metrics.monthlyRevenue')}</Text>
                 <Text style={styles.metricValue}>{formatCurrency(stats.monthly_revenue)}</Text>
               </View>
             </View>
             <Text style={styles.metricSubtext}>
-              {formatCurrency(Math.round(stats.monthly_revenue / Math.max(stats.total_students, 1)))} avg per student
+              {formatCurrency(Math.round(stats.monthly_revenue / Math.max(stats.total_students, 1)))} {t('dashboard.metrics.avgPerStudent')}
             </Text>
           </View>
 
@@ -248,20 +251,20 @@ export default function SchoolAdminDashboard({
                 <IconSymbol name="chart.line.uptrend.xyaxis" size={20} color="#FFFFFF" />
               </View>
               <View style={styles.metricInfo}>
-                <Text style={styles.metricTitle}>Attendance Rate</Text>
+                <Text style={styles.metricTitle}>{t('dashboard.metrics.attendanceRate')}</Text>
                 <Text style={styles.metricValue}>{formatPercentage(stats.attendance_rate)}</Text>
               </View>
             </View>
-            <Text style={styles.metricSubtext}>This month average</Text>
+            <Text style={styles.metricSubtext}>{t('dashboard.metrics.thisMonthAverage')}</Text>
           </View>
         </View>
 
         {/* Recent Activity */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.recentActivity')}</Text>
             <TouchableOpacity style={styles.seeAllButton}>
-              <Text style={styles.seeAllText}>See All</Text>
+              <Text style={styles.seeAllText}>{t('common.seeAll')}</Text>
               <IconSymbol name="chevron.right" size={16} color="#3B82F6" />
             </TouchableOpacity>
           </View>
@@ -283,7 +286,7 @@ export default function SchoolAdminDashboard({
                   <Text style={styles.activityTitle}>{activity.title}</Text>
                   <Text style={styles.activityDescription}>{activity.description}</Text>
                   <Text style={styles.activityTime}>
-                    {new Date(activity.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(activity.timestamp).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                 </View>
               </View>
@@ -294,7 +297,7 @@ export default function SchoolAdminDashboard({
         {/* System Alerts */}
         {dashboardData.alerts.length > 0 && (
           <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>System Alerts</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.systemAlerts')}</Text>
             <View style={styles.alertsList}>
               {dashboardData.alerts.map((alert, index) => (
                 <View key={alert.id} style={[styles.alertItem, { borderLeftColor: alert.priority === 'high' ? '#EF4444' : '#F59E0B' }]}>
@@ -305,11 +308,11 @@ export default function SchoolAdminDashboard({
                         size={18}
                         color={alert.priority === 'high' ? '#EF4444' : '#F59E0B'}
                       />
-                      <Text style={styles.alertTitle}>Alert</Text>
+                      <Text style={styles.alertTitle}>{t('common.error')}</Text>
                     </View>
                     <Text style={styles.alertMessage}>{alert.message}</Text>
                     <Text style={styles.alertTime}>
-                      {new Date(alert.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(alert.timestamp).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
                     </Text>
                   </View>
                 </View>
@@ -329,7 +332,7 @@ export default function SchoolAdminDashboard({
         {/* Enhanced Header with Search and Filters */}
         <View style={styles.enhancedSectionHeader}>
           <View style={styles.headerTitleRow}>
-            <Text style={styles.enhancedSectionTitle}>Students</Text>
+            <Text style={styles.enhancedSectionTitle}>{t('nav.students')}</Text>
             <View style={styles.studentCountBadge}>
               <Text style={styles.countBadgeText}>{dashboardData.recent_students.length}</Text>
             </View>
@@ -337,7 +340,7 @@ export default function SchoolAdminDashboard({
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity style={styles.filterButton}>
               <IconSymbol name="line.3.horizontal.decrease" size={18} color="#6B7280" />
-              <Text style={styles.filterButtonText}>Filter</Text>
+              <Text style={styles.filterButtonText}>{t('common.filter')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.enhancedAddButton}>
               <LinearGradient
@@ -345,7 +348,7 @@ export default function SchoolAdminDashboard({
                 style={styles.addButtonGradient}
               >
                 <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-                <Text style={styles.enhancedAddButtonText}>Add Student</Text>
+                <Text style={styles.enhancedAddButtonText}>{t('common.add')} {t('nav.students')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -381,7 +384,7 @@ export default function SchoolAdminDashboard({
                     <Text style={styles.enhancedStudentName}>{student.full_name}</Text>
                     <View style={styles.studentMetaRow}>
                       <IconSymbol name="calendar" size={12} color="#6B7280" />
-                      <Text style={styles.studentAge}>{student.age} years old</Text>
+                      <Text style={styles.studentAge}>{t('age.years', { count: student.age })}</Text>
                     </View>
                     <View style={styles.studentMetaRow}>
                       <IconSymbol name="building.2" size={12} color="#6B7280" />
@@ -397,7 +400,7 @@ export default function SchoolAdminDashboard({
                 <View style={styles.studentStatsRow}>
                   <View style={styles.studentStatItem}>
                     <Text style={styles.studentStatValue}>{formatPercentage(student.attendance_rate)}</Text>
-                    <Text style={styles.studentStatLabel}>Attendance</Text>
+                    <Text style={styles.studentStatLabel}>{t('education.attendance')}</Text>
                   </View>
                   <View style={styles.studentStatDivider} />
                   <View style={styles.studentStatItem}>
@@ -411,7 +414,7 @@ export default function SchoolAdminDashboard({
                         styles.paymentStatusText,
                         { color: student.monthly_fee_status === 'paid' ? '#10B981' : '#F59E0B' }
                       ]}>
-                        {student.monthly_fee_status === 'paid' ? 'Paid' : 'Pending'}
+                        {student.monthly_fee_status === 'paid' ? t('status.paid') : t('status.pending')}
                       </Text>
                     </View>
                   </View>
@@ -444,7 +447,7 @@ export default function SchoolAdminDashboard({
         {/* Enhanced Teachers Header */}
         <View style={styles.enhancedSectionHeader}>
           <View style={styles.headerTitleRow}>
-            <Text style={styles.enhancedSectionTitle}>Teachers</Text>
+            <Text style={styles.enhancedSectionTitle}>{t('nav.teachers')}</Text>
             <View style={styles.teacherCountBadge}>
               <Text style={styles.countBadgeText}>{dashboardData.teachers.length}</Text>
             </View>
@@ -452,7 +455,7 @@ export default function SchoolAdminDashboard({
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity style={styles.filterButton}>
               <IconSymbol name="line.3.horizontal.decrease" size={18} color="#6B7280" />
-              <Text style={styles.filterButtonText}>Filter</Text>
+              <Text style={styles.filterButtonText}>{t('common.filter')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.enhancedAddButton}
@@ -463,7 +466,7 @@ export default function SchoolAdminDashboard({
                 style={styles.addButtonGradient}
               >
                 <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-                <Text style={styles.enhancedAddButtonText}>Add Teacher</Text>
+                <Text style={styles.enhancedAddButtonText}>{t('common.add')} {t('nav.teachers')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -471,8 +474,8 @@ export default function SchoolAdminDashboard({
 
         {/* Upgrade CTA for Teachers (free tier) */}
         <UpgradeCTA
-          title="Unlock Teacher Premium"
-          description="Unlimited AI lesson generation, homework grading, and advanced analytics for your staff."
+          title={t('dashboard.unlockTeacherPremiumTitle')}
+          description={t('dashboard.unlockTeacherPremiumDesc')}
         />
 
         {/* Enhanced Teachers Grid */}
@@ -505,11 +508,11 @@ export default function SchoolAdminDashboard({
                     <Text style={styles.enhancedTeacherName}>{teacher.name}</Text>
                     <View style={styles.teacherMetaRow}>
                       <IconSymbol name="building.2" size={12} color="#6B7280" />
-                      <Text style={styles.teacherClasses}>{teacher.classes_assigned} classes</Text>
+                      <Text style={styles.teacherClasses}>{teacher.classes_assigned} {t('nav.classes').toLowerCase()}</Text>
                     </View>
                     <View style={styles.teacherMetaRow}>
                       <IconSymbol name="person.3" size={12} color="#6B7280" />
-                      <Text style={styles.teacherStudents}>{teacher.students_count} students</Text>
+                      <Text style={styles.teacherStudents}>{teacher.students_count} {t('nav.students').toLowerCase()}</Text>
                     </View>
                   </View>
                   <TouchableOpacity style={styles.teacherMenuButton}>
@@ -519,7 +522,7 @@ export default function SchoolAdminDashboard({
 
                 {/* Performance Rating */}
                 <View style={styles.performanceSection}>
-                  <Text style={styles.performanceLabel}>Performance Rating</Text>
+                  <Text style={styles.performanceLabel}>{t('dashboard.teacher.performanceRating')}</Text>
                   <View style={styles.enhancedRatingContainer}>
                     {Array.from({ length: 5 }, (_, i) => (
                       <IconSymbol
@@ -537,17 +540,17 @@ export default function SchoolAdminDashboard({
                 <View style={styles.teacherStatsRow}>
                   <View style={styles.teacherStatItem}>
                     <Text style={styles.teacherStatValue}>{teacher.monthly_summary.reports_created}</Text>
-                    <Text style={styles.teacherStatLabel}>Reports</Text>
+                    <Text style={styles.teacherStatLabel}>{t('dashboard.teacherSummary.reportsCreated')}</Text>
                   </View>
                   <View style={styles.teacherStatDivider} />
                   <View style={styles.teacherStatItem}>
                     <Text style={styles.teacherStatValue}>{teacher.monthly_summary.messages_sent}</Text>
-                    <Text style={styles.teacherStatLabel}>Messages</Text>
+                    <Text style={styles.teacherStatLabel}>{t('dashboard.teacherSummary.messagesSent')}</Text>
                   </View>
                   <View style={styles.teacherStatDivider} />
                   <View style={styles.teacherStatItem}>
                     <Text style={styles.teacherStatValue}>{teacher.monthly_summary.video_calls_conducted}</Text>
-                    <Text style={styles.teacherStatLabel}>Calls</Text>
+                    <Text style={styles.teacherStatLabel}>{t('dashboard.teacherSummary.videoCalls')}</Text>
                   </View>
                 </View>
 
@@ -574,7 +577,7 @@ export default function SchoolAdminDashboard({
         {/* Enhanced Parents Header */}
         <View style={styles.enhancedSectionHeader}>
           <View style={styles.headerTitleRow}>
-            <Text style={styles.enhancedSectionTitle}>Parents</Text>
+            <Text style={styles.enhancedSectionTitle}>{t('nav.parents')}</Text>
             <View style={styles.parentCountBadge}>
               <Text style={styles.countBadgeText}>{dashboardData.parents.length}</Text>
             </View>
@@ -582,7 +585,7 @@ export default function SchoolAdminDashboard({
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity style={styles.filterButton}>
               <IconSymbol name="line.3.horizontal.decrease" size={18} color="#6B7280" />
-              <Text style={styles.filterButtonText}>Filter</Text>
+              <Text style={styles.filterButtonText}>{t('common.filter')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.enhancedAddButton}>
               <LinearGradient
@@ -590,7 +593,7 @@ export default function SchoolAdminDashboard({
                 style={styles.addButtonGradient}
               >
                 <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-                <Text style={styles.enhancedAddButtonText}>Add Parent</Text>
+                <Text style={styles.enhancedAddButtonText}>{t('common.add')} {t('nav.parents')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -598,8 +601,8 @@ export default function SchoolAdminDashboard({
 
         {/* Upgrade CTA for Parents (free tier) */}
         <UpgradeCTA
-          title="Unlock Parent Premium"
-          description="Enhance parent engagement with premium analytics and notifications."
+          title={t('dashboard.unlockParentPremiumTitle')}
+          description={t('dashboard.unlockParentPremiumDesc')}
         />
 
         {/* Enhanced Parents Grid */}
@@ -632,7 +635,7 @@ export default function SchoolAdminDashboard({
                     <Text style={styles.enhancedParentName}>{parent.name}</Text>
                     <View style={styles.parentMetaRow}>
                       <IconSymbol name="person.2" size={12} color="#6B7280" />
-                      <Text style={styles.parentChildren}>{parent.children_names.length} child{parent.children_names.length !== 1 ? 'ren' : ''}</Text>
+                      <Text style={styles.parentChildren}>{parent.children_names.length} {parent.children_names.length === 1 ? t('common.child').toLowerCase() : t('dashboard.parent.childrenLabel').toLowerCase()}</Text>
                     </View>
                     <View style={styles.parentMetaRow}>
                       <IconSymbol name="envelope" size={12} color="#6B7280" />
@@ -646,7 +649,7 @@ export default function SchoolAdminDashboard({
 
                 {/* Children List */}
                 <View style={styles.childrenSection}>
-                  <Text style={styles.childrenLabel}>Children</Text>
+                  <Text style={styles.childrenLabel}>{t('dashboard.parent.childrenLabel')}</Text>
                   <View style={styles.childrenTags}>
                     {parent.children_names.map((childName, idx) => (
                       <View key={idx} style={styles.childTag}>
@@ -660,12 +663,12 @@ export default function SchoolAdminDashboard({
                 <View style={styles.parentStatsRow}>
                   <View style={styles.parentStatItem}>
                     <Text style={styles.parentStatValue}>{formatPercentage(parent.engagement_score)}</Text>
-                    <Text style={styles.parentStatLabel}>Engagement</Text>
+                    <Text style={styles.parentStatLabel}>{t('dashboard.parent.engagementLabel')}</Text>
                   </View>
                   <View style={styles.parentStatDivider} />
                   <View style={styles.parentStatItem}>
                     <Text style={styles.parentStatValue}>{formatCurrency(parent.total_fees_paid)}</Text>
-                    <Text style={styles.parentStatLabel}>Total Paid</Text>
+                    <Text style={styles.parentStatLabel}>{t('dashboard.parent.totalPaid')}</Text>
                   </View>
                 </View>
 
@@ -681,7 +684,7 @@ export default function SchoolAdminDashboard({
                       styles.paymentStatusText,
                       { color: parent.payment_status === 'current' ? '#10B981' : '#EF4444' }
                     ]}>
-                      {parent.payment_status === 'current' ? 'Current' : 'Overdue'}
+                      {parent.payment_status === 'current' ? t('status.current') : t('status.overdue')}
                     </Text>
                   </View>
                 </View>
@@ -699,10 +702,10 @@ export default function SchoolAdminDashboard({
     return (
       <View style={styles.tabContent}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Classes ({dashboardData.classes.length})</Text>
+          <Text style={styles.sectionTitle}>{t('nav.classes')} ({dashboardData.classes.length})</Text>
           <TouchableOpacity style={styles.addButton}>
             <IconSymbol name="plus" size={20} color="#3B82F6" />
-            <Text style={styles.addButtonText}>Add Class</Text>
+            <Text style={styles.addButtonText}>{t('common.add')} {t('nav.classes')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -715,21 +718,21 @@ export default function SchoolAdminDashboard({
               <View style={styles.classInfo}>
                 <Text style={styles.className}>{classItem.name}</Text>
                 <Text style={styles.classDetails}>
-                  {classItem.age_group_name} • Room {classItem.room_number || 'TBA'}
+                  {classItem.age_group_name} • {t('dashboard.roomLabel')} {classItem.room_number || t('common.unknown')}
                 </Text>
-                <Text style={styles.classTeacher}>Teacher: {classItem.teacher_name}</Text>
+                <Text style={styles.classTeacher}>{t('roles.teacher')}: {classItem.teacher_name}</Text>
               </View>
               <View style={styles.classCapacity}>
                 <Text style={styles.capacityNumber}>{classItem.student_count}</Text>
-                <Text style={styles.capacityLabel}>students</Text>
+                <Text style={styles.capacityLabel}>{t('nav.students').toLowerCase()}</Text>
               </View>
             </View>
             <View style={styles.classFooter}>
               <Text style={styles.classRevenue}>
-                Monthly Revenue: {formatCurrency(classItem.monthly_revenue)}
+                {t('dashboard.metrics.monthlyRevenue')}: {formatCurrency(classItem.monthly_revenue)}
               </Text>
               <Text style={styles.classCapacityPercent}>
-                Capacity: {formatPercentage(classItem.capacity_percentage)}
+                {t('education.capacity') || 'Capacity'}: {formatPercentage(classItem.capacity_percentage)}
               </Text>
             </View>
           </View>
@@ -744,39 +747,39 @@ export default function SchoolAdminDashboard({
 
     return (
       <View style={styles.tabContent}>
-        <Text style={styles.sectionTitle}>Financial Overview</Text>
+        <Text style={styles.sectionTitle}>{t('finance.overview')}</Text>
 
         {/* Revenue Cards */}
         <View style={styles.financeGrid}>
           <View style={styles.financeCard}>
-            <Text style={styles.financeTitle}>Monthly Revenue</Text>
+            <Text style={styles.financeTitle}>{t('dashboard.metrics.monthlyRevenue')}</Text>
             <Text style={styles.financeValue}>{formatCurrency(financials.monthly_revenue)}</Text>
           </View>
           <View style={styles.financeCard}>
-            <Text style={styles.financeTitle}>Collection Rate</Text>
+            <Text style={styles.financeTitle}>{t('finance.collectionRate')}</Text>
             <Text style={styles.financeValue}>{formatPercentage(financials.collection_rate)}</Text>
           </View>
         </View>
 
         <View style={styles.financeGrid}>
           <View style={styles.financeCard}>
-            <Text style={styles.financeTitle}>Pending</Text>
+            <Text style={styles.financeTitle}>{t('status.pending')}</Text>
             <Text style={[styles.financeValue, { color: '#F59E0B' }]}>{formatCurrency(financials.pending_payments)}</Text>
           </View>
           <View style={styles.financeCard}>
-            <Text style={styles.financeTitle}>Overdue</Text>
+            <Text style={styles.financeTitle}>{t('status.overdue')}</Text>
             <Text style={[styles.financeValue, { color: '#EF4444' }]}>{formatCurrency(financials.overdue_payments)}</Text>
           </View>
         </View>
 
         {/* Payment Trends */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Trends (Last 6 Months)</Text>
+          <Text style={styles.sectionTitle}>{t('finance.paymentTrends')}</Text>
           {financials.payment_trends.map((trend, index) => (
             <View key={index} style={styles.trendItem}>
               <Text style={styles.trendMonth}>{trend.month}</Text>
               <Text style={styles.trendRevenue}>{formatCurrency(trend.revenue)}</Text>
-              <Text style={styles.trendStudents}>{trend.students} students</Text>
+              <Text style={styles.trendStudents}>{trend.students} {t('nav.students').toLowerCase()}</Text>
             </View>
           ))}
         </View>
@@ -788,7 +791,7 @@ export default function SchoolAdminDashboard({
     if (loading) {
       return (
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading school data...</Text>
+          <Text style={styles.loadingText}>{t('dashboard.loading')}</Text>
         </View>
       );
     }
@@ -796,9 +799,9 @@ export default function SchoolAdminDashboard({
     if (error) {
       return (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Error: {error}</Text>
+          <Text style={styles.errorText}>{t('errors.somethingWentWrong')}: {error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={loadDashboardData}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('errors.tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -843,7 +846,7 @@ export default function SchoolAdminDashboard({
           style={styles.upgradeCtaButton}
           onPress={() => setUpgradeModal({ visible: true, featureName: 'Upgrade to Quantum Pro', description })}
         >
-          <Text style={styles.upgradeCtaButtonText}>Upgrade</Text>
+          <Text style={styles.upgradeCtaButtonText}>{t('subscription.actions.upgrade')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -863,7 +866,7 @@ export default function SchoolAdminDashboard({
 
       <View style={styles.headerSection}>
         <Text style={[styles.greeting, { color: palette.text }]}>{getGreeting()} 👋</Text>
-        <Text style={[styles.subtitle, { color: palette.textSecondary }]}>Manage your preschool with ease</Text>
+        <Text style={[styles.subtitle, { color: palette.textSecondary }]}>{t('dashboard.principalSubtitle')}</Text>
       </View>
 
       <ScrollView
@@ -882,12 +885,12 @@ export default function SchoolAdminDashboard({
 
       {/* Bottom Tab Navigation */}
       <View style={styles.bottomTabNavigation}>
-        {renderBottomTabButton('overview', 'Overview', 'chart.bar.fill')}
-        {renderBottomTabButton('students', 'Students', 'person.3.fill')}
-        {renderBottomTabButton('teachers', 'Teachers', 'person.badge.plus')}
-        {renderBottomTabButton('parents', 'Parents', 'person.2.fill')}
-        {renderBottomTabButton('classes', 'Classes', 'building.2')}
-        {renderBottomTabButton('finances', 'Finances', 'chart.pie.fill')}
+        {renderBottomTabButton('overview', t('dashboard.overview'), 'chart.bar.fill')}
+        {renderBottomTabButton('students', t('nav.students'), 'person.3.fill')}
+        {renderBottomTabButton('teachers', t('nav.teachers'), 'person.badge.plus')}
+        {renderBottomTabButton('parents', t('nav.parents'), 'person.2.fill')}
+        {renderBottomTabButton('classes', t('nav.classes'), 'building.2')}
+        {renderBottomTabButton('finances', t('nav.finances'), 'chart.pie.fill')}
         {/* Manage Subscription direct link */}
         <TouchableOpacity
           style={styles.bottomTabButton}
@@ -895,7 +898,7 @@ export default function SchoolAdminDashboard({
           onPress={() => { try { router.push('/pricing' as any); } catch {} }}
         >
           <IconSymbol name="creditcard.fill" size={24} color="#9CA3AF" />
-          <Text style={styles.bottomTabButtonText}>Manage</Text>
+          <Text style={styles.bottomTabButtonText}>{t('subscription.manageSubscription') || t('common.manage') || 'Manage'}</Text>
         </TouchableOpacity>
       </View>
 

@@ -72,7 +72,20 @@ CREATE TABLE IF NOT EXISTS video_call_participants (
 ALTER TABLE video_calls ENABLE ROW LEVEL SECURITY;
 ALTER TABLE video_call_participants ENABLE ROW LEVEL SECURITY;
 
--- Video calls policies
+-- Video calls policies (idempotent)
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'video_calls' AND policyname = 'Users can view video calls in their preschool'
+  ) THEN
+    EXECUTE 'DROP POLICY "Users can view video calls in their preschool" ON public.video_calls';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'video_calls' AND policyname = 'Teachers can manage video calls'
+  ) THEN
+    EXECUTE 'DROP POLICY "Teachers can manage video calls" ON public.video_calls';
+  END IF;
+END $$;
+
 CREATE POLICY "Users can view video calls in their preschool" ON video_calls
   FOR SELECT USING (
     preschool_id IN (
@@ -89,7 +102,15 @@ CREATE POLICY "Teachers can manage video calls" ON video_calls
     )
   );
 
--- Video call participants policies
+-- Video call participants policies (idempotent)
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'video_call_participants' AND policyname = 'Users can view their video call participations'
+  ) THEN
+    EXECUTE 'DROP POLICY "Users can view their video call participations" ON public.video_call_participants';
+  END IF;
+END $$;
+
 CREATE POLICY "Users can view their video call participations" ON video_call_participants
   FOR SELECT USING (
     user_id IN (

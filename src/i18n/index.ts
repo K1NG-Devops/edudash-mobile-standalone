@@ -4,7 +4,8 @@
  */
 
 import i18n from 'i18next';
-import { initReactI18next, useTranslation } from 'react-i18next';
+import React from 'react';
+import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { I18nManager } from 'react-native';
@@ -85,7 +86,7 @@ export async function initI18n(): Promise<void> {
       react: {
         useSuspense: false // Disable suspense for React Native
       },
-      compatibilityJSON: 'v3' // For React Native compatibility
+      compatibilityJSON: 'v4' // For React Native compatibility
     });
   
   // Set up RTL if needed
@@ -148,16 +149,36 @@ export async function reloadApp(): Promise<void> {
 
 /**
  * Custom hook for translations with proper typing
+ * Avoids react-i18next's hook on web due to a dependency-array bug causing
+ * React's areHookInputsEqual to read undefined.length. We subscribe directly
+ * to i18n language changes instead.
  */
 export function useT() {
-  const { t, i18n: i18nInstance, ready } = useTranslation();
-  
+  const [lang, setLang] = React.useState((i18n.language || 'en') as LanguageCode);
+
+  React.useEffect(() => {
+    const handler = (lng: string) => setLang((lng || 'en') as LanguageCode);
+    i18n.on('languageChanged', handler);
+    return () => {
+      i18n.off('languageChanged', handler);
+    };
+  }, []);
+
+  type TReturn = string;
+  const t = React.useCallback(
+    (key: string, options?: any): TReturn => {
+      const res = i18n.t(key as any, options);
+      return typeof res === 'string' ? res : String(res);
+    },
+    [lang]
+  );
+
   return {
     t,
-    i18n: i18nInstance,
-    ready,
-    language: i18nInstance.language as LanguageCode,
-    changeLanguage: changeAppLanguage
+    i18n,
+    ready: i18n.isInitialized,
+    language: lang,
+    changeLanguage: changeAppLanguage,
   };
 }
 

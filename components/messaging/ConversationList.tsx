@@ -271,6 +271,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   return (
     <FlashList
+      style={{ flex: 1 }}
       data={conversations}
       renderItem={renderItem}
       keyExtractor={keyExtractor}

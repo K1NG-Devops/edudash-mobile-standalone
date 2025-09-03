@@ -492,8 +492,19 @@ class AuthProviderClass extends React.Component<AuthProviderProps, AuthProviderS
     try {
       this.setState({ loading: true });
       await supabase.auth.signOut();
+
+      // Safety fallback: navigate to welcome even if auth listener doesn't fire on device
+      setTimeout(() => {
+        try {
+          router.replace('/');
+        } catch (error) {
+          try { router.push('/'); } catch {}
+        }
+      }, 200);
     } catch (error) {
       console.error('Sign out error:', error);
+      // Attempt navigation even on error to avoid trapping the user in-app
+      try { router.replace('/'); } catch {}
     } finally {
       this.setState({ loading: false });
     }

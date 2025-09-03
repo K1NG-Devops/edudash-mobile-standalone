@@ -6,7 +6,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, View, TouchableOpacityProps } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { useTheme } from '../theme/ThemeProvider';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Button variants configuration
 const buttonVariants = cva(
@@ -96,7 +96,7 @@ export const Button = React.forwardRef<React.ElementRef<typeof TouchableOpacity>
     onPress,
     ...props 
   }, ref) => {
-    const { colors } = useTheme();
+    const { theme } = useTheme();
     const isDisabled = disabled || loading;
 
     // Get the appropriate colors based on variant
@@ -104,13 +104,13 @@ export const Button = React.forwardRef<React.ElementRef<typeof TouchableOpacity>
       switch (variant) {
         case 'outline':
         case 'ghost':
-          return colors.primary;
+          return theme.colors.primary;
         case 'destructive':
-          return colors.destructiveForeground;
+          return theme.colors.error;
         case 'secondary':
-          return colors.secondaryForeground;
+          return theme.colors.secondary;
         default:
-          return colors.primaryForeground;
+          return theme.colors.primary;
       }
     };
 

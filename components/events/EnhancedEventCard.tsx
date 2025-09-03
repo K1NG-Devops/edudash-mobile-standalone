@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import { useT } from '@/i18n';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import NotificationIndicator from '@/components/ui/NotificationIndicator';
 import { EnhancedEvent, EventCardProps } from '@/types/events';
@@ -10,12 +11,16 @@ const EnhancedEventCard: React.FC<EventCardProps> = ({
   event,
   onPress,
   onParticipate,
+  onCancel,
+  onViewParticipants,
+  canViewParticipants,
   showActions = true,
   compact = false,
 }) => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
+  const { t } = useT();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -67,11 +72,11 @@ const EnhancedEventCard: React.FC<EventCardProps> = ({
   };
 
   const getStatusText = (status: EnhancedEvent['status']) => {
-    const texts = {
-      upcoming: 'Upcoming',
-      ongoing: 'Live Now',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
+    const texts: Record<string, string> = {
+      upcoming: t('events.status.upcoming'),
+      ongoing: t('events.status.ongoing'),
+      completed: t('events.status.completed'),
+      cancelled: t('events.status.cancelled'),
     };
     return texts[status] || status;
   };
@@ -153,10 +158,10 @@ const EnhancedEventCard: React.FC<EventCardProps> = ({
         {isLive && (
           <View style={styles.liveIndicator}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE EVENT</Text>
-            <Text style={[styles.liveSubtext, { color: palette.textSecondary }]}>
-              Happening now
-            </Text>
+              <Text style={[styles.liveText]}>{t('events.live')}</Text>
+              <Text style={[styles.liveSubtext, { color: palette.textSecondary }]}>
+                {t('events.happeningNow')}
+              </Text>
           </View>
         )}
       </View>
@@ -168,7 +173,7 @@ const EnhancedEventCard: React.FC<EventCardProps> = ({
           {hasNewUpdates && (
             <View style={styles.updatesBadge}>
               <NotificationIndicator count={event.recent_updates!.length} size="small" />
-              <Text style={styles.updatesText}>New Updates</Text>
+              <Text style={styles.updatesText}>{t('events.newUpdates')}</Text>
             </View>
           )}
         </View>
@@ -202,7 +207,7 @@ const EnhancedEventCard: React.FC<EventCardProps> = ({
             <View style={styles.detailRow}>
               <IconSymbol name="person.2" size={16} color={palette.textSecondary} />
               <Text style={[styles.detailText, { color: palette.textSecondary }]}>
-                {event.stats?.participants_count || 0}/{event.max_participants} participants
+                {event.stats?.participants_count || 0}/{event.max_participants} {t('events.participants')}
               </Text>
             </View>
           )}
@@ -233,7 +238,7 @@ const EnhancedEventCard: React.FC<EventCardProps> = ({
               <View style={styles.statItem}>
                 <IconSymbol name="bubble.left" size={14} color={palette.textSecondary} />
                 <Text style={[styles.statText, { color: palette.textSecondary }]}>
-                  {event.stats.updates_count} update{event.stats.updates_count !== 1 ? 's' : ''}
+              {event.stats.updates_count} {event.stats.updates_count !== 1 ? t('events.updates') : t('events.update')}
                 </Text>
               </View>
             )}
@@ -241,7 +246,7 @@ const EnhancedEventCard: React.FC<EventCardProps> = ({
               <View style={styles.statItem}>
                 <IconSymbol name="photo" size={14} color={palette.textSecondary} />
                 <Text style={[styles.statText, { color: palette.textSecondary }]}>
-                  {event.stats.media_count} photo{event.stats.media_count !== 1 ? 's' : ''}
+              {event.stats.media_count} {event.stats.media_count !== 1 ? t('events.photos') : t('events.photo')}
                 </Text>
               </View>
             )}
@@ -249,7 +254,7 @@ const EnhancedEventCard: React.FC<EventCardProps> = ({
               <View style={styles.statItem}>
                 <IconSymbol name="heart" size={14} color={palette.textSecondary} />
                 <Text style={[styles.statText, { color: palette.textSecondary }]}>
-                  {event.stats.reactions_count} reaction{event.stats.reactions_count !== 1 ? 's' : ''}
+              {event.stats.reactions_count} {event.stats.reactions_count !== 1 ? t('events.reactions') : t('events.reaction')}
                 </Text>
               </View>
             )}
@@ -274,18 +279,40 @@ const EnhancedEventCard: React.FC<EventCardProps> = ({
       {/* Actions */}
       {showActions && event.status === 'upcoming' && (
         <View style={[styles.cardActions, { borderTopColor: palette.outline }]}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: typeColor }]}
-            onPress={() => onParticipate?.(event)}
-          >
-            <IconSymbol name="person.badge.plus" size={18} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>
-              {event.user_participation ? 'Registered' : 'Join Event'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, styles.secondaryActionButton, { borderColor: palette.outline }]}>
-            <IconSymbol name="square.and.arrow.up" size={18} color={palette.text} />
-          </TouchableOpacity>
+          {!event.user_participation ? (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: typeColor }]}
+              onPress={() => onParticipate?.(event)}
+            >
+              <IconSymbol name="person.badge.plus" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>
+                {t('events.join')}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: '#EF4444' }]}
+              onPress={() => onCancel?.(event)}
+            >
+              <IconSymbol name="xmark.circle" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>
+                {t('common.cancel')}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {canViewParticipants ? (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.secondaryActionButton, { borderColor: palette.outline }]}
+              onPress={() => onViewParticipants?.(event)}
+              accessibilityLabel={t('events.viewParticipants')}
+            >
+              <IconSymbol name="person.2" size={18} color={palette.text} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[styles.actionButton, styles.secondaryActionButton, { borderColor: palette.outline }]} accessibilityLabel={t('events.share')}>
+              <IconSymbol name="square.and.arrow.up" size={18} color={palette.text} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </TouchableOpacity>

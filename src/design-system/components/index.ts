@@ -12,9 +12,10 @@ export * from './Icon';
 export * from './Badge';
 export * from './PageHeader';
 export * from './EmptyState';
+export * from './FloatingButton';
 
-// Theme Components
-export * from '../theme/ThemeProvider';
+// Theme Components (using main app ThemeProvider from contexts/ThemeContext)
+// export * from '../theme/ThemeProvider'; // Disabled - using main app theme
 export * from '../theme/ThemeToggle';
 export * from '../theme/NativeWindTheme';
 

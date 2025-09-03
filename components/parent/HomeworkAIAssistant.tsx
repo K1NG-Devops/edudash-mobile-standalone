@@ -92,6 +92,9 @@ export const HomeworkAIAssistant: React.FC<HomeworkAIAssistantProps> = ({
     setShowQuickHelp(false);
   };
 
+  const [lastTriedQuestion, setLastTriedQuestion] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
+
   const handleSendMessage = async () => {
     if (!userQuestion.trim()) return;
 
@@ -109,62 +112,41 @@ export const HomeworkAIAssistant: React.FC<HomeworkAIAssistantProps> = ({
     setShowQuickHelp(false);
 
     try {
-      let aiResponse: AIHelpResponse;
-      
-      if (selectedAssignment) {
-        // Get specific homework help
-        aiResponse = await HomeworkService.getHomeworkHelp(
-          selectedAssignment.title,
-          userMessage.content,
-          `${studentAge} years old`,
-          studentId,
-          studentName,
-          parentName,
-          language,
-          hintsOnly
-        );
-      } else {
-        // Get general educational guidance
-        aiResponse = await HomeworkService.getHomeworkHelp(
-          'General Learning Support',
-          userMessage.content,
-          `${studentAge} years old`,
-          studentId,
-          studentName,
-          parentName,
-          language,
-          hintsOnly
-        );
-      }
+      setLastTriedQuestion(userMessage.content);
+      setLastError(null);
 
-      // Format AI response for chat
-      let responseContent = aiResponse.explanation;
-      
-      if (aiResponse.hints.length > 0) {
-        responseContent += '\n\n💡 **Helpful Hints:**\n';
-        aiResponse.hints.forEach((hint, index) => {
-          responseContent += `${index + 1}. ${hint}\n`;
-        });
-      }
+      // Create a placeholder AI message to stream into
+      const aiMsgId = (Date.now() + 1).toString();
+      setChatMessages(prev => [...prev, { id: aiMsgId, type: 'ai', content: '', timestamp: new Date() }]);
 
-      if (aiResponse.examples.length > 0) {
-        responseContent += '\n\n📝 **Try These Examples:**\n';
-        aiResponse.examples.forEach((example, index) => {
-          responseContent += `• ${example}\n`;
-        });
-      }
+      const assignmentTitle = selectedAssignment ? selectedAssignment.title : 'General Learning Support';
 
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'ai',
-        content: responseContent,
-        timestamp: new Date()
-      };
+      await HomeworkService.streamHomeworkHelp(
+        assignmentTitle,
+        userMessage.content,
+        `${studentAge} years old`,
+        studentId,
+        studentName,
+        parentName,
+        language,
+        hintsOnly,
+        {
+          onDelta: (chunk) => {
+            setChatMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, content: (m.content || '') + chunk } : m));
+          },
+          onFinal: ({ explanation }) => {
+            setChatMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, content: explanation } : m));
+          },
+          onError: (err) => {
+            setLastError(err.message);
+            setChatMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, content: "I'm sorry, I'm having trouble connecting right now. Please try again." } : m));
+          }
+        }
+      );
 
-      setChatMessages(prev => [...prev, aiMessage]);
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting AI help:', error);
+      setLastError(error?.message || 'Request failed');
       
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -308,6 +290,15 @@ export const HomeworkAIAssistant: React.FC<HomeworkAIAssistantProps> = ({
         <View style={[styles.inputSection, { backgroundColor: palette.surface, borderTopColor: palette.outline }]}>
           {/* Controls row: Hints-only toggle and AI usage */}
           <View style={styles.controlsRow}>
+            {lastError && lastTriedQuestion && !isLoading && (
+              <TouchableOpacity
+                onPress={() => { setUserQuestion(lastTriedQuestion); setTimeout(handleSendMessage, 0); }}
+                style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#F59E0B', borderRadius: 8, marginRight: 8 }}
+                accessibilityLabel="Retry last request"
+              >
+                <Text style={{ color: '#111827', fontWeight: '600' }}>Retry</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.hintsRow}>
               <Switch
                 value={hintsOnly}

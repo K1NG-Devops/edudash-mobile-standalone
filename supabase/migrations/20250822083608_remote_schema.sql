@@ -480,30 +480,36 @@ $$;
 ALTER FUNCTION "public"."generate_invoice_number"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_active_connections"() RETURNS TABLE("connection_id" "uuid", "user_id" "uuid", "preschool_id" "uuid", "connection_type" "text", "status" "text", "created_at" timestamp with time zone, "updated_at" timestamp with time zone)
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    AS $$
+DO $$ BEGIN
+  -- Only create this TABLE-returning variant if the function doesn't already exist.
+  -- In dev, a JSON-returning version may already be present.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public' AND p.proname = 'get_active_connections'
+  ) THEN
+    EXECUTE 'CREATE OR REPLACE FUNCTION public.get_active_connections() RETURNS TABLE(connection_id uuid, user_id uuid, preschool_id uuid, connection_type text, status text, created_at timestamptz, updated_at timestamptz)
+LANGUAGE plpgsql SECURITY DEFINER
+AS $fn$
 BEGIN
-  -- For now, return a simple mock structure
-  -- You can customize this based on your actual requirements
   RETURN QUERY
   SELECT 
     gen_random_uuid() as connection_id,
     auth.uid() as user_id,
     (SELECT id FROM preschools LIMIT 1) as preschool_id,
-    'active'::text as connection_type,
-    'connected'::text as status,
+    ''active''::text as connection_type,
+    ''connected''::text as status,
     now() as created_at,
     now() as updated_at
   WHERE auth.uid() IS NOT NULL;
 END;
-$$;
+$fn$;';
 
-
-ALTER FUNCTION "public"."get_active_connections"() OWNER TO "postgres";
-
-
-COMMENT ON FUNCTION "public"."get_active_connections"() IS 'Returns active connections for the current user';
+    -- Set owner and comment only if we created it here
+    EXECUTE 'ALTER FUNCTION public.get_active_connections() OWNER TO postgres';
+    EXECUTE 'COMMENT ON FUNCTION public.get_active_connections() IS ''Returns active connections for the current user''';
+  END IF;
+END $$;
 
 
 

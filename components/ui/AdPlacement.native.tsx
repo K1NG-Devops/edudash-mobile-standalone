@@ -1,13 +1,12 @@
  
 import React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 interface AdPlacementProps { children: React.ReactNode }
 
 const AdPlacement = ({ children }: AdPlacementProps) => {
-  const isProd = process.env.NODE_ENV === 'production';
-  // Only enable ads in production when explicitly allowed
-  const enableAds = isProd && process.env.EXPO_PUBLIC_ENABLE_ADS === 'true';
+  // Allow ads in any env when explicitly enabled; use test IDs in non-production
+  const enableAds = process.env.EXPO_PUBLIC_ENABLE_ADS === 'true';
   if (!enableAds) return <>{children}</>;
 
   // Try to load the native ads module at runtime. If unavailable (e.g. Expo Go), skip ads gracefully.
@@ -22,7 +21,16 @@ const AdPlacement = ({ children }: AdPlacementProps) => {
     return <>{children}</>;
   }
 
-  const unitId = process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER_UNIT_ID || 'ca-app-pub-3940256099942544/6300978111';
+  const appEnv = String(process.env.EXPO_PUBLIC_ENVIRONMENT || '').toLowerCase();
+  const isProd = appEnv === 'production' || process.env.NODE_ENV === 'production';
+  const testId = Platform.OS === 'ios'
+    ? 'ca-app-pub-3940256099942544/2934735716'
+    : 'ca-app-pub-3940256099942544/6300978111';
+  const prodId = Platform.OS === 'ios'
+    ? (process.env.EXPO_PUBLIC_ADMOB_IOS_BANNER_UNIT_ID || testId)
+    : (process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER_UNIT_ID || testId);
+  const unitId = isProd ? prodId : testId;
+
   return (
     <View>
       {children}

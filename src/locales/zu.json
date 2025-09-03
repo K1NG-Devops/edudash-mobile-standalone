@@ -1,6 +1,8 @@
 {
   "common": {
     "appName": "EduDash Pro",
+    "seeAll": "Bona konke",
+    "manage": "Phatha",
     "ok": "Kulungile",
     "cancel": "Khansela",
     "save": "Londoloza",
@@ -30,7 +32,16 @@
     "viewMore": "Buka okuningi",
     "viewLess": "Buka okuncane",
     "optional": "Akuphoqelekile",
-    "required": "Kuyadingeka"
+    "required": "Kuyadingeka",
+    "unknown": "Okungaziwa",
+    "comingSoon": "Iyeza maduze",
+    "unassigned": "Akukabi kunikeziwe",
+    "success": "Impumelelo",
+    "child": "Ingane",
+    "lastActive": "Ubekade esebenza",
+    "lastLogin": "Ukungena kokugcina",
+    "never": "Akukaze",
+    "noSchool": "Akukho sikole"
   },
   "nav": {
     "home": "Ikhaya",
@@ -47,7 +58,8 @@
     "reports": "Imibiko",
     "help": "Usizo",
     "about": "Mayelana",
-    "logout": "Phuma"
+    "logout": "Phuma",
+    "finances": "Ezezimali"
   },
   "auth": {
     "signIn": "Ngena",
@@ -68,7 +80,20 @@
     "invalidCredentials": "I-imeyili noma iphasiwedi ayilungile",
     "accountCreated": "I-akhawunti yenziwe ngempumelelo",
     "passwordResetSent": "Isixhumanisi sokubuyisela iphasiwedi sithunyelwe ku-imeyili yakho",
-    "verifyEmail": "Sicela uqinisekise ikheli lakho le-imeyili"
+    "verifyEmail": "Sicela uqinisekise ikheli lakho le-imeyili",
+    "contactAdminForSetup": "Xhumana nomphathi mayelana nokulungiswa kwe-akhawunti",
+    "signInSubtitle": "Ngena ku-akhawunti yakho ye-EduDash Pro",
+    "passwordUpdatedTitle": "Iphasiwedi iguquliwe! 🎉",
+    "passwordUpdatedMessage": "Iphasiwedi yakho iguqulwe ngempumelelo. Manje ungakwazi ukungena ngephasiwedi entsha.",
+    "showPassword": "Bonisa",
+    "hidePassword": "Fihla",
+    "passwordResetRequired": "Kudingeka ukusetha kabusha iphasiwedi",
+    "passwordResetRequiredMessage": "Ngokuphepha kwakho, sicela usethe iphasiwedi entsha ngaphambi kokuqhubeka.",
+    "setNewPassword": "Setha iphasiwedi entsha",
+    "signInFailed": "Ukungena kwehlulekile",
+    "unexpectedError": "Kunenkinga engalindelekile. Sicela uzame futhi.",
+    "welcomeBack": "Siyakwamukela futhi",
+    "fillAllFields": "Sicela ugcwalise zonke izinkambu"
   },
   "settings": {
     "title": "Izilungiselelo",
@@ -98,11 +123,18 @@
       "currencyExample": "Isibonelo semali"
     },
     "rtlPreview": "Ukubuka kuqala kwe-RTL",
-    "languageChanged": "Ulimi lushintshele ku-{{language}}"
+    "languageChanged": "Ulimi lushintshele ku-{{language}}",
+    "admin": "Umphathi",
+    "schoolSettings": "Izilungiselelo zesikole",
+    "sendTestNotification": "Thumela izaziso zokuhlola",
+    "accountSubscription": "I-akhawunti & ukubhalisa",
+    "viewPlansUpgrade": "Buka izinhlelo & Thuthukisa",
+    "usageBilling": "Ukusetshenziswa & ama-invoyisi"
   },
   "errors": {
     "network": "Iphutha lenethiwekhi",
     "unknown": "Iphutha elingaziwa",
+    "reportsLoadFailed": "Yehlulekile ukulayisha imibiko",
     "timeout": "Isicelo siphelelwe isikhathi",
     "serverError": "Iphutha leseva",
     "notFound": "Akutholakali",
@@ -130,7 +162,9 @@
     "playVideo": "Dlala ividiyo",
     "pauseVideo": "Misa ividiyo",
     "muteAudio": "Thulisa umsindo",
-    "unmuteAudio": "Vula umsindo"
+    "unmuteAudio": "Vula umsindo",
+    "openMessages": "Vula imilayezo",
+    "openMessagesHint": "Ivula isikrini semilayezo"
   },
   "roles": {
     "teacher": "Uthisha",
@@ -141,7 +175,32 @@
     "superadmin": "Umphathi Omkhulu"
   },
   "dashboard": {
+    "schoolStatisticsTitle": "Izibalo zesikole",
+    "attendanceToday": "{{percent}}% Ukuba khona namuhla",
+    "newThisMonth": "okusha kule nyanga",
+    "activeClasses": "amakilasi asebenzayo",
+    "engagedFamilies": "Imindeni ebambe iqhaza",
+    "principalTools": "Amathuluzi kaThishanhloko",
     "welcome": "Siyakwamukela, {{name}}",
+    "principalSubtitle": "Phatha isikole sakho sezingane kalula",
+    "schoolOverviewTitle": "Uhlolojikelele lwesikole",
+    "schoolOverviewSubtitle": "Imibiko yesikhathi sangempela ngesikole sakho",
+    "upgradeYourSchoolTitle": "Thuthukisa isikole sakho",
+    "upgradeYourSchoolDescription": "Vula izibalo ze-premium, usizo oluphuthumayo, nokunye okwengeziwe esikoleni sakho.",
+    "systemAlerts": "Izexwayiso zesistimu",
+    "metrics": {
+      "monthlyRevenue": "Imali engenayo yanyanga zonke",
+      "attendanceRate": "Izinga lokuba khona",
+      "thisMonthAverage": "Isilinganiso salenyanga",
+      "avgPerStudent": "isilinganiso ngomfundi"
+    },
+    "unlockTeacherPremiumTitle": "Vula i-Premium Yothisha",
+    "unlockTeacherPremiumDesc": "Izifundo ze-AI ezingenamkhawulo, ukugrida umsebenzi wasekhaya, nezibalo ezithuthukile zabasebenzi.",
+    "unlockParentPremiumTitle": "Vula i-Premium Yabazali",
+    "unlockParentPremiumDesc": "Khulisa ukubamba iqhaza kwabazali ngezibalo ze-premium nezaziso.",
+    "teacherTagline": "Amathuluzi owadingayo okufundisa, ngokubuka nje",
+    "teachingAt": "Ufundisa ku-{{name}}",
+    "noDueDate": "Ayikho idethi yokugcina",
     "overview": "Isifingqo",
     "recentActivity": "Umsebenzi Wakamuva",
     "upcomingEvents": "Imicimbi Ezayo",
@@ -149,9 +208,195 @@
     "statistics": "Izibalo",
     "todaySchedule": "Isheduli Yanamuhla",
     "announcements": "Izimemezelo",
-    "noDataAvailable": "Ayikho idatha etholakalayo"
+    "noDataAvailable": "Ayikho idatha etholakalayo",
+    "goodMorning": "Usuku oluhle!",
+    "goodAfternoon": "Ntambama enhle!",
+    "goodEvening": "Ubusuku obuhle!",
+    "welcomeRole": "Siyakwamukela kudeshibhodi yakho ye-{{role}}",
+    "managingSchool": "🏫 Uphethe u-{{name}}",
+    "teacherDashboard": "👩‍🏫 Ideshibhodi kothisha",
+    "adminDashboard": "👨‍💼 Ideshibhodi yomphathi",
+    "childEvaluations": {
+      "title": "Ukuhlolwa kwezingane",
+      "subtitle": "Imibiko nokuhlolwa kwabafundi"
+    },
+    "videoCalls": {
+      "title": "Ucingo lwevidiyo",
+      "subtitle": "Hlela imihlangano yabazali"
+    },
+    "messages": { "subtitle": "Xhumana nabazali" },
+    "myClasses": {
+      "title": "Amakilasi ami",
+      "subtitle": "Phatha abafundi nemisebenzi"
+    },
+    "settings": { "subtitle": "Uhlelo lokumisa" },
+    "users": {
+      "title": "Abasebenzisi",
+      "subtitle": "Phatha othisha nabazali"
+    },
+    "todaysOverview": "📊 Uhlolojikelele lwanamuhla",
+    "cards": {
+      "completed": "Kuphothuliwe",
+      "pending": "Kusele",
+      "thisMonth": "Kule nyanga",
+      "ofThisMonth": "kuka-{{count}} kule nyanga",
+      "leftThisMonth": "esele kule nyanga",
+      "unlimited": "Akunamkhawulo",
+      "aiLessons": { "title": "Izifundo ze-AI" },
+      "homeworkAi": { "title": "AI Yomsebenzi Wasekhaya" },
+      "aiTutoring": { "title": "Ukuqeqeshwa kwe-AI" },
+      "analytics": { "title": "Izibalo", "reportsViewed": "Imibiko eboniwe" },
+      "premiumOnly": "Okukhethekile (Premium)"
+    },
+    "teacherSummary": {
+      "reportsCreated": "Imibiko yadalwa",
+      "messagesSent": "Imilayezo ithunyelwe",
+      "videoCalls": "Ucingo lwevidiyo"
+    },
+    "teacher": { "performanceRating": "Isilinganiso sokusebenza" },
+    "quickOverview": "Uhlolojikelele olusheshayo",
+    "loading": "Iyalayisha ideshibhodi yakho...",
+    "loadingFailed": "Ihlulekile ukulayisha idatha yedeshibhodi",
+    "updates": {
+      "recent": "Izibuyekezo zakamuva",
+      "newAssignmentTitle": "Umsebenzi omusha ushicilelwe",
+      "checkAssignments": "Bheka umsebenzi wakho wasekhaya",
+      "schoolAnnouncementTitle": "Isimemezelo sesikole",
+      "checkLatestUpdates": "Bheka izibuyekezo zakamuva"
+    },
+    "achievements": { "recent": "Izimpumelelo zakamuva" },
+    "mood": { "today": "Isimo sengqondo sanamuhla" },
+    "progress": { "weekly": "Inqubekela phambili yeviki" },
+    "actions": {
+      "createLesson": "Dala Isifundo",
+      "createClass": "Dala Ikilasi",
+      "browseLessons": "Pheqa Izifundo",
+      "createAssignment": "Dala Umsebenzi",
+      "newEvent": "Umcimbi omusha",
+      "announce": "Memezela",
+      "messageAll": "Thumela kubo bonke",
+      "addNewStudent": "Nezela umfundi omusha",
+      "hireTeacher": "Qasha uthisha",
+      "messageAllParentsStaff": "Thumela kubo bonke (Abazali + Abasebenzi)",
+      "openMessages": "Vula imilayezo",
+      "getSupport": "Thola usizo",
+      "aiLessonGenerator": "Umakhi wezifundo ze-AI",
+      "aiLessonGenerator_description": "Yakha izifundo ezenzelwe wena usebenzisa i-AI",
+      "gradeHomework": "Linganisa umsebenzi wasekhaya",
+      "gradeHomework_description": "Linganisa umsebenzi wasekhaya ngokuzenzakalela nge-AI",
+      "stemActivities": "Imisebenzi ye-STEM",
+      "stemActivities_description": "Finyelela umtapo wolwazi wemisebenzi ye-STEM ye-premium",
+      "progressAnalysis": "Ukuhlaziywa kwenqubekela phambili",
+      "progressAnalysis_description": "Izibalo ezithuthukile nokulandelela inqubekela phambili",
+      "support": "Usizo"
+    },
+    "lesson": {
+      "public": "Kawonkhe umuntu",
+      "private": "Kuyimfihlo",
+      "durationMinutes": "Isikhathi: {{minutes}} imin",
+      "level": "Izinga: {{level}}"
+    },
+    "events": {
+      "assignmentDue": "Umsebenzi wasekhaya uzophela"
+    },
+    "roomLabel": "Igumbi",
+    "maxCapacity": "Ubukhulu: {{max}}",
+    "studentsCount": "{{count}} Abafundi",
+    "noRecentActivity": "Azikho izenzo zakamuva.",
+    "pendingTasks": "Imisebenzi esele",
+    "noPendingTasks": "Azikho imisebenzi esele.",
+    "currentLessons": "Izifundo zamanje",
+    "viewAllLessons": "Buka zonke izifundo",
+    "recentHomeworkAssignments": "Imisebenzi yasekhaya yakamuva",
+    "empty": {
+      "noClassesTitle": "Awekho amakilasi okwamanje",
+      "noClassesDescription": "Dala ikilasi lakho lokuqala ukuze uqale.",
+      "noLessonsTitle": "Awekho izifundo okwamanje",
+      "noLessonsDescription": "Dala isifundo sakho sokuqala noma pheqa umtapo wezifundo.",
+      "noHomeworkTitle": "Awukho umsebenzi onikeziwe",
+      "noHomeworkDescription": "Dala umsebenzi wasekhaya wekilasi lakho."
+    },
+    "dueInDays_one": "Kufanele kwenziwe ngosuku olu-{{count}}",
+    "dueInDays_other": "Kufanele kwenziwe ezinsukwini ezingu-{{count}}",
+    "dueToday": "Kufanele kwenziwe namuhla",
+    "overdueByDays_one": "Sekudlule {{count}} usuku",
+    "overdueByDays_other": "Sekudlule izinsuku ezingu-{{count}}",
+    "classLabel": "Ikilasi",
+    "assigned": "Kuniketwe",
+    "general": "Okuvamile",
+    "recentActivities": "Imisebenzi yakamuva",
+    "parent": {
+      "welcome": "Siyakwamukela kudeshibhodi yabazali",
+      "seeHowChildDoing": "Ake sibone ukuthi u-{{name}} uhamba kanjani namuhla",
+      "recentUpdates": "Izibuyekezo zakamuva",
+      "quickOverview": "Uhlolojikelele olusheshayo",
+      "childrenLabel": "Izingane",
+      "engagementLabel": "Ukubamba iqhaza",
+      "totalPaid": "Inkokhelo iyonke",
+      "noTeacher": "Akukho thisha",
+      "noTeacherAssigned": "Akukho thisha onikeziwe",
+      "readyToRegister": "Ulungele ukubhalisa ingane yakho? Thepha ikhadi elingenhla ukuze uqale!",
+      "childRegistered": "Ingane ibhalisiwe!",
+      "completeYourProfile": "Gcwalisa iphrofayela yakho",
+      "profileComplete": "Iphrofayela iphelele",
+      "provideContactDetails": "Nikela imininingwane yokuxhumana ukuze sikhulumisane",
+      "contactReady": "Imininingwane yakho yokuxhumana isilungile",
+      "registerYourChild": "Bhalisa ingane yakho",
+      "addChildInfo": "Faka imininingwane yengane yakho ukuze kubhaliswe",
+      "childIsEnrolled": "Ingane yakho ibhalisiwe futhi isilungele",
+      "noChildrenTitle": "Azikho izingane ezitholiwe",
+      "noChildrenDescription": "Awukabhalisi izingane okwamanje",
+      "registerChild": "Bhalisa ingane",
+      "upcomingEventsTitle": "Imicimbi ezayo"
+    }
+  },
+  "finance": {
+    "overview": "Uhlolojikelele lwezezimali",
+    "collectionRate": "Izinga lokuqoqwa",
+    "paymentTrends": "Izitayela zokukhokha (Izinyanga ezi-6 ezedlule)",
+    "pendingPayments": "Izinkokhelo ezisalindile"
+  },
+  "status": {
+    "pending": "Kusele",
+    "overdue": "Sekuphelelwe yisikhathi",
+    "current": "Okukhona",
+    "paid": "Kukhokhiwe"
+  },
+  "reports": {
+    "schoolTitle": "Imibiko yesikole",
+    "schoolSubtitle": "Izinkomba ezibalulekile zesikole sakho"
+  },
+  "events": {
+    "title": "Imicimbi",
+    "join": "Joyina umcimbi",
+    "joined": "Ujoyine umcimbi",
+    "share": "Yabelana",
+    "noEvents": "Akukabi nemicimbi",
+    "loading": "Iyalayisha imicimbi…",
+    "loadMore": "Ilayisha eminye imicimbi...",
+    "endOfList": "Ufike ekugcineni",
+    "live": "UMCIMBI OBUKAYO",
+    "happeningNow": "Kuyenzeka manje",
+    "newUpdates": "Izibuyekezo ezintsha",
+    "update": "isbuyekezo",
+    "updates": "izibuyekezo",
+    "photo": "isithombe",
+    "photos": "izithombe",
+    "reaction": "ukuphendula",
+    "reactions": "izimpendulo",
+    "participants": "ababambiqhaza",
+    "participantsTitle": "Ababambiqhaza",
+    "viewParticipants": "Buka ababambiqhaza",
+    "noParticipants": "Akukabikho ababambiqhaza",
+    "status": {
+      "upcoming": "Ezayo",
+      "ongoing": "Bukhoma",
+      "completed": "Qedile",
+      "cancelled": "Kukhanseliwe"
+    }
   },
   "education": {
+    "capacity": "Amandla",
     "lesson": "Isifundo",
     "lessons": "Izifundo",
     "homework": "Umsebenzi wasekhaya",
@@ -171,6 +416,202 @@
     "schedule": "Isheduli",
     "exam": "Isivivinyo",
     "test": "Ukuhlolwa",
-    "quiz": "Imibuzo"
+    "quiz": "Imibuzo",
+    "activities": "Imisebenzi",
+    "completion": "Ukuqedela"
+  },
+  "subscription": {
+    "title": "Ukubhalisa",
+    "loading": "Iyalayisha ukubhalisa…",
+    "manageSubscription": "Phatha ukubhalisa",
+    "status": {
+      "free": "Mahhala",
+      "trial": "Isivivinyo",
+      "active": "Iyasebenza",
+      "canceled": "Kukhanseliwe",
+      "expired": "Kuphelelwe yisikhathi",
+      "pastDue": "Sekudlule isikhathi",
+      "inactive": "Ayisebenzi"
+    },
+    "plan": {
+      "freePlan": "Uhlelo lwamahhala"
+    },
+    "actions": {
+      "upgrade": "Thuthukisa",
+      "upgradeNow": "Thuthukisa manje",
+      "goPremium": "Thuthukisa ube yi-Premium",
+      "manageSubscription": "Phatha ukubhalisa",
+      "upgradeUnlimited": "Thuthukisa ukuze uthole ukungena okungenamkhawulo",
+      "upgradeToUnlock": "Thuthukisa ukuze uvule"
+    },
+    "usage": {
+      "title": "Ukusetshenziswa kwamanje",
+      "aiLessons": "Izifundo ze-AI",
+      "homeworkAI": "AI Yomsebenzi Wasekhaya",
+      "loading": "Ilayisha ukusetshenziswa...",
+      "thisMonthTitle": "Ukusetshenziswa kwale nyanga",
+      "summaryText": "Usebenzise {{aiUsed}} kwezingu-{{aiLimit}} izifundo ze-AI kanye {{hwUsed}} kwezingu-{{hwLimit}} ukuhlolwa komsebenzi wasekhaya kule nyanga."
+    },
+    "trial": {
+      "expiresIn_one": "Isivivinyo siphela ngosuku olulodwa",
+      "expiresIn_other": "Isivivinyo siphela ngemva kwezinsuku ezingu-{{count}}"
+    },
+    "alerts": {
+      "upgradeRequired": "Kudingeka ukuthuthukisa",
+      "limitReached": "Umkhawulo usufeziwe",
+      "premiumRequiredTitle": "Kudingeka i-Premium",
+      "premiumRequiredMessage": "Lesi sici sidinga uhlelo lwe-Premium."
+    },
+    "billing": {
+      "month": "inyanga",
+      "year": "unyaka"
+    }
+  },
+  "relative": {
+    "justNow": "manje nje",
+    "minutes_one": "{{count}} umzuzu odlule",
+    "minutes_other": "{{count}} imizuzu edlule",
+    "hours_one": "{{count}} ihora eledlule",
+    "hours_other": "{{count}} amahora edlule",
+    "days_one": "{{count}} usuku oludlule",
+    "days_other": "{{count}} izinsuku ezedlule"
+  },
+  "date": {
+    "today": "Namuhla",
+    "tomorrow": "Kusasa"
+  },
+  "age": {
+    "years_one": "{{count}} unyaka ubudala",
+    "years_other": "{{count}} iminyaka ubudala"
+  },
+  "payments": {
+    "uploadPOP": "Layisha ubufakazi bokukhokha",
+    "subscriptionPayment": "Inkokhelo yokubhalisa",
+    "proof": {
+      "successTitle": "Impumelelo",
+      "successMessage": "Ubufakazi bokukhokha buhanjisiwe ngempumelelo. Sizobubuyekeza bese sibuyekeza ukubhalisa kwakho maduzane.",
+      "errorTitle": "Iphutha",
+      "errorMessage": "Kwehlulekile ukuthumela ubufakazi bokukhokha. Sicela uzame futhi."
+    }
+  },
+  "profile": {
+    "complete": "Iphrofayela iphelele",
+    "completeProfileAction": "Gcwalisa iphrofayela"
+  },
+  "principal": {
+    "tools": {
+      "schoolSetup": "Ukusetha isikole",
+      "schoolSetupSubtitle": "Amakilasi & imisebenzi",
+      "teacherManagement": "Ukuphatha othisha",
+      "teacherManagementSubtitle": "Mema & phatha othisha",
+      "schoolCode": "Ikhodi yesikole",
+      "schoolCodeSubtitle": "Amakhodi esimemo sabazali",
+      "diagnostics": "Izokuxilonga",
+      "diagnosticsSubtitle": "Qinisekisa izinombolo & RLS",
+      "schoolAnalytics": "Izibalo zesikole",
+      "schoolAnalyticsSubtitle": "Ukuqonda ukusebenza",
+      "createAnnouncement": "Dala isimemezelo",
+      "createAnnouncementSubtitle": "Yazisa bonke abazali",
+      "schoolSettingsSubtitle": "Hlela izinqubomgomo"
+    }
+  },
+  "admin": {
+    "activity": {
+      "newParentRegistrations": "Ukubhalisa kwabazali okusha okungu-{{count}} namuhla",
+      "paymentsReceived": "Izinkokhelo ezingu-{{count}} ezamukelwe kuleli viki",
+      "teacherEvaluationsPending": "Ukuhlolwa kothisha okungu-{{count}} okusalele",
+      "newMessagesFromParents": "Imilayezo emisha engu-{{count}} evela kubazali"
+    },
+    "quick": {
+      "userManagementSubtitle": "Phatha abasebenzi nabazali",
+      "financialReportsSubtitle": "Buka imali engenayo nezindleko",
+      "studentAnalyticsTitle": "Izibalo zabafundi",
+      "studentAnalyticsSubtitle": "Ukubhaliswa nenqubekela phambili",
+      "communicationTitle": "Ukuxhumana",
+      "communicationSubtitle": "Thumela izimemezelo",
+      "systemSettingsSubtitle": "Lungisa isikole",
+      "supportCenterTitle": "Isikhungo sosizo",
+      "supportCenterSubtitle": "Usizo nezinsiza"
+    },
+    "stats": {
+      "totalStudents": "Abafundi bonke",
+      "totalTeachers": "Othisha bonke",
+      "totalParents": "Abazali bonke",
+      "activeUsers": "Abasebenzisi abasebenzayo"
+    },
+    "tabs": {
+      "overview": "Isifingqo",
+      "schools": "Izikole",
+      "users": "Abasebenzisi",
+      "activity": "Umsebenzi",
+      "system": "Uhlelo"
+    },
+    "super": {
+      "pageTitle": "🔱 Ideshibhodi yomphathi omkhulu",
+      "pageSubtitle": "Phatha ipulatifomu ye-EduDash Pro yonke",
+      "recentSchools": "Izikole zakamuva",
+      "addSchool": "Dala isikole",
+      "recentUsers": "Abasebenzisi bakamuva",
+      "platformActivity": "Umsebenzi weplathifomu",
+      "platformAlerts": "Izexwayiso zeplathifomu",
+      "pendingApprovals": "Ukuvunywa okusalele",
+      "onboarding": {
+        "title": "Izicelo zokungenisa isikole",
+        "noPendingTitle": "Azikho izicelo ezisalindile",
+        "noPendingDescription": "Zonke izicelo zokungenisa isikole seziphethwe",
+        "recentRequests": "Izicelo zakamuva",
+        "loadingRequests": "Iyalayisha izicelo zokungenisa...",
+        "checkManagement": "Bheka isikrini sokuphatha izikole ukuze uthole imininingwane",
+        "goToRequests": "Iya ezicelweni",
+        "totalSchools": "Izikole zonke"
+      }
+    },
+    "stats": {
+      "schools": "Izikole",
+      "totalUsers": "Abasebenzisi bonke",
+      "students": "Abafundi",
+      "monthlyRevenue": "Ingeniso yanyanga zonke",
+      "growthRate": "Izinga lokukhula",
+      "aiRequests": "Izicelo ze-AI"
+    },
+    "health": {
+      "title": "Impilo yesistimu",
+      "healthy": "Kuhle",
+      "issues": "Izinkinga",
+      "apiResponse": "Impendulo ye-API",
+      "uptime": "Isikhathi sokusebenza",
+      "storage": "Isitoreji",
+      "connections": "Izixhumanisi"
+    },
+    "actions": {
+      "manageOnboarding": "Phatha i-Onboarding",
+      "platformReports": "Imibiko yeplathifomu",
+      "systemSettings": "Izilungiselelo zesistimu",
+      "userManagement": "Ukuphathwa kwabasebenzisi",
+      "createSchool": "Dala isikole",
+      "createSchoolManually": "Dala isikole mathupha",
+      "manageAllRequests": "Phatha zonke izicelo",
+      "suspend": "Misa"
+    },
+    "messages": {
+      "confirmSuspendSchool": "Uqinisekile ukuthi ufuna ukumisa i-\"{{name}}\"? Lokhu kuzokhipha ukufinyelela kuwo wonke abasebenzisi kulesi sikole.",
+      "schoolSuspended": "Isikole simisiwe ngempumelelo.",
+      "suspendFailed": "Kwehlulekile ukumisa isikole.",
+      "confirmSuspendUser": "Uqinisekile ukuthi ufuna ukumisa u-\"{{name}}\"?",
+      "userSuspended": "Umsebenzisi umisiwe ngempumelelo.",
+      "userSuspendFailed": "Kwehlulekile ukumisa umsebenzisi.",
+      "aiUsageResetTitle": "Ukusetshenziswa kwe-AI kubuyiselwe",
+      "aiUsageResetUser": "Ukusetshenziswa kwe-AI kuka {{name}} kubuyiselwe.",
+      "resetFailed": "Kwehlulekile ukubuyisela ukusetshenziswa kwe-AI.",
+      "overageEnabledTitle": "Ukudlula umkhawulo kuvunyelwe",
+      "overageDisabledTitle": "Ukudlula umkhawulo kuvinjiwe",
+      "userCanBypassCaps": "{{name}} angadlula imikhawulo yanyanga zonke ye-AI.",
+      "userCanNoLongerBypassCaps": "{{name}} akasakwazi ukudlula imikhawulo yanyanga zonke ye-AI.",
+      "schoolOverageEnabledTitle": "Ukudlula umkhawulo kwesikole kuvunyelwe",
+      "schoolOverageDisabledTitle": "Ukudlula umkhawulo kwesikole kuvinjiwe",
+      "schoolCanBypassCaps": "Abahloli base-{{name}} bangadlula imikhawulo ye-AI yanyanga zonke.",
+      "schoolCanNoLongerBypassCaps": "Abahloli base-{{name}} abasenakudlula imikhawulo ye-AI yanyanga zonke.",
+      "updateFailed": "Kwehlulekile ukubuyekeza izilungiselelo."
+    }
   }
 }

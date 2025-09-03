@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Appearance, ColorSchemeName, useColorScheme as useDeviceColorScheme } from 'react-native';
+import { Appearance, ColorSchemeName, useColorScheme as useDeviceColorScheme, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SystemUI from 'expo-system-ui';
 import { lightColors, darkColors } from '../tokens/colors';
@@ -148,5 +148,3 @@ export function useThemeStyles<T extends Record<string, any>>(
   return React.useMemo(() => stylesFn(colors, isDark), [colors, isDark, stylesFn]);
 }
 
-// Export a Platform import for the SystemUI code
-import { Platform } from 'react-native';

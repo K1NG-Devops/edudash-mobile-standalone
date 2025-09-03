@@ -45,6 +45,10 @@ function dayBounds(now = new Date()) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+function sevenDaysAgoISO(now = new Date()) {
+  return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+}
+
 function featureModelDefaults(feature: string) {
   switch (feature) {
     case "homework_grading":
@@ -257,6 +261,14 @@ if (userErr || !userRes?.user) {
     const userTier = (dbUser?.subscription_tier as string) || "free";
     const isSuperAdmin = dbUser?.role === 'superadmin' && !!dbUser?.is_active;
 
+    // Whitelist models per tier
+    const tierAllowed: Record<string, string[]> = {
+      free: ["claude-3-haiku-20240307"],
+      starter: ["claude-3-haiku-20240307", "claude-3-5-sonnet-20241022"],
+      premium: ["claude-3-haiku-20240307", "claude-3-5-sonnet-20241022"],
+      enterprise: ["claude-3-haiku-20240307", "claude-3-5-sonnet-20241022", "claude-3-opus-20240229"],
+    };
+
     // Admin-only action: AI usage reset with full audit trail
     if (body.action === 'admin_reset_ai_usage') {
       if (!isSuperAdmin || !userId) {
@@ -391,14 +403,21 @@ if ((minuteCount ?? 0) >= 10) {
       }
     }
 
-    // Enforce monthly usage limits with overage support
-    const limits: Record<string, number> = {
-      free: 5,
-      starter: 25,
-      premium: 100,
+    // Enforce weekly and monthly usage limits with overage support
+    // Note: counts are per request (not tokens). Streaming still counts as one request.
+    const monthlyLimits: Record<string, number> = {
+      free: 20,
+      starter: 120,
+      premium: 600,
       enterprise: -1, // unlimited
     };
-    const limit = limits[userTier] ?? 5;
+    const weeklyLessonLimits: Record<string, number> = {
+      free: 10,
+      starter: 50,
+      premium: 200,
+      enterprise: -1,
+    };
+    const monthlyLimit = monthlyLimits[userTier] ?? 20;
     const { start, end } = monthBounds();
 
     // Soft reset baseline support: if a recent soft reset exists for the user/school/platform, use that time as the baseline
@@ -460,10 +479,29 @@ if ((minuteCount ?? 0) >= 10) {
       currentMonthCount = count ?? 0;
     }
 
+    // Weekly limit specifically for lesson_generation feature (rolling 7 days)
+    let weeklyLessonCount = 0;
+    if (userId && (body.feature?.toString() || 'lesson_generation') === 'lesson_generation') {
+      const since = sevenDaysAgoISO();
+      const { count: wcount } = await admin
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('feature', 'lesson_generation')
+        .gte('created_at', since);
+      weeklyLessonCount = wcount ?? 0;
+    }
+
     let overageApplied = false;
     let overageAmount = 0;
 
-    if (!isSuperAdmin && limit !== -1 && currentMonthCount >= limit) {
+    // Enforce weekly lesson limit first (if applicable and not unlimited)
+    if (!isSuperAdmin && (weeklyLessonLimits[userTier] ?? -1) !== -1 && weeklyLessonCount >= (weeklyLessonLimits[userTier] ?? 0)) {
+      return json({ success: false, error: `Weekly AI lesson generation limit reached (limit ${weeklyLessonLimits[userTier]})`, code: 'WEEKLY_LIMIT', error_type: 'quota', quota_charged: false }, 402, corsHeaders);
+    }
+
+    // Then enforce monthly overall request limit
+    if (!isSuperAdmin && monthlyLimit !== -1 && currentMonthCount >= monthlyLimit) {
       if (userId) {
         const { data: prefs } = await admin
           .from('billing_preferences')
@@ -537,8 +575,16 @@ if ((recent ?? 0) >= 1) {
       premium: "claude-3-5-sonnet-20241022",     // Same as starter for now
       enterprise: "claude-3-5-sonnet-20241022"   // Could upgrade to Opus for enterprise
     };
+
+    const wantStream = Boolean((body as any).stream === true || (body.params as any)?.stream === true);
     
-    const model = body.model || tierModels[userTier] || "claude-3-haiku-20240307";
+    let model = body.model || tierModels[userTier] || "claude-3-haiku-20240307";
+    if (!isSuperAdmin) {
+      const allowedModels = tierAllowed[userTier] || tierAllowed['free'];
+      if (!allowedModels.includes(model)) {
+        model = allowedModels[0];
+      }
+    }
     let prompt = body.prompt?.toString();
 
     if (!prompt) {
@@ -739,6 +785,158 @@ Return JSON { "answer": string, "suggestions": string[] }`;
     }
 
     const options = featureModelDefaults(feature);
+
+    // SSE streaming branch: true token streaming via Anthropic -> normalized SSE (delta/done)
+    if (wantStream) {
+      const stream = new ReadableStream({
+        start: async (controller) => {
+          const enc = new TextEncoder();
+          const send = (event: string, data: any) => {
+            const payload = `event: ${event}\n` + `data: ${JSON.stringify(data)}\n\n`;
+            controller.enqueue(enc.encode(payload));
+          };
+
+          // Accumulators for compatibility/finalization
+          let assembledText = "";
+          let inputTokens = 0;
+          let outputTokens = 0;
+
+          try {
+            // Prepare Anthropic request body with streaming
+            const content = Array.isArray(contentParts)
+              ? contentParts
+              : [{ type: 'text', text: String(prompt || '') }];
+
+            const upstream = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+              },
+              body: JSON.stringify({
+                model,
+                max_tokens: options.max_tokens,
+                temperature: options.temperature,
+                messages: [{ role: "user", content }],
+                stream: true,
+              }),
+            });
+
+            if (!upstream.ok || !upstream.body) {
+              const errText = await upstream.text().catch(() => "");
+              throw new Error(`Anthropic stream error (${upstream.status}): ${errText}`);
+            }
+
+            const reader = upstream.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            const flushBlocks = () => {
+              let idx;
+              while ((idx = buffer.indexOf("\n\n")) !== -1) {
+                const block = buffer.slice(0, idx);
+                buffer = buffer.slice(idx + 2);
+                let eventType = "";
+                let dataRaw = "";
+                for (const line of block.split("\n")) {
+                  if (line.startsWith("event:")) eventType = line.slice(6).trim();
+                  else if (line.startsWith("data:")) dataRaw += line.slice(5).trim();
+                }
+                if (!dataRaw) continue;
+                try {
+                  const data = JSON.parse(dataRaw);
+                  // Map Anthropic events to our normalized SSE
+                  // content_block_delta => text delta
+                  if (eventType === "content_block_delta") {
+                    const t = data?.delta?.type === 'text_delta' ? String(data?.delta?.text || '') : '';
+                    if (t) {
+                      assembledText += t;
+                      send('delta', { text: t });
+                    }
+                  }
+                  // message_start may contain input token usage depending on API version
+                  if (eventType === "message_start") {
+                    const it = Number(data?.message?.usage?.input_tokens ?? 0);
+                    if (it > 0) inputTokens = it;
+                  }
+                  // message_delta may include output token increments; sum if present
+                  if (eventType === "message_delta") {
+                    const ot = Number(data?.delta?.usage?.output_tokens ?? 0);
+                    if (!Number.isNaN(ot) && ot > 0) outputTokens += ot;
+                  }
+                  // content_block_stop or message_stop carry no text; ignore
+                } catch (_) {
+                  // ignore malformed chunk
+                }
+              }
+            };
+
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+              flushBlocks();
+            }
+            // Flush any trailing block
+            flushBlocks();
+
+            // Usage fallback: if outputTokens not captured via deltas, keep 0; server still counts 1 request
+            // Log usage (count request) after success
+            if (userId) {
+              try {
+                await admin.from('ai_usage_logs').insert({
+                  user_id: userId,
+                  feature,
+                  tokens_used: Number(inputTokens || 0) + Number(outputTokens || 0),
+                  created_at: new Date().toISOString(),
+                  model,
+                } as any);
+                if (overageApplied) {
+                  await admin.from('ai_overage_logs').insert({
+                    user_id: userId,
+                    feature,
+                    units: 1,
+                    amount: overageAmount,
+                    created_at: new Date().toISOString(),
+                  } as any);
+                }
+              } catch (e) {
+                console.error('Failed to log AI usage (stream):', e);
+              }
+            }
+
+            // Send compatibility 'final' then normalized 'done'
+            send('final', {
+              success: true,
+              content: assembledText,
+              usage: { inputTokens, outputTokens },
+              overage: overageApplied ? { charged: true, amount: overageAmount } : { charged: false },
+              quota_charged: true,
+              model,
+            });
+            send('done', { finish_reason: 'stop', usage: { input_tokens: inputTokens, output_tokens: outputTokens } });
+            controller.close();
+          } catch (err) {
+            console.error('SSE stream error:', err);
+            // Do not charge on error
+            send('done', { error: true, message: 'AI service temporarily unavailable. This request was not counted against your quota.' });
+            controller.close();
+          }
+        }
+      });
+
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no'
+        }
+      });
+    }
     
     let aiRes;
     let contentText = "";
@@ -780,8 +978,8 @@ return json({
           feature,
           tokens_used: tokensUsed,
           created_at: new Date().toISOString(),
+          model: model,
         } as any);
-
         if (overageApplied) {
           await admin.from('ai_overage_logs').insert({
             user_id: userId,
@@ -814,6 +1012,7 @@ return json({
       usage: { inputTokens, outputTokens }, 
       overage: overageApplied ? { charged: true, amount: overageAmount } : { charged: false },
       quota_charged: true,
+      model,
       attachment_index: attachmentIndex,
       attachment_limits: { per_file: maxTextCharsPerFile, total: maxTextCharsTotal }
     }, 200, corsHeaders);

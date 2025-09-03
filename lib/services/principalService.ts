@@ -902,20 +902,9 @@ export class PrincipalService {
    * Calculate monthly revenue for the school
    * Attempts to get real revenue data, falls back to estimated calculation
    */
-  private static async getMonthlyRevenue(preschoolId: string, totalStudents: number): Promise<number> {
+  private static async getMonthlyRevenue(preschoolId: string, _totalStudents: number): Promise<number> {
     try {
-      // First, try to get revenue from subscription/billing tables
-      const { data: subscriptions, error: subError } = await supabase
-        .from('preschools')
-        .select('subscription_plan, subscription_status')
-        .eq('id', preschoolId)
-        .maybeSingle();
-
-      if (!subError && subscriptions && subscriptions.subscription_status === 'active') {
-        return totalStudents * this.getMonthlyFeePerStudent();
-      }
-
-      // Second, try to get revenue from payment records for current month
+      // Real revenue only: sum completed payments for the current month
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
@@ -934,39 +923,19 @@ export class PrincipalService {
         .eq('payment_status', 'completed');
 
       if (!paymentError && payments && Array.isArray(payments) && payments.length > 0) {
-        // Sum up payments for current month
         const totalPayments = payments.reduce((total, payment: any) => total + (payment.amount || 0), 0);
         return totalPayments;
       }
 
-      // Fallback: Use estimated revenue based on student count and configurable fee
-      const monthlyFeePerStudent = this.getMonthlyFeePerStudent();
-      return Math.round(totalStudents * monthlyFeePerStudent);
+      // No real payments recorded this month
+      return 0;
     } catch (error) {
-      log.warn('Error calculating monthly revenue, using estimate:', error);
-      // Final fallback: estimated revenue
-      return Math.round(totalStudents * this.getMonthlyFeePerStudent());
+      log.warn('Error calculating monthly revenue:', error);
+      // No estimation allowed per No Mock Data policy
+      return 0;
     }
   }
 
-  /**
-   * Get the monthly fee per student
-   * Can be configured via environment variables or school settings
-   */
-  private static getMonthlyFeePerStudent(): number {
-    // Try to get from environment variables first
-    const envFee = process.env.EXPO_PUBLIC_MONTHLY_FEE_PER_STUDENT;
-    if (envFee) {
-      const parsed = parseFloat(envFee);
-      if (!isNaN(parsed) && parsed > 0) {
-        return parsed;
-      }
-    }
-
-    // Default fee: R800 per student per month (South African Rand)
-    // This is a reasonable fee for quality preschool education in South Africa
-    return 800;
-  }
 
   /**
    * Resend teacher invitation email

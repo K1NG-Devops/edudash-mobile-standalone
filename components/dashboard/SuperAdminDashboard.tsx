@@ -28,7 +28,8 @@ import {
 } from '@/lib/services/superAdminDataService';
 import { shadow } from '@/lib/ui/shadow';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PageHeader, EmptyState, Button } from '@/src/design-system/components';
+import { PageHeader, EmptyState, Button } from '@/design-system';
+import { useT } from '@/i18n';
 
 interface SuperAdminDashboardProps {
   userId: string;
@@ -57,6 +58,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const [showCreateSchoolModal, setShowCreateSchoolModal] = useState(false);
 
   const insets = useSafeAreaInsets();
+  const { t } = useT();
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
@@ -68,7 +70,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       setDashboardData(data);
     } catch (err: any) {
       console.error('Error fetching super admin dashboard data:', err);
-      setError(err.message || 'Failed to load dashboard data. Please try again.');
+      setError(err.message || t('errors.somethingWentWrong'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -132,20 +134,20 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   // Handle school suspension
   const handleSuspendSchool = (school: SchoolOverview) => {
     Alert.alert(
-      'Suspend School',
-      `Are you sure you want to suspend "${school.name}"? This will disable access for all users at this school.`,
+      t('admin.actions.suspend'),
+      t('admin.messages.confirmSuspendSchool', { name: school.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Suspend',
+          text: t('admin.actions.suspend'),
           style: 'destructive',
           onPress: async () => {
             const result = await SuperAdminDataService.suspendSchool(school.id, 'Manual suspension by super admin');
             if (result.success) {
-              Alert.alert('Success', 'School has been suspended successfully.');
+              Alert.alert(t('common.success'), t('admin.messages.schoolSuspended'));
               fetchDashboardData(); // Refresh data
             } else {
-              Alert.alert('Error', result.error || 'Failed to suspend school.');
+              Alert.alert(t('common.error'), result.error || t('admin.messages.suspendFailed'));
             }
           }
         }
@@ -156,20 +158,20 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   // Handle user suspension
   const handleSuspendUser = (user: UserOverview) => {
     Alert.alert(
-      'Suspend User',
-      `Are you sure you want to suspend "${user.name}"?`,
+      t('admin.actions.suspend'),
+      t('admin.messages.confirmSuspendUser', { name: user.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Suspend',
+          text: t('admin.actions.suspend'),
           style: 'destructive',
           onPress: async () => {
             const result = await SuperAdminDataService.suspendUser(user.id, 'Manual suspension by super admin');
             if (result.success) {
-              Alert.alert('Success', 'User has been suspended successfully.');
+              Alert.alert(t('common.success'), t('admin.messages.userSuspended'));
               fetchDashboardData(); // Refresh data
             } else {
-              Alert.alert('Error', result.error || 'Failed to suspend user.');
+              Alert.alert(t('common.error'), result.error || t('admin.messages.userSuspendFailed'));
             }
           }
         }
@@ -180,28 +182,28 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   // Reset AI usage for a user
   const handleResetAIForUser = async (user: UserOverview) => {
     const res = await SuperAdminDataService.resetAIUsage({ scope: 'user', targetUserId: user.id, mode: 'soft', reason: 'superadmin reset from dashboard' });
-    if (res.success) Alert.alert('AI Usage Reset', `AI usage for ${user.name} has been reset.`);
-    else Alert.alert('Reset Failed', res.error || 'Could not reset AI usage.');
+    if (res.success) Alert.alert(t('admin.messages.aiUsageResetTitle'), t('admin.messages.aiUsageResetUser', { name: user.name }));
+    else Alert.alert(t('common.error'), res.error || t('admin.messages.resetFailed'));
   };
 
   // Toggle tester overage for a user
   const handleToggleOverageForUser = async (user: UserOverview, enabled: boolean) => {
     const res = await SuperAdminDataService.setTesterOverage({ scope: 'user', targetUserId: user.id, enabled, pricePerUnit: 0 });
-    if (res.success) Alert.alert(enabled ? 'Tester Overage Enabled' : 'Tester Overage Disabled', `${user.name} can ${enabled ? 'bypass' : 'no longer bypass'} monthly AI caps.`);
-    else Alert.alert('Update Failed', res.error || 'Could not update tester overage.');
+    if (res.success) Alert.alert(enabled ? t('admin.messages.overageEnabledTitle') : t('admin.messages.overageDisabledTitle'), enabled ? t('admin.messages.userCanBypassCaps', { name: user.name }) : t('admin.messages.userCanNoLongerBypassCaps', { name: user.name }));
+    else Alert.alert(t('common.error'), res.error || t('admin.messages.updateFailed'));
   };
 
   // School-wide actions
   const handleResetAIForSchool = async (school: SchoolOverview) => {
     const res = await SuperAdminDataService.resetAIUsage({ scope: 'preschool', targetPreschoolId: school.id, mode: 'soft', reason: 'superadmin reset for school' });
-    if (res.success) Alert.alert('AI Usage Reset', `AI usage baseline updated for ${school.name}.`);
-    else Alert.alert('Reset Failed', res.error || 'Could not reset AI usage.');
+    if (res.success) Alert.alert(t('admin.messages.aiUsageResetTitle'), t('admin.messages.aiUsageResetUser', { name: school.name }));
+    else Alert.alert(t('common.error'), res.error || t('admin.messages.resetFailed'));
   };
 
   const handleToggleOverageForSchool = async (school: SchoolOverview, enabled: boolean) => {
     const res = await SuperAdminDataService.setTesterOverage({ scope: 'preschool', targetPreschoolId: school.id, enabled, pricePerUnit: 0 });
-    if (res.success) Alert.alert(enabled ? 'School Overage Enabled' : 'School Overage Disabled', `${school.name} testers can ${enabled ? 'bypass' : 'no longer bypass'} monthly AI caps.`);
-    else Alert.alert('Update Failed', res.error || 'Could not update school overage.');
+    if (res.success) Alert.alert(enabled ? t('admin.messages.schoolOverageEnabledTitle') : t('admin.messages.schoolOverageDisabledTitle'), enabled ? t('admin.messages.schoolCanBypassCaps', { name: school.name }) : t('admin.messages.schoolCanNoLongerBypassCaps', { name: school.name }));
+    else Alert.alert(t('common.error'), res.error || t('admin.messages.updateFailed'));
   };
 
   const getStatusColor = (status: string) => {
@@ -230,32 +232,32 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       <View style={styles.statCard}>
         <IconSymbol name="building.2" size={24} color="#3B82F6" />
         <Text style={styles.statValue}>{stats.total_schools}</Text>
-        <Text style={styles.statLabel}>Schools</Text>
+        <Text style={styles.statLabel}>{t('admin.stats.schools')}</Text>
       </View>
       <View style={styles.statCard}>
         <IconSymbol name="person.3" size={24} color="#10B981" />
         <Text style={styles.statValue}>{stats.total_users}</Text>
-        <Text style={styles.statLabel}>Total Users</Text>
+        <Text style={styles.statLabel}>{t('admin.stats.totalUsers')}</Text>
       </View>
       <View style={styles.statCard}>
         <IconSymbol name="graduationcap" size={24} color="#8B5CF6" />
         <Text style={styles.statValue}>{stats.total_students}</Text>
-        <Text style={styles.statLabel}>Students</Text>
+        <Text style={styles.statLabel}>{t('admin.stats.students')}</Text>
       </View>
       <View style={styles.statCard}>
         <IconSymbol name="dollarsign" size={24} color="#F59E0B" />
         <Text style={styles.statValue}>R {stats.monthly_revenue.toLocaleString('en-ZA')}</Text>
-        <Text style={styles.statLabel}>Monthly Revenue</Text>
+        <Text style={styles.statLabel}>{t('admin.stats.monthlyRevenue')}</Text>
       </View>
       <View style={styles.statCard}>
         <IconSymbol name="chart.line.uptrend.xyaxis" size={24} color="#EF4444" />
         <Text style={styles.statValue}>{stats.growth_rate}%</Text>
-        <Text style={styles.statLabel}>Growth Rate</Text>
+        <Text style={styles.statLabel}>{t('admin.stats.growthRate')}</Text>
       </View>
       <View style={styles.statCard}>
         <IconSymbol name="cpu" size={24} color="#6366F1" />
         <Text style={styles.statValue}>{stats.ai_usage_count.toLocaleString()}</Text>
-        <Text style={styles.statLabel}>AI Requests</Text>
+        <Text style={styles.statLabel}>{t('admin.stats.aiRequests')}</Text>
       </View>
     </View>
   );
@@ -264,32 +266,32 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const renderSystemHealth = (health: SystemHealth) => (
     <View style={styles.healthCard}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>🖥️ System Health</Text>
+        <Text style={styles.cardTitle}>🖥️ {t('admin.health.title')}</Text>
         <View
           style={styles.healthStatus}
           className={health.database_status === 'healthy' ? 'bg-emerald-500' : 'bg-red-500'}
         >
           <Text style={styles.healthStatusText}>
-            {health.database_status === 'healthy' ? 'Healthy' : 'Issues'}
+            {health.database_status === 'healthy' ? t('admin.health.healthy') : t('admin.health.issues')}
           </Text>
         </View>
       </View>
 
       <View style={styles.healthMetrics}>
         <View style={styles.healthMetric}>
-          <Text style={styles.healthMetricLabel}>API Response</Text>
+          <Text style={styles.healthMetricLabel}>{t('admin.health.apiResponse')}</Text>
           <Text style={styles.healthMetricValue}>{health.api_response_time}ms</Text>
         </View>
         <View style={styles.healthMetric}>
-          <Text style={styles.healthMetricLabel}>Uptime</Text>
+          <Text style={styles.healthMetricLabel}>{t('admin.health.uptime')}</Text>
           <Text style={styles.healthMetricValue}>{health.uptime_percentage}%</Text>
         </View>
         <View style={styles.healthMetric}>
-          <Text style={styles.healthMetricLabel}>Storage</Text>
+          <Text style={styles.healthMetricLabel}>{t('admin.health.storage')}</Text>
           <Text style={styles.healthMetricValue}>{health.storage_usage_percentage}%</Text>
         </View>
         <View style={styles.healthMetric}>
-          <Text style={styles.healthMetricLabel}>Connections</Text>
+          <Text style={styles.healthMetricLabel}>{t('admin.health.connections')}</Text>
           <Text style={styles.healthMetricValue}>{health.active_connections}</Text>
         </View>
       </View>
@@ -300,13 +302,13 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const renderSchoolsList = (schools: SchoolOverview[]) => (
     <View style={styles.schoolsList}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>🏫 Recent Schools</Text>
+        <Text style={styles.sectionTitle}>🏫 {t('admin.super.recentSchools')}</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setShowCreateSchoolModal(true)}
         >
           <IconSymbol name="plus" size={16} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Add School</Text>
+          <Text style={styles.addButtonText}>{t('admin.actions.createSchool')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -315,10 +317,10 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           <View style={styles.schoolInfo}>
             <Text style={styles.schoolName}>{school.name}</Text>
             <Text style={styles.schoolDetails}>
-              {school.user_count} users • {school.student_count} students
+              {school.user_count} {t('admin.stats.totalUsers').toLowerCase()} • {school.student_count} {t('admin.stats.students').toLowerCase()}
             </Text>
             <Text style={styles.schoolDetails}>
-              Last active: {new Date(school.last_activity).toLocaleDateString()}
+              {t('common.lastActive')}: {new Date(school.last_activity).toLocaleDateString()}
             </Text>
           </View>
 
@@ -364,17 +366,17 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   // Render users list
   const renderUsersList = (users: UserOverview[]) => (
     <View style={styles.usersList}>
-      <Text style={styles.sectionTitle}>👥 Recent Users</Text>
+      <Text style={styles.sectionTitle}>👥 {t('admin.super.recentUsers')}</Text>
 
       {users.slice(0, 10).map((user) => (
         <View key={user.id} style={styles.userCard}>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user.name}</Text>
             <Text style={styles.userDetails}>
-              {user.role} • {user.school_name || 'No School'}
+              {user.role} • {user.school_name || t('common.noSchool')}
             </Text>
             <Text style={styles.userDetails}>
-              Last login: {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+              {t('common.lastLogin')}: {user.last_login ? new Date(user.last_login).toLocaleDateString() : t('common.never')}
             </Text>
           </View>
 
@@ -425,12 +427,12 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     return (
       <View style={styles.onboardingSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🎓 School Onboarding Requests</Text>
+          <Text style={styles.sectionTitle}>🎓 {t('admin.super.onboarding.title')}</Text>
           <TouchableOpacity
             style={styles.viewAllButton}
             onPress={() => router.push('/screens/schools-management')}
           >
-            <Text style={styles.viewAllButtonText}>View All</Text>
+            <Text style={styles.viewAllButtonText}>{t('common.seeAll')}</Text>
             <IconSymbol name="arrow.right" size={14} color="#8B5CF6" />
           </TouchableOpacity>
         </View>
@@ -440,44 +442,44 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           <View style={styles.onboardingStatCard}>
             <IconSymbol name="clock.fill" size={24} color="#F59E0B" />
             <Text style={styles.onboardingStatValue}>{pendingCount}</Text>
-            <Text style={styles.onboardingStatLabel}>Pending</Text>
+            <Text style={styles.onboardingStatLabel}>{t('status.pending')}</Text>
           </View>
           <View style={styles.onboardingStatCard}>
             <IconSymbol name="checkmark.circle.fill" size={24} color="#10B981" />
             <Text style={styles.onboardingStatValue}>{dashboardData?.pending_approvals?.schools || 0}</Text>
-            <Text style={styles.onboardingStatLabel}>This Month</Text>
+            <Text style={styles.onboardingStatLabel}>{t('dashboard.cards.thisMonth')}</Text>
           </View>
           <View style={styles.onboardingStatCard}>
             <IconSymbol name="building.2.fill" size={24} color="#3B82F6" />
             <Text style={styles.onboardingStatValue}>{dashboardData?.platform_stats?.total_schools || 0}</Text>
-            <Text style={styles.onboardingStatLabel}>Total Schools</Text>
+            <Text style={styles.onboardingStatLabel}>{t('admin.super.onboarding.totalSchools')}</Text>
           </View>
         </View>
 
         {/* Pending Requests List */}
         {pendingCount > 0 ? (
           <View style={styles.pendingRequestsList}>
-            <Text style={styles.subsectionTitle}>Recent Requests</Text>
+            <Text style={styles.subsectionTitle}>{t('admin.super.onboarding.recentRequests')}</Text>
             {/* Show placeholder for now - would need to fetch actual onboarding requests */}
             <View style={styles.requestCard}>
               <View style={styles.requestInfo}>
-                <Text style={styles.requestSchoolName}>Loading onboarding requests...</Text>
-                <Text style={styles.requestDetails}>Check the Schools Management screen for details</Text>
+                <Text style={styles.requestSchoolName}>{t('admin.super.onboarding.loadingRequests')}</Text>
+                <Text style={styles.requestDetails}>{t('admin.super.onboarding.checkManagement')}</Text>
               </View>
               <TouchableOpacity 
                 style={styles.goToRequestsButton}
                 onPress={() => router.push('/screens/schools-management')}
               >
-                <Text style={styles.goToRequestsButtonText}>Go to Requests</Text>
+                <Text style={styles.goToRequestsButtonText}>{t('admin.super.onboarding.goToRequests')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
           <EmptyState
             icon={<IconSymbol name="tray" size={48} color="#9CA3AF" />}
-            title="No Pending Requests"
-            description="All school onboarding requests have been processed"
-            primaryAction={{ label: 'Create School', onPress: () => setShowCreateSchoolModal(true) }}
+            title={t('admin.super.onboarding.noPendingTitle')}
+            description={t('admin.super.onboarding.noPendingDescription')}
+            primaryAction={{ label: t('admin.actions.createSchool'), onPress: () => setShowCreateSchoolModal(true) }}
           />
         )}
 
@@ -488,14 +490,14 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             onPress={() => router.push('/screens/schools-management')}
           >
             <IconSymbol name="list.bullet" size={20} color="#FFFFFF" />
-            <Text style={styles.onboardingActionText}>Manage All Requests</Text>
+            <Text style={styles.onboardingActionText}>{t('admin.actions.manageAllRequests')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.onboardingActionButton, styles.secondaryActionButton]}
             onPress={() => setShowCreateSchoolModal(true)}
           >
             <IconSymbol name="plus.circle" size={20} color="#8B5CF6" />
-            <Text style={styles.onboardingActionText} className="text-violet-500">Create School Manually</Text>
+            <Text style={styles.onboardingActionText} className="text-violet-500">{t('admin.actions.createSchoolManually')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -505,7 +507,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   // Render activity feed
   const renderActivityFeed = (activities: PlatformActivity[]) => (
     <View style={styles.activityFeed}>
-      <Text style={styles.sectionTitle}>📊 Platform Activity</Text>
+      <Text style={styles.sectionTitle}>📊 {t('admin.super.platformActivity')}</Text>
 
       {activities.map((activity) => (
         <View key={activity.id} style={styles.activityCard}>
@@ -533,12 +535,13 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const renderTabNavigation = () => (
     // eslint-disable-next-line react-native/no-inline-styles
     <View style={[styles.tabNavigationBottom, { paddingBottom: insets.bottom, borderTopWidth: 0 }]}>
+      
       {[
-        { key: 'overview', label: 'Overview', icon: 'chart.bar' },
-        { key: 'schools', label: 'Schools', icon: 'building.2' },
-        { key: 'users', label: 'Users', icon: 'person.3' },
-        { key: 'activity', label: 'Activity', icon: 'clock' },
-        { key: 'system', label: 'System', icon: 'gear' }
+        { key: 'overview', label: t('admin.tabs.overview'), icon: 'chart.bar' },
+        { key: 'schools', label: t('admin.tabs.schools'), icon: 'building.2' },
+        { key: 'users', label: t('admin.tabs.users'), icon: 'person.3' },
+        { key: 'activity', label: t('admin.tabs.activity'), icon: 'clock' },
+        { key: 'system', label: t('admin.tabs.system'), icon: 'gear' }
       ].map((tab) => (
         <TouchableOpacity
           key={tab.key}
@@ -562,17 +565,17 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   if (loading && !refreshing && !dashboardData) {
     return (
       <View style={styles.container}>
-        <MobileHeader
-          user={userProfile}
-          schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => {/* TODO: Implement notifications */ }}
-          onSignOut={onSignOut}
-          onNavigate={handleNavigate}
-          notificationCount={0}
-        />
+      <MobileHeader
+        user={userProfile}
+        schoolName={t('common.appName')}
+        onNotificationsPress={() => {/* TODO: Implement notifications */ }}
+        onSignOut={onSignOut}
+        onNavigate={handleNavigate}
+        notificationCount={0}
+      />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Loading platform data...</Text>
+          <Text style={styles.loadingText}>{t('dashboard.loading')}</Text>
         </View>
       </View>
     );
@@ -582,20 +585,20 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   if (error && !loading && !refreshing) {
     return (
       <View style={styles.container}>
-        <MobileHeader
-          user={userProfile}
-          schoolName="EduDash Pro Platform"
-          onNotificationsPress={() => {/* TODO: Implement notifications */ }}
-          onSignOut={onSignOut}
-          onNavigate={handleNavigate}
-          notificationCount={0}
-        />
+      <MobileHeader
+        user={userProfile}
+        schoolName={t('common.appName')}
+        onNotificationsPress={() => {/* TODO: Implement notifications */ }}
+        onSignOut={onSignOut}
+        onNavigate={handleNavigate}
+        notificationCount={0}
+      />
         <View style={styles.errorContainer}>
           <IconSymbol name="exclamationmark.triangle.fill" size={48} color="#EF4444" />
-          <Text style={styles.errorTitle}>Access Denied</Text>
+          <Text style={styles.errorTitle}>{t('errors.forbidden')}</Text>
           <Text style={styles.errorMessage}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchDashboardData}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -609,7 +612,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       {/* Header */}
       <MobileHeader
         user={userProfile}
-        schoolName="EduDash Pro Platform"
+        schoolName={t('common.appName')}
         onNotificationsPress={() => {/* TODO: Implement notifications */ }}
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
@@ -628,15 +631,15 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       >
         {/* Page Header */}
         <PageHeader
-          title="🔱 Super Admin Dashboard"
-          subtitle="Manage the entire EduDash Pro platform"
-          actions={<Button text="Create School" onPress={() => setShowCreateSchoolModal(true)} />}
+          title={t('admin.super.pageTitle')}
+          subtitle={t('admin.super.pageSubtitle')}
+          actions={<Button text={t('admin.actions.createSchool')} onPress={() => setShowCreateSchoolModal(true)} />}
         />
 
         {/* Alerts Section */}
         {dashboardData.alerts.length > 0 && (
           <View style={styles.alertsSection}>
-            <Text style={styles.sectionTitle}>⚠️ Platform Alerts</Text>
+            <Text style={styles.sectionTitle}>⚠️ {t('admin.super.platformAlerts')}</Text>
             {dashboardData.alerts.map((alert) => (
               <View key={alert.id} style={[styles.alertCard, { borderLeftColor: getSeverityColor(alert.priority) }]}>
                 <Text style={styles.alertMessage}>{alert.message}</Text>
@@ -654,54 +657,54 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
             {/* Pending Approvals */}
             <View style={styles.approvalsSection}>
-              <Text style={styles.sectionTitle}>📋 Pending Approvals</Text>
+              <Text style={styles.sectionTitle}>📋 {t('admin.super.pendingApprovals')}</Text>
               <View style={styles.approvalsGrid}>
                 <View style={styles.approvalCard}>
                   <Text style={styles.approvalCount}>{dashboardData.pending_approvals.schools}</Text>
-                  <Text style={styles.approvalLabel}>Schools</Text>
+                  <Text style={styles.approvalLabel}>{t('admin.stats.schools')}</Text>
                 </View>
                 <View style={styles.approvalCard}>
                   <Text style={styles.approvalCount}>{dashboardData.pending_approvals.users}</Text>
-                  <Text style={styles.approvalLabel}>Users</Text>
+                  <Text style={styles.approvalLabel}>{t('admin.tabs.users')}</Text>
                 </View>
                 <View style={styles.approvalCard}>
                   <Text style={styles.approvalCount}>{dashboardData.pending_approvals.content_reports}</Text>
-                  <Text style={styles.approvalLabel}>Reports</Text>
+                  <Text style={styles.approvalLabel}>{t('nav.reports')}</Text>
                 </View>
               </View>
             </View>
 
             {/* Quick Actions */}
             <View style={styles.quickActionsSection}>
-              <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
+              <Text style={styles.sectionTitle}>⚡ {t('dashboard.quickActions')}</Text>
               <View style={styles.quickActionsGrid}>
                 <TouchableOpacity 
                   style={styles.quickActionCard}
                   onPress={() => router.push('/screens/schools-management')}
                 >
                   <IconSymbol name="person.badge.plus" size={24} color="#8B5CF6" />
-                  <Text style={styles.quickActionLabel}>Manage Onboarding</Text>
+                  <Text style={styles.quickActionLabel}>{t('admin.actions.manageOnboarding')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.quickActionCard}
                   onPress={() => setSelectedTab('activity')}
                 >
                   <IconSymbol name="chart.bar.doc.horizontal" size={24} color="#10B981" />
-                  <Text style={styles.quickActionLabel}>Platform Reports</Text>
+                  <Text style={styles.quickActionLabel}>{t('admin.actions.platformReports')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.quickActionCard}
                   onPress={() => setSelectedTab('system')}
                 >
                   <IconSymbol name="gear.badge" size={24} color="#F59E0B" />
-                  <Text style={styles.quickActionLabel}>System Settings</Text>
+                  <Text style={styles.quickActionLabel}>{t('admin.actions.systemSettings')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.quickActionCard}
                   onPress={() => setSelectedTab('users')}
                 >
                   <IconSymbol name="person.badge.shield.checkmark" size={24} color="#3B82F6" />
-                  <Text style={styles.quickActionLabel}>User Management</Text>
+                  <Text style={styles.quickActionLabel}>{t('admin.actions.userManagement')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -718,23 +721,23 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
             {/* Quick Actions */}
             <View style={styles.quickActionsSection}>
-              <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
+              <Text style={styles.sectionTitle}>⚡ {t('dashboard.quickActions')}</Text>
               <View style={styles.quickActionsGrid}>
                 <TouchableOpacity style={styles.quickActionCard}>
                   <IconSymbol name="plus.app" size={24} color="#3B82F6" />
-                  <Text style={styles.quickActionLabel}>Create School</Text>
+                  <Text style={styles.quickActionLabel}>{t('admin.actions.createSchool')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.quickActionCard}>
                   <IconSymbol name="chart.bar.doc.horizontal" size={24} color="#10B981" />
-                  <Text style={styles.quickActionLabel}>Platform Reports</Text>
+                  <Text style={styles.quickActionLabel}>{t('admin.actions.platformReports')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.quickActionCard}>
                   <IconSymbol name="gear.badge" size={24} color="#F59E0B" />
-                  <Text style={styles.quickActionLabel}>System Settings</Text>
+                  <Text style={styles.quickActionLabel}>{t('admin.actions.systemSettings')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.quickActionCard}>
                   <IconSymbol name="person.badge.shield.checkmark" size={24} color="#8B5CF6" />
-                  <Text style={styles.quickActionLabel}>User Management</Text>
+                  <Text style={styles.quickActionLabel}>{t('admin.actions.userManagement')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

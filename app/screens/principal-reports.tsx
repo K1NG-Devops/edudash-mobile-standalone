@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrincipalService } from '@/lib/services/principalService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useT } from '@/i18n';
 
 export default function PrincipalReportsScreen() {
   const { profile } = useAuth();
+  const { t } = useT();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export default function PrincipalReportsScreen() {
       const s = await PrincipalService.getPrincipalStats(profile.preschool_id);
       if (s.data) setStats(s.data);
     } catch (e: any) {
-      setError(e?.message || 'Failed to load reports');
+      setError(e?.message || t('errors.reportsLoadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -47,8 +49,8 @@ export default function PrincipalReportsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
       <View style={styles.header}>
-        <Text style={styles.title}>School Reports</Text>
-        <Text style={styles.subtitle}>Key metrics for your school</Text>
+        <Text style={styles.title}>{t('reports.schoolTitle')}</Text>
+        <Text style={styles.subtitle}>{t('reports.schoolSubtitle')}</Text>
       </View>
 
       {error ? (
@@ -58,12 +60,12 @@ export default function PrincipalReportsScreen() {
         </View>
       ) : (
         <View style={styles.grid}>
-          <ReportCard icon="graduationcap.fill" label="Total Students" value={stats.totalStudents} />
-          <ReportCard icon="person.2.fill" label="Teachers" value={stats.totalTeachers} />
-          <ReportCard icon="person.3.fill" label="Parents" value={stats.totalParents} />
-          <ReportCard icon="chart.bar.fill" label="Attendance" value={`${stats.attendanceRate}%`} />
-          <ReportCard icon="creditcard.fill" label="Monthly Revenue" value={`R${(stats.monthlyRevenue/1000).toFixed(0)}k`} />
-          <ReportCard icon="exclamationmark.triangle.fill" label="Pending Payments" value={stats.pendingPayments} />
+          <ReportCard icon="graduationcap.fill" label={t('admin.stats.students')} value={stats.totalStudents} />
+          <ReportCard icon="person.2.fill" label={t('nav.teachers')} value={stats.totalTeachers} />
+          <ReportCard icon="person.3.fill" label={t('nav.parents')} value={stats.totalParents} />
+          <ReportCard icon="chart.bar.fill" label={t('education.attendance')} value={`${stats.attendanceRate}%`} />
+          <ReportCard icon="creditcard.fill" label={t('dashboard.metrics.monthlyRevenue')} value={`R${(stats.monthlyRevenue/1000).toFixed(0)}k`} />
+          <ReportCard icon="exclamationmark.triangle.fill" label={t('finance.pendingPayments')} value={stats.pendingPayments} />
         </View>
       )}
 

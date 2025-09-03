@@ -9,7 +9,7 @@ import * as LucideIcons from 'lucide-react-native';
 // Use DOM-based lucide icons on web to avoid react-native-svg issues
  
 const LucideWeb: Record<string, any> | null = Platform.OS === 'web' ? require('lucide-react') : null;
-import { useTheme } from '../theme/ThemeProvider';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export interface IconProps extends ViewProps {
   name: keyof typeof LucideIcons;
@@ -36,9 +36,9 @@ export const Icon: React.FC<IconProps> = ({
   style,
   ...props 
 }) => {
-  const { colors } = useTheme();
+  const { theme } = useTheme();
   const iconSize = typeof size === 'number' ? size : sizeMap[size];
-  const iconColor = color || colors.foreground;
+  const iconColor = color || theme.colors.text;
 
   if (Platform.OS === 'web' && LucideWeb) {
     const WebIcon = (LucideWeb as any)[name];

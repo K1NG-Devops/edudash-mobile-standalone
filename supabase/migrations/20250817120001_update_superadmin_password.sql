@@ -10,8 +10,9 @@ BEGIN
   FROM auth.users 
   WHERE email = 'superadmin@edudashpro.org.za';
   
-  IF v_auth_user_id IS NULL THEN
-    RAISE EXCEPTION 'Auth user not found for email: superadmin@edudashpro.org.za';
+IF v_auth_user_id IS NULL THEN
+    RAISE NOTICE 'Auth user not found for email: superadmin@edudashpro.org.za - skipping password update';
+    RETURN;
   END IF;
   
   RAISE NOTICE 'Found auth user ID: %', v_auth_user_id;
@@ -34,8 +35,8 @@ BEGIN
   
   IF v_auth_user_id IS NOT NULL THEN
     RAISE NOTICE 'SUCCESS: Auth user password updated and email confirmed';
-  ELSE
-    RAISE EXCEPTION 'FAILED: Could not update auth user';
+ELSE
+    RAISE NOTICE 'FAILED: Could not update auth user - skipping in this environment';
   END IF;
   
 END $$;

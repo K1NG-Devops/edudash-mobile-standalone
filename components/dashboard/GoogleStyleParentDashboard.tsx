@@ -20,6 +20,7 @@ import { StudentDataService, EnhancedStudent, ParentDashboardData } from '@/lib/
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { shadow } from '@/lib/ui/shadow';
+import { useT } from '@/i18n';
 
 interface GoogleStyleParentDashboardProps {
   userId: string;
@@ -43,6 +44,7 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
   const [dashboardData, setDashboardData] = useState<ParentDashboardData | null>(null);
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
+  const { t } = useT();
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -421,17 +423,24 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
     return stars;
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('dashboard.goodMorning');
+    if (hour < 17) return t('dashboard.goodAfternoon');
+    return t('dashboard.goodEvening');
+  };
+
   const renderQuickActions = () => {
     const actions = [
-      { id: 'homework', icon: 'doc.text.fill', label: 'Homework', color: '#EA4335' },
-      { id: 'activities', icon: 'gamecontroller.fill', label: 'Activities', color: '#FBBC04' },
-      { id: 'lessons', icon: 'book.fill', label: 'Lessons', color: '#34A853' },
-      { id: 'calendar', icon: 'calendar', label: 'Calendar', color: '#4285F4' },
+      { id: 'homework', icon: 'doc.text.fill', label: t('education.homework'), color: '#EA4335' },
+      { id: 'activities', icon: 'gamecontroller.fill', label: t('education.activities'), color: '#FBBC04' },
+      { id: 'lessons', icon: 'book.fill', label: t('education.lessons'), color: '#34A853' },
+      { id: 'calendar', icon: 'calendar', label: t('nav.calendar'), color: '#4285F4' },
     ];
 
     return (
       <View style={styles.quickActionsContainer}>
-        <Text style={styles.sectionTitle}>Quick actions</Text>
+        <Text style={styles.sectionTitle}>{t('dashboard.quickActions')}</Text>
         <View style={styles.quickActionsGrid}>
           {actions.map(action => (
             <TouchableOpacity
@@ -453,15 +462,15 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
 
   const renderMetrics = () => {
     const metrics = [
-      { label: 'Attendance', value: '95%', icon: 'checkmark.circle.fill', color: '#34A853' },
-      { label: 'Assignments', value: '8/10', icon: 'doc.text.fill', color: '#4285F4' },
-      { label: 'Activities', value: '12', icon: 'star.fill', color: '#FBBC04' },
-      { label: 'Progress', value: `${weeklyProgress}%`, icon: 'chart.line.uptrend.xyaxis', color: '#EA4335' },
+      { label: t('education.attendance'), value: '95%', icon: 'checkmark.circle.fill', color: '#34A853' },
+      { label: t('education.assignments'), value: '8/10', icon: 'doc.text.fill', color: '#4285F4' },
+      { label: t('education.activities'), value: '12', icon: 'star.fill', color: '#FBBC04' },
+      { label: t('dashboard.progress.weekly'), value: `${weeklyProgress}%`, icon: 'chart.line.uptrend.xyaxis', color: '#EA4335' },
     ];
 
     return (
       <View style={styles.metricsContainer}>
-        <Text style={styles.sectionTitle}>This week</Text>
+        <Text style={styles.sectionTitle}>{t('dashboard.quickOverview')}</Text>
         <View style={styles.metricsGrid}>
           {metrics.map((metric, index) => (
             <View key={index} style={styles.metricCard}>
@@ -488,8 +497,8 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
           <View style={styles.childCardHeader}>
             <View style={styles.childInfo}>
               <Text style={styles.childName}>{selectedChild.name}</Text>
-              <Text style={styles.childDetails}>Grade {selectedChild.grade || 'Pre-K'}</Text>
-              <Text style={styles.childDetails}>Teacher: {selectedChild.teacher_name || 'Not assigned'}</Text>
+              <Text style={styles.childDetails}>🎓 {t('education.grade')}: {selectedChild.grade || 'Pre-K'}</Text>
+              <Text style={styles.childDetails}>👩‍🏫 {selectedChild.teacher_name || t('dashboard.parent.noTeacher')}</Text>
             </View>
             <View style={styles.childAvatar}>
               <Text style={styles.childInitial}>{selectedChild.name.charAt(0)}</Text>
@@ -497,13 +506,13 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
           </View>
           <View style={styles.childCardFooter}>
             <View style={styles.moodSection}>
-              <Text style={styles.moodLabel}>Today's mood</Text>
+              <Text style={styles.moodLabel}>{t('dashboard.mood.today')}</Text>
               <View style={styles.starsContainer}>
                 {renderMoodStars(todaysMood)}
               </View>
             </View>
             <TouchableOpacity style={styles.viewMoreButton}>
-              <Text style={styles.viewMoreText}>View details</Text>
+              <Text style={styles.viewMoreText}>{t('common.viewMore')}</Text>
               <IconSymbol name="chevron.right" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
@@ -514,14 +523,14 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
 
   const renderRecentActivity = () => {
     const activities = [
-      { title: 'Math worksheet completed', time: '2 hours ago', icon: 'checkmark.circle.fill', color: '#34A853' },
-      { title: 'Art project submitted', time: '1 day ago', icon: 'paintbrush.fill', color: '#FBBC04' },
-      { title: 'Reading assignment due', time: '2 days ago', icon: 'book.fill', color: '#EA4335' },
+      { title: 'Math worksheet completed', time: t('relative.hours', { count: 2 }), icon: 'checkmark.circle.fill', color: '#34A853' },
+      { title: 'Art project submitted', time: t('relative.days', { count: 1 }), icon: 'paintbrush.fill', color: '#FBBC04' },
+      { title: 'Reading assignment due', time: t('relative.days', { count: 2 }), icon: 'book.fill', color: '#EA4335' },
     ];
 
     return (
       <View style={styles.activityContainer}>
-        <Text style={styles.sectionTitle}>Recent activity</Text>
+        <Text style={styles.sectionTitle}>{t('dashboard.recentActivity')}</Text>
         <View style={styles.activityList}>
           {activities.map((activity, index) => (
             <TouchableOpacity key={index} style={styles.activityItem} activeOpacity={0.7}>
@@ -544,7 +553,7 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4285F4" />
-        <Text style={styles.loadingText}>Loading your dashboard...</Text>
+        <Text style={styles.loadingText}>{t('dashboard.loading')}</Text>
       </View>
     );
   }
@@ -554,7 +563,7 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchDashboardData}>
-          <Text style={styles.retryButtonText}>Try again</Text>
+          <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -566,9 +575,9 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
         <View style={styles.emptyStateIcon}>
           <IconSymbol name="person.badge.plus" size={32} color="#9AA0A6" />
         </View>
-        <Text style={styles.emptyStateTitle}>No children enrolled</Text>
+        <Text style={styles.emptyStateTitle}>{t('dashboard.parent.noChildrenTitle')}</Text>
         <Text style={styles.emptyStateText}>
-          Contact your school administrator to enroll your child in the system.
+          {t('dashboard.parent.noChildrenDescription')}
         </Text>
       </View>
     );
@@ -599,8 +608,8 @@ const GoogleStyleParentDashboard: React.FC<GoogleStyleParentDashboardProps> = ({
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
-          <Text style={styles.greeting}>Good morning, {userProfile.name.split(' ')[0]}</Text>
-          <Text style={styles.subtitle}>Here's what's happening with your child today</Text>
+          <Text style={styles.greeting}>{getGreeting()} 👋</Text>
+          <Text style={styles.subtitle}>{selectedChild ? t('dashboard.parent.seeHowChildDoing', { name: selectedChild.first_name }) : t('dashboard.parent.welcome')}</Text>
         </View>
 
         {/* Child Card */}

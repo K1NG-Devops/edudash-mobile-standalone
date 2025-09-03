@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 export default function InviteCodeRedirect() {
   const params = useLocalSearchParams();
@@ -17,8 +17,12 @@ export default function InviteCodeRedirect() {
   }, [code]);
 
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={styles.center}>
       <ActivityIndicator />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+});

@@ -225,11 +225,6 @@ export class TeacherDataService {
         .from('classes')
         .select(`
           *,
-          age_groups (
-            id,
-            name,
-            description
-          ),
           students (
             id,
             first_name,
@@ -252,6 +247,26 @@ export class TeacherDataService {
       if (!classesData || classesData.length === 0) {
 
         return [];
+      }
+
+      // Build age group lookup (relationship embedding not available for classes -> age_groups)
+      const ageGroupIds = Array.from(
+        new Set((classesData || []).map((c: any) => c.age_group_id).filter(Boolean))
+      );
+      let ageGroupMap = new Map<string, { id: string; name: string; description: string }>();
+      if (ageGroupIds.length > 0) {
+        try {
+          const { data: ageGroups } = await supabase
+            .from('age_groups')
+            .select('id, name, description')
+            .in('id', ageGroupIds as string[]);
+          (ageGroups || []).forEach((ag: any) => {
+            ageGroupMap.set(ag.id, { id: ag.id, name: ag.name, description: ag.description });
+          });
+        } catch (e) {
+          // Non-fatal: fallback handled below
+          log.warn('⚠️ [TeacherService] Could not load age_groups for classes:', e);
+        }
       }
 
       // Transform data to enhanced class format
@@ -277,12 +292,13 @@ export class TeacherDataService {
             })
           );
 
+          const ag = classData.age_group_id ? ageGroupMap.get(classData.age_group_id) : null;
           const enhancedClass: TeacherClass = {
             ...classData,
             student_count: activeStudents.length,
             students: studentsWithMetrics,
-            age_group_name: classData.age_groups?.name || 'Unknown',
-            age_group_description: classData.age_groups?.description || ''
+            age_group_name: ag?.name || classData.age_group || 'Unknown',
+            age_group_description: ag?.description || ''
           };
 
           return enhancedClass;

@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
@@ -18,8 +17,9 @@ import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
 import { router } from 'expo-router';
+import i18n, { useT, getCurrentLocaleTag } from '@/i18n';
 import { supabase } from '@/lib/supabase';
-import MessagingButton from '@/components/messaging/MessagingButton';
+import FloatingButton from '@/src/design-system/components/FloatingButton';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -27,12 +27,14 @@ const { width: screenWidth } = Dimensions.get('window');
 const formatRelativeTime = (date: string): string => {
   const now = new Date();
   const past = new Date(date);
-  const diffInHours = (now.getTime() - past.getTime()) / (1000 * 60 * 60);
-  
-  if (diffInHours < 1) return 'Just now';
-  if (diffInHours < 24) return `${Math.floor(diffInHours)} hours ago`;
-  if (diffInHours < 48) return '1 day ago';
-  return `${Math.floor(diffInHours / 24)} days ago`;
+  const diffMs = now.getTime() - past.getTime();
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  if (minutes < 1) return i18n.t('relative.justNow');
+  if (minutes < 60) return i18n.t('relative.minutes', { count: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return i18n.t('relative.hours', { count: hours });
+  const days = Math.floor(hours / 24);
+  return i18n.t('relative.days', { count: days });
 };
 
 // Helper function to format upcoming date
@@ -41,10 +43,10 @@ const formatUpcomingDate = (date: string): string => {
   const future = new Date(date);
   const diffInDays = Math.ceil((future.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   
-  if (diffInDays === 0) return 'Today';
-  if (diffInDays === 1) return 'Tomorrow';
-  if (diffInDays < 7) return future.toLocaleDateString('en-US', { weekday: 'long' });
-  return future.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (diffInDays === 0) return i18n.t('date.today');
+  if (diffInDays === 1) return i18n.t('date.tomorrow');
+  if (diffInDays < 7) return future.toLocaleDateString(getCurrentLocaleTag(), { weekday: 'long' });
+  return future.toLocaleDateString(getCurrentLocaleTag(), { month: 'short', day: 'numeric' });
 };
 
 // Fetch dashboard statistics from real data
@@ -97,8 +99,8 @@ const fetchRecentUpdates = async (parentId: string, children: Child[]): Promise<
         updates.push({
           id: `hw-${hw.id}`,
           type: 'homework',
-          title: hw.title || 'New Assignment',
-          description: hw.description || 'Check your assignments',
+          title: hw.title || i18n.t('dashboard.updates.newAssignmentTitle'),
+          description: hw.description || i18n.t('dashboard.updates.checkAssignments'),
           timestamp: formatRelativeTime(hw.created_at),
           child_id: undefined as any,
           icon: 'doc.text.fill'
@@ -112,8 +114,8 @@ const fetchRecentUpdates = async (parentId: string, children: Child[]): Promise<
         updates.push({
           id: `ann-${announcement.id}`,
           type: 'announcement',
-          title: announcement.title || 'School Announcement',
-          description: announcement.content || 'Check the latest updates',
+          title: announcement.title || i18n.t('dashboard.updates.schoolAnnouncementTitle'),
+          description: announcement.content || i18n.t('dashboard.updates.checkLatestUpdates'),
           timestamp: formatRelativeTime(announcement.created_at),
           icon: 'megaphone.fill'
         });
@@ -160,7 +162,7 @@ const fetchUpcomingEvents = async (parentId: string, children: Child[]): Promise
       if (due >= now) {
         rawEvents.push({
           id: `hw-${hw.id}`,
-          title: hw.title || 'Assignment Due',
+          title: hw.title || i18n.t('dashboard.events.assignmentDue'),
           dueMs: due.getTime(),
         });
       }
@@ -175,7 +177,7 @@ const fetchUpcomingEvents = async (parentId: string, children: Child[]): Promise
           id: ev.id,
           title: ev.title,
           date: formatUpcomingDate(d.toISOString()),
-          time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          time: d.toLocaleTimeString(getCurrentLocaleTag(), { hour: 'numeric', minute: '2-digit' }),
           type: 'assignment',
         } as UpcomingEvent;
       });
@@ -245,6 +247,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
   profile,
   onSignOut,
 }) => {
+  const { t } = useT();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
@@ -269,13 +272,13 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) {
-      setGreeting('Good morning');
+      setGreeting(t('dashboard.goodMorning'));
     } else if (hour < 17) {
-      setGreeting('Good afternoon');
+      setGreeting(t('dashboard.goodAfternoon'));
     } else {
-      setGreeting('Good evening');
+      setGreeting(t('dashboard.goodEvening'));
     }
-  }, []);
+  }, [t]);
 
   const fetchTenantInfo = useCallback(async () => {
     if (!profile?.preschool_id) return;
@@ -366,8 +369,8 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         last_name: student.last_name,
         name: `${student.first_name} ${student.last_name}`,
         age: calculateAge(student.date_of_birth),
-        class_name: student.classes?.name || 'Not Assigned',
-        teacher: student.classes?.users?.name || 'No Teacher Assigned',
+        class_name: student.classes?.name || i18n.t('common.unassigned'),
+        teacher: student.classes?.users?.name || i18n.t('dashboard.parent.noTeacherAssigned'),
         attendance: 0, // Will be fetched separately
         is_active: student.is_active,
         class_id: student.class_id,
@@ -400,7 +403,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
 
     } catch (error) {
       // Removed debug statement: console.error('Error fetching children data:', error);
-      Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
+      Alert.alert(i18n.t('errors.somethingWentWrong'), i18n.t('errors.tryAgain'));
     } finally {
       setLoading(false);
     }
@@ -441,7 +444,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         router.push('/screens/lessons');
         break;
       case 'messages':
-        router.push('/(tabs)/messages');
+        router.push('/messages');
         break;
       case 'profile':
         router.push('/screens/complete-profile');
@@ -478,9 +481,9 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
             <View style={styles.sparkleIcon}>
               <IconSymbol name="sparkles" size={32} color="#3B82F6" />
             </View>
-            <Text style={styles.onboardingTitle}>Welcome to EduDash Pro</Text>
+            <Text style={styles.onboardingTitle}>{t('dashboard.parent.welcome')}</Text>
             <Text style={styles.onboardingSubtitle}>
-              Your gateway to your child&apos;s educational journey
+              {t('dashboard.parent.provideContactDetails')}
             </Text>
           </View>
 
@@ -520,12 +523,12 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
                 />
               </View>
               <Text style={styles.actionTitle}>
-                {profileComplete ? 'Profile Complete!' : 'Complete Your Profile'}
+                {profileComplete ? t('dashboard.parent.profileComplete') : t('dashboard.parent.completeYourProfile')}
               </Text>
               <Text style={styles.actionDescription}>
                 {profileComplete 
-                  ? 'Your contact information is ready' 
-                  : 'Provide contact details for communication'
+                  ? t('dashboard.parent.contactReady') 
+                  : t('dashboard.parent.provideContactDetails')
                 }
               </Text>
             </TouchableOpacity>
@@ -547,12 +550,12 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
                 />
               </View>
               <Text style={styles.actionTitle}>
-                {children.length > 0 ? 'Child Registered!' : 'Register Your Child'}
+                {children.length > 0 ? t('dashboard.parent.childRegistered') : t('dashboard.parent.registerYourChild')}
               </Text>
               <Text style={styles.actionDescription}>
                 {children.length > 0 
-                  ? 'Your child is enrolled and ready' 
-                  : 'Add your child\'s information for enrollment'
+                  ? t('dashboard.parent.childIsEnrolled') 
+                  : t('dashboard.parent.addChildInfo')
                 }
               </Text>
             </TouchableOpacity>
@@ -561,7 +564,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
           {children.length === 0 && profileComplete && (
             <View style={styles.onboardingFooter}>
               <Text style={styles.onboardingFooterText}>
-                Ready to register your child? Tap the card above to get started!
+                {t('dashboard.parent.readyToRegister')}
               </Text>
             </View>
           )}
@@ -597,7 +600,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
                 )}
               </View>
               <Text style={styles.childDetails}>
-                🎂 {selectedChild?.age} years old
+                🎂 {t('age.years', { count: selectedChild?.age || 0 })}
               </Text>
               <Text style={styles.childDetails}>
                 👩‍🏫 {selectedChild?.teacher}
@@ -613,15 +616,15 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
           <View style={styles.childCardStats}>
             <View style={styles.childStat}>
               <Text style={styles.childStatValue}>{selectedChild?.attendance || 0}%</Text>
-              <Text style={styles.childStatLabel}>Attendance</Text>
+              <Text style={styles.childStatLabel}>{t('education.attendance')}</Text>
             </View>
             <View style={styles.childStat}>
               <Text style={styles.childStatValue}>{stats.totalActivities || 0}</Text>
-              <Text style={styles.childStatLabel}>Activities</Text>
+              <Text style={styles.childStatLabel}>{t('education.activities')}</Text>
             </View>
             <View style={styles.childStat}>
               <Text style={styles.childStatValue}>{stats.recentHomework || 0}</Text>
-              <Text style={styles.childStatLabel}>Homework</Text>
+              <Text style={styles.childStatLabel}>{t('education.homework')}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -651,7 +654,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
             <View style={styles.childDropdownInfo}>
               <Text style={styles.childDropdownName}>{child.name}</Text>
               <Text style={styles.childDropdownDetails}>
-                {child.age} years • {child.class_name} • {child.teacher}
+                {i18n.t('age.years', { count: child.age || 0 })} • {child.class_name} • {child.teacher}
               </Text>
             </View>
             {child.id === selectedChildId && (
@@ -668,23 +671,23 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
 
     return (
       <View style={styles.quickStatsContainer}>
-        <Text style={styles.sectionTitle}>📊 Quick Overview</Text>
+        <Text style={styles.sectionTitle}>📊 {t('dashboard.parent.quickOverview')}</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.totalChildren}</Text>
-            <Text style={styles.statLabel}>Children</Text>
+            <Text style={styles.statLabel}>{t('dashboard.parent.childrenLabel')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{Math.round(stats.avgAttendance)}%</Text>
-            <Text style={styles.statLabel}>Attendance</Text>
+            <Text style={styles.statLabel}>{t('education.attendance')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.totalActivities}</Text>
-            <Text style={styles.statLabel}>Activities</Text>
+            <Text style={styles.statLabel}>{t('education.activities')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.completionRate}%</Text>
-            <Text style={styles.statLabel}>Completion</Text>
+            <Text style={styles.statLabel}>{t('education.completion')}</Text>
           </View>
         </View>
       </View>
@@ -695,15 +698,15 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
     if (children.length === 0 && !profileComplete) return null;
 
     const actions = [
-      { id: 'homework', icon: 'doc.text.fill', label: 'Homework', color: '#EF4444' },
-      { id: 'activities', icon: 'gamecontroller.fill', label: 'Activities', color: '#F59E0B' },
-      { id: 'lessons', icon: 'book.fill', label: 'Lessons', color: '#10B981' },
-      { id: 'calendar', icon: 'calendar', label: 'Calendar', color: '#8B5CF6' },
+      { id: 'homework', icon: 'doc.text.fill', label: t('education.homework'), color: '#EF4444' },
+      { id: 'activities', icon: 'gamecontroller.fill', label: t('education.activities'), color: '#F59E0B' },
+      { id: 'lessons', icon: 'book.fill', label: t('education.lessons'), color: '#10B981' },
+      { id: 'calendar', icon: 'calendar', label: t('nav.calendar'), color: '#8B5CF6' },
     ];
 
     return (
       <View style={styles.quickActionsContainer}>
-        <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
+        <Text style={styles.sectionTitle}>⚡ {t('dashboard.quickActions')}</Text>
         <View style={styles.quickActionsGrid}>
           {actions.map(action => (
             <TouchableOpacity
@@ -727,7 +730,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
 
     return (
       <View style={styles.updatesContainer}>
-        <Text style={styles.sectionTitle}>📢 Recent Updates</Text>
+        <Text style={styles.sectionTitle}>📢 {t('dashboard.parent.recentUpdates')}</Text>
         {recentUpdates.slice(0, 3).map(update => (
           <TouchableOpacity key={update.id} style={styles.updateItem}>
             <View style={styles.updateIcon}>
@@ -749,7 +752,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
 
     return (
       <View style={styles.eventsContainer}>
-        <Text style={styles.sectionTitle}>📅 Upcoming Events</Text>
+        <Text style={styles.sectionTitle}>📅 {t('dashboard.upcomingEvents')}</Text>
         {upcomingEvents.slice(0, 3).map(event => (
           <TouchableOpacity key={event.id} style={styles.eventItem}>
             <View style={styles.eventDate}>
@@ -770,18 +773,18 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View className="flex-1 justify-center items-center bg-background">
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text style={styles.loadingText}>Loading your dashboard...</Text>
+        <Text className="mt-4 text-base text-foreground-muted">{t('dashboard.loading')}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-background">
       <MobileHeader
         user={{
-          name: profile?.name || 'Parent',
+          name: profile?.name || t('roles.parent'),
           role: 'parent',
           avatar: profile?.avatar_url,
         }}
@@ -792,7 +795,7 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
       />
 
       <ScrollView
-        style={styles.scrollView}
+        className="flex-1"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -800,17 +803,24 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         contentContainerStyle={styles.scrollContent}
       >
         {/* Header */}
-        <View style={styles.headerSection}>
-          <Text style={styles.greeting}>{greeting}! 👋</Text>
-          <Text style={styles.subtitle}>
+        <View className="px-6 pt-10 pb-6 bg-white mx-4 mt-4 rounded-xl shadow-sm">
+          <Text className="text-4xl font-black text-foreground mb-2 tracking-tight">{greeting} 👋</Text>
+          <Text className="text-lg text-foreground-subtle leading-6 font-normal">
             {selectedChild
-              ? `Let&apos;s see how ${selectedChild.first_name || selectedChild.name?.split(' ')[0]} is doing today`
-              : 'Welcome to your parent dashboard'
+              ? t('dashboard.parent.seeHowChildDoing', { name: selectedChild.first_name || selectedChild.name?.split(' ')[0] })
+              : t('dashboard.parent.welcome')
             }
           </Text>
           {tenantInfo && (
-            <View style={styles.tenantBadge}>
-              <Text style={styles.tenantLabel}>🏫 {tenantInfo.name}</Text>
+            <View className="bg-primary-subtle rounded-lg px-3 py-2 mt-3 self-start">
+              <Text
+                className="text-sm font-semibold text-primary"
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{ flexShrink: 1 }}
+              >
+                🏫 {tenantInfo.name}
+              </Text>
             </View>
           )}
         </View>
@@ -839,17 +849,13 @@ const EnhancedParentDashboard: React.FC<EnhancedParentDashboardProps> = ({
         <View style={styles.bottomSpacing} />
       </ScrollView>
       
-      {/* Floating Messaging Button */}
-      {(children.length > 0 || profileComplete) && (
-        <View style={styles.floatingButtonContainer}>
-          <MessagingButton
-            profile={profile}
-            children={children}
-            variant="floating"
-            size="large"
-          />
-        </View>
-      )}
+      {/* WhatsApp-style Floating Button */}
+      <FloatingButton 
+        onPress={() => router.push('/messages')}
+        accessibilityLabel={t('accessibility.openMessages')}
+        accessibilityHint={t('accessibility.openMessagesHint')}
+      />
+      
     </View>
   );
 };
@@ -877,20 +883,31 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   headerSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 16,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 24,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   greeting: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 32,
+    fontWeight: '800',
     color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 22,
+    fontSize: 17,
+    color: '#64748B',
+    lineHeight: 24,
+    fontWeight: '400',
   },
   tenantBadge: {
     backgroundColor: 'rgba(59, 130, 246, 0.1)',

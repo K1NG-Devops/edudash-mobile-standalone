@@ -40,6 +40,12 @@ interface Notification {
 export default function NotificationsScreen() {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
+
+  const themed = React.useMemo(() => StyleSheet.create({
+    notifTitleColor: { color: colorScheme === 'dark' ? '#F1F5F9' : '#111827' },
+    notifTimeColor: { color: colorScheme === 'dark' ? '#94A3B8' : '#6B7280' },
+    notifMessageColor: { color: colorScheme === 'dark' ? '#CBD5E1' : '#374151' },
+  }), [colorScheme]);
   const { user } = useAuth();
   const { subscription } = useSubscription();
   const isFreeTier = (subscription?.plan?.tier || 'free') === 'free';
@@ -172,10 +178,10 @@ export default function NotificationsScreen() {
 
   // Header actions (Mark all read / test) will be rendered below CompactHeader
   const HeaderActions = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 8 }}>
+    <View style={styles.headerActions}>
       {__DEV__ && (
         <TouchableOpacity
-          style={[styles.markAllButton, { backgroundColor: '#10B981' }]}
+          style={[styles.markAllButton, styles.markAllButtonGreen]}
           onPress={async () => {
             try {
               if (!user?.id) return;
@@ -259,16 +265,16 @@ export default function NotificationsScreen() {
                         <Text style={[
                           styles.notificationTitle,
                           !notification.read && styles.unreadTitle,
-                          { color: colorScheme === 'dark' ? '#F1F5F9' : '#111827' }
+                          themed.notifTitleColor,
                         ]}>
                           {notification.title}
                         </Text>
-                        <Text style={[styles.notificationTime, { color: colorScheme === 'dark' ? '#94A3B8' : '#6B7280' }]}>
+                        <Text style={[styles.notificationTime, themed.notifTimeColor]}>
                           {formatTimeAgo(notification.created_at)}
                         </Text>
                       </View>
                       
-                      <Text style={[styles.notificationMessage, { color: colorScheme === 'dark' ? '#CBD5E1' : '#374151' }]}>
+                      <Text style={[styles.notificationMessage, themed.notifMessageColor]}>
                         {notification.message}
                       </Text>
                       
@@ -326,6 +332,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 8 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -361,6 +368,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#8B5CF6',
     borderRadius: 6,
   },
+  markAllButtonGreen: { backgroundColor: '#10B981' },
   markAllText: {
     color: '#FFFFFF',
     fontSize: 12,

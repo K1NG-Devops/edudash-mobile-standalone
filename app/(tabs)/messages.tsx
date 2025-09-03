@@ -5,6 +5,7 @@ import MessagingCenter from '@/components/messaging/MessagingCenter';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
+import { StyleSheet } from 'react-native';
 
 // Inner component to properly use hooks
 const MessagesContent: React.FC<{ profile: any }> = ({ profile }) => {
@@ -55,11 +56,15 @@ export default function MessagesTabScreen() {
   const palette = Colors[colorScheme];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.background }} edges={['top','left','right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['top','left','right']}>
       <AuthConsumer>
         {({ profile }) => <MessagesContent profile={profile} />}
       </AuthConsumer>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+});
 

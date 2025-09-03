@@ -11,6 +11,18 @@ export default function AttendanceScreen() {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
 
+  // Themed styles to avoid inline objects for common colors/backgrounds
+  const themed = useMemo(() => StyleSheet.create({
+    screenBg: { backgroundColor: palette.background },
+    text: { color: palette.text },
+    textSecondary: { color: palette.textSecondary },
+    surfaceRow: { backgroundColor: palette.surface, borderColor: palette.outline },
+    pillActive: { borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.1)' },
+    pillInactive: { borderColor: palette.outline, backgroundColor: palette.surface },
+    pillTextActive: { color: '#3B82F6' },
+    pillTextInactive: { color: palette.text },
+  }), [palette]);
+
   const [children, setChildren] = useState<EnhancedStudent[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{ date: string; status: string }>>([]);
@@ -51,44 +63,66 @@ export default function AttendanceScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: palette.background }} className="flex-1 bg-background">
-      <View style={{ padding: 16 }}>
-        <Text style={[styles.title, { color: palette.text }]}>Attendance</Text>
+    <View style={[styles.screen, themed.screenBg]} className="flex-1 bg-background">
+      <View style={styles.pad16}>
+        <Text style={[styles.title, themed.text]}>Attendance</Text>
         {!!selectedChild && (
-          <Text style={[styles.subtitle, { color: palette.textSecondary }]}>For {selectedChild.full_name}</Text>
+          <Text style={[styles.subtitle, themed.textSecondary]}>For {selectedChild.full_name}</Text>
         )}
       </View>
 
       {/* Child selector */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.px16Gap8}>
         {children.map((c) => (
-          <TouchableOpacity key={c.id} onPress={async () => { setSelectedChildId(c.id); setRefreshing(true); const hist = await StudentDataService.getAttendanceHistory(c.id); setHistory(hist); setRefreshing(false); }} style={[styles.pill, { borderColor: c.id === (selectedChild?.id) ? '#3B82F6' : palette.outline, backgroundColor: c.id === (selectedChild?.id) ? 'rgba(59,130,246,0.1)' : palette.surface }]}>
-            <Text style={{ color: c.id === (selectedChild?.id) ? '#3B82F6' : palette.text }}>{c.first_name || c.full_name?.split(' ')[0]}</Text>
+          <TouchableOpacity
+            key={c.id}
+            onPress={async () => {
+              setSelectedChildId(c.id);
+              setRefreshing(true);
+              const hist = await StudentDataService.getAttendanceHistory(c.id);
+              setHistory(hist);
+              setRefreshing(false);
+            }}
+            style={[
+              styles.pill,
+              c.id === (selectedChild?.id) ? themed.pillActive : themed.pillInactive,
+            ]}
+          >
+            <Text style={c.id === (selectedChild?.id) ? themed.pillTextActive : themed.pillTextInactive}>
+              {c.first_name || c.full_name?.split(' ')[0]}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing || loading} onRefresh={onRefresh} />}> 
+      <ScrollView style={styles.flex1} contentContainerStyle={styles.pad16} refreshControl={<RefreshControl refreshing={refreshing || loading} onRefresh={onRefresh} />}> 
         {(!history || history.length === 0) ? (
-          <View style={[styles.center, { padding: 24 }]}>
+          <View style={[styles.center, styles.pad24]}>
             <IconSymbol name="calendar" size={48} color="#9CA3AF" />
-            <Text style={{ color: palette.textSecondary, marginTop: 8 }}>No attendance records yet.</Text>
+            <Text style={[styles.mt8, themed.textSecondary]}>No attendance records yet.</Text>
           </View>
         ) : (
           history.map((r, idx) => (
-            <View key={`${r.date}-${idx}`} style={[styles.row, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
-              <Text style={[styles.dateText, { color: palette.text }]}>{new Date(r.date).toLocaleDateString()}</Text>
+            <View key={`${r.date}-${idx}`} style={[styles.row, themed.surfaceRow]}>
+              <Text style={[styles.dateText, themed.text]}>{new Date(r.date).toLocaleDateString()}</Text>
               <Text style={[styles.statusText, { color: statusColor(r.status) }]}>{r.status || 'unknown'}</Text>
             </View>
           ))
         )}
-        <View style={{ height: 24 }} />
+        <View style={styles.h24} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  flex1: { flex: 1 },
+  pad16: { padding: 16 },
+  pad24: { padding: 24 },
+  px16Gap8: { paddingHorizontal: 16, gap: 8 },
+  h24: { height: 24 },
+  mt8: { marginTop: 8 },
   title: { fontSize: 24, fontWeight: '700' },
   subtitle: { fontSize: 14 },
   pill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1 },

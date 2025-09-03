@@ -80,8 +80,7 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
     // Use payment-validated helpers to avoid false "Active"
     if (isTrial) return '#f59e0b';
     if (isActive) return '#10b981';
-    // Treat provider 'active' without payment as past_due for display
-    if (subscription.status === 'active' || subscription.status === 'past_due') return '#ef4444';
+    if (subscription.status === 'past_due') return '#ef4444';
     if (subscription.status === 'canceled' || subscription.status === 'expired') return '#6b7280';
     return '#6b7280';
   };
@@ -89,7 +88,7 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
   const getStatusText = () => {
     if (isTrial) return 'Free Trial';
     if (isActive) return 'Active';
-    if (subscription.status === 'active' || subscription.status === 'past_due') return 'Past Due';
+    if (subscription.status === 'past_due') return 'Past Due';
     if (subscription.status === 'canceled') return 'Canceled';
     if (subscription.status === 'expired' || (daysUntilExpiry !== null && daysUntilExpiry === 0)) return 'Expired';
     return 'Inactive';

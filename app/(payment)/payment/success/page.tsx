@@ -65,7 +65,7 @@ export default function PaymentSuccessPage() {
 
   const handleContinue = () => {
     // Navigate to the main app or dashboard
-    router.replace('/dashboard');
+    router.replace('/(tabs)/dashboard');
   };
 
   const handleViewSubscription = () => {

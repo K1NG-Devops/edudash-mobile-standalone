@@ -176,38 +176,6 @@ export const MessagingHeader: React.FC<MessagingHeaderProps> = ({
                 />
               )}
 
-              {/* Compose Message Button */}
-              <TouchableOpacity
-                style={[
-                  sharedHeaderStyles.modernActionButton, 
-                  styles.composeButton,
-                  isExtraSmall && styles.composeButtonSmall
-                ]}
-                onPress={onCompose}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Compose new message"
-                accessibilityHint="Opens compose message screen"
-              >
-                <IconSymbol 
-                  name="plus" 
-                  size={isExtraSmall ? 16 : 18} 
-                  color="#FFFFFF" 
-                />
-                {notificationCount > 0 && (
-                  <View style={[
-                    sharedHeaderStyles.notificationBadge,
-                    isExtraSmall && styles.notificationBadgeSmall
-                  ]}>
-                    <Text style={[
-                      sharedHeaderStyles.badgeText,
-                      isExtraSmall && styles.badgeTextSmall
-                    ]}>
-                      {notificationCount > 99 ? '99+' : notificationCount.toString()}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
 
               {/* Menu Button (Optional) */}
               {onMenuPress && (

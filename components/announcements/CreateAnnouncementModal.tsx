@@ -9,17 +9,25 @@ interface CreateAnnouncementModalProps {
   visible: boolean;
   onClose: () => void;
   onPosted?: () => void; // callback to refresh Announcements list
+  defaultIncludeStaff?: boolean; // allow callers (e.g., principal quick action) to include staff by default
 }
 
-const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({ visible, onClose, onPosted }) => {
+const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({ visible, onClose, onPosted, defaultIncludeStaff = false }) => {
   const { colorScheme } = useTheme();
   const palette = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
 
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
-  const [includeStaff, setIncludeStaff] = useState(false);
+  const [includeStaff, setIncludeStaff] = useState(defaultIncludeStaff);
   const [posting, setPosting] = useState(false);
+
+  // Keep includeStaff in sync when modal opens with a different default
+  React.useEffect(() => {
+    if (visible) {
+      setIncludeStaff(defaultIncludeStaff);
+    }
+  }, [visible, defaultIncludeStaff]);
 
   const reset = () => {
     setSubject('');
@@ -58,9 +66,9 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({ visib
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.sheet, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E5E7EB' }] }>
+        <View style={[styles.sheet, isDark ? styles.sheetDark : styles.sheetLight]}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: isDark ? '#F8FAFC' : '#111827' }]}>Create Announcement</Text>
+            <Text style={[styles.title, isDark ? styles.textOnDark : styles.textOnLight]}>Create Announcement</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <IconSymbol name="xmark" size={18} color={isDark ? '#CBD5E1' : '#6B7280'} />
             </TouchableOpacity>
@@ -69,7 +77,7 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({ visib
           <TextInput
             placeholder="Subject (optional)"
             placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-            style={[styles.input, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+            style={[styles.input, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textFieldDark : styles.textFieldLight]}
             value={subject}
             onChangeText={setSubject}
           />
@@ -77,7 +85,7 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({ visib
           <TextInput
             placeholder="Write your announcement..."
             placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-            style={[styles.textarea, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+            style={[styles.textarea, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textFieldDark : styles.textFieldLight]}
             value={content}
             onChangeText={setContent}
             multiline
@@ -85,13 +93,17 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({ visib
           />
 
           <TouchableOpacity style={styles.toggleRow} onPress={() => setIncludeStaff(s => !s)}>
-            <View style={[styles.checkbox, { borderColor: isDark ? '#475569' : '#CBD5E1', backgroundColor: includeStaff ? '#10B981' : 'transparent' }]}>
+            <View style={[
+              styles.checkbox,
+              isDark ? styles.checkboxDark : styles.checkboxLight,
+              includeStaff ? styles.checkboxSelected : null,
+            ]}>
               {includeStaff && <IconSymbol name="checkmark" size={12} color="#FFFFFF" />}
             </View>
-            <Text style={{ color: isDark ? '#E5E7EB' : '#111827' }}>Include staff (teachers, admins)</Text>
+            <Text style={isDark ? styles.textOnDark : styles.textOnLight}>Include staff (teachers, admins)</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.postBtn, { backgroundColor: '#10B981' }]} onPress={postAnnouncement} disabled={posting}>
+          <TouchableOpacity style={[styles.postBtn, styles.postBtnPrimary]} onPress={postAnnouncement} disabled={posting}>
             {posting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
@@ -118,6 +130,20 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
   },
+  sheetDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#334155',
+  },
+  sheetLight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+  },
+  textOnDark: {
+    color: '#E5E7EB',
+  },
+  textOnLight: {
+    color: '#111827',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -142,6 +168,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 8,
   },
+  inputDark: {
+    borderColor: '#334155',
+    backgroundColor: '#0B1220',
+  },
+  inputLight: {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  textFieldDark: {
+    color: '#E5E7EB',
+  },
+  textFieldLight: {
+    color: '#111827',
+  },
   textarea: {
     borderWidth: 1,
     borderRadius: 10,
@@ -165,11 +205,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  checkboxDark: {
+    borderColor: '#475569',
+  },
+  checkboxLight: {
+    borderColor: '#CBD5E1',
+  },
+  checkboxSelected: {
+    backgroundColor: '#10B981',
+  },
   postBtn: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 10,
+  },
+  postBtnPrimary: {
+    backgroundColor: '#10B981',
   },
   postText: {
     color: '#FFFFFF',

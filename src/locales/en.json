@@ -1,6 +1,8 @@
 {
   "common": {
     "appName": "EduDash Pro",
+    "seeAll": "See All",
+    "manage": "Manage",
     "ok": "OK",
     "cancel": "Cancel",
     "save": "Save",
@@ -30,7 +32,16 @@
     "viewMore": "View more",
     "viewLess": "View less",
     "optional": "Optional",
-    "required": "Required"
+    "required": "Required",
+    "unknown": "Unknown",
+    "comingSoon": "Coming soon",
+    "unassigned": "Unassigned",
+    "success": "Success",
+    "child": "Child",
+    "lastActive": "Last active",
+    "lastLogin": "Last login",
+    "never": "Never",
+    "noSchool": "No School"
   },
   "nav": {
     "home": "Home",
@@ -47,7 +58,8 @@
     "reports": "Reports",
     "help": "Help",
     "about": "About",
-    "logout": "Logout"
+    "logout": "Logout",
+    "finances": "Finances"
   },
   "auth": {
     "signIn": "Sign in",
@@ -68,7 +80,20 @@
     "invalidCredentials": "Invalid email or password",
     "accountCreated": "Account created successfully",
     "passwordResetSent": "Password reset link sent to your email",
-    "verifyEmail": "Please verify your email address"
+    "verifyEmail": "Please verify your email address",
+    "contactAdminForSetup": "Contact your administrator for account setup",
+    "signInSubtitle": "Sign in to your EduDash Pro account",
+    "passwordUpdatedTitle": "Password Updated! 🎉",
+    "passwordUpdatedMessage": "Your password has been successfully updated. You can now sign in with your new password.",
+    "showPassword": "Show",
+    "hidePassword": "Hide",
+    "passwordResetRequired": "Password reset required",
+    "passwordResetRequiredMessage": "For your security, please set a new password before continuing.",
+    "setNewPassword": "Set new password",
+    "signInFailed": "Sign In Failed",
+    "unexpectedError": "Unexpected error. Please try again.",
+    "welcomeBack": "Welcome Back",
+    "fillAllFields": "Please fill in all fields"
   },
   "settings": {
     "title": "Settings",
@@ -98,11 +123,18 @@
       "currencyExample": "Currency example"
     },
     "rtlPreview": "RTL preview",
-    "languageChanged": "Language changed to {{language}}"
+    "languageChanged": "Language changed to {{language}}",
+    "admin": "Admin",
+    "schoolSettings": "School Settings",
+    "sendTestNotification": "Send test notification",
+    "accountSubscription": "Account & Subscription",
+    "viewPlansUpgrade": "View Plans & Upgrade",
+    "usageBilling": "Usage & Billing"
   },
   "errors": {
     "network": "Network error",
     "unknown": "Unknown error",
+    "reportsLoadFailed": "Failed to load reports",
     "timeout": "Request timed out",
     "serverError": "Server error",
     "notFound": "Not found",
@@ -130,7 +162,9 @@
     "playVideo": "Play video",
     "pauseVideo": "Pause video",
     "muteAudio": "Mute audio",
-    "unmuteAudio": "Unmute audio"
+    "unmuteAudio": "Unmute audio",
+    "openMessages": "Open messages",
+    "openMessagesHint": "Opens the messaging screen"
   },
   "roles": {
     "teacher": "Teacher",
@@ -141,6 +175,12 @@
     "superadmin": "Super Administrator"
   },
   "dashboard": {
+    "schoolStatisticsTitle": "School Statistics",
+    "attendanceToday": "{{percent}}% Attendance Today",
+    "newThisMonth": "new this month",
+    "activeClasses": "active classes",
+    "engagedFamilies": "Engaged families",
+    "principalTools": "Principal Tools",
     "welcome": "Welcome, {{name}}",
     "overview": "Overview",
     "recentActivity": "Recent Activity",
@@ -149,9 +189,202 @@
     "statistics": "Statistics",
     "todaySchedule": "Today's Schedule",
     "announcements": "Announcements",
-    "noDataAvailable": "No data available"
+    "noDataAvailable": "No data available",
+    "goodMorning": "Good morning!",
+    "goodAfternoon": "Good afternoon!",
+    "goodEvening": "Good evening!",
+    "welcomeRole": "Welcome to your {{role}} dashboard",
+    "managingSchool": "🏫 Managing {{name}}",
+    "teacherDashboard": "👩‍🏫 Teacher Dashboard",
+    "adminDashboard": "👨‍💼 Admin Dashboard",
+    "principalSubtitle": "Manage your preschool with ease",
+    "schoolOverviewTitle": "School Overview",
+    "schoolOverviewSubtitle": "Real-time insights into your school",
+    "upgradeYourSchoolTitle": "Upgrade your school",
+    "upgradeYourSchoolDescription": "Unlock premium analytics, priority support, and more for your school.",
+    "systemAlerts": "System Alerts",
+    "metrics": {
+      "monthlyRevenue": "Monthly Revenue",
+      "attendanceRate": "Attendance Rate",
+      "thisMonthAverage": "This month average",
+      "avgPerStudent": "avg per student"
+    },
+    "unlockTeacherPremiumTitle": "Unlock Teacher Premium",
+    "unlockTeacherPremiumDesc": "Unlimited AI lesson generation, homework grading, and advanced analytics for your staff.",
+    "unlockParentPremiumTitle": "Unlock Parent Premium",
+    "unlockParentPremiumDesc": "Enhance parent engagement with premium analytics and notifications.",
+    "teacherTagline": "Your teaching tools at a glance",
+    "teachingAt": "Teaching at {{name}}",
+    "noDueDate": "No due date",
+    "childEvaluations": {
+      "title": "Child Evaluations",
+      "subtitle": "Reports & assessments for students"
+    },
+    "videoCalls": {
+      "title": "Video Calls",
+      "subtitle": "Schedule parent meetings"
+    },
+    "messages": { "subtitle": "Communicate with parents" },
+    "myClasses": {
+      "title": "My Classes",
+      "subtitle": "Manage students & activities"
+    },
+    "settings": { "subtitle": "System configuration" },
+    "users": {
+      "title": "Users",
+      "subtitle": "Manage teachers & parents"
+    },
+    "todaysOverview": "📊 Today's Overview",
+    "cards": {
+      "completed": "Completed",
+      "pending": "Pending",
+      "thisMonth": "This Month",
+      "ofThisMonth": "of {{count}} this month",
+      "leftThisMonth": "left this month",
+      "unlimited": "Unlimited",
+      "aiLessons": { "title": "AI Lessons" },
+      "homeworkAi": { "title": "Homework AI" },
+      "aiTutoring": { "title": "AI Tutoring" },
+      "analytics": { "title": "Analytics", "reportsViewed": "Reports Viewed" },
+      "premiumOnly": "Premium Only"
+    },
+    "teacherSummary": {
+      "reportsCreated": "Reports Created",
+      "messagesSent": "Messages Sent",
+      "videoCalls": "Video Calls"
+    },
+    "teacher": { "performanceRating": "Performance Rating" },
+    "quickOverview": "Quick Overview",
+    "loading": "Loading your dashboard...",
+    "loadingFailed": "Failed to load dashboard data",
+    "updates": {
+      "recent": "Recent Updates",
+      "newAssignmentTitle": "New assignment posted",
+      "checkAssignments": "Check your assignments",
+      "schoolAnnouncementTitle": "School announcement",
+      "checkLatestUpdates": "Check the latest updates"
+    },
+    "achievements": { "recent": "Recent Achievements" },
+    "mood": { "today": "Today's Mood" },
+    "progress": { "weekly": "Weekly Progress" },
+    "actions": {
+      "createLesson": "Create Lesson",
+      "createClass": "Create Class",
+      "browseLessons": "Browse Lessons",
+      "createAssignment": "Create Assignment",
+      "newEvent": "New Event",
+      "announce": "Announce",
+      "messageAll": "Message All",
+      "addNewStudent": "Add New Student",
+      "hireTeacher": "Hire Teacher",
+      "messageAllParentsStaff": "Message All (Parents + Staff)",
+      "openMessages": "Open Messages",
+      "getSupport": "Get Support",
+      "aiLessonGenerator": "AI Lesson Generator",
+      "aiLessonGenerator_description": "Generate custom lessons using AI technology",
+      "gradeHomework": "Grade Homework",
+      "gradeHomework_description": "Automatically grade homework assignments with AI",
+      "stemActivities": "STEM Activities",
+      "stemActivities_description": "Access premium STEM activity library",
+      "progressAnalysis": "Progress Analysis",
+      "progressAnalysis_description": "Advanced analytics and progress tracking",
+      "support": "Support"
+    },
+    "lesson": {
+      "public": "Public",
+      "private": "Private",
+      "durationMinutes": "Duration: {{minutes}} min",
+      "level": "Level: {{level}}"
+    },
+    "events": {
+      "assignmentDue": "Assignment due"
+    },
+    "roomLabel": "Room",
+    "maxCapacity": "Max: {{max}}",
+    "studentsCount": "{{count}} Students",
+    "noRecentActivity": "No recent activity.",
+    "pendingTasks": "Pending Tasks",
+    "noPendingTasks": "No pending tasks.",
+    "currentLessons": "Current Lessons",
+    "viewAllLessons": "View All Lessons",
+    "recentHomeworkAssignments": "Recent Homework Assignments",
+    "empty": {
+      "noClassesTitle": "No classes yet",
+      "noClassesDescription": "Create your first class to get started.",
+      "noLessonsTitle": "No lessons yet",
+      "noLessonsDescription": "Create your first lesson or browse the lesson library.",
+      "noHomeworkTitle": "No homework assigned",
+      "noHomeworkDescription": "Create a homework assignment for your class."
+    },
+    "dueInDays_one": "Due in {{count}} day",
+    "dueInDays_other": "Due in {{count}} days",
+    "dueToday": "Due today",
+    "overdueByDays_one": "Overdue by {{count}} day",
+    "overdueByDays_other": "Overdue by {{count}} days",
+    "classLabel": "Class",
+    "assigned": "Assigned",
+    "general": "General",
+    "recentActivities": "Recent Activities",
+    "parent": {
+      "welcome": "Welcome to your parent dashboard",
+      "seeHowChildDoing": "Let's see how {{name}} is doing today",
+      "recentUpdates": "Recent Updates",
+      "quickOverview": "Quick Overview",
+      "childrenLabel": "Children",
+      "engagementLabel": "Engagement",
+      "totalPaid": "Total Paid",
+      "noTeacher": "No Teacher",
+      "noTeacherAssigned": "No Teacher Assigned",
+      "readyToRegister": "Ready to register your child? Tap the card above to get started!",
+      "childRegistered": "Child Registered!",
+      "completeYourProfile": "Complete Your Profile",
+      "profileComplete": "Profile Complete!",
+      "provideContactDetails": "Provide contact details for communication",
+      "contactReady": "Your contact information is ready",
+      "registerYourChild": "Register Your Child",
+      "addChildInfo": "Add your child's information for enrollment",
+      "childIsEnrolled": "Your child is enrolled and ready",
+      "noChildrenTitle": "No Children Found",
+      "noChildrenDescription": "You don't have any children registered",
+      "registerChild": "Register a Child",
+      "upcomingEventsTitle": "Upcoming Events"
+    }
+  },
+  "reports": {
+    "schoolTitle": "School Reports",
+    "schoolSubtitle": "Key metrics for your school"
+  },
+  "events": {
+    "title": "Events",
+    "join": "Join Event",
+    "joined": "Event joined",
+    "share": "Share",
+    "noEvents": "No events yet",
+    "loading": "Loading events…",
+    "loadMore": "Loading more events...",
+    "endOfList": "You've reached the end",
+    "live": "LIVE EVENT",
+    "happeningNow": "Happening now",
+    "newUpdates": "New Updates",
+    "update": "update",
+    "updates": "updates",
+    "photo": "photo",
+    "photos": "photos",
+    "reaction": "reaction",
+    "reactions": "reactions",
+    "participants": "participants",
+    "participantsTitle": "Participants",
+    "viewParticipants": "View participants",
+    "noParticipants": "No participants yet",
+    "status": {
+      "upcoming": "Upcoming",
+      "ongoing": "Live Now",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
   },
   "education": {
+    "capacity": "Capacity",
     "lesson": "Lesson",
     "lessons": "Lessons",
     "homework": "Homework",
@@ -171,6 +404,214 @@
     "schedule": "Schedule",
     "exam": "Exam",
     "test": "Test",
-    "quiz": "Quiz"
+    "quiz": "Quiz",
+    "activities": "Activities",
+    "completion": "Completion"
+  },
+  "subscription": {
+    "title": "Subscription",
+    "loading": "Loading subscription…",
+    "manageSubscription": "Manage Subscription",
+    "status": {
+      "free": "Free",
+      "trial": "Trial",
+      "active": "Active",
+      "canceled": "Canceled",
+      "expired": "Expired",
+      "pastDue": "Past Due",
+      "inactive": "Inactive"
+    },
+    "plan": {
+      "freePlan": "Free Plan"
+    },
+    "actions": {
+      "upgrade": "Upgrade",
+      "upgradeNow": "Upgrade Now",
+      "goPremium": "Go Premium",
+      "manageSubscription": "Manage Subscription",
+      "upgradeUnlimited": "Upgrade for Unlimited Access",
+      "upgradeToUnlock": "Upgrade to unlock"
+    },
+    "usage": {
+      "title": "Current Usage",
+      "aiLessons": "AI Lessons",
+      "homeworkAI": "Homework AI",
+      "loading": "Loading usage...",
+      "thisMonthTitle": "This Month's Usage",
+      "summaryText": "You've used {{aiUsed}} of {{aiLimit}} AI lessons and {{hwUsed}} of {{hwLimit}} homework gradings this month."
+    },
+    "trial": {
+      "expiresIn_one": "Trial expires in {{count}} day",
+      "expiresIn_other": "Trial expires in {{count}} days"
+    },
+    "alerts": {
+      "upgradeRequired": "Upgrade Required",
+      "limitReached": "Limit Reached",
+      "premiumRequiredTitle": "Premium Required",
+      "premiumRequiredMessage": "This feature requires a Premium plan."
+    },
+    "billing": {
+      "month": "month",
+      "year": "year"
+    }
+  },
+  "relative": {
+    "justNow": "just now",
+    "minutes_one": "{{count}} minute ago",
+    "minutes_other": "{{count}} minutes ago",
+    "hours_one": "{{count}} hour ago",
+    "hours_other": "{{count}} hours ago",
+    "days_one": "{{count}} day ago",
+    "days_other": "{{count}} days ago"
+  },
+  "date": {
+    "today": "Today",
+    "tomorrow": "Tomorrow"
+  },
+  "age": {
+    "years_one": "{{count}} year old",
+    "years_other": "{{count}} years old"
+  },
+  "finance": {
+    "overview": "Financial Overview",
+    "collectionRate": "Collection Rate",
+    "paymentTrends": "Payment Trends (Last 6 Months)",
+    "pendingPayments": "Pending Payments"
+  },
+  "status": {
+    "pending": "Pending",
+    "overdue": "Overdue",
+    "current": "Current",
+    "paid": "Paid"
+  },
+  "payments": {
+    "uploadPOP": "Upload POP",
+    "subscriptionPayment": "Subscription Payment",
+    "proof": {
+      "successTitle": "Success",
+      "successMessage": "Your proof of payment has been submitted successfully. We will review it and update your subscription shortly.",
+      "errorTitle": "Error",
+      "errorMessage": "Failed to submit proof of payment. Please try again."
+    }
+  },
+  "profile": {
+    "complete": "Profile Complete",
+    "completeProfileAction": "Complete Profile"
+  },
+  "principal": {
+    "tools": {
+      "schoolSetup": "School Setup",
+      "schoolSetupSubtitle": "Classes & assignments",
+      "teacherManagement": "Teacher Management",
+      "teacherManagementSubtitle": "Invite & manage teachers",
+      "schoolCode": "School Code",
+      "schoolCodeSubtitle": "Parent invitation codes",
+      "diagnostics": "Diagnostics",
+      "diagnosticsSubtitle": "Verify counts & RLS",
+      "schoolAnalytics": "School Analytics",
+      "schoolAnalyticsSubtitle": "Performance insights",
+      "createAnnouncement": "Create Announcement",
+      "createAnnouncementSubtitle": "Notify all parents",
+      "schoolSettingsSubtitle": "Configure policies"
+    }
+  },
+  "admin": {
+    "activity": {
+      "newParentRegistrations": "{{count}} new parent registrations today",
+      "paymentsReceived": "{{count}} payments received this week",
+      "teacherEvaluationsPending": "{{count}} teacher evaluations pending",
+      "newMessagesFromParents": "{{count}} new messages from parents"
+    },
+    "quick": {
+      "userManagementSubtitle": "Manage staff & parents",
+      "financialReportsSubtitle": "View revenue & expenses",
+      "studentAnalyticsTitle": "Student Analytics",
+      "studentAnalyticsSubtitle": "Enrollment & progress",
+      "communicationTitle": "Communication",
+      "communicationSubtitle": "Send announcements",
+      "systemSettingsSubtitle": "Configure school",
+      "supportCenterTitle": "Support Center",
+      "supportCenterSubtitle": "Help & resources"
+    },
+    "stats": {
+      "totalStudents": "Total Students",
+      "totalTeachers": "Total Teachers",
+      "totalParents": "Total Parents",
+      "activeUsers": "Active Users"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "schools": "Schools",
+      "users": "Users",
+      "activity": "Activity",
+      "system": "System"
+    },
+    "super": {
+      "pageTitle": "🔱 Super Admin Dashboard",
+      "pageSubtitle": "Manage the entire EduDash Pro platform",
+      "recentSchools": "Recent Schools",
+      "addSchool": "Add School",
+      "recentUsers": "Recent Users",
+      "platformActivity": "Platform Activity",
+      "platformAlerts": "Platform Alerts",
+      "pendingApprovals": "Pending Approvals",
+      "onboarding": {
+        "title": "School Onboarding Requests",
+        "noPendingTitle": "No Pending Requests",
+        "noPendingDescription": "All school onboarding requests have been processed",
+        "recentRequests": "Recent Requests",
+        "loadingRequests": "Loading onboarding requests...",
+        "checkManagement": "Check the Schools Management screen for details",
+        "goToRequests": "Go to Requests",
+        "totalSchools": "Total Schools"
+      }
+    },
+    "stats": {
+      "schools": "Schools",
+      "totalUsers": "Total Users",
+      "students": "Students",
+      "monthlyRevenue": "Monthly Revenue",
+      "growthRate": "Growth Rate",
+      "aiRequests": "AI Requests"
+    },
+    "health": {
+      "title": "System Health",
+      "healthy": "Healthy",
+      "issues": "Issues",
+      "apiResponse": "API Response",
+      "uptime": "Uptime",
+      "storage": "Storage",
+      "connections": "Connections"
+    },
+    "actions": {
+      "manageOnboarding": "Manage Onboarding",
+      "platformReports": "Platform Reports",
+      "systemSettings": "System Settings",
+      "userManagement": "User Management",
+      "createSchool": "Create School",
+      "createSchoolManually": "Create School Manually",
+      "manageAllRequests": "Manage All Requests",
+      "suspend": "Suspend"
+    },
+    "messages": {
+      "confirmSuspendSchool": "Are you sure you want to suspend \"{{name}}\"? This will disable access for all users at this school.",
+      "schoolSuspended": "School has been suspended successfully.",
+      "suspendFailed": "Failed to suspend school.",
+      "confirmSuspendUser": "Are you sure you want to suspend \"{{name}}\"?",
+      "userSuspended": "User has been suspended successfully.",
+      "userSuspendFailed": "Failed to suspend user.",
+      "aiUsageResetTitle": "AI Usage Reset",
+      "aiUsageResetUser": "AI usage for {{name}} has been reset.",
+      "resetFailed": "Could not reset AI usage.",
+      "overageEnabledTitle": "Tester Overage Enabled",
+      "overageDisabledTitle": "Tester Overage Disabled",
+      "userCanBypassCaps": "{{name}} can bypass monthly AI caps.",
+      "userCanNoLongerBypassCaps": "{{name}} can no longer bypass monthly AI caps.",
+      "schoolOverageEnabledTitle": "School Overage Enabled",
+      "schoolOverageDisabledTitle": "School Overage Disabled",
+      "schoolCanBypassCaps": "{{name}} testers can bypass monthly AI caps.",
+      "schoolCanNoLongerBypassCaps": "{{name}} testers can no longer bypass monthly AI caps.",
+      "updateFailed": "Could not update settings."
+    }
   }
 }

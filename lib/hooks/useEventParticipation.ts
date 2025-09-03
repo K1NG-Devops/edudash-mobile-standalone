@@ -341,3 +341,64 @@ export const handleEventJoin = async (
     options.onError?.(err.message || 'Failed to join event');
   }
 };
+
+// Helper: cancel (unregister) from an event
+export const handleEventCancel = async (
+  event: EnhancedEvent,
+  userId: string | undefined,
+  options: {
+    onSuccess?: (message: string) => void;
+    onError?: (error: string) => void;
+  } = {}
+) => {
+  if (!userId) {
+    options.onError?.('You must be logged in to cancel');
+    return;
+  }
+  try {
+    const { data: userRecord } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', userId)
+      .single();
+
+    if (!userRecord) throw new Error('User account not found');
+
+    const { data: participation } = await supabase
+      .from('event_participants')
+      .select('id')
+      .eq('event_id', event.id)
+      .eq('user_id', userRecord.id)
+      .single();
+
+    if (!participation) {
+      options.onError?.('You are not registered for this event');
+      return;
+    }
+
+    const { error: delErr } = await supabase
+      .from('event_participants')
+      .delete()
+      .eq('id', participation.id);
+
+    if (delErr) throw delErr;
+
+    // Log activity (best-effort)
+    try {
+      await supabase.from('activity_feed').insert({
+        actor_id: userRecord.id,
+        action: 'left_event',
+        target_type: 'event',
+        target_id: event.id,
+        preschool_id: event.preschool_id,
+        metadata: { event_title: event.title },
+        visibility: 'public',
+      });
+    } catch {}
+
+    options.onSuccess?.(`Cancelled participation in "${event.title}"`);
+  } catch (err: any) {
+    console.error('Failed to cancel event participation:', err);
+    options.onError?.(err.message || 'Failed to cancel');
+  }
+};

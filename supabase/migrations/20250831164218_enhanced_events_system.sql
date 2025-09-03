@@ -341,11 +341,12 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to create event notification
+-- Reordered parameters to place defaults at the end (PostgreSQL requires this)
 CREATE OR REPLACE FUNCTION create_event_notification(
     p_event_id UUID,
-    p_update_id UUID DEFAULT NULL,
     p_notification_type VARCHAR(50),
     p_title VARCHAR(255),
+    p_update_id UUID DEFAULT NULL,
     p_message TEXT DEFAULT NULL
 )
 RETURNS VOID AS $$
@@ -370,6 +371,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant necessary permissions
 GRANT EXECUTE ON FUNCTION get_event_stats(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION create_event_notification(UUID, UUID, VARCHAR(50), VARCHAR(255), TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION create_event_notification(UUID, VARCHAR(50), VARCHAR(255), UUID, TEXT) TO authenticated;
 
 COMMIT;

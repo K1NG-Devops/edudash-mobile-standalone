@@ -18,6 +18,7 @@ import { Colors } from '@/constants/Colors';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { UsageTrackingService, UsageStats } from '@/lib/services/usageTrackingService';
 import { ColorValue } from 'react-native';
+import i18n from '@/src/i18n/index';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -108,27 +109,27 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
     if (childData) {
       baseCards.push({
         id: 'activities',
-        title: 'Activities',
+        title: i18n.t('education.activities', { defaultValue: 'Activities' }),
         value: childData.completed_activities.toString(),
-        subtitle: 'Completed',
+        subtitle: i18n.t('dashboard.cards.completed', { defaultValue: 'Completed' }),
         icon: 'figure.run',
         gradient: ['#10B981', '#059669'] as const
       });
 
       baseCards.push({
         id: 'homework',
-        title: 'Homework',
+        title: i18n.t('education.homework'),
         value: childData.pending_homework.toString(),
-        subtitle: 'Pending',
+        subtitle: i18n.t('dashboard.cards.pending', { defaultValue: 'Pending' }),
         icon: 'doc.text',
         gradient: ['#F59E0B', '#D97706'] as const
       });
 
       baseCards.push({
         id: 'attendance',
-        title: 'Attendance',
+        title: i18n.t('education.attendance'),
         value: `${childData.attendance_percentage}%`,
-        subtitle: 'This Month',
+        subtitle: i18n.t('dashboard.cards.thisMonth', { defaultValue: 'This Month' }),
         icon: 'checkmark.circle',
         gradient: ['#3B82F6', '#2563EB'] as const
       });
@@ -139,11 +140,11 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
       // AI Lessons card
       baseCards.push({
         id: 'ai_lessons',
-        title: 'AI Lessons',
+        title: i18n.t('dashboard.cards.aiLessons.title', { defaultValue: 'AI Lessons' }),
         value: usageStats.ai_lessons_used_this_month.toString(),
         subtitle: usageStats.quotas.ai_lessons_per_month 
-          ? `of ${usageStats.quotas.ai_lessons_per_month} this month`
-          : 'Unlimited',
+          ? i18n.t('dashboard.cards.ofThisMonth', { count: usageStats.quotas.ai_lessons_per_month, defaultValue: 'of {{count}} this month' })
+          : i18n.t('dashboard.cards.unlimited', { defaultValue: 'Unlimited' }),
         icon: 'brain.head.profile',
         gradient: ['#8B5CF6', '#7C3AED'] as const,
         usageInfo: usageStats.quotas.ai_lessons_per_month ? {
@@ -157,11 +158,11 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
       // Homework AI card
       baseCards.push({
         id: 'homework_ai',
-        title: 'Homework AI',
+        title: i18n.t('dashboard.cards.homeworkAi.title', { defaultValue: 'Homework AI' }),
         value: usageStats.homework_graded_this_month.toString(),
         subtitle: usageStats.quotas.homework_grading_per_month
-          ? `of ${usageStats.quotas.homework_grading_per_month} this month`
-          : 'Unlimited',
+          ? i18n.t('dashboard.cards.ofThisMonth', { count: usageStats.quotas.homework_grading_per_month, defaultValue: 'of {{count}} this month' })
+          : i18n.t('dashboard.cards.unlimited', { defaultValue: 'Unlimited' }),
         icon: 'doc.text.below.ecg',
         gradient: ['#06B6D4', '#0891B2'] as const,
         usageInfo: usageStats.quotas.homework_grading_per_month ? {
@@ -176,11 +177,11 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
       if (usageStats.quotas.ai_tutoring_sessions_per_month !== null || usageStats.can_access_premium_features) {
         baseCards.push({
           id: 'ai_tutoring',
-          title: 'AI Tutoring',
+          title: i18n.t('dashboard.cards.aiTutoring.title', { defaultValue: 'AI Tutoring' }),
         value: usageStats.ai_tutoring_sessions_today.toString(),
         subtitle: usageStats.quotas.ai_tutoring_sessions_per_month
-            ? `of ${usageStats.quotas.ai_tutoring_sessions_per_month} this month`
-            : 'Unlimited',
+            ? i18n.t('dashboard.cards.ofThisMonth', { count: usageStats.quotas.ai_tutoring_sessions_per_month, defaultValue: 'of {{count}} this month' })
+            : i18n.t('dashboard.cards.unlimited', { defaultValue: 'Unlimited' }),
           icon: 'person.2.badge.gearshape',
         gradient: ['#EC4899', '#DB2777'] as const,
           usageInfo: usageStats.quotas.ai_tutoring_sessions_per_month ? {
@@ -197,9 +198,9 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
       if (isFreeTier) {
         baseCards.push({
           id: 'premium_analytics',
-          title: 'Analytics',
+          title: i18n.t('dashboard.cards.analytics.title', { defaultValue: 'Analytics' }),
           value: '🔒',
-          subtitle: 'Premium Only',
+          subtitle: i18n.t('dashboard.cards.premiumOnly', { defaultValue: 'Premium Only' }),
           icon: 'chart.bar.xaxis',
           gradient: ['#6B7280', '#4B5563'] as const,
           isPremium: true,
@@ -208,9 +209,9 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
       } else {
         baseCards.push({
           id: 'premium_analytics',
-          title: 'Analytics',
+          title: i18n.t('dashboard.cards.analytics.title', { defaultValue: 'Analytics' }),
           value: usageStats.premium_features_accessed_today?.toString() || '0',
-          subtitle: 'Reports Viewed',
+          subtitle: i18n.t('dashboard.cards.analytics.reportsViewed', { defaultValue: 'Reports Viewed' }),
           icon: 'chart.bar.xaxis',
           gradient: ['#7C3AED', '#6D28D9'] as const,
           isPremium: true,
@@ -225,11 +226,11 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
   const handleCardPress = async (card: StatCardData) => {
     if (card.isLocked && card.isPremium) {
       Alert.alert(
-        'Premium Feature',
-        `${card.title} requires a premium subscription. Would you like to upgrade?`,
+        i18n.t('subscription.alerts.premiumRequiredTitle'),
+        i18n.t('subscription.alerts.premiumRequiredMessage', { feature: card.title }),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management') }
+          { text: i18n.t('common.cancel'), style: 'cancel' },
+          { text: i18n.t('subscription.actions.upgrade'), onPress: () => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management') }
         ]
       );
       return;
@@ -238,14 +239,14 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
     if (card.isLocked) {
       const permission = await UsageTrackingService.canPerformAction(userId, card.usageInfo?.feature as any);
       if (!permission.allowed && permission.upgradeRequired) {
-        Alert.alert(
-          'Usage Limit Reached',
-          permission.reason + '\n\nUpgrade for higher limits and unlimited features.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Upgrade', onPress: () => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management') }
-          ]
-        );
+      Alert.alert(
+        i18n.t('subscription.alerts.limitReached'),
+        permission.reason + '\n\n' + i18n.t('subscription.actions.upgradeUnlimited'),
+        [
+          { text: i18n.t('common.cancel'), style: 'cancel' },
+          { text: i18n.t('subscription.actions.upgrade'), onPress: () => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management') }
+        ]
+      );
         return;
       }
     }
@@ -368,7 +369,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
                   <Text style={styles.cardSubtitle}>{card.subtitle}</Text>
                   {card.id === 'ai_lessons' && card.usageInfo && !card.isLocked && (
                     <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 }}>
-                      {card.usageInfo.limit === -1 ? '∞ left this month' : `${Math.max(0, card.usageInfo.limit - card.usageInfo.used)} left this month`}
+                      {card.usageInfo.limit === -1 ? `∞ ${i18n.t('dashboard.cards.leftThisMonth')}` : `${Math.max(0, card.usageInfo.limit - card.usageInfo.used)} ${i18n.t('dashboard.cards.leftThisMonth')}`}
                     </Text>
                   )}
                 </>
@@ -392,7 +393,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
                 onPress={() => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management')}
               >
                 <Text style={styles.upgradePromptText}>
-                  {card.isPremium ? 'Upgrade to Unlock' : 'Manage Subscription'}
+                  {card.isPremium ? i18n.t('subscription.actions.upgradeToUnlock') : i18n.t('subscription.actions.manageSubscription')}
                 </Text>
                 <IconSymbol name="arrow.up.right" size={12} color="#FFFFFF" />
               </TouchableOpacity>
@@ -408,7 +409,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={palette.primary} />
         <Text style={[styles.loadingText, { color: palette.textSecondary }]}>
-          Loading usage stats...
+          {i18n.t('subscription.usage.loading')}
         </Text>
       </View>
     );
@@ -430,7 +431,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
               style={styles.upgradeButton}
               onPress={() => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management')}
             >
-              <Text style={styles.upgradeButtonText}>Upgrade</Text>
+              <Text style={styles.upgradeButtonText}>{i18n.t('subscription.actions.upgrade')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -451,7 +452,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
               color={subscriptionTier === 'free' ? '#6B7280' : '#8B5CF6'} 
             />
             <Text style={[styles.tierText, { color: palette.text }]}>
-              {subscription?.plan?.name || 'Free Plan'}
+              {subscription?.plan?.name || i18n.t('subscription.plan.freePlan')}
             </Text>
           </View>
           {isFreeTier && (
@@ -459,7 +460,7 @@ const SubscriptionAwareStatsCards: React.FC<SubscriptionAwareStatsCardsProps> = 
               style={styles.tierUpgradeButton}
               onPress={() => onUpgradePress ? onUpgradePress() : router.push('/screens/subscription-management')}
             >
-              <Text style={styles.tierUpgradeText}>Upgrade</Text>
+              <Text style={styles.tierUpgradeText}>{i18n.t('subscription.actions.upgrade')}</Text>
               <IconSymbol name="arrow.right" size={12} color="#8B5CF6" />
             </TouchableOpacity>
           )}

@@ -244,20 +244,20 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.sheet, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E5E7EB' }]}>
+        <View style={[styles.sheet, isDark ? styles.sheetDark : styles.sheetLight]}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: isDark ? '#F8FAFC' : '#111827' }]}>Create Event</Text>
+            <Text style={[styles.title, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}>Create Event</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <IconSymbol name="xmark" size={18} color={isDark ? '#CBD5E1' : '#6B7280'} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={styles.contentPB8} showsVerticalScrollIndicator={false}>
             {/* Basic Event Info */}
             <TextInput
               placeholder="Event title"
               placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-              style={[styles.input, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+              style={[styles.input, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
               value={title}
               onChangeText={setTitle}
             />
@@ -265,19 +265,19 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
             <TextInput
               placeholder="Description (optional)"
               placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-              style={[styles.textarea, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+              style={[styles.textarea, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
               value={description}
               onChangeText={setDescription}
               multiline
               numberOfLines={4}
             />
 
-            <Text style={[styles.label, { color: isDark ? '#E5E7EB' : '#111827' }]}>Date & time</Text>
+            <Text style={[styles.label, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}>Date & time</Text>
             <View style={styles.row}>
               <TextInput
                 placeholder="Start (YYYY-MM-DDTHH:mm)"
                 placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-                style={[styles.input, styles.inputHalf, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+                style={[styles.input, styles.inputHalf, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
                 value={startDate}
                 onChangeText={setStartDate}
                 autoCapitalize="none"
@@ -285,7 +285,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
               <TextInput
                 placeholder="End (optional)"
                 placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-                style={[styles.input, styles.inputHalf, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+                style={[styles.input, styles.inputHalf, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
                 value={endDate}
                 onChangeText={setEndDate}
                 autoCapitalize="none"
@@ -295,18 +295,26 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
             <TextInput
               placeholder="Location (optional)"
               placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-              style={[styles.input, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+              style={[styles.input, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
               value={location}
               onChangeText={setLocation}
             />
 
-            <Text style={[styles.label, { color: isDark ? '#E5E7EB' : '#111827' }]}>Event type</Text>
+            <Text style={[styles.label, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}>Event type</Text>
             <View style={styles.typeRow}>
               {EVENT_TYPES.map((t) => {
                 const active = eventType === t;
                 return (
-                  <TouchableOpacity key={t} onPress={() => setEventType(t)} style={[styles.typeChip, { borderColor: active ? '#3B82F6' : (isDark ? '#334155' : '#E5E7EB'), backgroundColor: active ? (isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)') : 'transparent' }]}>
-                    <Text style={{ color: active ? '#3B82F6' : (isDark ? '#CBD5E1' : '#6B7280'), fontWeight: active ? '700' : '500' }}>{t.replace('_',' ')}</Text>
+                  <TouchableOpacity key={t} onPress={() => setEventType(t)} style={[
+                    styles.typeChip,
+                    active
+                      ? (isDark ? styles.typeChipActiveDark : styles.typeChipActiveLight)
+                      : (isDark ? styles.typeChipInactiveDark : styles.typeChipInactiveLight)
+                  ]}>
+                    <Text style={[
+                      active ? styles.typeTextActiveBlue : (isDark ? styles.typeTextInactiveDark : styles.typeTextInactiveLight),
+                      active ? styles.fw700 : styles.fw500,
+                    ]}>{t.replace('_',' ')}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -315,7 +323,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
             {/* Event Audience & Targeting */}
             <View style={styles.targetingSection}>
               <TouchableOpacity
-                style={[styles.targetingHeader, { borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+                style={[styles.targetingHeader, (isDark ? styles.borderDark : styles.borderLight), (isDark ? styles.bgCardDark : styles.bgCardLight)]}
                 onPress={() => setShowTargeting(!showTargeting)}
               >
                 <View style={styles.targetingHeaderLeft}>
@@ -325,10 +333,10 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     color={isDark ? '#3B82F6' : '#3B82F6'}
                   />
                   <View>
-                    <Text style={[styles.targetingTitle, { color: isDark ? '#E5E7EB' : '#111827' }]}>
+                    <Text style={[styles.targetingTitle, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}>
                       Event Audience
                     </Text>
-                    <Text style={[styles.targetingSubtitle, { color: isDark ? '#94A3B8' : '#6B7280' }]}>
+                    <Text style={[styles.targetingSubtitle, isDark ? styles.textSecondaryDark : styles.textSecondaryLight]}>
                       {targeting.audience_type === 'everyone' ? 'Everyone can join' :
                        targeting.audience_type === 'specific_groups' ? `${targeting.audience_config.group_ids?.length || 0} groups selected` :
                        targeting.audience_type === 'specific_users' ? `${targeting.audience_config.user_ids?.length || 0} users selected` :
@@ -338,7 +346,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 </View>
                 <View style={styles.targetingHeaderRight}>
                   {targeting.requires_approval && (
-                    <View style={[styles.approvalBadge, { backgroundColor: '#F59E0B' }]}>
+                    <View style={[styles.approvalBadge, styles.approvalBadgeAmber]}>
                       <IconSymbol name="checkmark.seal" size={12} color="#FFFFFF" />
                       <Text style={styles.approvalText}>Approval</Text>
                     </View>
@@ -364,13 +372,13 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
             </View>
 
             {/* Attachments */}
-            <Text style={[styles.label, { color: isDark ? '#E5E7EB' : '#111827' }]}>Attachments (optional)</Text>
+            <Text style={[styles.label, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}>Attachments (optional)</Text>
             <View style={styles.attachRow}>
-              <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#10B981' }]} onPress={addImage}>
+              <TouchableOpacity style={[styles.smallBtn, styles.smallBtnGreen]} onPress={addImage}>
                 <IconSymbol name="photo" size={16} color="#FFFFFF" />
                 <Text style={styles.smallBtnText}>Add Image</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#F59E0B' }]} onPress={addVideo}>
+              <TouchableOpacity style={[styles.smallBtn, styles.smallBtnAmber]} onPress={addVideo}>
                 <IconSymbol name="video" size={16} color="#FFFFFF" />
                 <Text style={styles.smallBtnText}>Add Video</Text>
               </TouchableOpacity>
@@ -378,9 +386,9 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
             {attachments.length > 0 && (
               <View style={styles.attachList}>
                 {attachments.map((a) => (
-                  <View key={a.name} style={[styles.attachItem, { borderColor: isDark ? '#334155' : '#E5E7EB' }]}>
+                  <View key={a.name} style={[styles.attachItem, isDark ? styles.borderDark : styles.borderLight]}>
                     <IconSymbol name={a.mimeType.startsWith('image/') ? 'photo' : 'video'} size={14} color={isDark ? '#E5E7EB' : '#1F2937'} />
-                    <Text style={{ flex: 1, color: isDark ? '#E5E7EB' : '#1F2937' }} numberOfLines={1}>{a.name}</Text>
+                    <Text style={[styles.attachItemText, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]} numberOfLines={1}>{a.name}</Text>
                     <TouchableOpacity onPress={() => removeAttachment(a.name)}>
                       <IconSymbol name="xmark.circle.fill" size={16} color="#EF4444" />
                     </TouchableOpacity>
@@ -390,7 +398,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
             )}
           </ScrollView>
 
-          <TouchableOpacity style={[styles.postBtn, { backgroundColor: '#3B82F6' }]} onPress={createEvent} disabled={posting}>
+          <TouchableOpacity style={[styles.postBtn, styles.postBtnBlue]} onPress={createEvent} disabled={posting}>
             {posting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
@@ -567,6 +575,31 @@ const styles = StyleSheet.create({
   targetingContent: {
     maxHeight: 400,
   },
+  sheetDark: { backgroundColor: '#0F172A', borderColor: '#334155' },
+  sheetLight: { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' },
+  inputDark: { borderColor: '#334155', backgroundColor: '#0B1220' },
+  inputLight: { borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' },
+  contentPB8: { paddingBottom: 8 },
+  typeChipActiveDark: { borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.15)' },
+  typeChipActiveLight: { borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.1)' },
+  typeChipInactiveDark: { borderColor: '#334155', backgroundColor: 'transparent' },
+  typeChipInactiveLight: { borderColor: '#E5E7EB', backgroundColor: 'transparent' },
+  typeTextActiveBlue: { color: '#3B82F6' },
+  typeTextInactiveDark: { color: '#CBD5E1' },
+  typeTextInactiveLight: { color: '#6B7280' },
+  fw700: { fontWeight: '700' },
+  fw500: { fontWeight: '500' },
+  borderDark: { borderColor: '#334155' },
+  borderLight: { borderColor: '#E5E7EB' },
+  bgCardDark: { backgroundColor: '#0B1220' },
+  bgCardLight: { backgroundColor: '#F9FAFB' },
+  approvalBadgeAmber: { backgroundColor: '#F59E0B' },
+  attachItemText: { flex: 1 },
+  postBtnBlue: { backgroundColor: '#3B82F6' },
+  textPrimaryDark: { color: '#E5E7EB' },
+  textPrimaryLight: { color: '#111827' },
+  textSecondaryDark: { color: '#94A3B8' },
+  textSecondaryLight: { color: '#6B7280' },
 });
 
 export default CreateEventModal;

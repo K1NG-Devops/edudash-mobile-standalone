@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import type { Href } from 'expo-router';
 import { router } from 'expo-router';
 import React from 'react';
+import i18n from '../../src/i18n/index';
 import {
   ScrollView,
   StyleSheet,
@@ -250,9 +251,9 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
 
   getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning!';
-    if (hour < 17) return 'Good afternoon!';
-    return 'Good evening!';
+    if (hour < 12) return i18n.t('dashboard.goodMorning');
+    if (hour < 17) return i18n.t('dashboard.goodAfternoon');
+    return i18n.t('dashboard.goodEvening');
   };
 
   renderStars = (rating: number) => {
@@ -311,7 +312,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
         router.push('/screens/lessons' as Href);
         break;
       case 'messages':
-        router.push('/(tabs)/messages' as Href);
+        router.push('/messages' as Href);
         break;
       default:
 
@@ -384,7 +385,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
           <View style={styles.headerTextSection}>
             <Text style={[styles.greeting, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>{this.getGreeting()} 👋</Text>
             <Text style={[styles.subtitle, { color: this.props.isDark ? this.props.palette.textSecondary : '#6B7280' }]}>
-              Welcome to your {profile?.role || 'admin'} dashboard
+              {i18n.t('dashboard.welcomeRole', { role: i18n.t(`roles.${profile?.role || 'admin'}`) })}
             </Text>
           </View>
 
@@ -392,11 +393,11 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
           <View style={styles.adminDashboard}>
             {this.state.tenantName && (
               <View style={styles.tenantInfo}>
-                <Text style={styles.tenantLabel}>🏫 Managing {this.state.tenantName}</Text>
+                <Text style={styles.tenantLabel}>{i18n.t('dashboard.managingSchool', { name: this.state.tenantName })}</Text>
               </View>
             )}
             <Text style={[styles.adminTitle, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>
-              {profile?.role === 'teacher' ? '👩‍🏫 Teacher Dashboard' : '👨‍💼 Admin Dashboard'}
+              {profile?.role === 'teacher' ? i18n.t('dashboard.teacherDashboard') : i18n.t('dashboard.adminDashboard')}
             </Text>
 
             {/* Quick Actions Grid */}
@@ -412,8 +413,8 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
                         <IconSymbol name="doc.text.fill" size={24} color="#3B82F6" />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.teacherActionTitle}>Child Evaluations</Text>
-                        <Text style={styles.teacherActionSubtitle}>Reports & assessments for students</Text>
+                        <Text style={styles.teacherActionTitle}>{i18n.t('dashboard.childEvaluations.title')}</Text>
+                        <Text style={styles.teacherActionSubtitle}>{i18n.t('dashboard.childEvaluations.subtitle')}</Text>
                       </View>
                     </TouchableOpacity>
                   </ThemedCard>
@@ -427,8 +428,8 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
                         <IconSymbol name="video.fill" size={24} color="#10B981" />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.teacherActionTitle}>Video Calls</Text>
-                        <Text style={styles.teacherActionSubtitle}>Schedule parent meetings</Text>
+                        <Text style={styles.teacherActionTitle}>{i18n.t('dashboard.videoCalls.title')}</Text>
+                        <Text style={styles.teacherActionSubtitle}>{i18n.t('dashboard.videoCalls.subtitle')}</Text>
                       </View>
                     </TouchableOpacity>
                   </ThemedCard>
@@ -436,14 +437,14 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
                   <ThemedCard>
                     <TouchableOpacity
                       style={styles.teacherActionRow}
-                      onPress={() => router.push('/(tabs)/messages' as Href)}
+                      onPress={() => router.push('/messages' as Href)}
                     >
                       <View style={styles.teacherActionIcon}>
                         <IconSymbol name="message.fill" size={24} color="#F59E0B" />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.teacherActionTitle}>Messages</Text>
-                        <Text style={styles.teacherActionSubtitle}>Communicate with parents</Text>
+                        <Text style={styles.teacherActionTitle}>{i18n.t('nav.messages')}</Text>
+                        <Text style={styles.teacherActionSubtitle}>{i18n.t('dashboard.messages.subtitle')}</Text>
                       </View>
                     </TouchableOpacity>
                   </ThemedCard>
@@ -457,8 +458,8 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
                         <IconSymbol name="person.3.fill" size={24} color="#8B5CF6" />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.teacherActionTitle}>My Classes</Text>
-                        <Text style={styles.teacherActionSubtitle}>Manage students & activities</Text>
+                        <Text style={styles.teacherActionTitle}>{i18n.t('dashboard.myClasses.title')}</Text>
+                        <Text style={styles.teacherActionSubtitle}>{i18n.t('dashboard.myClasses.subtitle')}</Text>
                       </View>
                     </TouchableOpacity>
                   </ThemedCard>
@@ -473,8 +474,8 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
                         <IconSymbol name="gear" size={24} color="#6B7280" />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.teacherActionTitle}>Settings</Text>
-                        <Text style={styles.teacherActionSubtitle}>System configuration</Text>
+                        <Text style={styles.teacherActionTitle}>{i18n.t('nav.settings')}</Text>
+                        <Text style={styles.teacherActionSubtitle}>{i18n.t('dashboard.settings.subtitle')}</Text>
                       </View>
                     </TouchableOpacity>
                   </ThemedCard>
@@ -485,8 +486,8 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
                         <IconSymbol name="person.2.fill" size={24} color="#6B7280" />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.teacherActionTitle}>Users</Text>
-                        <Text style={styles.teacherActionSubtitle}>Manage teachers & parents</Text>
+                        <Text style={styles.teacherActionTitle}>{i18n.t('dashboard.users.title')}</Text>
+                        <Text style={styles.teacherActionSubtitle}>{i18n.t('dashboard.users.subtitle')}</Text>
                       </View>
                     </TouchableOpacity>
                   </ThemedCard>
@@ -497,19 +498,19 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
             {/* Today's Summary for Teachers */}
             {profile?.role === 'teacher' && (
               <ThemedCard>
-                <Text style={styles.teacherSummaryTitle}>📊 Today&apos;s Overview</Text>
+                <Text style={styles.teacherSummaryTitle}>{i18n.t('dashboard.todaysOverview')}</Text>
                 <View style={styles.teacherSummaryRow}>
                   <View style={styles.teacherSummaryItem}>
                     <Text style={styles.teacherSummaryNumber}>0</Text>
-                    <Text style={styles.teacherSummaryLabel}>Reports Created</Text>
+                    <Text style={styles.teacherSummaryLabel}>{i18n.t('dashboard.teacherSummary.reportsCreated')}</Text>
                   </View>
                   <View style={styles.teacherSummaryItem}>
                     <Text style={styles.teacherSummaryNumber}>0</Text>
-                    <Text style={styles.teacherSummaryLabel}>Messages Sent</Text>
+                    <Text style={styles.teacherSummaryLabel}>{i18n.t('dashboard.teacherSummary.messagesSent')}</Text>
                   </View>
                   <View style={styles.teacherSummaryItem}>
                     <Text style={styles.teacherSummaryNumber}>0</Text>
-                    <Text style={styles.teacherSummaryLabel}>Video Calls</Text>
+                    <Text style={styles.teacherSummaryLabel}>{i18n.t('dashboard.teacherSummary.videoCalls')}</Text>
                   </View>
                 </View>
               </ThemedCard>

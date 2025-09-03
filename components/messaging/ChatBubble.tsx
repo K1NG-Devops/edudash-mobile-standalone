@@ -2,12 +2,9 @@ import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Dimensions,
   Pressable,
 } from 'react-native';
-import { Typography } from '@/constants/typography';
-import { Spacing } from '@/constants/spacing';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 
@@ -47,30 +44,30 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
   const isDark = colorScheme === 'dark';
   const colors = Colors[colorScheme];
 
-  // WhatsApp-like colors
+  // EduDash brand colors with proper rgba values
   const bubbleColors = {
     outgoing: {
-      light: '#DCF8C6', // WhatsApp green
-      dark: '#005C4B',
+      light: isDark ? 'rgba(165, 180, 252, 0.2)' : 'rgba(99, 102, 241, 0.15)', // Primary with opacity
+      dark: isDark ? 'rgba(165, 180, 252, 0.25)' : 'rgba(99, 102, 241, 0.2)',
     },
     incoming: {
-      light: '#FFFFFF',
-      dark: '#202C33',
+      light: colors.surface,
+      dark: colors.surfaceVariant,
     },
   };
 
   const textColors = {
     outgoing: {
-      light: '#111827',
-      dark: '#E5E7EB',
+      light: colors.text,
+      dark: colors.text,
     },
     incoming: {
-      light: '#111827',
-      dark: '#E5E7EB',
+      light: colors.text,
+      dark: colors.text,
     },
     timestamp: {
-      light: 'rgba(17, 24, 39, 0.6)',
-      dark: 'rgba(229, 231, 235, 0.6)',
+      light: colors.textSecondary,
+      dark: colors.textSecondary,
     },
   };
 
@@ -96,34 +93,35 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 
   const formatTime = (timestamp: string): string => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', {
+    // Use device locale and time preference (12/24h) automatically
+    return date.toLocaleTimeString([], {
       hour: 'numeric',
       minute: '2-digit',
-      hour12: false,
     });
   };
 
   const renderStatusTicks = () => {
     if (!isMine || !status) return null;
 
-    const tickColor = status === 'read' ? '#34D399' : getTimestampColor();
+    // Read receipts: blue for read, timestamp color for others
+    const tickColor = status === 'read' ? '#34B7F1' : getTimestampColor();
     
     switch (status) {
       case 'sent':
         return (
-          <Text style={[styles.statusTick, { color: tickColor }]}>
+          <Text className="text-[11px] font-semibold" style={{ color: tickColor }}>
             ✓
           </Text>
         );
       case 'delivered':
         return (
-          <Text style={[styles.statusTick, { color: tickColor }]}>
+          <Text className="text-[11px] font-semibold" style={{ color: tickColor }}>
             ✓✓
           </Text>
         );
       case 'read':
         return (
-          <Text style={[styles.statusTick, { color: tickColor }]}>
+          <Text className="text-[11px] font-semibold" style={{ color: tickColor }}>
             ✓✓
           </Text>
         );
@@ -132,45 +130,49 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     }
   };
 
-  const bubbleStyle = [
-    styles.messageBubble,
-    {
+  const bubbleStyle = [{
       backgroundColor: getBubbleBackgroundColor(),
-      alignSelf: (isMine ? 'flex-end' : 'flex-start') as 'flex-end' | 'flex-start',
       borderBottomRightRadius: isMine ? 4 : 16,
       borderBottomLeftRadius: isMine ? 16 : 4,
-      maxWidth: screenWidth * 0.78,
+      maxWidth: screenWidth * 0.82,
     },
-    !isDark && !isMine && styles.incomingShadow,
-  ];
+    // Subtle shadow on incoming bubbles only (WhatsApp-like)
+    !isMine ? {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 1.5,
+      elevation: 1,
+    } : null].filter(Boolean as any);
 
   return (
-    <View style={[styles.messageContainer, isMine ? styles.sentContainer : styles.receivedContainer]}>
+    <View className={`flex-row mb-2.5 px-5 items-end ${isMine ? 'justify-end' : 'justify-start'}`}>
       {showAvatar && !isMine && (
-        <View style={styles.avatarPlaceholder}>
-          <Text style={styles.avatarText}>
+        <View className="w-7 h-7 rounded-full bg-gray-200 items-center justify-center mr-2 mb-1">
+          <Text className="text-xs font-semibold text-gray-500">
             {(senderName || 'U').charAt(0).toUpperCase()}
           </Text>
         </View>
       )}
       
       <Pressable
+        className="rounded-2xl px-4 py-2"
         style={bubbleStyle}
         onPress={onPress}
         android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
       >
         {!isMine && showAvatar && senderName && (
-          <Text style={[styles.senderName, { color: colors.primary }]}>
+          <Text className="mb-1 font-semibold" style={{ color: colors.primary }}>
             {senderName}
           </Text>
         )}
         
-        <Text style={[styles.messageText, { color: getTextColor() }]}>
+        <Text className="text-[14px] leading-5 mb-1" style={{ color: getTextColor() }}>
           {message.content}
         </Text>
         
-        <View style={styles.messageFooter}>
-          <Text style={[styles.messageTime, { color: getTimestampColor() }]}>
+        <View className="flex-row items-center justify-end gap-1">
+          <Text className="text-[11px]" style={{ color: getTimestampColor() }}>
             {formatTime(message.created_at)}
           </Text>
           {renderStatusTicks()}
@@ -180,6 +182,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
   );
 };
 
+/* migrated to NativeWind classes
 const styles = StyleSheet.create({
   messageContainer: {
     flexDirection: 'row',
@@ -244,3 +247,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+*/

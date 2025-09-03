@@ -6,7 +6,7 @@
 export interface PayFastConfig {
   merchantId: string;
   merchantKey: string;
-  passphrase: string;
+  passphrase?: string;
   baseUrl: string;
   returnUrl: string;
   cancelUrl: string;
@@ -34,34 +34,36 @@ export interface SubscriptionPlan {
   };
 }
 
-// Environment Detection
-const isProduction = process.env.NODE_ENV === 'production';
-const isDevelopment = process.env.NODE_ENV === 'development';
+// Resolve environment
+const payfastEnv = (process.env.EXPO_PUBLIC_PAYFAST_ENV || 'sandbox').toLowerCase();
+const isProd = payfastEnv === 'production';
 
-// PayFast Configuration
+// Helper: resolve base URLs
+const PAYFAST_BASE_URL = isProd
+  ? 'https://www.payfast.co.za/eng/process'
+  : 'https://sandbox.payfast.co.za/eng/process';
+
+// Resolve app endpoints
+const APP_WEB_URL = (process.env.EXPO_PUBLIC_WEB_URL || '').replace(/\/$/, '');
+const API_BASE = (process.env.EXPO_PUBLIC_API_BASE || '').replace(/\/$/, '');
+const WEBHOOK_BASE = (process.env.EXPO_PUBLIC_WEBHOOK_BASE || API_BASE || APP_WEB_URL).replace(/\/$/, '');
+
+// PayFast Configuration (client-side, public values only)
+// Note: For subscriptions we generate secure signatures on the server (Edge Function).
 export const getPayFastConfig = (): PayFastConfig => {
-  if (isProduction) {
-    return {
-      merchantId: process.env.PAYFAST_MERCHANT_ID!,
-      merchantKey: process.env.PAYFAST_MERCHANT_KEY!,
-      passphrase: process.env.PAYFAST_PASSPHRASE!,
-      baseUrl: 'https://www.payfast.co.za/eng/process',
-      returnUrl: `${process.env.EXPO_PUBLIC_API_URL}/payment/success`,
-      cancelUrl: `${process.env.EXPO_PUBLIC_API_URL}/payment/cancel`,
-      notifyUrl: `${process.env.EXPO_PUBLIC_API_URL}/payment/notify`,
-    };
-  } else {
-    // Sandbox configuration for development/testing
-    return {
-      merchantId: '10004241',
-      merchantKey: 'q1cd2rdny4a53',
-      passphrase: 'EduDashTestPassphrase2024',
-      baseUrl: 'https://sandbox.payfast.co.za/eng/process',
-      returnUrl: `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8081'}/payment/success`,
-      cancelUrl: `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8081'}/payment/cancel`,
-      notifyUrl: `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8081'}/payment/notify`,
-    };
-  }
+  const merchantId = process.env.EXPO_PUBLIC_PAYFAST_MERCHANT_ID || '';
+  const merchantKey = process.env.EXPO_PUBLIC_PAYFAST_MERCHANT_KEY || '';
+  const passphrase = process.env.EXPO_PUBLIC_PAYFAST_PASSPHRASE || undefined; // avoid exposing if not needed
+
+  return {
+    merchantId,
+    merchantKey,
+    passphrase,
+    baseUrl: PAYFAST_BASE_URL,
+    returnUrl: `${APP_WEB_URL || 'http://localhost:8081'}/payment/success`,
+    cancelUrl: `${APP_WEB_URL || 'http://localhost:8081'}/payment/cancel`,
+    notifyUrl: `${WEBHOOK_BASE || (APP_WEB_URL || 'http://localhost:8081')}/api/webhooks/payfast`,
+  };
 };
 
 // Subscription Plans Configuration

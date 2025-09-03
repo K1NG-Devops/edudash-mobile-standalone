@@ -3,7 +3,7 @@
   "main": "node_modules/expo-router/entry",
   "version": "1.0.1",
   "scripts": {
-    "start": "expo start",
+    "start": "NODE_OPTIONS=--max-old-space-size=4096 expo start",
     "storybook": "expo start",
     "storybook:ios": "expo run:ios",
     "storybook:android": "expo run:android",
@@ -46,7 +46,11 @@
     "test:all": "npm run test:principal && npm run test:components && npm run test:integration",
     "setup:email-templates": "node scripts/setup-email-templates.js",
     "verify-env": "node scripts/verify-env.js",
-    "seed:plans": "ALLOW_SERVICE_SEED=true node scripts/seed-subscription-plans.js"
+    "seed:plans": "ALLOW_SERVICE_SEED=true node scripts/seed-subscription-plans.js",
+    "i18n:check": "node scripts/check-i18n.js",
+    "i18n:extract": "i18next-parser",
+    "lint:i18n": "npm run i18n:check",
+    "validate:i18n": "node scripts/validate-i18n.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.58.0",
@@ -80,6 +84,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.1",
     "expo": "53.0.22",
+    "expo-av": "~15.1.7",
     "expo-blur": "~14.1.5",
     "expo-clipboard": "~7.1.5",
     "expo-constants": "~17.1.7",
@@ -117,6 +122,7 @@
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-heroicons": "^4.0.0",
+    "react-native-paper": "^5.14.5",
     "react-native-purchases": "^7.27.4",
     "react-native-qrcode-svg": "^6.3.15",
     "react-native-reanimated": "~3.17.4",
@@ -125,6 +131,7 @@
     "react-native-svg": "15.11.2",
     "react-native-toast-message": "^2.3.3",
     "react-native-url-polyfill": "^2.0.0",
+    "react-native-vector-icons": "^10.3.0",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "supabase": "^2.39.2",

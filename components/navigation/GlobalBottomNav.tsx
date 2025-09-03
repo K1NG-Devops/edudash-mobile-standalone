@@ -7,6 +7,7 @@ import { router, usePathname } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { shadow } from '@/lib/ui/shadow';
+import { useT } from '@/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -21,6 +22,7 @@ export default function GlobalBottomNav() {
   // Always call hooks unconditionally to preserve hook order across renders
   const pathname = usePathname();
   const { profile, loading } = useAuth();
+  const { t } = useT();
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
 
@@ -138,28 +140,28 @@ export default function GlobalBottomNav() {
   const normalizedRole = String(profile.role) === 'principal' ? 'preschool_admin' : String(profile.role || '');
 
   const adminTabs: TabItem[] = [
-    { key: 'overview', label: 'Overview', icon: 'chart.bar', onPress: () => router.push('/(tabs)/dashboard' as any) },
-    { key: 'teachers', label: 'Teachers', icon: 'person.2.fill', onPress: () => router.push('/screens/teachers' as any) },
-    { key: 'students', label: 'Students', icon: 'graduationcap.fill', onPress: () => router.push('/screens/students' as any) },
-    { key: 'messages', label: 'Messages', icon: 'message.fill', onPress: () => router.push('/(tabs)/messages' as any) },
-    { key: 'settings', label: 'Settings', icon: 'gear', onPress: () => router.push('/(tabs)/settings_new' as any) },
+    { key: 'overview', label: t('nav.dashboard'), icon: 'chart.bar', onPress: () => router.push('/(tabs)/dashboard' as any) },
+    { key: 'teachers', label: t('nav.teachers'), icon: 'person.2.fill', onPress: () => router.push('/screens/teachers' as any) },
+    { key: 'students', label: t('nav.students'), icon: 'graduationcap.fill', onPress: () => router.push('/screens/students' as any) },
+{ key: 'messages', label: t('nav.messages'), icon: 'message.fill', onPress: () => router.push('/messages' as any) },
+    { key: 'settings', label: t('nav.settings'), icon: 'gear', onPress: () => router.push('/(tabs)/settings_new' as any) },
   ];
 
   const teacherTabs: TabItem[] = [
     // Route teacher overview to the main dashboard tab to avoid cross-stack redirects
-    { key: 'overview', label: 'Overview', icon: 'rectangle.3.group', onPress: () => router.push('/(tabs)/dashboard' as any) },
-    { key: 'students', label: 'Students', icon: 'graduationcap.fill', onPress: () => router.push('/screens/students' as any) },
-    { key: 'activities', label: 'Activities', icon: 'figure.run', onPress: () => router.push('/(tabs)/activities' as any) },
-    { key: 'messages', label: 'Messages', icon: 'message.fill', onPress: () => router.push('/(tabs)/messages' as any) },
-    { key: 'manage', label: 'Manage', icon: 'creditcard.fill', onPress: () => router.push('/pricing' as any) },
+    { key: 'overview', label: t('nav.dashboard'), icon: 'rectangle.3.group', onPress: () => router.push('/(tabs)/dashboard' as any) },
+    { key: 'students', label: t('nav.students'), icon: 'graduationcap.fill', onPress: () => router.push('/screens/students' as any) },
+    { key: 'activities', label: t('dashboard.upcomingEvents'), icon: 'figure.run', onPress: () => router.push('/(tabs)/activities' as any) },
+{ key: 'messages', label: t('nav.messages'), icon: 'message.fill', onPress: () => router.push('/messages' as any) },
+    { key: 'manage', label: 'Billing', icon: 'creditcard.fill', onPress: () => router.push('/pricing' as any) },
   ];
 
   const parentTabs: TabItem[] = [
-    { key: 'overview', label: 'Overview', icon: 'rectangle.3.group', onPress: () => router.push('/(tabs)/dashboard' as any) },
-    { key: 'activities', label: 'Activities', icon: 'figure.run', onPress: () => router.push('/(tabs)/activities' as any) },
-    { key: 'messages', label: 'Messages', icon: 'message.fill', onPress: () => router.push('/(tabs)/messages' as any) },
-    { key: 'manage', label: 'Manage', icon: 'creditcard.fill', onPress: () => router.push('/pricing' as any) },
-    { key: 'settings', label: 'Settings', icon: 'gear', onPress: () => router.push('/(tabs)/settings_new' as any) },
+    { key: 'overview', label: t('nav.dashboard'), icon: 'rectangle.3.group', onPress: () => router.push('/(tabs)/dashboard' as any) },
+    { key: 'activities', label: t('dashboard.upcomingEvents'), icon: 'figure.run', onPress: () => router.push('/(tabs)/activities' as any) },
+    { key: 'messages', label: t('nav.messages'), icon: 'message.fill', onPress: () => router.push('/messages' as any) },
+    { key: 'manage', label: 'Billing', icon: 'creditcard.fill', onPress: () => router.push('/pricing' as any) },
+    { key: 'settings', label: t('nav.settings'), icon: 'gear', onPress: () => router.push('/(tabs)/settings_new' as any) },
   ];
 
   const tabs: TabItem[] = normalizedRole === 'teacher' 

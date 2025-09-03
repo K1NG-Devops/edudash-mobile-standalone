@@ -90,6 +90,369 @@ function parseFunctionsError(err: any): { status?: number; error?: string; code?
 export class ClaudeAIService {
   private static instance: ClaudeAIService;
 
+  /**
+   * Stream lesson generation via SSE for in-flight progress updates.
+   * Falls back to non-streaming if streaming is unavailable.
+   */
+  async streamLessonContent(params: {
+    topic: string;
+    ageGroup: string;
+    duration: number;
+    learningObjectives: string[];
+    modelIdentifier?: string;
+  }, handlers: {
+    onProgress?: (stage: string) => void; // legacy progress stages
+    onDelta?: (chunk: string) => void;    // new: receive streamed text chunks
+    onFinal?: (payload: { success: boolean; content?: any; quota_charged?: boolean; model?: string }) => void;
+    onError?: (err: { message: string; code?: string }) => void;
+  }): Promise<void> {
+    try {
+      const baseUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+      if (!baseUrl || !anonKey) {
+        handlers.onError?.({ message: 'Supabase configuration missing' });
+        return;
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        handlers.onError?.({ message: 'Not authenticated' });
+        return;
+      }
+
+      const langInstruction = '';
+      const prompt = `Create an engaging preschool lesson plan for ${params.ageGroup} children on the topic "${params.topic}".\n\nREQUIREMENTS:\n- Duration: ${params.duration} minutes\n- Age Group: ${params.ageGroup}\n- Learning Objectives: ${params.learningObjectives.join(', ')}\n\nPlease provide a comprehensive lesson plan with:\n1. Engaging title and description\n2. Detailed lesson content with step-by-step instructions\n3. 3-5 interactive activities suitable for the age group\n4. Assessment questions to check understanding\n5. Home extension activities for parents\n\nFormat as JSON with this structure:\n{\n  "title": "lesson title",\n  "description": "brief description",\n  "content": "detailed lesson content with instructions",\n  "activities": [\n    {\n      "title": "activity name",\n      "description": "what children will do",\n      "instructions": "step by step instructions",\n      "materials": ["item1", "item2"],\n      "estimatedTime": minutes\n    }\n  ],\n  "assessmentQuestions": ["question1", "question2"],\n  "homeExtension": ["activity1", "activity2"]\n}\n\nMake it educational, fun, and age-appropriate with hands-on learning experiences.${langInstruction}`;
+
+      const res = await fetch(`${baseUrl}/functions/v1/ai-proxy`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': anonKey,
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        },
+        body: JSON.stringify({
+          feature: 'lesson_generation',
+          prompt,
+          model: params.modelIdentifier,
+          params: { stream: true },
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        handlers.onError?.({ message: `Stream start failed (${res.status})`, code: 'STREAM_START_FAILED' });
+        return;
+      }
+
+      const reader: ReadableStreamDefaultReader<Uint8Array> | null = (res.body as any)?.getReader?.();
+      if (!reader) {
+        // Fallback: non-streaming invoke
+        const fallback = await this.generateLessonContent({
+          topic: params.topic,
+          ageGroup: params.ageGroup,
+          duration: params.duration,
+          learningObjectives: params.learningObjectives,
+          userId: 'unknown',
+          preschoolId: 'unknown',
+          modelIdentifier: params.modelIdentifier,
+        } as any);
+        handlers.onFinal?.({ success: !!fallback.success, content: fallback.content, quota_charged: fallback.quota_charged });
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buf = '';
+      let assembled = '';
+      const processChunk = (chunk: string) => {
+        buf += chunk;
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const block = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          const lines = block.split('\n');
+          let eventType = 'message';
+          let dataLine = '';
+          for (const line of lines) {
+            if (line.startsWith('event:')) eventType = line.slice(6).trim();
+            else if (line.startsWith('data:')) dataLine += line.slice(5).trim();
+          }
+          if (dataLine) {
+            try {
+              const payload = JSON.parse(dataLine);
+              if (eventType === 'delta') {
+                const chunk = String(payload?.text || '');
+                if (chunk) {
+                  assembled += chunk;
+                  handlers.onDelta?.(chunk);
+                }
+              } else if (eventType === 'done') {
+                // Stream finished
+                handlers.onFinal?.({ success: true, content: assembled, quota_charged: true });
+              } else if (eventType === 'progress') {
+                // Legacy progress support
+                handlers.onProgress?.(payload.stage || '');
+              } else if (eventType === 'final') {
+                // Back-compat: some servers send a final payload before done
+                const content = payload?.content ?? assembled;
+                handlers.onFinal?.({ success: payload.success ?? true, content, quota_charged: payload.quota_charged, model: payload.model });
+      } else if (eventType === 'error') {
+                handlers.onError?.({ message: payload.message || 'Stream error', code: payload.code });
+              }
+            } catch {}
+          }
+        }
+      };
+
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        processChunk(decoder.decode(value, { stream: true }));
+      }
+    } catch (e: any) {
+      handlers.onError?.({ message: e?.message || 'Streaming error' });
+    }
+  }
+
+  /**
+   * Stream Homework Help (chat-style) via SSE. Accumulates plain text; caller may parse JSON onFinal.
+   */
+  async streamHomeworkHelp(params: {
+    question: string;
+    childAge: number;
+    childName?: string;
+    parentName?: string;
+    languageCode?: string;
+    hintsOnly?: boolean;
+    attachments?: { url: string; mimeType: string; name?: string }[];
+  }, handlers: {
+    onDelta?: (chunk: string) => void;
+    onFinal?: (payload: { success: boolean; content?: string; quota_charged?: boolean }) => void;
+    onError?: (err: { message: string; code?: string }) => void;
+  }): Promise<void> {
+    try {
+      const baseUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+      if (!baseUrl || !anonKey) {
+        handlers.onError?.({ message: 'Supabase configuration missing' });
+        return;
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        handlers.onError?.({ message: 'Not authenticated' });
+        return;
+      }
+
+      const langInstruction = params.languageCode && params.languageCode !== 'en'
+        ? `\n\nPlease write your response in ${params.languageCode}.`
+        : '';
+      const hintsInstruction = params.hintsOnly ? `\n\nImportant: Provide hints and gentle guidance without giving the full solution outright. Ask guiding questions and suggest next steps.` : '';
+      const who = params.parentName ? `${params.parentName} (the parent)` : 'the parent';
+      const childRef = params.childName || 'their child';
+      const prompt = `You are a warm, practical AI tutor helping ${who} support ${childRef}, age ${params.childAge}, with homework.\n\nQuestion: "${params.question}"\n\nUse any provided attachments as context. Provide a step-by-step plan, tips, and point out when to involve the teacher.${langInstruction}${hintsInstruction}`;
+
+      const res = await fetch(`${baseUrl}/functions/v1/ai-proxy`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': anonKey,
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        },
+        body: JSON.stringify({
+          feature: 'homework_help',
+          prompt,
+          params: { question: params.question, childAge: params.childAge, childName: params.childName || 'child', parentName: params.parentName, languageCode: params.languageCode, stream: true },
+          attachments: (params.attachments || []).map(a => ({ url: a.url, mime_type: a.mimeType, name: a.name })),
+        }),
+      });
+
+      if (!res.ok) {
+        handlers.onError?.({ message: `Stream start failed (${res.status})`, code: 'STREAM_START_FAILED' });
+        return;
+      }
+
+      const reader: ReadableStreamDefaultReader<Uint8Array> | null = (res.body as any)?.getReader?.();
+      if (!reader) {
+        // Fallback to non-streaming
+        const fallback = await this.askHomeworkHelp({
+          question: params.question,
+          childAge: params.childAge,
+          childName: params.childName,
+          parentName: params.parentName,
+          languageCode: params.languageCode,
+          hintsOnly: params.hintsOnly,
+          userId: 'unknown',
+          preschoolId: 'unknown',
+        } as any);
+        handlers.onFinal?.({ success: !!fallback.success, content: fallback.answer, quota_charged: fallback.quota_charged });
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buf = '';
+      let assembled = '';
+      const processChunk = (chunk: string) => {
+        buf += chunk;
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const block = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          const lines = block.split('\n');
+          let eventType = 'message';
+          let dataLine = '';
+          for (const line of lines) {
+            if (line.startsWith('event:')) eventType = line.slice(6).trim();
+            else if (line.startsWith('data:')) dataLine += line.slice(5).trim();
+          }
+          if (dataLine) {
+            try {
+              const payload = JSON.parse(dataLine);
+              if (eventType === 'delta') {
+                const text = String(payload?.text || '');
+                if (text) {
+                  assembled += text;
+                  handlers.onDelta?.(text);
+                }
+              } else if (eventType === 'final') {
+                const content = payload?.content ?? assembled;
+                handlers.onFinal?.({ success: payload.success ?? true, content, quota_charged: payload.quota_charged });
+              } else if (eventType === 'done') {
+                handlers.onFinal?.({ success: true, content: assembled, quota_charged: true });
+              } else if (eventType === 'error') {
+                handlers.onError?.({ message: payload.message || 'Stream error', code: payload.code });
+              }
+            } catch {}
+          }
+        }
+      };
+
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        processChunk(decoder.decode(value, { stream: true }));
+      }
+    } catch (e: any) {
+      handlers.onError?.({ message: e?.message || 'Streaming error' });
+    }
+  }
+
+  /**
+   * Stream Homework Grading via SSE. Accumulates textual JSON; caller may parse JSON on final.
+   */
+  async streamHomeworkGrading(params: {
+    assignmentTitle: string;
+    assignmentInstructions: string;
+    studentSubmission: string;
+    studentAge: number;
+  }, handlers: {
+    onDelta?: (chunk: string) => void;
+    onFinal?: (payload: { success: boolean; content?: string; quota_charged?: boolean }) => void;
+    onError?: (err: { message: string; code?: string }) => void;
+  }): Promise<void> {
+    try {
+      const baseUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+      if (!baseUrl || !anonKey) {
+        handlers.onError?.({ message: 'Supabase configuration missing' });
+        return;
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        handlers.onError?.({ message: 'Not authenticated' });
+        return;
+      }
+
+      const prompt = `Grade this preschool homework submission for a ${params.studentAge}-year-old child.\n\nASSIGNMENT: "${params.assignmentTitle}"\nINSTRUCTIONS: ${params.assignmentInstructions}\n\nSTUDENT SUBMISSION: "${params.studentSubmission}"\n\nPlease provide JSON: {"grade":"Excellent|Good|Needs Improvement|Incomplete","feedback":"...","strengths":[],"areasForImprovement":[],"nextSteps":[],"parentNotes":"..."}`;
+
+      const res = await fetch(`${baseUrl}/functions/v1/ai-proxy`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': anonKey,
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        },
+        body: JSON.stringify({
+          feature: 'homework_grading',
+          prompt,
+          params: { stream: true },
+        }),
+      });
+
+      if (!res.ok) {
+        handlers.onError?.({ message: `Stream start failed (${res.status})`, code: 'STREAM_START_FAILED' });
+        return;
+      }
+
+      const reader: ReadableStreamDefaultReader<Uint8Array> | null = (res.body as any)?.getReader?.();
+      if (!reader) {
+        // Fallback
+        const fallback = await this.gradeHomework({
+          assignmentTitle: params.assignmentTitle,
+          assignmentInstructions: params.assignmentInstructions,
+          studentSubmission: params.studentSubmission,
+          studentAge: params.studentAge,
+          userId: 'unknown',
+          preschoolId: 'unknown',
+        } as any);
+        handlers.onFinal?.({ success: !!fallback.success, content: JSON.stringify(fallback.grading || {}), quota_charged: fallback.quota_charged });
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buf = '';
+      let assembled = '';
+      const processChunk = (chunk: string) => {
+        buf += chunk;
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const block = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          const lines = block.split('\n');
+          let eventType = 'message';
+          let dataLine = '';
+          for (const line of lines) {
+            if (line.startsWith('event:')) eventType = line.slice(6).trim();
+            else if (line.startsWith('data:')) dataLine += line.slice(5).trim();
+          }
+          if (dataLine) {
+            try {
+              const payload = JSON.parse(dataLine);
+              if (eventType === 'delta') {
+                const text = String(payload?.text || '');
+                if (text) {
+                  assembled += text;
+                  handlers.onDelta?.(text);
+                }
+              } else if (eventType === 'final') {
+                const content = payload?.content ?? assembled;
+                handlers.onFinal?.({ success: payload.success ?? true, content, quota_charged: payload.quota_charged });
+              } else if (eventType === 'done') {
+                handlers.onFinal?.({ success: true, content: assembled, quota_charged: true });
+              } else if (eventType === 'error') {
+                handlers.onError?.({ message: payload.message || 'Stream error', code: payload.code });
+              }
+            } catch {}
+          }
+        }
+      };
+
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        processChunk(decoder.decode(value, { stream: true }));
+      }
+    } catch (e: any) {
+      handlers.onError?.({ message: e?.message || 'Streaming error' });
+    }
+  }
+
   static getInstance(): ClaudeAIService {
     if (!ClaudeAIService.instance) {
       ClaudeAIService.instance = new ClaudeAIService();
@@ -116,6 +479,7 @@ export class ClaudeAIService {
     userId: string;
     preschoolId: string;
     languageCode?: string;
+    modelIdentifier?: string; // optional model override; server enforces tier defaults
   }): Promise<{
     success: boolean;
     content?: {
@@ -177,6 +541,7 @@ Make it educational, fun, and age-appropriate with hands-on learning experiences
         body: {
           feature: 'lesson_generation',
           prompt,
+          model: params.modelIdentifier,
         },
       });
 
@@ -248,6 +613,7 @@ Make it educational, fun, and age-appropriate with hands-on learning experiences
     userId: string;
     preschoolId: string;
     languageCode?: string;
+    modelIdentifier?: string; // optional model override
   }): Promise<{
     success: boolean;
     content?: {
@@ -329,6 +695,7 @@ Ensure the activities demonstrate the integration focus (${integrations.join(', 
         body: {
           feature: 'lesson_generation',
           prompt,
+          model: params.modelIdentifier,
         },
       });
 
@@ -763,6 +1130,8 @@ const analysisParsed = extractJsonFromText(String(text));
 
 // Export singleton instance
 export const claudeAI = ClaudeAIService.getInstance();
+
+export type LessonStreamHandler = Parameters<ClaudeAIService['streamLessonContent']>[1];
 
 // Helper function to check AI availability
 export const isAIAvailable = (): boolean => {

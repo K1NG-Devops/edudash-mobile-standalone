@@ -14,7 +14,8 @@ import {
 export const useEnhancedEvents = (
   preschoolId: string | undefined,
   options: EventSearchOptions = {},
-  enabled: boolean = true
+  enabled: boolean = true,
+  currentAuthUserId?: string
 ) => {
   const [events, setEvents] = useState<EnhancedEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +52,8 @@ export const useEnhancedEvents = (
             id, media_type, file_url, thumbnail_url, alt_text, caption
           ),
           event_participants(
-            id, user_id, student_id, participation_type, status
+            id, user_id, student_id, participation_type, status,
+            user:users(auth_user_id)
           )
         `)
         .eq('preschool_id', preschoolId)
@@ -97,19 +99,52 @@ export const useEnhancedEvents = (
       }
 
       // Process the data to match EnhancedEvent interface
-      const processedEvents: EnhancedEvent[] = (data || []).map((event: any) => ({
-        ...event,
-        preschool_id: event?.preschool_id ?? '',
-        stats: {
-          participants_count: event?.event_participants?.filter((p: any) => p.status === 'attended').length || 0,
-          updates_count: event?.event_updates?.length || 0,
-          media_count: event?.event_media?.length || 0,
-          reactions_count: 0, // This would need a separate query
-          comments_count: 0, // This would need a separate query
-        },
-        recent_updates: (event?.event_updates || []).slice(0, 3).map((u: any) => ({ ...u, title: u?.title ?? undefined })),
-        featured_media: (event?.event_media || []).slice(0, 5),
-      }));
+      const processedEvents: EnhancedEvent[] = (data || []).map((evt: any) => {
+        // Determine if the current user is registered for this event
+        let user_participation: any | undefined = undefined;
+        try {
+          if (currentAuthUserId) {
+            user_participation = (evt?.event_participants || []).find(
+              (p: any) => p?.user?.auth_user_id === currentAuthUserId
+            );
+          }
+        } catch {}
+
+        // Client-side status guard (upcoming -> ongoing -> completed)
+        const now = new Date();
+        const start = evt?.start_date ? new Date(evt.start_date) : undefined;
+        const end = evt?.end_date ? new Date(evt.end_date) : undefined;
+        let effectiveStatus = evt?.status as EnhancedEvent['status'];
+        if (effectiveStatus !== 'cancelled' && start) {
+          if (end ? now > end : now > start) {
+            effectiveStatus = 'completed';
+          } else if (now >= start && (!end || now <= end)) {
+            effectiveStatus = 'ongoing';
+          } else {
+            effectiveStatus = 'upcoming';
+          }
+        }
+
+        // Participant stats (registered + attended)
+        const participants = Array.isArray(evt?.event_participants) ? evt.event_participants : [];
+        const participantsCount = participants.filter((p: any) => ['registered', 'attended'].includes(p?.status)).length;
+
+        return {
+          ...evt,
+          status: effectiveStatus,
+          preschool_id: evt?.preschool_id ?? '',
+          user_participation,
+          stats: {
+            participants_count: participantsCount,
+            updates_count: evt?.event_updates?.length || 0,
+            media_count: evt?.event_media?.length || 0,
+            reactions_count: 0, // This would need a separate query
+            comments_count: 0, // This would need a separate query
+          },
+          recent_updates: (evt?.event_updates || []).slice(0, 3).map((u: any) => ({ ...u, title: u?.title ?? undefined })),
+          featured_media: (evt?.event_media || []).slice(0, 5),
+        } as EnhancedEvent;
+      });
 
       if (reset) {
         setEvents(processedEvents);

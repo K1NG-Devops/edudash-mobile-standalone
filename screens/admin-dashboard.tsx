@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useT } from '@/i18n';
 import {
     Alert,
     Dimensions,
@@ -37,6 +38,7 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboardScreen: React.FC<AdminDashboardProps> = ({ profile, onSignOut }) => {
+  const { t } = useT();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
@@ -89,8 +91,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardProps> = ({ profile, onSignOu
         pendingPayments,
       });
     } catch (error) {
-      // Removed debug statement: console.error('Error loading admin stats:', error);
-      Alert.alert('Error', 'Failed to load dashboard statistics');
+      Alert.alert(t('common.error'), t('errors.adminStatsLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -147,6 +148,13 @@ const AdminDashboardScreen: React.FC<AdminDashboardProps> = ({ profile, onSignOu
     </TouchableOpacity>
   );
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('dashboard.goodMorning');
+    if (hour < 17) return t('dashboard.goodAfternoon');
+    return t('dashboard.goodEvening');
+  };
+
   return (
     <View style={styles.container}>
       <MobileHeader
@@ -171,52 +179,52 @@ const AdminDashboardScreen: React.FC<AdminDashboardProps> = ({ profile, onSignOu
       >
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Good morning! 👋</Text>
+          <Text style={styles.welcomeTitle}>{getGreeting()} 👋</Text>
           <Text style={styles.welcomeSubtitle}>
-            {profile?.role === 'superadmin' ? 'Super Admin Dashboard' : 'Principal Dashboard'}
+            {profile?.role === 'superadmin' ? t('admin.super.pageTitle') : t('dashboard.adminDashboard')}
           </Text>
         </View>
 
         {/* Statistics Cards */}
         <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>📊 Overview</Text>
+          <Text style={styles.sectionTitle}>📊 {t('dashboard.overview')}</Text>
           <View style={styles.statsGrid}>
             <StatCard
-              title="Total Users"
+              title={t('admin.stats.totalUsers')}
               value={stats.totalUsers}
               icon="person.3.fill"
               color="#3B82F6"
               onPress={() => router.push('/screens/users')}
             />
             <StatCard
-              title="Students"
+              title={t('nav.students')}
               value={stats.totalStudents}
               icon="graduationcap.fill"
               color="#10B981"
               onPress={() => router.push('/screens/students')}
             />
             <StatCard
-              title="Teachers"
+              title={t('nav.teachers')}
               value={stats.totalTeachers}
               icon="person.2.square.stack.fill"
               color="#F59E0B"
               onPress={() => router.push('/screens/teachers')}
             />
             <StatCard
-              title="Parents"
+              title={t('nav.parents')}
               value={stats.totalParents}
               icon="heart.fill"
               color="#EF4444"
               onPress={() => router.push('/screens/parents')}
             />
             <StatCard
-              title="Active Users"
+              title={t('admin.stats.activeUsers')}
               value={stats.activeUsers}
               icon="checkmark.circle.fill"
               color="#8B5CF6"
             />
             <StatCard
-              title="Monthly Revenue"
+              title={t('dashboard.metrics.monthlyRevenue')}
               value={`R${stats.monthlyRevenue.toLocaleString()}`}
               icon="dollarsign.circle.fill"
               color="#06B6D4"
@@ -227,46 +235,46 @@ const AdminDashboardScreen: React.FC<AdminDashboardProps> = ({ profile, onSignOu
 
         {/* Quick Actions */}
         <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
+          <Text style={styles.sectionTitle}>⚡ {t('dashboard.quickActions')}</Text>
           <View style={styles.actionsGrid}>
             <QuickActionCard
-              title="User Management"
-              subtitle="Manage staff & parents"
+              title={t('admin.actions.userManagement')}
+              subtitle={t('admin.quick.userManagementSubtitle')}
               icon="person.crop.circle.badge.plus"
               color="#3B82F6"
               onPress={() => router.push('/screens/users')}
             />
             <QuickActionCard
-              title="Financial Reports"
-              subtitle="View revenue & expenses"
+              title={t('finance.overview')}
+              subtitle={t('admin.quick.financialReportsSubtitle')}
               icon="chart.bar.fill"
               color="#10B981"
               onPress={() => router.push('/(tabs)/payment')}
             />
             <QuickActionCard
-              title="Student Analytics"
-              subtitle="Enrollment & progress"
+              title={t('admin.quick.studentAnalyticsTitle')}
+              subtitle={t('admin.quick.studentAnalyticsSubtitle')}
               icon="chart.line.uptrend.xyaxis"
               color="#F59E0B"
               onPress={() => router.push('/screens/analytics')}
             />
             <QuickActionCard
-              title="Communication"
-              subtitle="Send announcements"
+              title={t('admin.quick.communicationTitle')}
+              subtitle={t('admin.quick.communicationSubtitle')}
               icon="megaphone.fill"
               color="#EF4444"
-              onPress={() => router.push('/(tabs)/messages')}
+              onPress={() => router.push('/messages')}
             />
             <QuickActionCard
-              title="System Settings"
-              subtitle="Configure school"
+              title={t('admin.actions.systemSettings')}
+              subtitle={t('admin.quick.systemSettingsSubtitle')}
               icon="gearshape.fill"
               color="#8B5CF6"
               onPress={() => router.push('/(tabs)/settings')}
             />
             <QuickActionCard
-              title="Support Center"
-              subtitle="Help & resources"
+              title={t('admin.quick.supportCenterTitle')}
+              subtitle={t('admin.quick.supportCenterSubtitle')}
               icon="questionmark.circle.fill"
               color="#06B6D4"
               onPress={() => router.push('/screens/support')}
@@ -276,12 +284,12 @@ const AdminDashboardScreen: React.FC<AdminDashboardProps> = ({ profile, onSignOu
 
         {/* Recent Activity */}
         <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>📈 Recent Activity</Text>
+          <Text style={styles.sectionTitle}>📈 {t('dashboard.recentActivity')}</Text>
           <View style={styles.activityCard}>
-            <Text style={styles.activityItem}>• 3 new parent registrations today</Text>
-            <Text style={styles.activityItem}>• 15 payments received this week</Text>
-            <Text style={styles.activityItem}>• 2 teacher evaluations pending</Text>
-            <Text style={styles.activityItem}>• 8 new messages from parents</Text>
+            <Text style={styles.activityItem}>• {t('admin.activity.newParentRegistrations', { count: 3 })}</Text>
+            <Text style={styles.activityItem}>• {t('admin.activity.paymentsReceived', { count: 15 })}</Text>
+            <Text style={styles.activityItem}>• {t('admin.activity.teacherEvaluationsPending', { count: 2 })}</Text>
+            <Text style={styles.activityItem}>• {t('admin.activity.newMessagesFromParents', { count: 8 })}</Text>
           </View>
         </View>
       </ScrollView>

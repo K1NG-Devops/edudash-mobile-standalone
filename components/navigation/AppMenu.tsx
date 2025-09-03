@@ -55,7 +55,7 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
         title: 'Profile Settings',
         subtitle: 'Manage your account',
         icon: 'person.circle.fill',
-        route: '/profile',
+        route: '/screens/profile',
         color: '#6366F1',
       },
       {

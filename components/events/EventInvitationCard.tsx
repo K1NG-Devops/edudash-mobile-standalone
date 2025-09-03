@@ -44,6 +44,22 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
   const isPending = invitation.status === 'pending';
   const canRespond = isPending && showActions;
 
+  const leftBorderStyle = invitation.status === 'pending'
+    ? styles.leftBorderPending
+    : invitation.status === 'accepted'
+      ? styles.leftBorderAccepted
+      : invitation.status === 'declined'
+        ? styles.leftBorderDeclined
+        : styles.leftBorderMaybe;
+
+  const statusBadgeStyle = invitation.status === 'pending'
+    ? styles.statusBadgePending
+    : invitation.status === 'accepted'
+      ? styles.statusBadgeAccepted
+      : invitation.status === 'declined'
+        ? styles.statusBadgeDeclined
+        : styles.statusBadgeMaybe;
+
   const handleAccept = () => {
     Alert.alert(
       'Accept Invitation',
@@ -97,11 +113,8 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
       style={[
         styles.card,
         compact && styles.compactCard,
-        {
-          backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-          borderColor: isDark ? '#334155' : '#E5E7EB',
-          borderLeftColor: STATUS_COLORS[invitation.status],
-        }
+        isDark ? styles.cardDark : styles.cardLight,
+        leftBorderStyle
       ]}
     >
       <View style={styles.header}>
@@ -110,7 +123,7 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
             style={[
               styles.eventTitle,
               compact && styles.compactTitle,
-              { color: isDark ? '#F8FAFC' : '#111827' }
+              isDark ? styles.textPrimaryDark : styles.textPrimaryLight
             ]}
             numberOfLines={compact ? 1 : 2}
           >
@@ -121,7 +134,7 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
             <Text
               style={[
                 styles.eventDate,
-                { color: isDark ? '#94A3B8' : '#6B7280' }
+                isDark ? styles.textSecondaryDark : styles.textSecondaryLight
               ]}
             >
               {formatDate(invitation.event.start_date)}
@@ -132,13 +145,13 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
             <View
               style={[
                 styles.eventTypeBadge,
-                { backgroundColor: isDark ? '#374151' : '#F3F4F6' }
+                isDark ? styles.eventTypeBadgeDark : styles.eventTypeBadgeLight
               ]}
             >
               <Text
                 style={[
                   styles.eventTypeText,
-                  { color: isDark ? '#D1D5DB' : '#4B5563' }
+                  isDark ? styles.eventTypeTextDark : styles.eventTypeTextLight
                 ]}
               >
                 {invitation.event.event_type.replace('_', ' ')}
@@ -151,7 +164,7 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
           <View
             style={[
               styles.statusBadge,
-              { backgroundColor: STATUS_COLORS[invitation.status] }
+              statusBadgeStyle
             ]}
           >
             <IconSymbol
@@ -172,13 +185,13 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
             <View
               style={[
                 styles.inviterAvatar,
-                { backgroundColor: isDark ? '#475569' : '#CBD5E1' }
+                isDark ? styles.inviterAvatarDark : styles.inviterAvatarLight
               ]}
             >
               <Text
                 style={[
                   styles.avatarText,
-                  { color: isDark ? '#E2E8F0' : '#475569' }
+                  isDark ? styles.avatarTextDark : styles.avatarTextLight
                 ]}
               >
                 {invitation.inviter?.name?.charAt(0).toUpperCase() || '?'}
@@ -188,7 +201,7 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
               <Text
                 style={[
                   styles.inviterName,
-                  { color: isDark ? '#F8FAFC' : '#111827' }
+                  isDark ? styles.textPrimaryDark : styles.textPrimaryLight
                 ]}
               >
                 Invited by {invitation.inviter?.name || 'Unknown'}
@@ -196,7 +209,7 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
               <Text
                 style={[
                   styles.invitedTime,
-                  { color: isDark ? '#94A3B8' : '#6B7280' }
+                  isDark ? styles.textSecondaryDark : styles.textSecondaryLight
                 ]}
               >
                 {new Date(invitation.invited_at).toLocaleDateString()}
@@ -210,13 +223,13 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
         <View
           style={[
             styles.responseMessage,
-            { backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }
+            isDark ? styles.responseMessageDark : styles.responseMessageLight
           ]}
         >
           <Text
             style={[
               styles.responseText,
-              { color: isDark ? '#CBD5E1' : '#4B5563' }
+              isDark ? styles.responseTextDark : styles.responseTextLight
             ]}
           >
             "{invitation.response_message}"
@@ -261,7 +274,7 @@ export const EventInvitationCard: React.FC<EventInvitationCardProps> = ({
             <Text
               style={[
                 styles.cancelBtnText,
-                { color: isDark ? '#94A3B8' : '#6B7280' }
+                isDark ? styles.textSecondaryDark : styles.textSecondaryLight
               ]}
             >
               Cancel Invitation
@@ -281,6 +294,12 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
+  cardDark: { backgroundColor: '#1E293B', borderColor: '#334155' },
+  cardLight: { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' },
+  leftBorderPending: { borderLeftColor: '#F59E0B' },
+  leftBorderAccepted: { borderLeftColor: '#10B981' },
+  leftBorderDeclined: { borderLeftColor: '#EF4444' },
+  leftBorderMaybe: { borderLeftColor: '#6366F1' },
   compactCard: {
     padding: 12,
     marginBottom: 8,
@@ -300,6 +319,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
+  textPrimaryDark: { color: '#E5E7EB' },
+  textPrimaryLight: { color: '#111827' },
+  textSecondaryDark: { color: '#94A3B8' },
+  textSecondaryLight: { color: '#6B7280' },
   compactTitle: {
     fontSize: 14,
   },
@@ -313,11 +336,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
   },
+  eventTypeBadgeDark: { backgroundColor: '#374151' },
+  eventTypeBadgeLight: { backgroundColor: '#F3F4F6' },
   eventTypeText: {
     fontSize: 12,
     fontWeight: '500',
     textTransform: 'capitalize',
   },
+  eventTypeTextDark: { color: '#D1D5DB' },
+  eventTypeTextLight: { color: '#4B5563' },
   statusContainer: {
     alignItems: 'flex-end',
   },
@@ -329,6 +356,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 4,
   },
+  statusBadgePending: { backgroundColor: '#F59E0B' },
+  statusBadgeAccepted: { backgroundColor: '#10B981' },
+  statusBadgeDeclined: { backgroundColor: '#EF4444' },
+  statusBadgeMaybe: { backgroundColor: '#6366F1' },
   statusText: {
     color: '#FFFFFF',
     fontSize: 12,
@@ -349,10 +380,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
+  inviterAvatarDark: { backgroundColor: '#475569' },
+  inviterAvatarLight: { backgroundColor: '#CBD5E1' },
   avatarText: {
     fontSize: 14,
     fontWeight: '600',
   },
+  avatarTextDark: { color: '#E2E8F0' },
+  avatarTextLight: { color: '#475569' },
   inviterDetails: {
     flex: 1,
   },
@@ -369,11 +404,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
+  responseMessageDark: { backgroundColor: '#0F172A' },
+  responseMessageLight: { backgroundColor: '#F8FAFC' },
   responseText: {
     fontSize: 14,
     fontStyle: 'italic',
     lineHeight: 20,
   },
+  responseTextDark: { color: '#CBD5E1' },
+  responseTextLight: { color: '#4B5563' },
   actions: {
     flexDirection: 'row',
     gap: 8,

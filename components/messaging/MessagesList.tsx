@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
-  StyleSheet,
   ActivityIndicator,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -97,7 +96,7 @@ export const MessagesList = forwardRef<MessagesListRef, MessagesListProps>(({
     };
 
     return (
-      <View style={styles.messageWrapper}>
+      <View>
         <ChatBubble
           message={{
             id: item.id,
@@ -125,7 +124,7 @@ export const MessagesList = forwardRef<MessagesListRef, MessagesListProps>(({
     if (!loadingMore) return null;
     
     return (
-      <View style={styles.loadingFooter}>
+      <View className="py-4 items-center">
         <ActivityIndicator 
           size="small" 
           color={Colors[colorScheme].primary} 
@@ -148,7 +147,7 @@ export const MessagesList = forwardRef<MessagesListRef, MessagesListProps>(({
   }, [messages, onContentSizeChange]);
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#0B141A' : '#EFEAE2' }, style]}>
+    <View className="flex-1" style={[{ backgroundColor: Colors[colorScheme].background }, style]}>
       <FlashList
         ref={listRef}
         data={messages}
@@ -160,7 +159,7 @@ export const MessagesList = forwardRef<MessagesListRef, MessagesListProps>(({
         onEndReachedThreshold={0.5}
         ListFooterComponent={renderFooter}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={{ paddingVertical: Spacing.md }}
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
           autoscrollToTopThreshold: 10,
@@ -174,6 +173,7 @@ export const MessagesList = forwardRef<MessagesListRef, MessagesListProps>(({
 
 MessagesList.displayName = 'MessagesList';
 
+/* migrated to NativeWind classes
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -189,3 +189,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+*/

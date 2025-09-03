@@ -9,11 +9,12 @@ import { supabase } from '@/lib/supabase';
 import NotificationIndicator from '@/components/ui/NotificationIndicator';
 import { useEnhancedEvents, useEventNotifications } from '@/lib/hooks/useEnhancedEvents';
 import { useAnnouncementNotifications } from '@/lib/hooks/useAnnouncementNotifications';
-import { handleEventJoin } from '@/lib/hooks/useEventParticipation';
+import { handleEventJoin, handleEventCancel } from '@/lib/hooks/useEventParticipation';
 import EnhancedEventCard from '@/components/events/EnhancedEventCard';
 import { EnhancedEvent } from '@/types/events';
 import { requestShowInterstitial } from '@/lib/ads/adEvents';
 import { Alert } from 'react-native';
+import EventParticipantsModal from '@/components/events/EventParticipantsModal';
 
 interface ActivityItem {
   id: string;
@@ -34,6 +35,8 @@ export default function ActivitiesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [activeTab, setActiveTab] = useState<'teacher' | 'events' | 'announcements'>('teacher');
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  const [participantsEvent, setParticipantsEvent] = useState<EnhancedEvent | null>(null);
 
   // Enhanced events system
   const {
@@ -47,10 +50,12 @@ export default function ActivitiesScreen() {
     profile?.preschool_id ?? undefined,
     {
       limit: 10,
-      filters: { status: ['upcoming', 'ongoing', 'completed'] },
-      sort: { field: 'start_date', direction: 'desc' },
+      // Show strictly upcoming events, soonest first
+      filters: { status: ['upcoming'] },
+      sort: { field: 'start_date', direction: 'asc' },
     },
-    profile?.role !== 'teacher'
+    profile?.role !== 'teacher',
+    profile?.auth_user_id
   );
 
   // Event notifications
@@ -167,10 +172,10 @@ export default function ActivitiesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} className="flex-1 bg-background" edges={['top','left','right']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: bg }]} className="flex-1 bg-background" edges={['top','left','right']}>
         <View style={[styles.center, { backgroundColor: bg }]}> 
           <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={{ marginTop: 12, color: sub }}>Loading activities…</Text>
+          <Text style={[styles.loadingText, { color: sub }]}>Loading activities…</Text>
         </View>
       </SafeAreaView>
     );
@@ -179,8 +184,8 @@ export default function ActivitiesScreen() {
   if (profile?.role !== 'teacher') {
     // Parent/Admin view with toggle between Events and Announcements
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} className="flex-1 bg-background" edges={['top','left','right']}>
-        <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 12, borderBottomWidth: 1, borderBottomColor: border }}>
+      <SafeAreaView style={[styles.container, { backgroundColor: bg }]} className="flex-1 bg-background" edges={['top','left','right']}>
+        <View style={[styles.tabsContainer, { borderBottomColor: border }]}>
           <TouchableOpacity 
             onPress={() => {
               setActiveTab('events');
@@ -191,10 +196,22 @@ export default function ActivitiesScreen() {
                 setTimeout(markAllEventNotificationsRead, 500);
               }
             }} 
-            style={[styles.tabBtn, activeTab === 'events' && [styles.tabBtnActive, { borderColor: '#8B5CF6' }]]}
+            style={[
+              styles.tabBtn,
+              activeTab === 'events' && [styles.tabBtnActive, styles.tabBtnActiveBorder]
+            ]}
           >
             <View style={styles.tabContent}>
-              <Text style={{ color: activeTab === 'events' ? '#8B5CF6' : sub, fontWeight: '600' }}>Events</Text>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'events'
+                    ? styles.tabTextActive
+                    : (isDark ? styles.tabTextInactiveDark : styles.tabTextInactiveLight)
+                ]}
+              >
+                Events
+              </Text>
               {eventNotificationsCount > 0 && (
                 <View style={styles.indicatorWrapper}>
                   <NotificationIndicator count={eventNotificationsCount} size="small" />
@@ -210,10 +227,22 @@ export default function ActivitiesScreen() {
               // Mark announcements as read when tab is opened
               setTimeout(markAllAsRead, 500); // Small delay to allow UI update
             }} 
-            style={[styles.tabBtn, activeTab === 'announcements' && [styles.tabBtnActive, { borderColor: '#8B5CF6' }]]}
+            style={[
+              styles.tabBtn,
+              activeTab === 'announcements' && [styles.tabBtnActive, styles.tabBtnActiveBorder]
+            ]}
           >
             <View style={styles.tabContent}>
-              <Text style={{ color: activeTab === 'announcements' ? '#8B5CF6' : sub, fontWeight: '600' }}>Announcements</Text>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'announcements'
+                    ? styles.tabTextActive
+                    : (isDark ? styles.tabTextInactiveDark : styles.tabTextInactiveLight)
+                ]}
+              >
+                Announcements
+              </Text>
               {unreadAnnouncementsCount > 0 && (
                 <View style={styles.indicatorWrapper}>
                   <NotificationIndicator count={unreadAnnouncementsCount} size="small" />
@@ -227,7 +256,7 @@ export default function ActivitiesScreen() {
           eventsLoading ? (
             <View style={[styles.center, { backgroundColor: bg }]}> 
               <ActivityIndicator size="large" color="#8B5CF6" />
-              <Text style={{ marginTop: 12, color: sub }}>Loading events…</Text>
+              <Text style={[styles.loadingText, { color: sub }]}>Loading events…</Text>
             </View>
           ) : events.length ? (
             <FlatList
@@ -237,13 +266,26 @@ export default function ActivitiesScreen() {
                   event={item}
                   onPress={handleEventPress}
                   onParticipate={handleEventParticipate}
+                  onCancel={async (ev) => {
+                    await handleEventCancel(ev, profile?.auth_user_id, {
+                      onSuccess: (msg) => {
+                        Alert.alert('Done', msg, [{ text: 'OK', onPress: () => refreshEvents() }]);
+                      },
+                      onError: (e) => Alert.alert('Could not cancel', e),
+                    });
+                  }}
+                  onViewParticipants={(ev) => {
+                    setParticipantsEvent(ev);
+                    setShowParticipantsModal(true);
+                  }}
+                  canViewParticipants={profile?.role !== 'parent' || (!!item.created_by && item.created_by === profile?.id)}
                   showActions={true}
                   compact={false}
                 />
               )}
               keyExtractor={(item) => item.id}
-              style={{ flex: 1, backgroundColor: bg }}
-              contentContainerStyle={{ padding: 16 }}
+              style={[styles.flatListContainer, { backgroundColor: bg }]}
+              contentContainerStyle={styles.flatListContent}
               refreshControl={
                 <RefreshControl 
                   refreshing={eventsRefreshing} 
@@ -259,21 +301,26 @@ export default function ActivitiesScreen() {
               onEndReachedThreshold={0.3}
               ListFooterComponent={
                 eventsHasMore ? (
-                  <View style={{ padding: 16, alignItems: 'center' }}>
+                  <View style={styles.listFooterContainer}>
                     <ActivityIndicator size="small" color="#8B5CF6" />
-                    <Text style={[{ marginTop: 8, color: sub }]}>Loading more events...</Text>
+                    <Text style={[
+                      styles.listFooterText,
+                      isDark ? styles.subTextDark : styles.subTextLight
+                    ]}>Loading more events...</Text>
                   </View>
                 ) : events.length > 5 ? (
-                  <View style={{ padding: 16, alignItems: 'center' }}>
-                    <Text style={[{ color: sub }]}>You've reached the end</Text>
+                  <View style={styles.listFooterContainer}>
+                    <Text style={[
+                      isDark ? styles.subTextDark : styles.subTextLight
+                    ]}>You've reached the end</Text>
                   </View>
                 ) : null
               }
               showsVerticalScrollIndicator={false}
             />
           ) : (
-            <View style={[styles.center, { backgroundColor: bg, padding: 24 }]}> 
-              <View style={[styles.emptyIcon, { backgroundColor: isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.08)' }]}>
+            <View style={[styles.center, styles.emptyStateContainer, { backgroundColor: bg }]}> 
+              <View style={[styles.emptyIcon, isDark ? styles.emptyIconDark : styles.emptyIconLight]}>
                 <IconSymbol name="calendar" size={64} color="#10B981" />
               </View>
               <Text style={[styles.emptyTitle, { color: text }]}>No events yet</Text>
@@ -282,16 +329,16 @@ export default function ActivitiesScreen() {
           )
         ) : (
           announcements.length ? (
-            <ScrollView style={{ flex: 1, backgroundColor: bg }} contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+            <ScrollView style={[styles.scrollViewContainer, { backgroundColor: bg }]} contentContainerStyle={styles.scrollViewContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
               {announcements
                 .filter(Boolean)
                 .map((a: any) => (
                   <View key={a.id} style={[styles.card, { backgroundColor: card, borderColor: border }]}> 
                     <View style={styles.row}>
-                      <View style={[styles.iconWrap, { backgroundColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.1)' }]}> 
+                      <View style={[styles.iconWrap, isDark ? styles.iconWrapDark : styles.iconWrapLight]}> 
                         <IconSymbol name="megaphone.fill" size={20} color="#8B5CF6" />
                       </View>
-                      <View style={{ flex: 1 }}>
+                      <View style={styles.cardContent}>
                         <Text style={[styles.title, { color: text }]} numberOfLines={2}>{a.content}</Text>
                         <View style={styles.metaRow}>
                           <Text style={[styles.meta, { color: sub }]}>{timeAgo(a.created_at)}</Text>
@@ -300,23 +347,30 @@ export default function ActivitiesScreen() {
                     </View>
                   </View>
                 ))}
-              <View style={{ height: 24 }} />
+              <View style={styles.bottomSpacer} />
             </ScrollView>
           ) : (
-            <View style={[styles.center, { backgroundColor: bg, padding: 24 }]}> 
-              <Text style={{ color: sub }}>No announcements yet.</Text>
+            <View style={[styles.center, styles.emptyStateContainer, { backgroundColor: bg }]}> 
+              <Text style={isDark ? styles.subTextDark : styles.subTextLight}>No announcements yet.</Text>
             </View>
           )
         )}
+      {participantsEvent && (
+        <EventParticipantsModal
+          visible={showParticipantsModal}
+          eventId={participantsEvent.id}
+          onClose={() => { setShowParticipantsModal(false); setParticipantsEvent(null); }}
+        />
+      )}
       </SafeAreaView>
     );
   }
 
   if (!activities.length) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top','left','right']}>
-        <View style={[styles.center, { backgroundColor: bg, padding: 24 }]}> 
-        <View style={[styles.emptyIcon, { backgroundColor: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }]}> 
+      <SafeAreaView style={[styles.container, { backgroundColor: bg }]} edges={['top','left','right']}>
+        <View style={[styles.center, styles.emptyStateContainer, { backgroundColor: bg }]}> 
+        <View style={[styles.emptyIcon, isDark ? styles.emptyIconPurpleDark : styles.emptyIconPurpleLight]}> 
           <IconSymbol name="figure.run" size={64} color="#8B5CF6" />
         </View>
         <Text style={[styles.emptyTitle, { color: text }]}>No activities yet</Text>
@@ -330,20 +384,20 @@ export default function ActivitiesScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top','left','right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bg }]} edges={['top','left','right']}>
       <ScrollView
-        style={{ flex: 1, backgroundColor: bg }}
-      contentContainerStyle={{ padding: 16 }}
+        style={[styles.scrollViewContainer, { backgroundColor: bg }]}
+      contentContainerStyle={styles.scrollViewContent}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       showsVerticalScrollIndicator={false}
     >
       {activities.map((a) => (
         <View key={a.id} style={[styles.card, { backgroundColor: card, borderColor: border }]}> 
           <View style={styles.row}>
-            <View style={[styles.iconWrap, { backgroundColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.1)' }]}> 
+            <View style={[styles.iconWrap, isDark ? styles.iconWrapDark : styles.iconWrapLight]}> 
               <IconSymbol name={iconFor(a.type) as any} size={20} color="#8B5CF6" />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.cardContent}>
               <Text style={[styles.title, { color: text }]} numberOfLines={1}>{a.title}</Text>
               <Text style={[styles.desc, { color: sub }]} numberOfLines={2}>{a.description}</Text>
               <View style={styles.metaRow}>
@@ -356,35 +410,179 @@ export default function ActivitiesScreen() {
           </View>
         </View>
       ))}
-      <View style={{ height: 24 }} />
+      <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  tabBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
-  tabBtnActive: { backgroundColor: 'rgba(139,92,246,0.08)' },
-  emptyIcon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
-  emptyText: { fontSize: 14, textAlign: 'center', marginBottom: 4 },
-  emptyHint: { fontSize: 12, textAlign: 'center', marginTop: 2 },
-
-  card: { borderRadius: 12, padding: 12, borderWidth: 1, marginBottom: 12 },
-  row: { flexDirection: 'row', gap: 12 },
-  iconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 16, fontWeight: '600' },
-  desc: { fontSize: 14, marginTop: 2 },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
-  meta: { fontSize: 12 },
-  tabContent: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    position: 'relative' 
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+  },
+  tabBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  tabBtnActive: {
+    backgroundColor: 'rgba(139,92,246,0.08)',
+  },
+  tabBtnActiveBorder: {
+    borderColor: '#8B5CF6',
+  },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  tabText: {
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: '#8B5CF6',
+  },
+  tabTextInactiveDark: {
+    color: '#94A3B8',
+  },
+  tabTextInactiveLight: {
+    color: '#6B7280',
   },
   indicatorWrapper: {
     marginLeft: 6,
     marginTop: -2,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  flatListContainer: {
+    flex: 1,
+  },
+  flatListContent: {
+    padding: 16,
+  },
+  listFooterContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  listFooterText: {
+    marginTop: 8,
+  },
+  subTextDark: {
+    color: '#94A3B8',
+  },
+  subTextLight: {
+    color: '#6B7280',
+  },
+  emptyStateContainer: {
+    padding: 24,
+  },
+  emptyIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyIconDark: {
+    backgroundColor: 'rgba(16,185,129,0.15)',
+  },
+  emptyIconLight: {
+    backgroundColor: 'rgba(16,185,129,0.08)',
+  },
+  emptyIconPurpleDark: {
+    backgroundColor: 'rgba(139,92,246,0.15)',
+  },
+  emptyIconPurpleLight: {
+    backgroundColor: 'rgba(139,92,246,0.08)',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  emptyHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  scrollViewContainer: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    padding: 16,
+  },
+  announcementContainer: {
+    padding: 16,
+  },
+  card: {
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconWrapDark: {
+    backgroundColor: 'rgba(139,92,246,0.2)',
+  },
+  iconWrapLight: {
+    backgroundColor: 'rgba(139,92,246,0.1)',
+  },
+  cardContent: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  desc: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  meta: {
+    fontSize: 12,
+  },
+  bottomSpacer: {
+    height: 24,
   },
 });

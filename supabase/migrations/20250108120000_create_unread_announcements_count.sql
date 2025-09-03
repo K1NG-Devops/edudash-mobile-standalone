@@ -10,7 +10,7 @@ BEGIN
   FROM messages m
   INNER JOIN message_recipients mr ON m.id = mr.message_id
   WHERE mr.recipient_id = p_user_id
-    AND mr.is_read = false
+    AND mr.read_at IS NULL
     AND m.message_type = 'announcement'
     AND m.deleted_at IS NULL;
   
@@ -35,21 +35,21 @@ BEGIN
      FROM messages m
      INNER JOIN message_recipients mr ON m.id = mr.message_id
      WHERE mr.recipient_id = p_user_id
-       AND mr.is_read = false
+       AND mr.read_at IS NULL
        AND m.message_type != 'announcement'
        AND m.deleted_at IS NULL) AS unread_messages,
     (SELECT COUNT(DISTINCT m.id)
      FROM messages m
      INNER JOIN message_recipients mr ON m.id = mr.message_id
      WHERE mr.recipient_id = p_user_id
-       AND mr.is_read = false
+       AND mr.read_at IS NULL
        AND m.message_type = 'announcement'
        AND m.deleted_at IS NULL) AS unread_announcements,
     (SELECT COUNT(DISTINCT m.id)
      FROM messages m
      INNER JOIN message_recipients mr ON m.id = mr.message_id
      WHERE mr.recipient_id = p_user_id
-       AND mr.is_read = false
+       AND mr.read_at IS NULL
        AND m.deleted_at IS NULL) AS total_unread;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -57,10 +57,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION get_unread_counts(UUID) TO authenticated;
 
--- Create an index to optimize the unread count queries
+-- Create an index to optimize the unread count queries (compatible with base schema)
 CREATE INDEX IF NOT EXISTS idx_message_recipients_unread_announcements 
-ON message_recipients(recipient_id, is_read) 
-WHERE is_read = false;
+ON message_recipients(recipient_id) 
+WHERE read_at IS NULL;
 
 -- Create a composite index for better performance on announcement queries
 CREATE INDEX IF NOT EXISTS idx_messages_type_deleted 

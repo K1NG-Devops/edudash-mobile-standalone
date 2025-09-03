@@ -213,6 +213,7 @@ export default function TeachersScreen() {
       )}
 
       <FlashList
+        style={{ flex: 1 }}
         data={filtered}
         keyExtractor={(t) => t.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}

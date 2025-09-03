@@ -5,6 +5,8 @@ import { StyleProp, ViewStyle } from 'react-native';
 const IOS_ALIAS: Record<string, SymbolViewProps['name']> = {
   // Map generic 'brain' to a valid SF Symbol
   brain: 'brain.head.profile',
+  // Common aliases used in components
+  smiley: 'face.smiling',
 };
 
 export function IconSymbol({

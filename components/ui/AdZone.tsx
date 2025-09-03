@@ -5,6 +5,7 @@ import { useSubscription } from '@/lib/hooks/useSubscription'
 
 interface AdZoneProps {
   children: React.ReactNode
+  showForAll?: boolean // if true, show ads regardless of subscription tier
 }
 
 /**
@@ -13,14 +14,15 @@ interface AdZoneProps {
  * On web, AdPlacement is a no-op; on native, it renders a BannerAd beneath children.
  * Never use this on learning/lesson/assignment screens.
  */
-const AdZone = ({ children }: AdZoneProps) => {
+const AdZone = ({ children, showForAll = false }: AdZoneProps) => {
   const { subscription } = useSubscription()
   const tier = subscription?.plan?.tier || 'free'
   const isFreeTier = tier === 'free'
   const adsEnabled = process.env.EXPO_PUBLIC_ENABLE_ADS === 'true'
 
-  // Only show ads for freemium users when ads are enabled
-  if (isFreeTier && adsEnabled) {
+  const shouldShow = adsEnabled && (showForAll || isFreeTier)
+
+  if (shouldShow) {
     return (
       <AdPlacement>
         {children}

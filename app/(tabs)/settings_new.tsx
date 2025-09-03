@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,12 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { router } from 'expo-router';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useT } from '@/i18n';
+import BottomSheetModal from '@/components/ui/BottomSheetModal';
+import { useToast } from '@/components/ui/Toast';
+import * as Localization from 'expo-localization';
+import { toSupportedLang, LanguageCode } from '@/src/i18n/languages';
 
 export default function SettingsNewScreen() {
   const { colorScheme, setColorScheme } = useTheme();
@@ -27,6 +33,19 @@ export default function SettingsNewScreen() {
   const palette = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
 
+  // Themed dynamic styles to avoid inline color objects
+  const themed = useMemo(() => StyleSheet.create({
+    text: { color: palette.text },
+    textSecondary: { color: palette.textSecondary },
+    borderBottomOutline: { borderBottomColor: palette.outline },
+    bgOutline: { backgroundColor: palette.outline },
+  }), [palette]);
+
+  const { language, setLanguage, languages, getLabel } = useLanguage();
+  const { t } = useT();
+  const [langOpen, setLangOpen] = useState(false);
+  const toast = useToast();
+
   // Sync dark mode setting when theme changes
   useEffect(() => {
     setSettings(prev => ({ ...prev, darkMode: isDark }));
@@ -34,6 +53,12 @@ export default function SettingsNewScreen() {
 
   const updateSetting = (key: string, value: boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Helper to change language and show confirmation toast
+  const applyLanguage = async (code: LanguageCode) => {
+    await setLanguage(code);
+    toast.success(t('settings.languageChanged', { language: getLabel(code) }));
   };
 
   const handleSignOut = () => {
@@ -57,22 +82,22 @@ export default function SettingsNewScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Settings Title */}
         <View style={styles.titleSection}>
-          <Text style={[styles.pageTitle, { color: palette.text }]}>Settings</Text>
-          <Text style={[styles.pageSubtitle, { color: palette.textSecondary }]}>
-            Customize your app experience
+          <Text style={[styles.pageTitle, { color: palette.text }]}>{t('settings.title')}</Text>
+          <Text style={[styles.pageSubtitle, { color: palette.textSecondary }]}> 
+            {t('settings.formats.sectionTitle')}
           </Text>
         </View>
 
         {/* Notifications Section */}
         <View style={[styles.section, { backgroundColor: palette.surface }]}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>Notifications</Text>
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>{t('settings.notifications')}</Text>
           
           <View style={[styles.settingItem, { borderBottomColor: palette.outline }]}>
             <View style={styles.settingInfo}>
               <IconSymbol name="bell" size={20} color={palette.textSecondary} />
               <View style={styles.settingContent}>
-                <Text style={[styles.settingLabel, { color: palette.text }]}>
-                  Receive notifications about important updates
+                <Text style={[styles.settingLabel, { color: palette.text }]}> 
+                  {t('settings.pushNotifications')}
                 </Text>
               </View>
             </View>
@@ -84,12 +109,12 @@ export default function SettingsNewScreen() {
             />
           </View>
 
-          <View style={[styles.settingItem, { borderBottomColor: 'transparent' }]}>
+          <View style={[styles.settingItem, styles.borderBottomTransparent]}>
             <View style={styles.settingInfo}>
               <IconSymbol name="envelope" size={20} color={palette.textSecondary} />
               <View style={styles.settingContent}>
-                <Text style={[styles.settingLabel, { color: palette.text }]}>
-                  Receive email notifications for important events
+                <Text style={[styles.settingLabel, { color: palette.text }]}> 
+                  {t('settings.emailNotifications')}
                 </Text>
               </View>
             </View>
@@ -102,16 +127,131 @@ export default function SettingsNewScreen() {
           </View>
         </View>
 
+        {/* Language Section */}
+        <View style={[styles.section, { backgroundColor: palette.surface }]}>
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>{t('settings.language')}</Text>
+
+          {/* Dropdown-style selector */}
+          <TouchableOpacity
+            style={[styles.settingItem]}
+            onPress={() => setLangOpen(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingInfo}>
+              <IconSymbol name="globe" size={20} color={palette.textSecondary} />
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingLabel, { color: palette.text }]}> 
+                  {getLabel(language)}
+                </Text>
+                <Text style={[themed.textSecondary, styles.mt2]}>
+                  {t('settings.selectLanguage')}
+                </Text>
+              </View>
+            </View>
+            <IconSymbol name="chevron.down" size={18} color={palette.textSecondary} />
+          </TouchableOpacity>
+
+          {/* Use device language row */}
+          <TouchableOpacity
+            style={[styles.settingItem, styles.borderBottomTransparent]}
+            onPress={async () => {
+              const locales = Localization.getLocales();
+              const deviceLocaleTag = (locales && locales.length > 0) ? (locales[0].languageTag || 'en-ZA') : 'en-ZA';
+              const deviceLang = toSupportedLang(deviceLocaleTag);
+              await applyLanguage(deviceLang);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingInfo}>
+              <IconSymbol name="globe" size={20} color={palette.textSecondary} />
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingLabel, { color: palette.text }]}>
+                  {t('settings.useDeviceLanguage')}
+                </Text>
+                <Text style={[themed.textSecondary, styles.mt2]}>
+                  {/* Show the detected device language label */}
+                  {(() => {
+                    try {
+                      const locales = Localization.getLocales();
+                      const deviceLocaleTag = (locales && locales.length > 0) ? (locales[0].languageTag || 'en-ZA') : 'en-ZA';
+                      const deviceLang = toSupportedLang(deviceLocaleTag);
+                      return getLabel(deviceLang);
+                    } catch {
+                      return getLabel('en' as LanguageCode);
+                    }
+                  })()}
+                </Text>
+              </View>
+            </View>
+            <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Language Picker Bottom Sheet */}
+        <BottomSheetModal visible={langOpen} onClose={() => setLangOpen(false)}>
+          <View style={styles.modalContent}>
+            <Text style={[styles.modalTitle, themed.text]}>
+              {t('settings.selectLanguage')}
+            </Text>
+            <View style={styles.mt4}>
+              {languages.map((lang) => {
+                const supported = lang.code === 'en' || lang.code === 'af' || lang.code === 'zu';
+                const isActive = language === lang.code;
+                return (
+                  <TouchableOpacity
+                    key={lang.code}
+                    style={[
+                      styles.langRow,
+                      themed.borderBottomOutline,
+                      !supported && styles.opacityDim,
+                    ]}
+                    disabled={!supported}
+                    onPress={async () => {
+                      if (!supported) return;
+                      await applyLanguage(lang.code as any);
+                      setLangOpen(false);
+                    }}
+                    activeOpacity={supported ? 0.7 : 1}
+                  >
+                    <View style={styles.langRowLeft}>
+                      <View style={styles.mr12}>
+                        <IconSymbol name="globe" size={18} color={palette.textSecondary} />
+                      </View>
+                      <View style={styles.flex1}>
+                        <Text style={[styles.langName, themed.text]}>{getLabel(lang.code as any)}</Text>
+                        <Text style={[styles.langDisplayName, themed.textSecondary]}>{lang.displayName}</Text>
+                      </View>
+                    </View>
+                    {supported ? (
+                      isActive ? (
+                        <IconSymbol name="checkmark.circle.fill" size={20} color={palette.primary} />
+                      ) : (
+                        <IconSymbol name="circle" size={20} color={palette.outline} />
+                      )
+                    ) : (
+                      <View style={[styles.unsupportedBadge, themed.bgOutline]}>
+                        <Text style={[styles.unsupportedBadgeText, themed.text]}>
+                          {t('common.comingSoon')}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </BottomSheetModal>
+
         {/* Appearance Section */}
         <View style={[styles.section, { backgroundColor: palette.surface }]}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>Appearance</Text>
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>{t('settings.appearance')}</Text>
           
-          <View style={[styles.settingItem, { borderBottomColor: 'transparent' }]}>
+          <View style={[styles.settingItem, styles.borderBottomTransparent]}>
             <View style={styles.settingInfo}>
               <IconSymbol name={isDark ? 'sun.max' : 'moon'} size={20} color={palette.textSecondary} />
               <View style={styles.settingContent}>
-                <Text style={[styles.settingLabel, { color: palette.text }]}>
-                  Use dark theme for better visibility in low light
+                <Text style={[styles.settingLabel, { color: palette.text }]}> 
+                  {t('settings.darkMode')}
                 </Text>
               </View>
             </View>
@@ -130,7 +270,7 @@ export default function SettingsNewScreen() {
         {/* Admin Section */}
         {(profile?.role === 'preschool_admin' || profile?.role === 'superadmin') && (
           <View style={[styles.section, { backgroundColor: palette.surface }]}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>Admin</Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>{t('settings.admin')}</Text>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: palette.surface }]}
@@ -138,7 +278,7 @@ export default function SettingsNewScreen() {
             >
               <IconSymbol name="gearshape.fill" size={20} color={palette.primary} />
               <Text style={[styles.actionButtonText, { color: palette.text }]}> 
-                School Settings
+                {t('settings.schoolSettings')}
               </Text>
               <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
             </TouchableOpacity>
@@ -149,7 +289,7 @@ export default function SettingsNewScreen() {
             >
               <IconSymbol name="paperplane" size={20} color={palette.success} />
               <Text style={[styles.actionButtonText, { color: palette.text }]}> 
-                Send test notification
+                {t('settings.sendTestNotification')}
               </Text>
               <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
             </TouchableOpacity>
@@ -158,14 +298,14 @@ export default function SettingsNewScreen() {
 
         {/* Account Section */}
         <View style={[styles.section, { backgroundColor: palette.surface }]}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>Account & Subscription</Text>
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>{t('settings.accountSubscription')}</Text>
           
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: palette.surface }]}
             onPress={() => router.push('/pricing')}
           >
             <IconSymbol name="crown.fill" size={20} color={palette.primary} />
-            <Text style={[styles.actionButtonText, { color: palette.text }]}>View Plans & Upgrade</Text>
+            <Text style={[styles.actionButtonText, { color: palette.text }]}>{t('settings.viewPlansUpgrade')}</Text>
             <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
           </TouchableOpacity>
           
@@ -174,7 +314,7 @@ export default function SettingsNewScreen() {
             onPress={() => router.push('/screens/subscription-management')}
           >
             <IconSymbol name="chart.bar.fill" size={20} color={palette.success} />
-            <Text style={[styles.actionButtonText, { color: palette.text }]}>Usage & Billing</Text>
+            <Text style={[styles.actionButtonText, { color: palette.text }]}>{t('settings.usageBilling')}</Text>
             <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
           </TouchableOpacity>
           
@@ -183,7 +323,7 @@ export default function SettingsNewScreen() {
             onPress={handleSignOut}
           >
             <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color={palette.error} />
-            <Text style={[styles.actionButtonText, { color: palette.error }]}>Sign Out</Text>
+            <Text style={[styles.actionButtonText, { color: palette.error }]}>{t('auth.signOut')}</Text>
             <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -199,6 +339,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  mt2: { marginTop: 2 },
+  mt4: { marginTop: 4 },
+  borderBottomTransparent: { borderBottomColor: 'transparent' },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -305,4 +448,22 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100,
   },
+  // Language dropdown modal styles
+  modalContent: { paddingVertical: 12 },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  langRow: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  opacityDim: { opacity: 0.6 },
+  langRowLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 },
+  mr12: { marginRight: 12 },
+  flex1: { flex: 1 },
+  langName: { fontSize: 16 },
+  langDisplayName: { fontSize: 12, marginTop: 2 },
+  unsupportedBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
+  unsupportedBadgeText: { fontSize: 12 },
 });

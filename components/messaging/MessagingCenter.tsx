@@ -3,6 +3,7 @@ import { UserProfile } from '@/contexts/SimpleWorkingAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { useNavigationVisibility } from '@/contexts/NavigationContext';
+import FloatingButton from '@/src/design-system/components/FloatingButton';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useConversationMessages } from '@/lib/hooks/useConversationMessages';
@@ -24,6 +25,8 @@ import {
 } from 'react-native';
 import ComposeMessageModal from './ComposeMessageModal';
 import { ConversationService, type Conversation as RoomConversation } from '@/lib/services/conversationService';
+import ChatViewModal from '@/components/messaging/ChatViewModal';
+import BottomSheetModal from '@/components/ui/BottomSheetModal';
 import { router } from 'expo-router';
 import { MessagingHeader } from './MessagingHeader';
 import { ConversationList } from './ConversationList';
@@ -109,11 +112,12 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
   const draftTimerRef = useRef<any>(null);
   // Removed announcements tab - now handled in Activities tab
   const [showComposeModal, setShowComposeModal] = useState(false);
-  const [showActionSheet, setShowActionSheet] = useState(false);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [parentUserId, setParentUserId] = useState<string | null>(null);
   const [preschoolName, setPreschoolName] = useState<string | null>(null);
   const [sendOnEnter, setSendOnEnter] = useState(false);
+  const [showChatViewModal, setShowChatViewModal] = useState(false);
+  const [showMenuModal, setShowMenuModal] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const messageSubscription = useRef<any>(null);
@@ -817,7 +821,8 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
           } else {
             setSelectedConversation(conversation.id);
             setSelectedRoomId(null);
-            loadMessages(conversation.id);
+            setShowChatViewModal(true);
+            // Let the modal load messages itself; also prefetch draft
             loadDMDraft(conversation.id);
           }
         }}
@@ -1048,18 +1053,21 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
     );
   }
 
-  const handleComposeMessage = () => {
-    const role = String(profile?.role || '');
-    const isStaff = ['teacher','principal','preschool_admin','admin','superadmin'].includes(role);
-    if (isStaff) {
-      setShowActionSheet(true);
-    } else {
-      setShowComposeModal(true);
-    }
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      {/* Show header when not in conversation */}
+      {showHeader && !selectedConversation && !selectedRoomId && (
+        <MessagingHeader
+          title="Messages"
+          subtitle="Chat with teachers and staff"
+          role={profile?.role || 'parent'}
+          schoolName={preschoolName || undefined}
+          userName={profile?.name || undefined}
+          onMenuPress={() => setShowMenuModal(true)}
+          showComingSoonPills={true}
+        />
+      )}
 
       {(selectedConversation || selectedRoomId) ? (
         renderChatView()
@@ -1067,45 +1075,20 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         <>
           {/* Single Content - Just Conversations */}
           {renderConversationsList()}
-
-          {/* Floating Action Button */}
-          <TouchableOpacity
-            style={[styles.fab, { bottom: Math.max(88, insets.bottom + 72) }]}
-            onPress={() => {
-              const role = String(profile?.role || '');
-              const isStaff = ['teacher','principal','preschool_admin','admin','superadmin'].includes(role);
-              if (isStaff) setShowActionSheet(true); else setShowComposeModal(true);
-            }}
-            accessibilityLabel="New"
-            accessibilityHint="Create a new message or group"
-          >
-            <IconSymbol name="plus" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          {/* Quick Action Sheet */}
-          <Modal visible={showActionSheet} transparent animationType="fade" onRequestClose={() => setShowActionSheet(false)}>
-            <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowActionSheet(false)}>
-              <View style={[styles.sheetContainer, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF', borderColor: colors.border }]}
-              >
-                <Text style={[styles.sheetTitle, { color: colors.text }]}>Start new</Text>
-                <TouchableOpacity style={styles.sheetItem} onPress={() => { setShowActionSheet(false); setShowComposeModal(true); }}>
-                  <IconSymbol name="bubble.left.and.bubble.right" size={18} color="#3B82F6" />
-                  <Text style={[styles.sheetItemText, { color: colors.text }]}>Direct message</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.sheetItem} onPress={() => { setShowActionSheet(false); router.push('/screens/new-group' as any); }}>
-                  <IconSymbol name="person.3.fill" size={18} color="#10B981" />
-                  <Text style={[styles.sheetItemText, { color: colors.text }]}>New group</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.sheetItem} onPress={() => { setShowActionSheet(false); router.push('/(tabs)/activities' as any); }}>
-                  <IconSymbol name="megaphone.fill" size={18} color="#F59E0B" />
-                  <Text style={[styles.sheetItemText, { color: colors.text }]}>View Announcements</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowActionSheet(false)}>
-                  <Text style={styles.sheetCancelText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </Modal>
+          
+          {/* Floating Button for New Chat (WhatsApp style) */}
+          <FloatingButton
+            onPress={() => router.push('/screens/new-chat')}
+            accessibilityLabel="New chat"
+            accessibilityHint="Opens the New Chat screen to start a conversation"
+            icon="chatbubble-ellipses"
+            size={28}
+            backgroundColor="#25D366" // WhatsApp green
+            iconColor="#FFFFFF"
+            bottom={140}
+            right={24}
+            buttonSize={64}
+          />
         </>
       )}
 
@@ -1261,16 +1244,135 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
         </TouchableOpacity>
       </Modal>
 
+      {/* Settings Menu Modal */}
+      <Modal visible={showMenuModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowMenuModal(false)}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.bg }]}>
+          {/* Modal Header */}
+          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+            <TouchableOpacity 
+              style={styles.modalCloseButton} 
+              onPress={() => setShowMenuModal(false)}
+            >
+              <IconSymbol name="xmark" size={18} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Message Settings</Text>
+            <View style={styles.modalCloseButton} /> {/* Spacer */}
+          </View>
+
+          {/* Settings Content */}
+          <View style={styles.modalContent}>
+            <TouchableOpacity 
+              style={[styles.settingsItem, { borderBottomColor: colors.border }]} 
+              onPress={() => {
+                setShowMenuModal(false);
+                Alert.alert('Coming Soon', 'Notification settings will be available in a future update.');
+              }}
+            >
+              <View style={styles.settingsItemLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: '#3B82F6' }]}>
+                  <IconSymbol name="bell" size={20} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={[styles.settingsItemTitle, { color: colors.text }]}>Notifications</Text>
+                  <Text style={[styles.settingsItemSubtitle, { color: colors.muted }]}>Manage message alerts</Text>
+                </View>
+              </View>
+              <IconSymbol name="chevron.right" size={16} color={colors.muted} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.settingsItem, { borderBottomColor: colors.border }]} 
+              onPress={() => {
+                setShowMenuModal(false);
+                Alert.alert('Coming Soon', 'Privacy settings will be available in a future update.');
+              }}
+            >
+              <View style={styles.settingsItemLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: '#10B981' }]}>
+                  <IconSymbol name="lock" size={20} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={[styles.settingsItemTitle, { color: colors.text }]}>Privacy</Text>
+                  <Text style={[styles.settingsItemSubtitle, { color: colors.muted }]}>Control message privacy</Text>
+                </View>
+              </View>
+              <IconSymbol name="chevron.right" size={16} color={colors.muted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.settingsItem, { borderBottomColor: colors.border }]}
+              onPress={() => {
+                setSendOnEnter(prev => !prev);
+                setShowMenuModal(false);
+              }}
+            >
+              <View style={styles.settingsItemLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: '#F59E0B' }]}>
+                  <IconSymbol name="keyboard" size={20} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={[styles.settingsItemTitle, { color: colors.text }]}>Send Messages</Text>
+                  <Text style={[styles.settingsItemSubtitle, { color: colors.muted }]}>Enter key sends messages</Text>
+                </View>
+              </View>
+              <View style={[styles.toggle, sendOnEnter && styles.toggleActive]}>
+                <View style={[styles.toggleThumb, sendOnEnter && styles.toggleThumbActive]} />
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.settingsItem, { borderBottomWidth: 0 }]} 
+              onPress={() => {
+                setShowMenuModal(false);
+                Alert.alert('Coming Soon', 'Message themes will be available in a future update.');
+              }}
+            >
+              <View style={styles.settingsItemLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: '#8B5CF6' }]}>
+                  <IconSymbol name="paintbrush" size={20} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={[styles.settingsItemTitle, { color: colors.text }]}>Themes</Text>
+                  <Text style={[styles.settingsItemSubtitle, { color: colors.muted }]}>Customize message appearance</Text>
+                </View>
+              </View>
+              <IconSymbol name="chevron.right" size={16} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Compose Message Modal */}
       <ComposeMessageModal
         visible={showComposeModal}
         onClose={() => setShowComposeModal(false)}
         profile={profile}
         childrenList={childrenList}
+        mode="modal"
+        onMessageSent={() => {
+          loadConversations(false);
+        }}
+      />
+
+      {/* Chat View Modal for DM - teacher style */}
+      {selectedConversation && (
+        <ChatViewModal
+          visible={showChatViewModal}
+          onClose={() => {
+            setShowChatViewModal(false);
+            setSelectedConversation(null);
+            setMessages([]);
+          }}
+          contact={{
+            id: selectedConversation,
+            name: conversations.find(c => c.id === selectedConversation)?.participant_name || 'Unknown User',
+          }}
+          profile={profile}
           onMessageSent={() => {
             loadConversations(false);
           }}
-      />
+        />
+      )}
     </View>
   );
 };
@@ -1715,22 +1817,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
   },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 24,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 6,
-  },
   fixedInputBar: {
     position: 'absolute',
     left: 0,
@@ -1787,6 +1873,83 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     flex: 1,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalContent: {
+    flex: 1,
+    paddingTop: 20,
+  },
+  settingsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  settingsItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingsIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  settingsItemTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  settingsItemSubtitle: {
+    fontSize: 14,
+  },
+  toggle: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#E5E7EB',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleActive: {
+    backgroundColor: '#3B82F6',
+  },
+  toggleThumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FFFFFF',
+    alignSelf: 'flex-start',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
   },
 });
 

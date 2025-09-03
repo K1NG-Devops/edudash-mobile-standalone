@@ -1,6 +1,8 @@
 {
   "common": {
     "appName": "EduDash Pro",
+    "seeAll": "Sien alles",
+    "manage": "Bestuur",
     "ok": "OK",
     "cancel": "Kanselleer",
     "save": "Stoor",
@@ -30,7 +32,16 @@
     "viewMore": "Wys meer",
     "viewLess": "Wys minder",
     "optional": "Opsioneel",
-    "required": "Verplig"
+    "required": "Verplig",
+    "unknown": "Onbekend",
+    "comingSoon": "Kom binnekort",
+    "unassigned": "Nie toegewys nie",
+    "success": "Sukses",
+    "child": "Kind",
+    "lastActive": "Laas aktief",
+    "lastLogin": "Laaste aanmelding",
+    "never": "Nooit",
+    "noSchool": "Geen skool"
   },
   "nav": {
     "home": "Tuis",
@@ -47,7 +58,8 @@
     "reports": "Verslae",
     "help": "Hulp",
     "about": "Oor",
-    "logout": "Teken uit"
+    "logout": "Teken uit",
+    "finances": "Finansies"
   },
   "auth": {
     "signIn": "Teken in",
@@ -68,7 +80,20 @@
     "invalidCredentials": "Ongeldige e-pos of wagwoord",
     "accountCreated": "Rekening suksesvol geskep",
     "passwordResetSent": "Wagwoord herstel skakel gestuur na jou e-pos",
-    "verifyEmail": "Verifieer asseblief jou e-posadres"
+    "verifyEmail": "Verifieer asseblief jou e-posadres",
+    "contactAdminForSetup": "Kontak die administrateur vir rekening opstelling",
+    "signInSubtitle": "Teken in by jou EduDash Pro-rekening",
+    "passwordUpdatedTitle": "Wagwoord bygewerk! 🎉",
+    "passwordUpdatedMessage": "Jou wagwoord is suksesvol bygewerk. Jy kan nou met jou nuwe wagwoord inteken.",
+    "showPassword": "Wys",
+    "hidePassword": "Versteek",
+    "passwordResetRequired": "Wagwoordherstel vereis",
+    "passwordResetRequiredMessage": "Vir jou veiligheid, stel asseblief 'n nuwe wagwoord voordat jy voortgaan.",
+    "setNewPassword": "Stel nuwe wagwoord",
+    "signInFailed": "Aanmelding het misluk",
+    "unexpectedError": "Onverwagte fout. Probeer asseblief weer.",
+    "welcomeBack": "Welkom terug",
+    "fillAllFields": "Vul asseblief alle velde in"
   },
   "settings": {
     "title": "Instellings",
@@ -98,11 +123,18 @@
       "currencyExample": "Geldeenheid voorbeeld"
     },
     "rtlPreview": "RTL-voorskou",
-    "languageChanged": "Taal verander na {{language}}"
+    "languageChanged": "Taal verander na {{language}}",
+    "admin": "Admin",
+    "schoolSettings": "Skoolinstellings",
+    "sendTestNotification": "Stuur toetserkennisgewing",
+    "accountSubscription": "Rekening & Intekening",
+    "viewPlansUpgrade": "Bekyk planne & Opgradeer",
+    "usageBilling": "Gebruik & Fakturering"
   },
   "errors": {
     "network": "Netwerkfout",
     "unknown": "Onbekende fout",
+    "reportsLoadFailed": "Kon nie verslae laai nie",
     "timeout": "Versoek het uitgetel",
     "serverError": "Bediener fout",
     "notFound": "Nie gevind nie",
@@ -130,7 +162,9 @@
     "playVideo": "Speel video",
     "pauseVideo": "Onderbreek video",
     "muteAudio": "Demp klank",
-    "unmuteAudio": "Ontdemp klank"
+    "unmuteAudio": "Ontdemp klank",
+    "openMessages": "Maak boodskappe oop",
+    "openMessagesHint": "Maak die boodskap-skerm oop"
   },
   "roles": {
     "teacher": "Onderwyser",
@@ -141,7 +175,32 @@
     "superadmin": "Super Administrateur"
   },
   "dashboard": {
+    "schoolStatisticsTitle": "Skoolstatistiek",
+    "attendanceToday": "{{percent}}% Bywoning vandag",
+    "newThisMonth": "nuut hierdie maand",
+    "activeClasses": "aktiewe klasse",
+    "engagedFamilies": "Betrokke gesinne",
+    "principalTools": "Skoolhoof Hulpmiddele",
     "welcome": "Welkom, {{name}}",
+    "principalSubtitle": "Bestuur jou kleuterskool met gemak",
+    "schoolOverviewTitle": "Skool Oorsig",
+    "schoolOverviewSubtitle": "Intydse insigte in jou skool",
+    "upgradeYourSchoolTitle": "Gradeer jou skool op",
+    "upgradeYourSchoolDescription": "Ontsluit premium-analitika, prioriteitsondersteuning en meer vir jou skool.",
+    "systemAlerts": "Stelselwaarskuwings",
+    "metrics": {
+      "monthlyRevenue": "Maandelikse Inkomste",
+      "attendanceRate": "Bywoningsyfer",
+      "thisMonthAverage": "Gemiddeld hierdie maand",
+      "avgPerStudent": "gem. per student"
+    },
+    "unlockTeacherPremiumTitle": "Ontsluit Onderwyser Premium",
+    "unlockTeacherPremiumDesc": "Onbeperkte KI-lesse, huiswerkgradering en gevorderde analitika vir personeel.",
+    "unlockParentPremiumTitle": "Ontsluit Ouer Premium",
+    "unlockParentPremiumDesc": "Verbeter ouerbetrokkenheid met premium analitika en kennisgewings.",
+    "teacherTagline": "Jou onderriggereedskap in een oogopslag",
+    "teachingAt": "Onderig by {{name}}",
+    "noDueDate": "Geen sperdatum",
     "overview": "Oorsig",
     "recentActivity": "Onlangse Aktiwiteit",
     "upcomingEvents": "Komende Gebeure",
@@ -149,9 +208,195 @@
     "statistics": "Statistieke",
     "todaySchedule": "Vandag se Skedule",
     "announcements": "Aankondigings",
-    "noDataAvailable": "Geen data beskikbaar"
+    "noDataAvailable": "Geen data beskikbaar",
+    "goodMorning": "Goeie more!",
+    "goodAfternoon": "Goeie middag!",
+    "goodEvening": "Goeie naand!",
+    "welcomeRole": "Welkom by jou {{role}}-paneel",
+    "managingSchool": "🏫 Bestuur {{name}}",
+    "teacherDashboard": "👩‍🏫 Onderwyserpaneel",
+    "adminDashboard": "👨‍💼 Administrateurpaneel",
+    "childEvaluations": {
+      "title": "Kind-evaluerings",
+      "subtitle": "Verslae en assesserings vir studente"
+    },
+    "videoCalls": {
+      "title": "Video-oproepe",
+      "subtitle": "Skeduleer ouervergaderings"
+    },
+    "messages": { "subtitle": "Kommunikeer met ouers" },
+    "myClasses": {
+      "title": "My klasse",
+      "subtitle": "Bestuur studente en aktiwiteite"
+    },
+    "settings": { "subtitle": "Stelselkonfigurasie" },
+    "users": {
+      "title": "Gebruikers",
+      "subtitle": "Bestuur onderwysers en ouers"
+    },
+    "todaysOverview": "📊 Vandag se oorsig",
+    "cards": {
+      "completed": "Voltooi",
+      "pending": "Hangend",
+      "thisMonth": "Hierdie maand",
+      "ofThisMonth": "van {{count}} hierdie maand",
+      "leftThisMonth": "oor hierdie maand",
+      "unlimited": "Onbeperk",
+      "aiLessons": { "title": "KI-Lesse" },
+      "homeworkAi": { "title": "Huiswerk KI" },
+      "aiTutoring": { "title": "KI-Tutoriaal" },
+      "analytics": { "title": "Analitika", "reportsViewed": "Verslae bekyk" },
+      "premiumOnly": "Slegs Premium"
+    },
+    "teacherSummary": {
+      "reportsCreated": "Verslae geskep",
+      "messagesSent": "Boodskappe gestuur",
+      "videoCalls": "Video-oproepe"
+    },
+    "teacher": { "performanceRating": "Prestasiegradering" },
+    "quickOverview": "Vinnige oorsig",
+    "loading": "Laai jou paneelbord...",
+    "loadingFailed": "Laai van paneelborddata het misluk",
+    "updates": {
+      "recent": "Onlangse bywerkings",
+      "newAssignmentTitle": "Nuwe opdrag gepos",
+      "checkAssignments": "Gaan jou opdragte na",
+      "schoolAnnouncementTitle": "Skoolaankondiging",
+      "checkLatestUpdates": "Kyk na die jongste bywerkings"
+    },
+    "achievements": { "recent": "Onlangse prestasies" },
+    "mood": { "today": "Vandag se bui" },
+    "progress": { "weekly": "Weeklikse vordering" },
+    "actions": {
+      "createLesson": "Skep Les",
+      "createClass": "Skep Klas",
+      "browseLessons": "Blaai deur Lesse",
+      "createAssignment": "Skep Opdrag",
+      "newEvent": "Nuwe gebeurtenis",
+      "announce": "Kondig aan",
+      "messageAll": "Stuur aan almal",
+      "addNewStudent": "Voeg nuwe student by",
+      "hireTeacher": "Neem onderwyser aan",
+      "messageAllParentsStaff": "Stuur aan almal (Ouers + Personeel)",
+      "openMessages": "Maak boodskappe oop",
+      "getSupport": "Kry ondersteuning",
+      "aiLessonGenerator": "KI-Lesgenerator",
+      "aiLessonGenerator_description": "Genereer pasgemaakte lesse met KI-tegnologie",
+      "gradeHomework": "Gradeer huiswerk",
+      "gradeHomework_description": "Gradeer huiswerk outomaties met KI",
+      "stemActivities": "STEM-aktiwiteite",
+      "stemActivities_description": "Toegang tot premium STEM-aktiwiteite-biblioteek",
+      "progressAnalysis": "Vorderingsanalise",
+      "progressAnalysis_description": "Gevorderde analitika en vorderingopsporing",
+      "support": "Ondersteuning"
+    },
+    "lesson": {
+      "public": "Publiek",
+      "private": "Privaat",
+      "durationMinutes": "Duur: {{minutes}} min",
+      "level": "Vlak: {{level}}"
+    },
+    "events": {
+      "assignmentDue": "Opdrag verskuldig"
+    },
+    "roomLabel": "Lokaal",
+    "maxCapacity": "Maks: {{max}}",
+    "studentsCount": "{{count}} Studente",
+    "noRecentActivity": "Geen onlangse aktiwiteit.",
+    "pendingTasks": "Hangende take",
+    "noPendingTasks": "Geen hangende take nie.",
+    "currentLessons": "Huidige lesse",
+    "viewAllLessons": "Sien alle lesse",
+    "recentHomeworkAssignments": "Onlangse huiswerkopdragte",
+    "empty": {
+      "noClassesTitle": "Nog geen klasse nie",
+      "noClassesDescription": "Skep jou eerste klas om te begin.",
+      "noLessonsTitle": "Nog geen lesse nie",
+      "noLessonsDescription": "Skep jou eerste les of blaai deur die lesbiblioteek.",
+      "noHomeworkTitle": "Akukho misebenzi okwamanje",
+      "noHomeworkDescription": "Skep 'n huiswerkopdrag vir jou klas."
+    },
+    "dueInDays_one": "Verskuldig oor {{count}} dag",
+    "dueInDays_other": "Verskuldig oor {{count}} dae",
+    "dueToday": "Verskuldig vandag",
+    "overdueByDays_one": "Agterstallig met {{count}} dag",
+    "overdueByDays_other": "Agterstallig met {{count}} dae",
+    "classLabel": "Klas",
+    "assigned": "Toegewys",
+    "general": "Algemeen",
+    "recentActivities": "Onlangse aktiwiteite",
+    "parent": {
+      "welcome": "Welkom by jou ouer-paneelbord",
+      "seeHowChildDoing": "Kom ons kyk hoe gaan dit met {{name}} vandag",
+      "recentUpdates": "Onlangse bywerkings",
+      "quickOverview": "Vinnige oorsig",
+      "childrenLabel": "Kinders",
+      "engagementLabel": "Betrokkenheid",
+      "totalPaid": "Totaal betaal",
+      "noTeacher": "Geen onderwyser",
+      "noTeacherAssigned": "Geen onderwyser toegeken nie",
+      "readyToRegister": "Gereed om jou kind te registreer? Tik die kaart hierbo om te begin!",
+      "childRegistered": "Kind geregistreer!",
+      "completeYourProfile": "Voltooi jou profiel",
+      "profileComplete": "Profiel voltooi!",
+      "provideContactDetails": "Verskaf kontakbesonderhede vir kommunikasie",
+      "contactReady": "Jou kontakbesonderhede is gereed",
+      "registerYourChild": "Registreer jou kind",
+      "addChildInfo": "Voeg jou kind se inligting vir inskrywing by",
+      "childIsEnrolled": "Jou kind is ingeskryf en gereed",
+      "noChildrenTitle": "Geen kinders gevind",
+      "noChildrenDescription": "Jy het nog geen kinders geregistreer nie",
+      "registerChild": "Registreer 'n kind",
+      "upcomingEventsTitle": "Komende Gebeure"
+    }
+  },
+  "finance": {
+    "overview": "Finansiële Oorsig",
+    "collectionRate": "Invorderingskoers",
+    "paymentTrends": "Betalingstendense (Laaste 6 maande)",
+    "pendingPayments": "Hangende betalings"
+  },
+  "status": {
+    "pending": "Hangend",
+    "overdue": "Agterstallig",
+    "current": "Huidig",
+    "paid": "Betaal"
+  },
+  "reports": {
+    "schoolTitle": "Skoolverslae",
+    "schoolSubtitle": "Sleutelmaatstawwe vir jou skool"
+  },
+  "events": {
+    "title": "Gebeure",
+    "join": "Sluit by gebeurtenis aan",
+    "joined": "By gebeurtenis aangesluit",
+    "share": "Deel",
+    "noEvents": "Nog geen gebeurtenisse nie",
+    "loading": "Laai gebeurtenisse…",
+    "loadMore": "Laai meer gebeurtenisse...",
+    "endOfList": "Jy het die einde bereik",
+    "live": "LEWENDE GEBEURTENIS",
+    "happeningNow": "Gebeure vind nou plaas",
+    "newUpdates": "Nuwe bywerkings",
+    "update": "bywerking",
+    "updates": "bywerkings",
+    "photo": "foto",
+    "photos": "foto's",
+    "reaction": "reaksie",
+    "reactions": "reaksies",
+    "participants": "deelnemers",
+    "participantsTitle": "Deelnemers",
+    "viewParticipants": "Bekyk deelnemers",
+    "noParticipants": "Nog geen deelnemers nie",
+    "status": {
+      "upcoming": "Komend",
+      "ongoing": "Regstreeks",
+      "completed": "Afgehandel",
+      "cancelled": "Gekanselleer"
+    }
   },
   "education": {
+    "capacity": "Kapasiteit",
     "lesson": "Les",
     "lessons": "Lesse",
     "homework": "Huiswerk",
@@ -171,6 +416,202 @@
     "schedule": "Skedule",
     "exam": "Eksamen",
     "test": "Toets",
-    "quiz": "Vasvra"
+    "quiz": "Vasvra",
+    "activities": "Aktiwiteite",
+    "completion": "Voltooiing"
+  },
+  "subscription": {
+    "title": "Intekening",
+    "loading": "Laai intekening…",
+    "manageSubscription": "Bestuur Intekening",
+    "status": {
+      "free": "Gratis",
+      "trial": "Proeflopie",
+      "active": "Aktief",
+      "canceled": "Gekanselleer",
+      "expired": "Verval",
+      "pastDue": "Agterstallig",
+      "inactive": "Onaktief"
+    },
+    "plan": {
+      "freePlan": "Gratis plan"
+    },
+    "actions": {
+      "upgrade": "Opgradeer",
+      "upgradeNow": "Gradeer nou op",
+      "goPremium": "Word Premium",
+      "manageSubscription": "Bestuur intekening",
+      "upgradeUnlimited": "Gradeer op vir onbeperkte toegang",
+      "upgradeToUnlock": "Gradeer op om te ontsluit"
+    },
+    "usage": {
+      "title": "Huidige gebruik",
+      "aiLessons": "KI-Lesse",
+      "homeworkAI": "Huiswerk KI",
+      "loading": "Laai gebruik...",
+      "thisMonthTitle": "Hierdie maand se gebruik",
+      "summaryText": "Jy het {{aiUsed}} van {{aiLimit}} KI-lesse en {{hwUsed}} van {{hwLimit}} huiswerkgraderings hierdie maand gebruik."
+    },
+    "trial": {
+      "expiresIn_one": "Proeflopie verstryk oor {{count}} dag",
+      "expiresIn_other": "Proeflopie verstryk oor {{count}} dae"
+    },
+    "alerts": {
+      "upgradeRequired": "Opgradering vereis",
+      "limitReached": "Limiet bereik",
+      "premiumRequiredTitle": "Premium vereis",
+      "premiumRequiredMessage": "Hierdie funksie vereis 'n Premium-plan."
+    },
+    "billing": {
+      "month": "maand",
+      "year": "jaar"
+    }
+  },
+  "relative": {
+    "justNow": "so pas",
+    "minutes_one": "{{count}} minuut gelede",
+    "minutes_other": "{{count}} minute gelede",
+    "hours_one": "{{count}} uur gelede",
+    "hours_other": "{{count}} ure gelede",
+    "days_one": "{{count}} dag gelede",
+    "days_other": "{{count}} dae gelede"
+  },
+  "date": {
+    "today": "Vandag",
+    "tomorrow": "Môre"
+  },
+  "age": {
+    "years_one": "{{count}} jaar oud",
+    "years_other": "{{count}} jaar oud"
+  },
+  "payments": {
+    "uploadPOP": "Laai bewys van betaling op",
+    "subscriptionPayment": "Intekeningbetaling",
+    "proof": {
+      "successTitle": "Sukses",
+      "successMessage": "Jou bewys van betaling is suksesvol ingedien. Ons sal dit hersien en jou intekening binnekort bywerk.",
+      "errorTitle": "Fout",
+      "errorMessage": "Kon nie bewys van betaling indien nie. Probeer asseblief weer."
+    }
+  },
+  "profile": {
+    "complete": "Profiel voltooi",
+    "completeProfileAction": "Voltooi profiel"
+  },
+  "principal": {
+    "tools": {
+      "schoolSetup": "Skoolopstelling",
+      "schoolSetupSubtitle": "Klasse & opdragte",
+      "teacherManagement": "Onderwyserbestuur",
+      "teacherManagementSubtitle": "Nooi en bestuur onderwysers",
+      "schoolCode": "Skoolkode",
+      "schoolCodeSubtitle": "Ouers se uitnodigingskodes",
+      "diagnostics": "Diagnostiek",
+      "diagnosticsSubtitle": "Verifieer tellings & RLS",
+      "schoolAnalytics": "Skoolanalitika",
+      "schoolAnalyticsSubtitle": "Prestasie-insigte",
+      "createAnnouncement": "Skep aankondiging",
+      "createAnnouncementSubtitle": "Lig alle ouers in",
+      "schoolSettingsSubtitle": "Konfigureer beleid"
+    }
+  },
+  "admin": {
+    "activity": {
+      "newParentRegistrations": "{{count}} nuwe ouerregistrasies vandag",
+      "paymentsReceived": "{{count}} betalings ontvang hierdie week",
+      "teacherEvaluationsPending": "{{count}} onderwyser-evaluerings hangend",
+      "newMessagesFromParents": "{{count}} nuwe boodskappe van ouers"
+    },
+    "quick": {
+      "userManagementSubtitle": "Bestuur personeel en ouers",
+      "financialReportsSubtitle": "Bekyk inkomste en uitgawes",
+      "studentAnalyticsTitle": "Student-analitika",
+      "studentAnalyticsSubtitle": "Inskrywings en vordering",
+      "communicationTitle": "Kommunikasie",
+      "communicationSubtitle": "Stuur aankondigings",
+      "systemSettingsSubtitle": "Stel skool op",
+      "supportCenterTitle": "Hulpsentrum",
+      "supportCenterSubtitle": "Hulp en bronne"
+    },
+    "stats": {
+      "totalStudents": "Totale Studente",
+      "totalTeachers": "Totale Onderwysers",
+      "totalParents": "Totale Ouers",
+      "activeUsers": "Aktiewe gebruikers"
+    },
+    "tabs": {
+      "overview": "Oorsig",
+      "schools": "Skole",
+      "users": "Gebruikers",
+      "activity": "Aktiwiteit",
+      "system": "Stelsel"
+    },
+    "super": {
+      "pageTitle": "🔱 Super Admin Paneelbord",
+      "pageSubtitle": "Bestuur die hele EduDash Pro-platform",
+      "recentSchools": "Onlangse Skole",
+      "addSchool": "Voeg Skool by",
+      "recentUsers": "Onlangse Gebruikers",
+      "platformActivity": "Platform Aktiwiteit",
+      "platformAlerts": "Platform Waarskuwings",
+      "pendingApprovals": "Hangende Goedkeurings",
+      "onboarding": {
+        "title": "Skool-Onboarding Versoeke",
+        "noPendingTitle": "Geen hangende versoeke nie",
+        "noPendingDescription": "Alle skool-onboarding versoeke is verwerk",
+        "recentRequests": "Onlangse Versoeke",
+        "loadingRequests": "Laai onboarding versoeke...",
+        "checkManagement": "Gaan na die Skoolbestuur-skerm vir besonderhede",
+        "goToRequests": "Gaan na Versoeke",
+        "totalSchools": "Totale Skole"
+      }
+    },
+    "stats": {
+      "schools": "Skole",
+      "totalUsers": "Totale Gebruikers",
+      "students": "Studente",
+      "monthlyRevenue": "Maandelikse Inkomste",
+      "growthRate": "Groeikoers",
+      "aiRequests": "KI-Versoeke"
+    },
+    "health": {
+      "title": "Stelselgesondheid",
+      "healthy": "Gesond",
+      "issues": "Probleme",
+      "apiResponse": "API-reaksie",
+      "uptime": "Uptyd",
+      "storage": "Berging",
+      "connections": "Verbindings"
+    },
+    "actions": {
+      "manageOnboarding": "Bestuur Onboarding",
+      "platformReports": "Platformverslae",
+      "systemSettings": "Stelselinstellings",
+      "userManagement": "Gebruikersbestuur",
+      "createSchool": "Skep Skool",
+      "createSchoolManually": "Skep Skool Handmatig",
+      "manageAllRequests": "Bestuur alle versoeke",
+      "suspend": "Skors"
+    },
+    "messages": {
+      "confirmSuspendSchool": "Is jy seker jy wil \"{{name}}\" skors? Dit sal toegang vir alle gebruikers by hierdie skool deaktiveer.",
+      "schoolSuspended": "Skool is suksesvol geskors.",
+      "suspendFailed": "Kon nie skool skors nie.",
+      "confirmSuspendUser": "Is jy seker jy wil \"{{name}}\" skors?",
+      "userSuspended": "Gebruiker is suksesvol geskors.",
+      "userSuspendFailed": "Kon nie gebruiker skors nie.",
+      "aiUsageResetTitle": "KI-gebruik teruggestel",
+      "aiUsageResetUser": "KI-gebruik vir {{name}} is teruggestel.",
+      "resetFailed": "Kon nie KI-gebruik terugstel nie.",
+      "overageEnabledTitle": "Toetser-oorskryding geaktiveer",
+      "overageDisabledTitle": "Toetser-oorskryding gedeaktiveer",
+      "userCanBypassCaps": "{{name}} kan maandelikse KI-limiete omseil.",
+      "userCanNoLongerBypassCaps": "{{name}} kan nie meer maandelikse KI-limiete omseil nie.",
+      "schoolOverageEnabledTitle": "Skool-oorskryding geaktiveer",
+      "schoolOverageDisabledTitle": "Skool-oorskryding gedeaktiveer",
+      "schoolCanBypassCaps": "Toetsers by {{name}} kan maandelikse KI-limiete omseil.",
+      "schoolCanNoLongerBypassCaps": "Toetsers by {{name}} kan nie meer maandelikse KI-limiete omseil nie.",
+      "updateFailed": "Kon nie instellings bywerk nie."
+    }
   }
 }

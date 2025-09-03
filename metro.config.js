@@ -9,10 +9,12 @@ const { withNativeWind } = require('nativewind/metro');
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
-// Path alias (handled by Babel's module-resolver). Avoid duplicating here to reduce risk of virtual modules.
-// config.resolver.alias = {
-//   '@': path.resolve(__dirname, './'),
-// };
+// Path alias for Metro (ensure resolution in environments where Babel plugins may not apply)
+config.resolver.alias = {
+  '@': path.resolve(__dirname, './'),
+  '@/i18n': path.resolve(__dirname, './src/i18n/index.ts'),
+  '@/design-system': path.resolve(__dirname, './src/design-system/index.ts'),
+};
 
 // Exclusions (use Metro's exclusionList to create a single RegExp)
 // IMPORTANT: Do not exclude broad patterns that could match inside node_modules.

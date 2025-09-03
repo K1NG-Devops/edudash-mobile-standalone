@@ -51,7 +51,7 @@ export default function LessonDetailsScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['top']}>
         <View style={styles.center}> 
           <ActivityIndicator size="large" color={palette.primary} />
-          <Text style={{ marginTop: 8, color: palette.textSecondary }}>Loading lesson…</Text>
+          <Text style={[styles.mt8, { color: palette.textSecondary }]}>Loading lesson…</Text>
         </View>
       </SafeAreaView>
     )
@@ -63,7 +63,7 @@ export default function LessonDetailsScreen() {
         <View style={styles.center}>
           <Text style={{ color: palette.error }}>{error || 'Lesson not found'}</Text>
           <TouchableOpacity onPress={() => router.back()} style={[styles.retryBtn, { backgroundColor: palette.primary }]}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Go back</Text>
+            <Text style={styles.btnTextLight}>Go back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -73,14 +73,21 @@ export default function LessonDetailsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={[styles.header, { borderBottomColor: palette.outline }]}> 
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }} accessibilityRole="button" accessibilityLabel="Go back">
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <IconSymbol name="chevron.left" size={22} color={palette.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: palette.text }]} numberOfLines={1}>Lesson Details</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity
+          onPress={() => router.push(`/screens/assign-homework?lessonId=${lessonId}`)}
+          style={styles.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Assign homework"
+        >
+          <IconSymbol name="paperplane.fill" size={20} color={palette.text} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView contentContainerStyle={styles.contentPadding}>
         <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.outline }]}> 
           <Text style={[styles.lessonTitle, { color: palette.text }]}>{lesson.title}</Text>
           {lesson.description && <Text style={[styles.lessonDesc, { color: palette.textSecondary }]}>{lesson.description}</Text>}
@@ -91,9 +98,9 @@ export default function LessonDetailsScreen() {
             )}
           </View>
           {lesson.content && (
-            <View style={{ marginTop: 12 }}>
+            <View style={styles.mt12}>
               <Text style={[styles.sectionTitle, { color: palette.text }]}>Lesson Content</Text>
-              <Text style={{ color: palette.textSecondary, lineHeight: 20 }}>{lesson.content}</Text>
+              <Text style={[styles.lh20, { color: palette.textSecondary }]}>{lesson.content}</Text>
             </View>
           )}
         </View>
@@ -106,11 +113,21 @@ export default function LessonDetailsScreen() {
             activities.map((a, idx) => (
               <View key={a.id || idx} style={styles.activity}>
                 <Text style={[styles.activityTitle, { color: palette.text }]}>{a.title}</Text>
-                {a.description && <Text style={{ color: palette.textSecondary, marginTop: 2 }}>{a.description}</Text>}
-                {a.instructions && <Text style={{ color: palette.textSecondary, marginTop: 6 }}>Instructions: {a.instructions}</Text>}
-                <View style={{ flexDirection: 'row', marginTop: 6 }}>
-                  <Text style={[styles.pill, { backgroundColor: colorScheme === 'dark' ? '#0F172A' : '#EEF2FF', color: '#3B82F6' }]}>⏱ {a.estimated_time ?? '—'} min</Text>
-                  {!!a.materials && <Text style={[styles.pill, { backgroundColor: colorScheme === 'dark' ? '#052E2B' : '#ECFDF5', color: '#059669' }]}>Materials: {a.materials}</Text>}
+                {a.description && <Text style={[styles.mt2, { color: palette.textSecondary }]}>{a.description}</Text>}
+                {a.instructions && <Text style={[styles.mt6, { color: palette.textSecondary }]}>Instructions: {a.instructions}</Text>}
+                <View style={styles.rowMt6}>
+                  <Text style={[
+                    styles.pill,
+                    colorScheme === 'dark' ? styles.pillBlueBgDark : styles.pillBlueBgLight,
+                    styles.pillBlueText
+                  ]}>⏱ {a.estimated_time ?? '—'} min</Text>
+                  {!!a.materials && (
+                    <Text style={[
+                      styles.pill,
+                      colorScheme === 'dark' ? styles.pillGreenBgDark : styles.pillGreenBgLight,
+                      styles.pillGreenText
+                    ]}>Materials: {a.materials}</Text>
+                  )}
                 </View>
               </View>
             ))
@@ -136,5 +153,21 @@ const styles = StyleSheet.create({
   activityTitle: { fontSize: 14, fontWeight: '700' },
   pill: { fontSize: 12, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, marginRight: 8 },
   retryBtn: { marginTop: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
+  // Utilities
+  iconBtn: { padding: 6 },
+  contentPadding: { padding: 16 },
+  mt8: { marginTop: 8 },
+  mt12: { marginTop: 12 },
+  mt2: { marginTop: 2 },
+  mt6: { marginTop: 6 },
+  rowMt6: { flexDirection: 'row', marginTop: 6 },
+  lh20: { lineHeight: 20 },
+  btnTextLight: { color: '#fff', fontWeight: '700' },
+  pillBlueBgDark: { backgroundColor: '#0F172A' },
+  pillBlueBgLight: { backgroundColor: '#EEF2FF' },
+  pillBlueText: { color: '#3B82F6' },
+  pillGreenBgDark: { backgroundColor: '#052E2B' },
+  pillGreenBgLight: { backgroundColor: '#ECFDF5' },
+  pillGreenText: { color: '#059669' },
 })
 

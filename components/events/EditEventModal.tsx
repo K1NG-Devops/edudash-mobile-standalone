@@ -130,19 +130,19 @@ export default function EditEventModal({ visible, event, onClose, onSaved }: Pro
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.sheet, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E5E7EB' }] }>
+        <View style={[styles.sheet, isDark ? styles.sheetDark : styles.sheetLight] }>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: isDark ? '#F8FAFC' : '#111827' }]}>Edit Event</Text>
+            <Text style={[styles.title, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}>Edit Event</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <IconSymbol name="xmark" size={18} color={isDark ? '#CBD5E1' : '#6B7280'} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={{ paddingBottom: 8 }}>
+          <ScrollView contentContainerStyle={styles.contentPB8}>
             <TextInput
               placeholder="Title"
               placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-              style={[styles.input, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+              style={[styles.input, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
               value={title}
               onChangeText={setTitle}
             />
@@ -150,26 +150,26 @@ export default function EditEventModal({ visible, event, onClose, onSaved }: Pro
             <TextInput
               placeholder="Description"
               placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-              style={[styles.textarea, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+              style={[styles.textarea, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
               value={description}
               onChangeText={setDescription}
               multiline
               numberOfLines={4}
             />
 
-            <Text style={[styles.label, { color: isDark ? '#E5E7EB' : '#111827' }]}>Date & time</Text>
+            <Text style={[styles.label, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}>Date & time</Text>
             <View style={styles.row}>
               <TextInput
                 placeholder="Start (YYYY-MM-DDTHH:mm)"
                 placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-                style={[styles.input, styles.half, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+                style={[styles.input, styles.half, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
                 value={startDate}
                 onChangeText={setStartDate}
               />
               <TextInput
                 placeholder="End (optional)"
                 placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-                style={[styles.input, styles.half, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+                style={[styles.input, styles.half, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
                 value={endDate}
                 onChangeText={setEndDate}
               />
@@ -178,55 +178,71 @@ export default function EditEventModal({ visible, event, onClose, onSaved }: Pro
             <TextInput
               placeholder="Location (optional)"
               placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
-              style={[styles.input, { color: isDark ? '#E5E7EB' : '#111827', borderColor: isDark ? '#334155' : '#E5E7EB', backgroundColor: isDark ? '#0B1220' : '#F9FAFB' }]}
+              style={[styles.input, isDark ? styles.inputDark : styles.inputLight, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}
               value={location}
               onChangeText={setLocation}
             />
 
-            <Text style={[styles.label, { color: isDark ? '#E5E7EB' : '#111827' }]}>Event type</Text>
+            <Text style={[styles.label, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}>Event type</Text>
             <View style={styles.typeRow}>
               {EVENT_TYPES.map((t) => {
                 const active = eventType === t;
                 return (
-                  <TouchableOpacity key={t} onPress={() => setEventType(t)} style={[styles.chip, { borderColor: active ? '#3B82F6' : (isDark ? '#334155' : '#E5E7EB'), backgroundColor: active ? (isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)') : 'transparent' }]}>
-                    <Text style={{ color: active ? '#3B82F6' : (isDark ? '#CBD5E1' : '#6B7280'), fontWeight: active ? '700' : '500' }}>{t.replace('_',' ')}</Text>
+                  <TouchableOpacity key={t} onPress={() => setEventType(t)} style={[
+                    styles.chip,
+                    active
+                      ? (isDark ? styles.chipActiveBlueDark : styles.chipActiveBlueLight)
+                      : (isDark ? styles.chipInactiveDark : styles.chipInactiveLight)
+                  ]}>
+                    <Text style={[
+                      active ? styles.typeTextActiveBlue : (isDark ? styles.typeTextInactiveDark : styles.typeTextInactiveLight),
+                      active ? styles.fw700 : styles.fw500,
+                    ]}>{t.replace('_',' ')}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
 
-            <Text style={[styles.label, { color: isDark ? '#E5E7EB' : '#111827' }]}>Status</Text>
+            <Text style={[styles.label, isDark ? styles.textPrimaryDark : styles.textPrimaryLight]}>Status</Text>
             <View style={styles.typeRow}>
               {STATUSES.map((s) => {
                 const active = status === s;
                 return (
-                  <TouchableOpacity key={s} onPress={() => setStatus(s)} style={[styles.chip, { borderColor: active ? '#10B981' : (isDark ? '#334155' : '#E5E7EB'), backgroundColor: active ? (isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)') : 'transparent' }]}>
-                    <Text style={{ color: active ? '#10B981' : (isDark ? '#CBD5E1' : '#6B7280'), fontWeight: active ? '700' : '500' }}>{s}</Text>
+                  <TouchableOpacity key={s} onPress={() => setStatus(s)} style={[
+                    styles.chip,
+                    active
+                      ? (isDark ? styles.statusChipActiveGreenDark : styles.statusChipActiveGreenLight)
+                      : (isDark ? styles.chipInactiveDark : styles.chipInactiveLight)
+                  ]}>
+                    <Text style={[
+                      active ? styles.statusTextActiveGreen : (isDark ? styles.typeTextInactiveDark : styles.typeTextInactiveLight),
+                      active ? styles.fw700 : styles.fw500,
+                    ]}>{s}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
 
-            <View style={[styles.row, { alignItems: 'center', marginBottom: 8 }] }>
-              <Text style={{ color: isDark ? '#E5E7EB' : '#111827', flex: 1 }}>Featured</Text>
+            <View style={[styles.row, styles.rowAlignCenterMB8] }>
+              <Text style={[isDark ? styles.textPrimaryDark : styles.textPrimaryLight, styles.flex1]}>Featured</Text>
               <Switch value={isFeatured} onValueChange={setIsFeatured} />
             </View>
 
-            <View style={[styles.row, { gap: 8 }] }>
-              <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#3B82F6' }]} onPress={pickCover}>
+            <View style={[styles.row, styles.gap8] }>
+              <TouchableOpacity style={[styles.smallBtn, styles.smallBtnBlue]} onPress={pickCover}>
                 <IconSymbol name="photo" size={16} color="#FFFFFF" />
                 <Text style={styles.smallBtnText}>{cover ? 'Change Cover' : 'Upload Cover'}</Text>
               </TouchableOpacity>
               {!!event.cover_image_url && !cover && (
-                <Text style={{ color: palette.textSecondary, flex: 1 }} numberOfLines={1}>Current cover set</Text>
+                <Text style={[isDark ? styles.textSecondaryDark : styles.textSecondaryLight, styles.flex1]} numberOfLines={1}>Current cover set</Text>
               )}
               {cover && (
-                <Text style={{ color: palette.textSecondary, flex: 1 }} numberOfLines={1}>{cover.name}</Text>
+                <Text style={[isDark ? styles.textSecondaryDark : styles.textSecondaryLight, styles.flex1]} numberOfLines={1}>{cover.name}</Text>
               )}
             </View>
           </ScrollView>
 
-          <TouchableOpacity style={[styles.saveBtn, { backgroundColor: '#3B82F6' }]} onPress={save} disabled={saving}>
+          <TouchableOpacity style={[styles.saveBtn, styles.saveBtnBlue]} onPress={save} disabled={saving}>
             {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveText}>Save Changes</Text>}
           </TouchableOpacity>
         </View>
@@ -252,4 +268,31 @@ const styles = StyleSheet.create({
   smallBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 12 },
   saveBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, marginTop: 8 },
   saveText: { color: '#FFFFFF', fontWeight: '700' },
+  // theme + utility variants
+  sheetDark: { backgroundColor: '#0F172A', borderColor: '#334155' },
+  sheetLight: { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' },
+  inputDark: { borderColor: '#334155', backgroundColor: '#0B1220' },
+  inputLight: { borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' },
+  contentPB8: { paddingBottom: 8 },
+  textPrimaryDark: { color: '#E5E7EB' },
+  textPrimaryLight: { color: '#111827' },
+  textSecondaryDark: { color: '#94A3B8' },
+  textSecondaryLight: { color: '#6B7280' },
+  chipActiveBlueDark: { borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.15)' },
+  chipActiveBlueLight: { borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.1)' },
+  chipInactiveDark: { borderColor: '#334155', backgroundColor: 'transparent' },
+  chipInactiveLight: { borderColor: '#E5E7EB', backgroundColor: 'transparent' },
+  typeTextActiveBlue: { color: '#3B82F6' },
+  typeTextInactiveDark: { color: '#CBD5E1' },
+  typeTextInactiveLight: { color: '#6B7280' },
+  statusChipActiveGreenDark: { borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.15)' },
+  statusChipActiveGreenLight: { borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.1)' },
+  statusTextActiveGreen: { color: '#10B981' },
+  fw700: { fontWeight: '700' },
+  fw500: { fontWeight: '500' },
+  rowAlignCenterMB8: { alignItems: 'center', marginBottom: 8 },
+  gap8: { gap: 8 },
+  smallBtnBlue: { backgroundColor: '#3B82F6' },
+  saveBtnBlue: { backgroundColor: '#3B82F6' },
+  flex1: { flex: 1 },
 });

@@ -9,6 +9,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "target": "esnext",
+    "baseUrl": ".",
     "lib": [
       "dom",
       "esnext"
@@ -20,6 +21,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@/i18n": [
+        "src/i18n/index.ts"
+      ],
+      "@/design-system": [
+        "src/design-system/index.ts"
       ]
     }
   },

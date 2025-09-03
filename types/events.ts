@@ -220,6 +220,9 @@ export interface EventCardProps {
   event: EnhancedEvent;
   onPress?: (event: EnhancedEvent) => void;
   onParticipate?: (event: EnhancedEvent) => void;
+  onCancel?: (event: EnhancedEvent) => void; // cancel participation
+  onViewParticipants?: (event: EnhancedEvent) => void;
+  canViewParticipants?: boolean;
   showActions?: boolean;
   compact?: boolean;
 }

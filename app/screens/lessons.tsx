@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -42,6 +44,7 @@ export default function LessonsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'all' | 'ai' | 'manual'>('all');
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
 
   useEffect(() => {
     loadLessons();
@@ -80,7 +83,7 @@ export default function LessonsScreen() {
   );
   const filteredLessons = tab === 'all'
     ? searched
-    : searched.filter(l => tab === 'ai' ? l.is_ai_generated === true : l.is_ai_generated !== true);
+    : searched.filter(l => tab === 'ai' ? l.is_ai_generated === true : (l.is_ai_generated === false || l.is_ai_generated == null));
 
   const renderLessonCard = (lesson: Lesson) => {
     const isPublic = lesson.is_public;
@@ -172,7 +175,7 @@ export default function LessonsScreen() {
         backgroundMode="surface"
         onBackPress={() => router.back()}
         rightActions={(
-          <TouchableOpacity style={styles.addButton} onPress={() => {}}>
+          <TouchableOpacity style={styles.addButton} accessibilityRole="button" accessibilityLabel="Create lesson" onPress={() => setShowCreateMenu(true)}>
             <IconSymbol name="plus" size={18} color={palette.primary} />
           </TouchableOpacity>
         )}
@@ -242,9 +245,9 @@ export default function LessonsScreen() {
             {!searchQuery && (
               <TouchableOpacity
                 style={[styles.createButton, { backgroundColor: palette.primary }]}
-                onPress={() => {
-                  // Navigate to create lesson
-                }}
+                accessibilityRole="button"
+                accessibilityLabel="Create lesson"
+                onPress={() => setShowCreateMenu(true)}
               >
                 <Text style={styles.createButtonText}>Create Lesson</Text>
               </TouchableOpacity>
@@ -256,11 +259,58 @@ export default function LessonsScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Create menu modal */}
+      <Modal
+        visible={showCreateMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCreateMenu(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowCreateMenu(false)}>
+          <View style={[styles.modalCard, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
+            <Text style={[styles.modalTitle, { color: palette.text }]}>Create lesson</Text>
+            <TouchableOpacity
+              style={[styles.modalAction, { borderColor: palette.outline }]}
+              onPress={() => {
+                setShowCreateMenu(false);
+                router.push('/screens/ai-lesson-generator');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Create AI-generated lesson"
+            >
+              <IconSymbol name="sparkles" size={18} color="#8B5CF6" />
+              <Text style={[styles.modalActionText, { color: palette.text }]}>AI-generated</Text>
+              <Text style={[styles.modalHint, { color: palette.textSecondary }]}>Use AI to create a full lesson</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalAction, { borderColor: palette.outline }]}
+              onPress={() => {
+                setShowCreateMenu(false);
+                router.push('/screens/lesson-create-manual');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Create manual lesson"
+            >
+              <IconSymbol name="pencil" size={18} color="#10B981" />
+              <Text style={[styles.modalActionText, { color: palette.text }]}>Manual</Text>
+              <Text style={[styles.modalHint, { color: palette.textSecondary }]}>Start from a blank template</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalCard: { borderWidth: StyleSheet.hairlineWidth, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 },
+  modalTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
+  modalAction: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 12, marginTop: 10 },
+  modalActionText: { fontSize: 15, fontWeight: '700' },
+  modalHint: { fontSize: 12, marginTop: 2 },
   container: {
     flex: 1,
   },

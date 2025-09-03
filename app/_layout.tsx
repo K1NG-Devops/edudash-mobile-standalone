@@ -3,7 +3,7 @@ import '../global.css'; // NativeWind styles
 import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary';
 import { AuthProvider } from '@/contexts/SimpleWorkingAuth';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
-import { ThemeProvider as DesignSystemThemeProvider } from '@/src/design-system/theme/ThemeProvider';
+// import { ThemeProvider as DesignSystemThemeProvider } from '@/design-system/theme/ThemeProvider';
 import * as Notifications from 'expo-notifications';
 import { Stack, usePathname, ErrorBoundaryProps } from 'expo-router';
 import { useEffect } from 'react';
@@ -21,7 +21,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
 import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
 import { AppFlowProvider } from '@/contexts/AppFlowProvider';
-// import AdsBootstrapper from '@/components/advertising/AdsBootstrapper';
+import AdsBootstrapper from '@/components/advertising/AdsBootstrapper';
 // import { GrowthBookProvider } from '@growthbook/growthbook-react';
 // import { growthbook } from '@/lib/growthbook';
 import ShakeToReport from '@/components/feedback/ShakeToReport';
@@ -161,6 +161,8 @@ export default function RootLayout() {
           <Stack.Screen name="+not-found" options={{ headerShown: false, title: 'Not Found' }} />
         </Stack>
         {!shouldHideNav && <GlobalBottomNav />}
+        {/* Initialize interstitials and ad config (child-safe, throttled) */}
+        <AdsBootstrapper />
         {/* Shake-to-report, gated to beta builds and authenticated users */}
         {process.env.EXPO_PUBLIC_BETA_MODE === 'true' && process.env.EXPO_PUBLIC_SHAKE_TO_REPORT === 'true' && profile && (
           <ShakeToReport />
@@ -174,7 +176,7 @@ export default function RootLayout() {
     const { colorScheme } = useTheme();
     // Apply "dark" class at the root so `dark:` variants work across the app on native
     return (
-      <View className={colorScheme === 'dark' ? 'dark flex-1' : 'flex-1'} style={{ flex: 1 }}>
+      <View className={colorScheme === 'dark' ? 'dark flex-1' : 'flex-1'} style={styles.full}>
         {children}
       </View>
     );
@@ -185,7 +187,7 @@ export default function RootLayout() {
       <AuthProvider>
         <QueryProvider>
           <ThemeProvider>
-            <DesignSystemThemeProvider>
+            {/* <DesignSystemThemeProvider> */}
               <RevenueCatProvider>
                 <ToastProvider>
                   <NavigationProvider>
@@ -204,7 +206,7 @@ export default function RootLayout() {
                   </NavigationProvider>
                 </ToastProvider>
               </RevenueCatProvider>
-            </DesignSystemThemeProvider>
+            {/* </DesignSystemThemeProvider> */}
           </ThemeProvider>
         </QueryProvider>
       </AuthProvider>
@@ -216,6 +218,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  full: { flex: 1 },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
+import i18n from '@/i18n';
 import { shadow } from '@/lib/ui/shadow';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { PlatformSubscription } from '@/lib/services/subscriptionService';
@@ -126,7 +127,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
     // - Otherwise: Inactive
     if (!subscription) {
       return {
-        status: 'Free',
+        status: i18n.t('subscription.status.free', { defaultValue: 'Free' }),
         color: '#6B7280',
         bgColor: isDark
           ? (['rgba(148,163,184,0.18)', 'rgba(148,163,184,0.08)'] as const)
@@ -141,7 +142,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
 
     if (isTrial) {
       return {
-        status: 'Trial',
+        status: i18n.t('subscription.status.trial', { defaultValue: 'Trial' }),
         color: '#F59E0B',
         bgColor: isDark
           ? (['rgba(245,158,11,0.18)', 'rgba(245,158,11,0.08)'] as const)
@@ -152,7 +153,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
 
     if (isActive) {
       return {
-        status: 'Active',
+        status: i18n.t('subscription.status.active', { defaultValue: 'Active' }),
         color: '#10B981',
         bgColor: isDark
           ? (['rgba(16,185,129,0.18)', 'rgba(16,185,129,0.08)'] as const)
@@ -163,7 +164,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
 
     if (subscription.status === 'canceled') {
       return {
-        status: 'Canceled',
+        status: i18n.t('subscription.status.canceled', { defaultValue: 'Canceled' }),
         color: '#6B7280',
         bgColor: isDark
           ? (['rgba(148,163,184,0.18)', 'rgba(148,163,184,0.08)'] as const)
@@ -174,7 +175,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
 
     if (subscription.status === 'expired' || isExpired) {
       return {
-        status: 'Expired',
+        status: i18n.t('subscription.status.expired', { defaultValue: 'Expired' }),
         color: '#6B7280',
         bgColor: isDark
           ? (['rgba(148,163,184,0.18)', 'rgba(148,163,184,0.08)'] as const)
@@ -183,10 +184,10 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
       };
     }
 
-    // If provider reports active but payment isn't confirmed, call it Past Due
-    if (subscription.status === 'active' || subscription.status === 'past_due') {
+    // If provider reports past_due, reflect Past Due explicitly
+    if (subscription.status === 'past_due') {
       return {
-        status: 'Past Due',
+        status: i18n.t('subscription.status.pastDue', { defaultValue: 'Past Due' }),
         color: '#EF4444',
         bgColor: isDark
           ? (['rgba(239,68,68,0.18)', 'rgba(239,68,68,0.08)'] as const)
@@ -196,7 +197,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
     }
 
     return {
-      status: 'Inactive',
+      status: i18n.t('subscription.status.inactive', { defaultValue: 'Inactive' }),
       color: '#6B7280',
       bgColor: isDark
         ? (['rgba(148,163,184,0.18)', 'rgba(148,163,184,0.08)'] as const)
@@ -245,14 +246,14 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
             </Text>
           </View>
           <Text style={[styles.compactPlan, { color: palette.text }]}>
-            {subscription?.plan?.name || 'Free Plan'}
+            {subscription?.plan?.name || i18n.t('subscription.plan.freePlan', { defaultValue: 'Free Plan' })}
           </Text>
           {isFreeTier && (
             <LinearGradient
               colors={['#8B5CF6', '#7C3AED']}
               style={styles.compactUpgrade}
             >
-              <Text style={styles.compactUpgradeText}>Upgrade</Text>
+              <Text style={styles.compactUpgradeText}>{i18n.t('subscription.actions.upgrade', { defaultValue: 'Upgrade' })}</Text>
             </LinearGradient>
           )}
         </View>
@@ -286,12 +287,12 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
           </View>
           
           <Text style={[styles.planName, { color: palette.text }]}>
-            {subscription?.plan?.name || 'Free Plan'}
+            {subscription?.plan?.name || i18n.t('subscription.plan.freePlan', { defaultValue: 'Free Plan' })}
           </Text>
           
           {subscription && (
             <Text style={[styles.planPrice, { color: palette.textSecondary }]}>
-              R{subscription.amount}/{subscription.billing_interval === 'monthly' ? 'month' : 'year'}
+R{subscription.amount}/{subscription.billing_interval === 'monthly' ? i18n.t('subscription.billing.month') : i18n.t('subscription.billing.year')}
             </Text>
           )}
         </View>
@@ -301,7 +302,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
           <View style={[styles.warningContainer, { backgroundColor: isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)' }]}>
             <IconSymbol name="exclamationmark.triangle.fill" size={14} color="#F59E0B" />
             <Text style={[styles.warningText, { color: palette.text }]}>
-              Trial expires in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? 's' : ''}
+              {i18n.t('subscription.trial.expiresIn', { count: daysUntilExpiry })}
             </Text>
           </View>
         )}
@@ -310,7 +311,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
         {showUsage && usageStats && !loadingUsage && (
           <View style={styles.usageSection}>
             <Text style={[styles.usageTitle, { color: palette.text }]}>
-              Current Usage
+              {i18n.t('subscription.usage.title', { defaultValue: 'Current Usage' })}
             </Text>
             
             <View style={styles.usageGrid}>
@@ -319,7 +320,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
                 <View style={styles.usageHeader}>
                   <IconSymbol name="brain.head.profile" size={16} color="#8B5CF6" />
                   <Text style={[styles.usageLabel, { color: palette.textSecondary }]}>
-                    AI Lessons
+                    {i18n.t('subscription.usage.aiLessons', { defaultValue: 'AI Lessons' })}
                   </Text>
                 </View>
                 <View style={[styles.usageBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
@@ -343,7 +344,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
                 <View style={styles.usageHeader}>
                   <IconSymbol name="doc.text.below.ecg" size={16} color="#10B981" />
                   <Text style={[styles.usageLabel, { color: palette.textSecondary }]}>
-                    Homework AI
+                    {i18n.t('subscription.usage.homeworkAI', { defaultValue: 'Homework AI' })}
                   </Text>
                 </View>
                 <View style={[styles.usageBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
@@ -369,7 +370,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
           <View style={styles.loadingUsage}>
             <ActivityIndicator size="small" color={palette.textSecondary} />
             <Text style={[styles.loadingText, { color: palette.textSecondary }]}>
-              Loading usage...
+              {i18n.t('subscription.usage.loading', { defaultValue: 'Loading usage...' })}
             </Text>
           </View>
         )}
@@ -386,7 +387,9 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
                 style={styles.upgradeButtonGradient}
               >
                 <Text style={styles.upgradeButtonText}>
-                  {isTrial ? 'Upgrade Now' : 'Go Premium'}
+                  {isTrial 
+                    ? i18n.t('subscription.actions.upgradeNow', { defaultValue: 'Upgrade Now' })
+                    : i18n.t('subscription.actions.goPremium', { defaultValue: 'Go Premium' })}
                 </Text>
                 <IconSymbol name="arrow.up.right" size={14} color="#FFFFFF" />
               </LinearGradient>
@@ -397,7 +400,7 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
               onPress={handleManagePress}
             >
               <Text style={[styles.manageSubscriptionText, { color: palette.primary }]}>
-                Manage Subscription
+                {i18n.t('subscription.actions.manageSubscription', { defaultValue: 'Manage Subscription' })}
               </Text>
               <IconSymbol name="arrow.right" size={12} color={palette.primary} />
             </TouchableOpacity>

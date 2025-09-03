@@ -15,6 +15,7 @@ import { useSubscription, useFeatureAccess } from '@/contexts/SubscriptionContex
 import UpgradeModal from '@/components/subscription/UpgradeModal'
 import { router } from 'expo-router'
 import { requestShowInterstitial } from '@/lib/ads/adEvents'
+import { generateWorksheetPdf, shareFileIfPossible } from '@/lib/resources/worksheet'
 
 interface AgeGroup { id: string; name: string }
 interface Category { id: string; name: string }
@@ -28,6 +29,15 @@ export default function AILessonGeneratorScreen() {
   const queryClient = useQueryClient()
   const { aiUsage } = useSubscription()
   const feature = useFeatureAccess('ai_lesson_generator')
+
+  // Themed styles moved from repeated inline objects
+  const themed = useMemo(() => StyleSheet.create({
+    screenBg: { backgroundColor: palette.background },
+    headerBorder: { borderBottomColor: palette.outline },
+    text: { color: palette.text },
+    textSecondary: { color: palette.textSecondary },
+    cardSurface: { backgroundColor: palette.surface, borderColor: palette.outline },
+  }), [palette])
 
   const [generated, setGenerated] = useState<any | null>(null)
   const [savedLessonId, setSavedLessonId] = useState<string | null>(null)
@@ -185,33 +195,33 @@ export default function AILessonGeneratorScreen() {
   const students = studentsQuery.data || []
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: palette.background }]} edges={['top', 'bottom', 'left', 'right']}>
-      <View style={[styles.header, { borderBottomColor: palette.outline }]}>
+    <SafeAreaView style={[styles.container, themed.screenBg]} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, themed.headerBorder]}>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={styles.backBtn}>
           <IconSymbol name="chevron.left" size={22} color={palette.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: palette.text }]}>AI Lesson Generator</Text>
-        <View style={{ width: 24 }} />
+        <Text style={[styles.title, themed.text]}>AI Lesson Generator</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       {!feature.hasAccess && !feature.canUseAI ? (
         <View style={styles.centerContent}>
-          <Text style={{ color: palette.text, marginBottom: 8 }}>AI Lesson Generator requires an upgrade.</Text>
-          <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#8B5CF6' }]} onPress={() => setShowUpgrade(true)}>
+          <Text style={[styles.inlineText, themed.text]}>AI Lesson Generator requires an upgrade.</Text>
+          <TouchableOpacity style={[styles.primaryBtn, styles.btnViolet]} onPress={() => setShowUpgrade(true)}>
             <Text style={styles.primaryBtnText}>Upgrade</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <ScrollView contentContainerStyle={styles.scrollPad}>
           {/* Free usage counter (informational only) */}
-          <View style={[styles.usagePill, { backgroundColor: colorScheme === 'dark' ? '#0F172A' : '#EEF2FF', borderColor: '#8B5CF6' }]}> 
+          <View style={[styles.usagePill, colorScheme === 'dark' ? styles.usagePillDark : styles.usagePillLight]}> 
             <IconSymbol name="bolt.fill" size={14} color="#8B5CF6" />
-            <Text style={{ marginLeft: 6, color: palette.textSecondary }}>AI free usage left: {String(showFreeLeft)}</Text>
+            <Text style={[styles.usagePillText, themed.textSecondary]}>AI free usage left: {String(showFreeLeft)}</Text>
           </View>
 
           {/* Generation UI */}
-          <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
-            <Text style={[styles.cardTitle, { color: palette.text }]}>1) Create your lesson</Text>
+          <View style={[styles.card, themed.cardSurface]}>
+            <Text style={[styles.cardTitle, themed.text]}>1) Create your lesson</Text>
             <LessonGenerator
               userId={authUserId}
               preschoolId={preschoolId}
@@ -223,19 +233,19 @@ export default function AILessonGeneratorScreen() {
 
           {/* Save & metadata */}
           {!!generated && (
-            <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
-              <Text style={[styles.cardTitle, { color: palette.text }]}>2) Save & publish</Text>
-              <View style={{ marginVertical: 8 }}>
-                <Text style={[styles.label, { color: palette.textSecondary }]}>Age Group</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
+            <View style={[styles.card, themed.cardSurface]}>
+              <Text style={[styles.cardTitle, themed.text]}>2) Save & publish</Text>
+              <View style={styles.vMargin8}>
+                <Text style={[styles.label, themed.textSecondary]}>Age Group</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vMargin8}>
                   {ageOptions.map((a) => (
                     <TouchableOpacity key={a.id} style={[styles.chip, picker.ageGroupId === a.id && styles.chipActive]} onPress={() => setPicker(prev => ({ ...prev, ageGroupId: a.id }))}>
                       <Text style={[styles.chipText, picker.ageGroupId === a.id && styles.chipTextActive]}>{a.name}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
-                <Text style={[styles.label, { color: palette.textSecondary }]}>Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
+                <Text style={[styles.label, themed.textSecondary]}>Category</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vMargin8}>
                   {catOptions.map((c) => (
                     <TouchableOpacity key={c.id} style={[styles.chip, picker.categoryId === c.id && styles.chipActive]} onPress={() => setPicker(prev => ({ ...prev, categoryId: c.id }))}>
                       <Text style={[styles.chipText, picker.categoryId === c.id && styles.chipTextActive]}>{c.name}</Text>
@@ -243,19 +253,16 @@ export default function AILessonGeneratorScreen() {
                   ))}
                 </ScrollView>
 
-                <View style={{ flexDirection: 'row', marginTop: 8, alignItems: 'center' }}>
+                <View style={styles.rowAlignCenter}>
                   <TouchableOpacity onPress={() => setPublishNow(v => !v)} style={[styles.checkbox, publishNow && styles.checkboxChecked]} accessibilityRole="checkbox" accessibilityLabel="Publish now"/>
-                  <Text style={{ marginLeft: 8, color: palette.text }}>Publish now</Text>
+                  <Text style={[styles.ml8, themed.text]}>Publish now</Text>
                 </View>
 
-                <View style={{ flexDirection: 'row', marginTop: 12 }}>
+                <View style={styles.rowMt12}>
                   <TouchableOpacity 
                     style={[
                       styles.primaryBtn, 
-                      { 
-                        backgroundColor: (!picker.ageGroupId || !picker.categoryId) ? '#9CA3AF' : '#10B981',
-                        opacity: (!picker.ageGroupId || !picker.categoryId) ? 0.7 : 1
-                      }
+                      (!picker.ageGroupId || !picker.categoryId) ? styles.btnDisabled : styles.btnGreen
                     ]} 
                     onPress={saveLesson}
                     disabled={!picker.ageGroupId || !picker.categoryId}
@@ -265,7 +272,7 @@ export default function AILessonGeneratorScreen() {
                 </View>
 
                 {savedLessonId && (
-                  <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                  <View style={styles.rowMt8}>
                     <TouchableOpacity style={[styles.secondaryBtn]} onPress={() => router.push('/screens/lessons')}>
                       <IconSymbol name="book" size={18} color="#111827" />
                       <Text style={styles.secondaryBtnText}>View saved lessons</Text>
@@ -274,7 +281,7 @@ export default function AILessonGeneratorScreen() {
                 )}
 
                 {(!picker.ageGroupId || !picker.categoryId) && (
-                  <Text style={[styles.helpText, { color: '#EF4444', marginTop: 8 }]}>
+                  <Text style={[styles.helpText, styles.textRed, styles.mt8]}>
                     Please select both an age group and category above to save your lesson.
                   </Text>
                 )}
@@ -284,9 +291,9 @@ export default function AILessonGeneratorScreen() {
 
           {/* Assign */}
           {!!savedLessonId && (
-            <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
-              <Text style={[styles.cardTitle, { color: palette.text }]}>3) Assign</Text>
-              <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+            <View style={[styles.card, themed.cardSurface]}>
+              <Text style={[styles.cardTitle, themed.text]}>3) Assign</Text>
+              <View style={styles.rowMb8}>
                 <TouchableOpacity style={[styles.toggle, assignUI.mode === 'class' && styles.toggleActive]} onPress={() => setAssignUI(prev => ({ ...prev, mode: 'class' }))}>
                   <Text style={[styles.toggleText, assignUI.mode === 'class' && styles.toggleTextActive]}>Entire class</Text>
                 </TouchableOpacity>
@@ -297,8 +304,8 @@ export default function AILessonGeneratorScreen() {
 
               {assignUI.mode === 'class' ? (
                 <View>
-                  <Text style={[styles.label, { color: palette.textSecondary }]}>Select class</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
+                  <Text style={[styles.label, themed.textSecondary]}>Select class</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vMargin8}>
                     {classes.map((cls) => (
                       <TouchableOpacity key={cls.id} style={[styles.chip, assignUI.classId === cls.id && styles.chipActive]} onPress={() => setAssignUI(prev => ({ ...prev, classId: cls.id }))}>
                         <Text style={[styles.chipText, assignUI.classId === cls.id && styles.chipTextActive]}>{cls.name}</Text>
@@ -306,9 +313,10 @@ export default function AILessonGeneratorScreen() {
                     ))}
                   </ScrollView>
                 </View>
-              ) : (
-                <View style={{ height: 240 }}>
-                  <Text style={[styles.label, { color: palette.textSecondary }]}>Pick students</Text>
+) : (
+                <View>
+                  <View style={styles.h24} />
+                  <Text style={[styles.label, themed.textSecondary]}>Pick students</Text>
                   <FlashList
                     data={students}
                     estimatedItemSize={56}
@@ -322,7 +330,7 @@ export default function AILessonGeneratorScreen() {
                             return { ...prev, selected: s }
                           })
                         }}>
-                          <Text style={{ color: palette.text }}>{item.first_name} {item.last_name}</Text>
+                          <Text style={[styles.itemText, themed.text]}>{item.first_name} {item.last_name}</Text>
                           {selected && <IconSymbol name="checkmark.circle.fill" size={18} color="#10B981" />}
                         </TouchableOpacity>
                       )
@@ -331,8 +339,8 @@ export default function AILessonGeneratorScreen() {
                 </View>
               )}
 
-              <View style={{ flexDirection: 'row', marginTop: 12 }}>
-                <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#3B82F6', opacity: assigning ? 0.6 : 1 }]} disabled={assigning} onPress={assignLesson}>
+              <View style={styles.rowMt12}>
+                <TouchableOpacity style={[styles.primaryBtn, styles.btnBlue, assigning && styles.btnDim]} disabled={assigning} onPress={assignLesson}>
                   <Text style={styles.primaryBtnText}>{assigning ? 'Assigning…' : 'Assign Lesson'}</Text>
                 </TouchableOpacity>
               </View>
@@ -341,9 +349,19 @@ export default function AILessonGeneratorScreen() {
 
           {/* Resources */}
           {!!savedLessonId && (
-            <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.outline }]}>
-              <Text style={[styles.cardTitle, { color: palette.text }]}>4) Resources</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            <View style={[styles.card, themed.cardSurface]}>
+              <Text style={[styles.cardTitle, themed.text]}>4) Resources</Text>
+              <View style={styles.rowWrap}>
+                <TouchableOpacity style={[styles.secondaryBtn]} onPress={() => router.push({ pathname: '/screens/analytics', params: { from: 'ai-lesson', lessonId: savedLessonId || '', title: generated?.title || '' } })}>
+                  <IconSymbol name="doc.text.magnifyingglass" size={18} color="#8B5CF6" />
+                  <Text style={styles.secondaryBtnText}>Insights & Reports</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.secondaryBtn]} onPress={() => router.push({ pathname: '/screens/homework', params: { fromLesson: '1', lessonId: savedLessonId || '', title: generated?.title || '' } })}>
+                  <IconSymbol name="pencil.and.outline" size={18} color="#10B981" />
+                  <Text style={styles.secondaryBtnText}>Grade Homework with AI</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity style={[styles.secondaryBtn]} onPress={async () => {
                   try {
                     const deep = `edudashpro://lesson/${savedLessonId}`
@@ -361,6 +379,38 @@ export default function AILessonGeneratorScreen() {
                 }}>
                   <IconSymbol name="paperplane.fill" size={18} color="#3B82F6" />
                   <Text style={styles.secondaryBtnText}>Share to parents</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.secondaryBtn]} onPress={async () => {
+                  try {
+                    if (!generated) { Alert.alert('No lesson', 'Please generate a lesson first.'); return; }
+                    const res = await generateWorksheetPdf(generated);
+                    if (!res) { Alert.alert('Failed', 'Could not generate worksheet'); return; }
+                    const shared = await shareFileIfPossible(res.fileUri);
+                    if (!shared) {
+                      Alert.alert('Worksheet ready', `Worksheet saved to: ${res.fileUri}`)
+                    }
+                  } catch (e:any) {
+                    Alert.alert('Error', e?.message || 'Failed to generate worksheet');
+                  }
+                }}>
+                  <IconSymbol name="doc.richtext" size={18} color="#059669" />
+                  <Text style={styles.secondaryBtnText}>Generate Worksheet (PDF)</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.secondaryBtn]} onPress={() => {
+                  try {
+                    const q1 = `https://www.youtube.com/results?search_query=${encodeURIComponent((generated?.title || 'Preschool lesson') + ' educational video')}`
+                    const q2 = `https://www.youtube.com/results?search_query=${encodeURIComponent((generated?.title || 'lesson') + ' ' + (generated?.activities?.[0]?.title || '') + ' kids')}`
+                    Alert.alert('Suggested Videos', 'Open one of these searches in your browser:', [
+                      { text: 'Search 1', onPress: () => console.log('Open', q1) },
+                      { text: 'Search 2', onPress: () => console.log('Open', q2) },
+                      { text: 'Close', style: 'cancel' }
+                    ])
+                  } catch {}
+                }}>
+                  <IconSymbol name="play.rectangle.fill" size={18} color="#DC2626" />
+                  <Text style={styles.secondaryBtnText}>Find Educational Videos</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.secondaryBtn]} onPress={() => {
@@ -400,6 +450,29 @@ export default function AILessonGeneratorScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerSpacer: { width: 24 },
+  inlineText: { marginBottom: 8 },
+  scrollPad: { padding: 16 },
+  usagePillLight: { backgroundColor: '#EEF2FF', borderColor: '#8B5CF6', borderWidth: 1, borderRadius: 999, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 },
+  usagePillDark: { backgroundColor: '#0F172A', borderColor: '#8B5CF6', borderWidth: 1, borderRadius: 999, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 },
+  usagePillText: { marginLeft: 6 },
+  vMargin8: { marginVertical: 8 },
+  rowAlignCenter: { flexDirection: 'row', marginTop: 8, alignItems: 'center' },
+  ml8: { marginLeft: 8 },
+  rowMt12: { flexDirection: 'row', marginTop: 12 },
+  rowMt8: { flexDirection: 'row', marginTop: 8 },
+  rowMb8: { flexDirection: 'row', marginBottom: 8 },
+  textRed: { color: '#EF4444' },
+  mt8: { marginTop: 8 },
+  h240: { height: 240 },
+  itemText: { fontSize: 14 },
+  btnViolet: { backgroundColor: '#8B5CF6' },
+  btnGreen: { backgroundColor: '#10B981' },
+  btnBlue: { backgroundColor: '#3B82F6' },
+  btnDisabled: { backgroundColor: '#9CA3AF', opacity: 0.7 },
+  btnDim: { opacity: 0.6 },
+  rowWrap: { flexDirection: 'row', flexWrap: 'wrap' },
+  h24: { height: 24 },
   container: { flex: 1 },
   header: { height: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   backBtn: { padding: 6 },

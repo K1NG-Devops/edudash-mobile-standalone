@@ -1,5 +1,11 @@
 import 'dotenv/config';
 
+import fs from 'fs';
+
+const hasGoogleServices = fs.existsSync('./android/app/google-services.json');
+const buildProfile = process.env.EAS_BUILD_PROFILE || '';
+const isProd = buildProfile === 'production' || process.env.NODE_ENV === 'production';
+
 export default {
   expo: {
     name: "EduDash Pro",
@@ -18,7 +24,10 @@ export default {
       associatedDomains: [
         "applinks:www.edudashpro.org.za",
         "applinks:edudashpro.org.za"
-      ]
+      ],
+      infoPlist: {
+        NSMicrophoneUsageDescription: "Allow the app to access your microphone for voice messages."
+      }
     },
     android: {
       adaptiveIcon: {
@@ -30,10 +39,13 @@ export default {
         "INTERNET",
         "CAMERA",
         // Android 13+ runtime permission for notifications
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        // Audio recording permissions for voice messages
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
       ],
-      // If you add your Firebase config, point to it here (required for background push on Android)
-      googleServicesFile: "./android/app/google-services.json",
+      // Point to Firebase config when available (dev optional, prod enforced by Gradle)
+      ...(hasGoogleServices ? { googleServicesFile: "./android/app/google-services.json" } : {}),
       edgeToEdgeEnabled: true,
       // Enable Android App Links so https://www.edudashpro.org.za/open in the app
       intentFilters: [
@@ -57,6 +69,7 @@ export default {
       "expo-dev-client",
       "expo-secure-store",
       "expo-notifications",
+      "expo-av",
       [
         "expo-splash-screen",
         {

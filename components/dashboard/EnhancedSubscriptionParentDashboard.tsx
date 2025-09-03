@@ -10,7 +10,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   Dimensions,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -19,6 +20,7 @@ import { PaymentService } from '@/lib/services/paymentService';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { MobileHeader } from '@/components/navigation/MobileHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DashboardSubscriptionCard } from '@/components/dashboard/DashboardSubscriptionCard';
 import SubscriptionAwareStatsCards from '@/components/dashboard/SubscriptionAwareStatsCards';
 import { AdComponents } from '@/components/advertising/AdComponents';
@@ -28,7 +30,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
-import { PageHeader, EmptyState, Button } from '@/src/design-system/components';
+import { PageHeader, EmptyState, Button } from '@/design-system';
 
 interface EnhancedSubscriptionParentDashboardProps {
   userId: string;
@@ -41,7 +43,11 @@ interface EnhancedSubscriptionParentDashboardProps {
   onSignOut: () => Promise<void>;
 }
 
+import i18n, { useT } from '@/i18n';
+
 const { width: screenWidth } = Dimensions.get('window');
+const isSmallScreen = screenWidth < 375;
+const isVerySmallScreen = screenWidth < 320;
 
 const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDashboardProps> = ({
   userId,
@@ -50,7 +56,10 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
   onSignOut
 }) => {
   const { colorScheme } = useTheme();
+  const { t } = useT();
   const palette = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const { subscription, isSubscriptionActive, refreshSubscription } = useSubscription();
   
   const [dashboardData, setDashboardData] = useState<ParentDashboardData | null>(null);
@@ -68,6 +77,10 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
 
   const isFreeTier = !subscription || subscription.plan?.tier === 'free';
   const subscriptionTier = subscription?.plan?.tier || 'free';
+
+  // Ads gating per WARP rules: only show when explicitly enabled
+  const enableAds = process.env.EXPO_PUBLIC_ENABLE_ADS === 'true';
+  const isProd = (process.env.EXPO_PUBLIC_ENVIRONMENT === 'production') || (process.env.NODE_ENV === 'production');
 
   // Load contacts for messaging
   const loadContacts = async () => {
@@ -88,7 +101,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
       
       const mapped = (data || []).map((row: any) => ({
         id: row.id,
-        name: row.name || 'Unknown',
+        name: row.name || i18n.t('common.unknown'),
         role: row.role,
         avatar_url: row.avatar_url || undefined,
         email: row.email || undefined,
@@ -164,7 +177,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
       }
     } catch (err) {
       console.error('Error fetching parent dashboard data:', err);
-      setError('Failed to load dashboard data. Please try again.');
+      setError(t('errors.somethingWentWrong'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -213,15 +226,15 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
     if (!permission.allowed) {
       if (permission.upgradeRequired) {
         Alert.alert(
-          'Upgrade Required',
-          permission.reason + '\n\nUpgrade your subscription to access unlimited AI features.',
+          i18n.t('subscription.alerts.upgradeRequired'),
+          permission.reason + '\n\n' + i18n.t('subscription.actions.upgradeUnlimited'),
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Upgrade Now', onPress: handleUpgrade }
+            { text: i18n.t('common.cancel'), style: 'cancel' },
+            { text: i18n.t('subscription.actions.upgradeNow'), onPress: handleUpgrade }
           ]
         );
       } else {
-        Alert.alert('Limit Reached', permission.reason);
+        Alert.alert(i18n.t('subscription.alerts.limitReached'), permission.reason);
       }
       return false;
     }
@@ -238,9 +251,9 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning!';
-    if (hour < 17) return 'Good afternoon!';
-    return 'Good evening!';
+    if (hour < 12) return t('dashboard.goodMorning');
+    if (hour < 17) return t('dashboard.goodAfternoon');
+    return t('dashboard.goodEvening');
   };
 
   const timeAgo = (isoDate: string) => {
@@ -248,12 +261,12 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
     const then = new Date(isoDate).getTime();
     const diff = Math.max(0, now - then);
     const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 1) return t('relative.justNow');
+    if (minutes < 60) return t('relative.minutes', { count: minutes });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return t('relative.hours', { count: hours });
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return t('relative.days', { count: days });
   };
 
   // Navigation handlers
@@ -288,7 +301,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         router.push('/screens/lessons');
         break;
       case 'messages':
-        router.push('/(tabs)/messages');
+        router.push('/messages');
         break;
       case 'upload-pop':
         setShowPopModal(true);
@@ -321,11 +334,12 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
+          actionsPlacement="below"
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#8B5CF6" />
           <Text style={[styles.loadingText, { color: palette.textSecondary }]}>
-            Loading your dashboard...
+            {t('dashboard.loading')}
           </Text>
         </View>
       </View>
@@ -343,13 +357,14 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
           onSignOut={onSignOut}
           onNavigate={handleNavigate}
           notificationCount={0}
+          actionsPlacement="below"
         />
         <View style={styles.errorContainer}>
           <IconSymbol name="exclamationmark.triangle.fill" size={48} color="#EF4444" />
-          <Text style={[styles.errorTitle, { color: palette.text }]}>Something went wrong</Text>
+          <Text style={[styles.errorTitle, { color: palette.text }]}>{t('errors.somethingWentWrong')}</Text>
           <Text style={[styles.errorMessage, { color: palette.textSecondary }]}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchDashboardData}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -366,6 +381,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         onSignOut={onSignOut}
         onNavigate={handleNavigate}
         notificationCount={dashboardData?.recent_updates.length || 0}
+        actionsPlacement="below"
       />
 
       <ScrollView
@@ -374,22 +390,42 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(100, insets.bottom + 80) }
+        ]}
       >
-        {/* Page Header */}
-        <PageHeader
-          spacing="sm"
-          title={`${getGreeting()} 👋`}
-          subtitle={selectedChild ? `Let's see how ${selectedChild.first_name} is doing today` : 'Welcome to your dashboard'}
-          actions={(!selectedChild && dashboardData && dashboardData.children.length === 0)
-            ? <Button text="Register Child" onPress={() => router.push('/(tabs)/register')} />
-            : undefined}
-        />
-        {tenantName && (
-          <View style={styles.tenantInfo}>
-            <Text style={[styles.tenantLabel, { color: palette.text }]}>🏫 {tenantName}</Text>
+        {/* Modern Responsive Header Section (Google-style) */}
+        <View style={[
+          styles.modernHeaderSection,
+          { 
+            paddingLeft: Math.max(12, insets.left + (isSmallScreen ? 12 : 16)),
+            paddingRight: Math.max(12, insets.right + (isSmallScreen ? 12 : 16))
+          }
+        ]}>
+          <View style={styles.titleSection}>
+            <Text style={[
+              styles.modernTitle,
+              (isVerySmallScreen ? styles.modernTitleVerySmall : (isSmallScreen ? styles.modernTitleSmall : styles.modernTitleDefault)),
+              { color: palette.text }
+            ]}>{getGreeting()} 👋</Text>
+            <Text style={[
+              styles.modernSubtitle,
+              (isSmallScreen ? styles.modernSubtitleSmall : styles.modernSubtitleDefault),
+              { color: palette.textSecondary }
+            ]}>
+{selectedChild ? t('dashboard.parent.seeHowChildDoing', { name: selectedChild.first_name }) : t('dashboard.parent.welcome')}
+            </Text>
+            {tenantName && (
+              <View style={[
+                styles.tenantBadge,
+                isDark ? styles.tenantBadgeDark : styles.tenantBadgeLight
+              ]}>
+                <Text style={styles.tenantLabel} numberOfLines={1} ellipsizeMode="tail">🏫 {tenantName}</Text>
+              </View>
+            )}
           </View>
-        )}
+        </View>
 
         {/* Subscription Management Card */}
         <DashboardSubscriptionCard
@@ -402,7 +438,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         {isFreeTier && (
           <AdComponents.SafeBannerAd 
             style={styles.adBanner}
-            adUnitId="ca-app-pub-3940256099942544/6300978111" // Test ID
+            adUnitId={Platform.OS === 'ios' ? 'ca-app-pub-3940256099942544/2934735716' : 'ca-app-pub-3940256099942544/6300978111'}
           />
         )}
 
@@ -431,10 +467,10 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                     )}
                   </View>
                   <Text style={styles.childDetails}>
-                    🎂 {selectedChild.age} years old
+🎂 {t('age.years', { count: selectedChild.age || 0 })}
                   </Text>
                   <Text style={styles.childDetails}>
-                    👩‍🏫 {selectedChild.teacher_name || 'No Teacher Assigned'}
+👩‍🏫 {selectedChild.teacher_name || i18n.t('dashboard.parent.noTeacherAssigned')}
                   </Text>
                 </View>
                 <View style={styles.childEmoji}>
@@ -445,12 +481,12 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
               <View style={styles.childCardFooter}>
                 <View style={styles.childBadge}>
                   <Text style={styles.childBadgeText}>
-                    {selectedChild.class_name || selectedChild.age_group_name || 'Unassigned'}
+{selectedChild.class_name || selectedChild.age_group_name || i18n.t('common.unassigned')}
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.attendanceButton} onPress={() => router.push(`/screens/attendance${selectedChildId ? `?childId=${selectedChildId}` : ''}` as any)}>
                   <Text style={styles.attendanceText}>
-                    Attendance: {selectedChild.attendance_percentage}%
+{t('education.attendance')}: {selectedChild.attendance_percentage}%
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -460,9 +496,9 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
           <View style={styles.emptyStateCard}>
             <EmptyState
               icon={<IconSymbol name="person.2.fill" size={40} color="#9CA3AF" />}
-              title={loading ? 'Loading...' : (dashboardData && dashboardData.children.length === 0 ? 'No Children Found' : 'Welcome!')}
-              description={loading ? "Fetching your child's information" : (dashboardData && dashboardData.children.length === 0 ? "You don't have any children registered" : 'Setting up your dashboard...')}
-              primaryAction={!loading && dashboardData && dashboardData.children.length === 0 ? { label: 'Register a Child', onPress: () => router.push('/(tabs)/register') } : undefined}
+              title={loading ? t('common.loading') : (dashboardData && dashboardData.children.length === 0 ? t('dashboard.parent.noChildrenTitle') : t('dashboard.parent.welcome'))}
+              description={loading ? t('dashboard.loading') : (dashboardData && dashboardData.children.length === 0 ? t('dashboard.parent.noChildrenDescription') : t('dashboard.quickOverview'))}
+              primaryAction={!loading && dashboardData && dashboardData.children.length === 0 ? { label: t('dashboard.parent.registerChild'), onPress: () => router.push('/(tabs)/register') } : undefined}
             />
           </View>
         )}
@@ -488,7 +524,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                     {child.full_name}
                   </Text>
                   <Text style={[styles.childDropdownDetails, { color: palette.textSecondary }]}>
-                    {child.age} years • {child.class_name || child.age_group_name || 'Unassigned'} • {child.teacher_name || 'No Teacher'}
+                    {t('age.years', { count: child.age || 0 })} • {child.class_name || child.age_group_name || i18n.t('common.unassigned')} • {child.teacher_name || i18n.t('dashboard.parent.noTeacher')}
                   </Text>
                 </View>
                 {child.id === selectedChildId && (
@@ -512,7 +548,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
 
         {/* Enhanced Quick Actions with AI Features */}
         <View style={styles.quickActionsSection}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>🚀 Quick Actions</Text>
+<Text style={[styles.sectionHeading, { color: palette.text }]}>🚀 {t('dashboard.quickActions')}</Text>
           
           <View style={styles.quickActions}>
             {/* Standard actions */}
@@ -523,7 +559,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
               <View style={styles.quickActionIcon}>
                 <IconSymbol name="book.fill" size={24} color="#6B7280" />
               </View>
-              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Lessons</Text>
+              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>{t('education.lessons')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -533,7 +569,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
               <View style={styles.quickActionIcon}>
                 <IconSymbol name="doc.text.fill" size={24} color="#6B7280" />
               </View>
-              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Homework</Text>
+              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>{t('education.homework')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -543,7 +579,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
               <View style={styles.quickActionIcon}>
                 <IconSymbol name="location.fill" size={24} color="#6B7280" />
               </View>
-              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Activities</Text>
+              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>{t('education.activities')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -553,7 +589,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
               <View style={styles.quickActionIcon}>
                 <IconSymbol name="message.fill" size={24} color="#6B7280" />
               </View>
-              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Messages</Text>
+              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>{t('nav.messages')}</Text>
             </TouchableOpacity>
 
             {/* Upload POP */}
@@ -564,7 +600,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
               <View style={styles.quickActionIcon}>
                 <IconSymbol name="doc.text.fill" size={24} color="#6B7280" />
               </View>
-              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>Upload POP</Text>
+              <Text style={[styles.quickActionLabel, { color: palette.textSecondary }]}>{t('payments.uploadPOP')}</Text>
             </TouchableOpacity>
 
             {/* Complete Profile */}
@@ -583,7 +619,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                 />
                 {!profileComplete && (
                   <View style={styles.alertBadge}>
-                    <IconSymbol name="exclamationmark" size={8} color="#FFFFFF" />
+                    <IconSymbol name="exclamationmark.circle" size={8} color="#FFFFFF" />
                   </View>
                 )}
               </View>
@@ -591,7 +627,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                 style={styles.quickActionLabel}
                 className={profileComplete ? 'text-muted-foreground' : 'text-red-500'}
               >
-                {profileComplete ? 'Profile Complete' : 'Complete Profile'}
+                {profileComplete ? t('profile.complete') : t('profile.completeProfileAction')}
               </Text>
             </TouchableOpacity>
 
@@ -608,7 +644,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                   </View>
                 )}
               </View>
-              <Text style={styles.quickActionLabel} className="text-violet-500">AI Lessons</Text>
+              <Text style={styles.quickActionLabel} className="text-violet-500">{t('dashboard.cards.aiLessons.title')}</Text>
               {usageStats?.quotas.ai_lessons_per_month && (
                 <Text style={styles.usageIndicator}>
                   {usageStats.ai_lessons_used_this_month}/{usageStats.quotas.ai_lessons_per_month}
@@ -628,27 +664,27 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
                   </View>
                 )}
               </View>
-              <Text style={styles.quickActionLabel} className="text-violet-500">AI Grading</Text>
+              <Text style={styles.quickActionLabel} className="text-violet-500">{t('dashboard.cards.homeworkAi.title')}</Text>
               {usageStats?.quotas.homework_grading_per_month && (
                 <Text style={styles.usageIndicator}>
                   {usageStats.homework_graded_this_month}/{usageStats.quotas.homework_grading_per_month}
                 </Text>
               )}
             </TouchableOpacity>
-          </View>
+        </View>
         </View>
 
         {/* Free Tier Interstitial Ad */}
         {isFreeTier && (
           <AdComponents.SafeInterstitialAd 
-            adUnitId="ca-app-pub-3940256099942544/1033173712" // Test ID
+            adUnitId={Platform.OS === 'ios' ? 'ca-app-pub-3940256099942544/4411468910' : 'ca-app-pub-3940256099942544/1033173712'}
           />
         )}
 
         {/* Recent Activity for selected child */}
         {selectedChild && dashboardData && dashboardData.recent_updates && (
           <View style={styles.activitySection}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>🕒 Recent Activity</Text>
+<Text style={[styles.sectionHeading, { color: palette.text }]}>🕒 {t('dashboard.recentActivity')}</Text>
             {dashboardData.recent_updates
               .filter((u) => !selectedChild || u.student_id === selectedChild.id)
               .slice(0, 5)
@@ -674,7 +710,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         {/* Recent Achievements */}
         {selectedChild && selectedChild.recent_achievements && selectedChild.recent_achievements.length > 0 && (
           <View style={styles.achievementsSection}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>🏆 Recent Achievements</Text>
+<Text style={[styles.sectionHeading, { color: palette.text }]}>🏆 {t('dashboard.achievements.recent')}</Text>
             <View style={styles.achievementsList}>
               {selectedChild.recent_achievements.map((achievement, index) => (
                 <View key={index} style={styles.achievementBadge}>
@@ -688,7 +724,7 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
         {/* Upcoming Events */}
         {dashboardData && dashboardData.upcoming_events.length > 0 && (
           <View style={styles.eventsSection}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>📅 Upcoming Events</Text>
+<Text style={[styles.sectionHeading, { color: palette.text }]}>📅 {t('dashboard.parent.upcomingEventsTitle')}</Text>
             {dashboardData.upcoming_events.slice(0, 3).map((event) => (
               <TouchableOpacity key={event.id} style={[styles.eventItem, { backgroundColor: palette.surface }]}>
                 <View style={styles.eventDate}>
@@ -711,20 +747,36 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
           <View style={[styles.usageSummary, { backgroundColor: palette.surface }]}>
             <View style={styles.usageSummaryHeader}>
               <IconSymbol name="chart.bar.xaxis" size={20} color="#8B5CF6" />
-              <Text style={[styles.usageSummaryTitle, { color: palette.text }]}>This Month's Usage</Text>
+              <Text style={[styles.usageSummaryTitle, { color: palette.text }]}>{t('subscription.usage.thisMonthTitle')}</Text>
             </View>
             <Text style={[styles.usageSummaryText, { color: palette.textSecondary }]}>
-              You've used {usageStats.ai_lessons_used_this_month} of {usageStats.quotas.ai_lessons_per_month ?? '∞'} AI lessons and {usageStats.homework_graded_this_month} of {usageStats.quotas.homework_grading_per_month ?? '∞'} homework gradings this month.
+              {t('subscription.usage.summaryText', { aiUsed: usageStats.ai_lessons_used_this_month, aiLimit: usageStats.quotas.ai_lessons_per_month ?? '∞', hwUsed: usageStats.homework_graded_this_month, hwLimit: usageStats.quotas.homework_grading_per_month ?? '∞' })}
             </Text>
             <TouchableOpacity style={styles.upgradeNowButton} onPress={handleUpgrade}>
-              <Text style={styles.upgradeNowText}>Upgrade for Unlimited Access</Text>
+              <Text style={styles.upgradeNowText}>{t('subscription.actions.upgradeUnlimited')}</Text>
               <IconSymbol name="arrow.up.right" size={14} color="#FFFFFF" />
             </TouchableOpacity>
+
+            {/* Ad placeholder below upgrade button (free tier only), gated by env */}
+            {enableAds && (
+              <AdComponents.SafeBannerAd
+                style={styles.adBanner}
+                adUnitId={isProd
+                  ? (Platform.OS === 'android'
+                      ? (process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER_UNIT_ID || 'ca-app-pub-3940256099942544/6300978111')
+                      : (process.env.EXPO_PUBLIC_ADMOB_IOS_BANNER_UNIT_ID || 'ca-app-pub-3940256099942544/2934735716'))
+                  : (Platform.OS === 'ios'
+                      ? 'ca-app-pub-3940256099942544/2934735716'
+                      : 'ca-app-pub-3940256099942544/6300978111')}
+              />
+            )}
           </View>
         )}
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
+        {/* Bottom safe area compensation */}
+        <View style={{ height: Math.max(0, insets.bottom) }} />
       </ScrollView>
 
       {/* POP Upload Modal */}
@@ -733,23 +785,23 @@ const EnhancedSubscriptionParentDashboard: React.FC<EnhancedSubscriptionParentDa
           isVisible={showPopModal}
           onClose={() => setShowPopModal(false)}
           studentId={selectedChildId || ''}
-          childName={selectedChild?.full_name || selectedChild?.name || 'Child'}
+          childName={selectedChild?.full_name || selectedChild?.name || i18n.t('common.child')}
           amountPaid={subscription?.plan?.price || 0}
-          feeDescription={`${subscription?.plan?.name || 'Subscription'} Payment`}
+          feeDescription={t('payments.subscriptionPayment')}
           onUploadSuccess={async (data: ProofOfPaymentData) => {
             try {
               await PaymentService.submitProofOfPayment(data);
               Alert.alert(
-                'Success',
-                'Your proof of payment has been submitted successfully. We will review it and update your subscription shortly.',
-                [{ text: 'OK', onPress: () => setShowPopModal(false) }]
+                i18n.t('payments.proof.successTitle'),
+                i18n.t('payments.proof.successMessage'),
+                [{ text: i18n.t('common.ok'), onPress: () => setShowPopModal(false) }]
               );
               await refreshSubscription();
             } catch (error) {
               Alert.alert(
-                'Error',
-                'Failed to submit proof of payment. Please try again.',
-                [{ text: 'OK' }]
+                i18n.t('payments.proof.errorTitle'),
+                i18n.t('payments.proof.errorMessage'),
+                [{ text: i18n.t('common.ok') }]
               );
             }
           }}
@@ -770,34 +822,43 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100, // Space for tab bar
   },
-  headerTextSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 16,
+  // Modern Header Section - Google Style
+  modernHeaderSection: {
+    paddingHorizontal: 4,
+    paddingVertical: 20,
+    marginBottom: 8,
   },
-  greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  titleSection: {
+    marginBottom: 20,
+  },
+  modernTitle: {
+    fontWeight: '300', // Light weight for Google style
+    letterSpacing: -0.5,
+    marginBottom: 8,
     color: '#1F2937',
-    marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 16,
+  modernTitleDefault: { fontSize: 32, lineHeight: 40 },
+  modernTitleSmall: { fontSize: 28, lineHeight: 34 },
+  modernTitleVerySmall: { fontSize: 24, lineHeight: 30 },
+  modernSubtitle: {
+    opacity: 0.7,
     color: '#6B7280',
-    lineHeight: 22,
   },
-  tenantInfo: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  modernSubtitleDefault: { fontSize: 14, lineHeight: 20 },
+  modernSubtitleSmall: { fontSize: 13, lineHeight: 20 },
+  tenantBadge: {
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    marginTop: 8,
+    marginTop: 12,
     alignSelf: 'flex-start',
   },
+  tenantBadgeLight: { backgroundColor: 'rgba(66, 133, 244, 0.1)' },
+  tenantBadgeDark: { backgroundColor: 'rgba(66, 133, 244, 0.2)' },
   tenantLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E40AF',
+    color: '#4285F4',
   },
 
   // Ad banner
@@ -963,7 +1024,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
   },
-  sectionTitle: {
+  sectionHeading: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 16,
