@@ -20,7 +20,6 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem, getRoleColors } from '@/constants/DesignSystem';
 import { Avatar } from '@/components/ui/Avatar';
 import { rolesContent, featuresContent, testimonialsContent } from '@/constants/marketing';
-import AdZone from '@/components/ui/AdZone';
 // import { PricingComponent } from '@/components/pricing/PricingComponent';
 // import { useAuth } from '@/contexts/SimpleWorkingAuth';
 // import { AdBanner, SponsoredContent, RevenueBanner } from '@/components/advertising/AdComponents';
@@ -150,7 +149,7 @@ export default function FuturisticMarketingPage() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" translucent />
-      <SafeAreaView edges={['top','left','right']} style={styles.flex1}>
+      <SafeAreaView edges={['top','left','right']} style={{ flex: 1 }}>
         <ScrollView 
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
@@ -164,28 +163,12 @@ export default function FuturisticMarketingPage() {
         >
         <HeroSection />
         <SchoolOnboardingBanner />
-        {/* Strategic banner placement after onboarding banner */}
-        <AdZone showForAll>
-          <View />
-        </AdZone>
         <RoleBasedBenefitsSection />
         <FeaturesSection setSelectedFeature={setSelectedFeature} />
-        {/* Strategic banner placement mid-page */}
-        <AdZone showForAll>
-          <View />
-        </AdZone>
         <TestimonialsSection activeTestimonial={activeTestimonial} setActiveTestimonial={setActiveTestimonial} />
         <EmbeddedPricingSection />
-        {/* Strategic banner placement near pricing */}
-        <AdZone showForAll>
-          <View />
-        </AdZone>
         <QASection showQA={showQA} setShowQA={setShowQA} />
         <EnhancedAdSection />
-        {/* Strategic banner placement before footer */}
-        <AdZone showForAll>
-          <View />
-        </AdZone>
         <FooterSection />
         </ScrollView>
       </SafeAreaView>
@@ -444,7 +427,7 @@ const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ activeTestimo
         </Text>
 
         {isDesktop ? (
-          <View style={styles.rowWrapCenterGap16}>
+          <View style={{ flexDirection: 'row', gap: 16, justifyContent: 'center', flexWrap: 'wrap' as any }}>
             {testimonials.map((_, idx) => (
               <View key={idx} style={{ width: Math.min(380, (width - 120) / 3) }}>
                 <TestimonialCard index={idx} />
@@ -674,7 +657,7 @@ const RoleBasedBenefitsSection = () => {
           showsHorizontalScrollIndicator={false}
           snapToAlignment="start"
           decelerationRate="fast"
-          contentContainerStyle={[styles.roleCarousel, styles.px16]}>
+          contentContainerStyle={[styles.roleCarousel, { paddingHorizontal: 16 }]}>
           {roles.map((role, idx) => (
             <View key={role.id} style={[styles.roleSlide, { width: slideWidth }]}> 
               <LinearGradient
@@ -745,7 +728,7 @@ const EmbeddedPricingSection = () => {
           initialView={isPrincipal ? 'role-specific' : 'overview'}
           theme="professional"
         /> */}
-        <Text style={styles.whiteCenterMv12}>
+        <Text style={{ color: '#fff', textAlign: 'center', marginVertical: 12 }}>
           Pricing temporarily hidden for debugging auth provider
         </Text>
         
@@ -1068,10 +1051,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0a0f',
   },
-  flex1: { flex: 1 },
-  rowWrapCenterGap16: { flexDirection: 'row', flexWrap: 'wrap' as any, gap: 16, justifyContent: 'center' },
-  px16: { paddingHorizontal: 16 },
-  whiteCenterMv12: { color: '#fff', textAlign: 'center', marginVertical: 12 },
   scrollView: {
     flex: 1,
   },
