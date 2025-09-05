@@ -1,15 +1,14 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-/*
-  Edge Function: update-events-status
-  - Sets events.status based on start_date/end_date
-  - Intended to be scheduled every 15 minutes (via Supabase Scheduler)
-
-  Scheduling (CLI):
-    supabase functions deploy update-events-status
-    supabase functions schedule create update-events-status --cron "*/15 * * * *" --endpoint "/update-events-status"
-*/
+// Edge Function: update-events-status
+// - Sets events.status based on start_date/end_date
+// - Intended to be scheduled every 15 minutes (via Supabase Scheduler)
+//
+// Scheduling (CLI):
+//   supabase functions deploy update-events-status
+//   supabase functions schedule create update-events-status --cron "0/15 * * * *" --endpoint "/update-events-status"
+//   (tip: "*/15" is also common, but avoid including the '*/' sequence inside block comments)
 
 serve(async () => {
   try {

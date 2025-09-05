@@ -4,6 +4,23 @@
 -- Ensure table exists and RLS is enabled (no-op if already set)
 ALTER TABLE IF EXISTS public.school_invitation_codes ENABLE ROW LEVEL SECURITY;
 
+-- Compatibility: ensure preschool_id column exists and mirrors school_id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='school_invitation_codes' AND column_name='preschool_id'
+  ) THEN
+    ALTER TABLE public.school_invitation_codes ADD COLUMN preschool_id uuid;
+    -- Backfill from school_id if available
+    BEGIN
+      UPDATE public.school_invitation_codes SET preschool_id = school_id WHERE preschool_id IS NULL;
+    EXCEPTION WHEN undefined_column THEN
+      -- In some environments school_id may not exist; ignore
+    END;
+  END IF;
+END $$;
+
 -- Drop existing policies to avoid duplicates (idempotent)
 DO $$
 BEGIN

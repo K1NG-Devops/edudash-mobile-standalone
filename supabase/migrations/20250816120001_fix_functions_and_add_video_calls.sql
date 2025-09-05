@@ -17,7 +17,8 @@ DROP FUNCTION IF EXISTS superadmin_approve_onboarding(uuid);
 CREATE TABLE IF NOT EXISTS video_calls (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   preschool_id uuid NOT NULL REFERENCES preschools(id) ON DELETE CASCADE,
-  class_id uuid REFERENCES classes(id) ON DELETE SET NULL,
+  -- Defer FK to classes until classes table exists in later migrations
+  class_id uuid,
   teacher_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title text NOT NULL,
   description text,
@@ -52,7 +53,8 @@ CREATE TABLE IF NOT EXISTS video_call_participants (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   call_id uuid NOT NULL REFERENCES video_calls(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  student_id uuid REFERENCES students(id) ON DELETE CASCADE, -- For parent-student associations
+  -- Defer FK to students until students table exists in later migrations
+  student_id uuid, -- For parent-student associations
   
   -- Participation details
   joined_at timestamp with time zone,

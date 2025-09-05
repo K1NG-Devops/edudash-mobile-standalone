@@ -135,10 +135,12 @@ BEGIN
     FOREIGN KEY ("preschool_id") REFERENCES "public"."preschools"("id") ON DELETE CASCADE;
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'billing_cycles_subscription_plan_id_fkey') THEN
-    ALTER TABLE "public"."billing_cycles" 
-    ADD CONSTRAINT "billing_cycles_subscription_plan_id_fkey" 
-    FOREIGN KEY ("subscription_plan_id") REFERENCES "public"."subscription_plans"("id") ON DELETE SET NULL;
+IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'billing_cycles_subscription_plan_id_fkey') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='subscription_plans') THEN
+      ALTER TABLE "public"."billing_cycles" 
+      ADD CONSTRAINT "billing_cycles_subscription_plan_id_fkey" 
+      FOREIGN KEY ("subscription_plan_id") REFERENCES "public"."subscription_plans"("id") ON DELETE SET NULL;
+    END IF;
   END IF;
   
   -- Foreign keys for assessment_rubrics

@@ -1,15 +1,27 @@
 #!/bin/bash
 
 # Setup PayFast Sandbox Configuration
-# This script configures PayFast for development/testing
+# This script configures PayFast for development/testing with YOUR sandbox credentials
 
 echo "🏦 Setting up PayFast Sandbox Configuration..."
+echo "📝 Please enter your PayFast sandbox account credentials:"
+echo "   (Get these from your PayFast sandbox dashboard at https://sandbox.payfast.co.za)"
+echo ""
 
-# PayFast Sandbox Credentials (publicly available test credentials)
-# These are safe to use for testing and are provided by PayFast
-SANDBOX_MERCHANT_ID="10000100"
-SANDBOX_MERCHANT_KEY="46f0cd694581a"
-SANDBOX_PASSPHRASE="jt7NOE43FZPn"
+# Prompt for your actual sandbox credentials
+read -p "Enter your Sandbox Merchant ID: " SANDBOX_MERCHANT_ID
+read -p "Enter your Sandbox Merchant Key: " SANDBOX_MERCHANT_KEY
+read -s -p "Enter your Sandbox Passphrase (hidden): " SANDBOX_PASSPHRASE
+echo "" # New line after hidden input
+
+# Validate inputs
+if [[ -z "$SANDBOX_MERCHANT_ID" || -z "$SANDBOX_MERCHANT_KEY" || -z "$SANDBOX_PASSPHRASE" ]]; then
+    echo "❌ Error: All credentials are required!"
+    echo "   Please run the script again with your sandbox credentials."
+    exit 1
+fi
+
+echo "✅ Credentials entered successfully!"
 
 # Backup existing .env.local if it exists
 if [ -f ".env.local" ]; then

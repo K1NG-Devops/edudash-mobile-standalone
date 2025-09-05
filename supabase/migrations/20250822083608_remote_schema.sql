@@ -1784,8 +1784,16 @@ ALTER TABLE ONLY "public"."emergency_contacts"
 
 
 
-ALTER TABLE ONLY "public"."events"
-    ADD CONSTRAINT "events_pkey" PRIMARY KEY ("id");
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'events_pkey' AND conrelid = 'public.events'::regclass
+  ) THEN
+    ALTER TABLE ONLY "public"."events"
+      ADD CONSTRAINT "events_pkey" PRIMARY KEY ("id");
+  END IF;
+END $$;
 
 
 
