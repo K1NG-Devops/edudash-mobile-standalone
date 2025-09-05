@@ -27,6 +27,15 @@
       ],
       "@/design-system": [
         "src/design-system/index.ts"
+      ],
+      "@edudash/ui/*": [
+        "../../packages/ui/src/*"
+      ],
+      "@edudash/api/*": [
+        "../../packages/api/src/*"
+      ],
+      "@edudash/types/*": [
+        "../../packages/types/src/*"
       ]
     }
   },
