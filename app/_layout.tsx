@@ -86,12 +86,13 @@ Notifications.setNotificationHandler({
 
 export default function RootLayout() {
   const pathname = usePathname();
-  // Hide global bottom nav on welcome, landing, auth, super-admin dashboard and pricing pages
+  // Hide global bottom nav on welcome, landing, auth, super-admin screens and pricing pages
   const hideBottomNav = (
     pathname === '/' ||
     pathname === '/landing' ||
     pathname.startsWith('/(auth)') ||
     pathname.startsWith('/screens/super-admin-dashboard') ||
+    pathname.startsWith('/screens/schools-management') ||
     pathname === '/pricing'
   );
 
