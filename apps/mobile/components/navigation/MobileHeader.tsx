@@ -185,7 +185,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           />
           <LinearGradient
             colors={[redBlueGradient[0], redBlueGradient[1]]}
-            style={[styles.header, { paddingTop: Math.max(0, insets.top - 2) }]}
+            style={[styles.header, { paddingTop: Math.max(0, insets.top - 8) }]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
@@ -382,8 +382,8 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingTop: 0, // snug under status bar
-    paddingBottom: 12,
-    minHeight: 72,
+    paddingBottom: 8,
+    minHeight: 64,
     marginTop: 0,
   },
   belowActionsContainer: {
