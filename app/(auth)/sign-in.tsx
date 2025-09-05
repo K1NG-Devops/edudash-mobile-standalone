@@ -49,6 +49,21 @@ export default function SignIn() {
     }
 
     setLoading(true);
+    let navigated = false;
+    const safeNavigate = (path: string) => {
+      if (navigated) return;
+      navigated = true;
+      try { router.replace(path as any); } catch { try { router.push(path as any); } catch {} }
+    };
+
+    // Absolute safety timeout: never leave the user spinning on web if anything stalls
+    const safetyTimer = setTimeout(() => {
+      if (!navigated) {
+        safeNavigate('/(tabs)/dashboard');
+        setLoading(false);
+      }
+    }, 2500);
+
     try {
       const result = await signIn(email.trim(), password);
       if (result.error) {
@@ -64,7 +79,7 @@ export default function SignIn() {
           // Fast-path: trust JWT/user_metadata for role when DB profile may be blocked by RLS
           const mdRole = (authUser as any)?.user_metadata?.role;
           if (mdRole && String(mdRole).toLowerCase() === 'superadmin') {
-            router.replace('/screens/super-admin-dashboard');
+            safeNavigate('/screens/super-admin-dashboard');
             return;
           }
 
@@ -78,11 +93,11 @@ export default function SignIn() {
                 .from('users')
                 .select('role, password_reset_required')
                 .eq('auth_user_id', id)
-                .single();
+                .maybeSingle();
               if (!roleErr && profile?.role) {
                 return {
                   role: profile.role as string,
-                  passwordResetRequired: profile.password_reset_required || false
+                  passwordResetRequired: (profile as any)?.password_reset_required || false
                 };
               }
               await new Promise((r) => setTimeout(r, delayMs));
@@ -101,7 +116,7 @@ export default function SignIn() {
                 [
                   {
                     text: t('auth.setNewPassword'),
-                    onPress: () => router.replace('/reset-password')
+                    onPress: () => safeNavigate('/reset-password')
                   }
                 ]
               );
@@ -109,17 +124,20 @@ export default function SignIn() {
             }
 
             if (profileData?.role === 'superadmin') {
-              router.replace('/screens/super-admin-dashboard');
+              safeNavigate('/screens/super-admin-dashboard');
               return;
             }
           }
-        } catch { }
+        } catch {
+          // ignore; fall back below
+        }
         // Fallback route for non-superadmin or if lookup fails
-        router.replace('/(tabs)/dashboard');
+        safeNavigate('/(tabs)/dashboard');
       }
     } catch (error) {
       Alert.alert(t('common.error'), t('auth.unexpectedError'));
     } finally {
+      clearTimeout(safetyTimer);
       setLoading(false);
     }
   };

@@ -42,7 +42,8 @@
     "supabase/functions/**",
     "archive/**",
     "legacy/_excluded/**",
-    "app/api/**"
+    "app/api/**",
+    "app/_api/**"
   ],
   "extends": "expo/tsconfig.base"
 }

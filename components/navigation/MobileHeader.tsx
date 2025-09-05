@@ -177,7 +177,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
     return (
       <>
-        <SafeAreaView style={styles.safeArea} edges={['left', 'right']} className="bg-transparent">
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']} className="bg-transparent">
           <StatusBar 
             barStyle={computedBarStyle as any}
             translucent={true}
@@ -185,7 +185,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           />
           <LinearGradient
             colors={[redBlueGradient[0], redBlueGradient[1]]}
-            style={[styles.header, { paddingTop: insets.top }]}
+            style={styles.header}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
@@ -224,13 +224,22 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                     <Text style={styles.userName} className="mb-0.5 mr-2 text-[18px] font-semibold text-white">{displayName}</Text>
                     <View style={styles.roleContainer} className="ml-2">
                       <View style={styles.roleBadge} className="self-start rounded-lg bg-white/15 px-2.5 py-[3px]">
-                        <Text style={styles.roleTitle} className="text-[13px] text-white opacity-90">
+                        <Text
+                          style={[
+                            styles.roleTitle,
+                            isNarrow && styles.roleTitleCompact,
+                            { maxWidth: isNarrow ? 110 : 160 }
+                          ]}
+                          className="text-white opacity-90"
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
                           {user?.role === 'preschool_admin' ? t('roles.principal') : 
                            user?.role === 'principal' ? t('roles.principal') :
                            user?.role === 'school_admin' ? t('roles.admin') :
                            user?.role === 'teacher' ? t('roles.teacher') :
                            user?.role === 'parent' ? t('roles.parent') :
-                           user?.role === 'superadmin' ? t('roles.superadmin') : t('roles.admin')}
+                           user?.role === 'superadmin' ? (t('roles.superadminShort') || t('roles.superadmin')) : t('roles.admin')}
                         </Text>
                       </View>
                     </View>
@@ -372,7 +381,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 0, // will be overridden by insets.top + 8
+    paddingTop: 8,
     paddingBottom: 16,
     minHeight: 84,
     marginTop: 0,
@@ -454,6 +463,9 @@ userName: {
     color: '#FFFFFF',
     opacity: 0.9,
     flexShrink: 0,
+  },
+  roleTitleCompact: {
+    fontSize: 12,
   },
   rightSection: {
     flexDirection: 'row',
