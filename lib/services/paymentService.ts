@@ -882,7 +882,7 @@ export class PaymentService {
         };
 
         try {
-          const { claudeService } = await import('@/services/ai/claude-service');
+          const { claudeService } = await import('@/lib/ai/claudeService');
           const prompt = `
             As a financial analyst for an early childhood education center, analyze this payment data:
             
