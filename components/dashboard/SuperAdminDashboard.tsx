@@ -28,7 +28,7 @@ import {
 } from '@/lib/services/superAdminDataService';
 import { shadow } from '@/lib/ui/shadow';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PageHeader, EmptyState, Button } from '@/design-system';
+import { EmptyState, Button } from '@/design-system';
 import { useT } from '@/i18n';
 
 interface SuperAdminDashboardProps {
@@ -43,6 +43,8 @@ interface SuperAdminDashboardProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
+const isSmallScreen = screenWidth < 375;
+const isVerySmallScreen = screenWidth < 320;
 
 const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   userId,
@@ -80,6 +82,16 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   // Initial data fetch
   useEffect(() => {
     fetchDashboardData();
+
+    // Expose a global refresh hook for child components (e.g., OnboardingRequestManager)
+    // This allows triggering a dashboard refetch immediately after approvals.
+    (global as any).refreshSuperAdminDashboard = fetchDashboardData;
+
+    return () => {
+      if ((global as any).refreshSuperAdminDashboard === fetchDashboardData) {
+        (global as any).refreshSuperAdminDashboard = undefined;
+      }
+    };
   }, [userId]);
 
   // Handle refresh
@@ -125,7 +137,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
   // Handle school creation success
   const handleSchoolCreated = (schoolId: string) => {
-    console.log('School created successfully:', schoolId);
     setShowCreateSchoolModal(false);
     // Refresh dashboard data to show new school
     fetchDashboardData();
@@ -227,40 +238,30 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   };
 
   // Render platform stats cards
-  const renderStatsCards = (stats: PlatformStats) => (
-    <View style={styles.statsGrid}>
-      <View style={styles.statCard}>
-        <IconSymbol name="building.2" size={24} color="#3B82F6" />
-        <Text style={styles.statValue}>{stats.total_schools}</Text>
-        <Text style={styles.statLabel}>{t('admin.stats.schools')}</Text>
+  const renderStatsCards = (stats: PlatformStats) => {
+    const cards = [
+      { icon: 'building.2.fill', title: t('admin.stats.schools'), value: String(stats.total_schools), color: '#3B82F6' },
+      { icon: 'person.3.fill', title: t('admin.stats.totalUsers'), value: String(stats.total_users), color: '#10B981' },
+      { icon: 'graduationcap', title: t('admin.stats.students'), value: String(stats.total_students), color: '#8B5CF6' },
+      { icon: 'creditcard.fill', title: t('admin.stats.monthlyRevenue'), value: `R ${stats.monthly_revenue.toLocaleString('en-ZA')}`, color: '#F59E0B' },
+      { icon: 'chart.line.uptrend.xyaxis', title: t('admin.stats.growthRate'), value: `${stats.growth_rate}%`, color: '#EF4444' },
+      { icon: 'cpu', title: t('admin.stats.aiRequests'), value: stats.ai_usage_count.toLocaleString(), color: '#6366F1' },
+    ];
+
+    return (
+      <View style={styles.statsGrid}>
+        {cards.map((c, idx) => (
+          <View key={`${c.title}-${idx}`} style={[styles.statCard, { borderTopColor: c.color }]}>
+            <View style={styles.statHeaderRow}>
+              <IconSymbol name={c.icon as any} size={20} color={c.color} />
+              <Text style={styles.statTitle}>{c.title}</Text>
+            </View>
+            <Text style={[styles.statValue, { color: c.color }]}>{c.value}</Text>
+          </View>
+        ))}
       </View>
-      <View style={styles.statCard}>
-        <IconSymbol name="person.3" size={24} color="#10B981" />
-        <Text style={styles.statValue}>{stats.total_users}</Text>
-        <Text style={styles.statLabel}>{t('admin.stats.totalUsers')}</Text>
-      </View>
-      <View style={styles.statCard}>
-        <IconSymbol name="graduationcap" size={24} color="#8B5CF6" />
-        <Text style={styles.statValue}>{stats.total_students}</Text>
-        <Text style={styles.statLabel}>{t('admin.stats.students')}</Text>
-      </View>
-      <View style={styles.statCard}>
-        <IconSymbol name="dollarsign" size={24} color="#F59E0B" />
-        <Text style={styles.statValue}>R {stats.monthly_revenue.toLocaleString('en-ZA')}</Text>
-        <Text style={styles.statLabel}>{t('admin.stats.monthlyRevenue')}</Text>
-      </View>
-      <View style={styles.statCard}>
-        <IconSymbol name="chart.line.uptrend.xyaxis" size={24} color="#EF4444" />
-        <Text style={styles.statValue}>{stats.growth_rate}%</Text>
-        <Text style={styles.statLabel}>{t('admin.stats.growthRate')}</Text>
-      </View>
-      <View style={styles.statCard}>
-        <IconSymbol name="cpu" size={24} color="#6366F1" />
-        <Text style={styles.statValue}>{stats.ai_usage_count.toLocaleString()}</Text>
-        <Text style={styles.statLabel}>{t('admin.stats.aiRequests')}</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   // Render system health indicator
   const renderSystemHealth = (health: SystemHealth) => (
@@ -268,8 +269,10 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>🖥️ {t('admin.health.title')}</Text>
         <View
-          style={styles.healthStatus}
-          className={health.database_status === 'healthy' ? 'bg-emerald-500' : 'bg-red-500'}
+          style={[
+            styles.healthStatus,
+            { backgroundColor: health.database_status === 'healthy' ? '#10B981' : '#EF4444' }
+          ]}
         >
           <Text style={styles.healthStatusText}>
             {health.database_status === 'healthy' ? t('admin.health.healthy') : t('admin.health.issues')}
@@ -497,7 +500,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             onPress={() => setShowCreateSchoolModal(true)}
           >
             <IconSymbol name="plus.circle" size={20} color="#8B5CF6" />
-            <Text style={styles.onboardingActionText} className="text-violet-500">{t('admin.actions.createSchoolManually')}</Text>
+            <Text style={[styles.onboardingActionText, styles.onboardingActionTextSecondary]}>{t('admin.actions.createSchoolManually')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -629,12 +632,30 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 64 }]}
       >
-        {/* Page Header */}
-        <PageHeader
-          title={t('admin.super.pageTitle')}
-          subtitle={t('admin.super.pageSubtitle')}
-          actions={<Button text={t('admin.actions.createSchool')} onPress={() => setShowCreateSchoolModal(true)} />}
-        />
+        {/* Page Header - Google-like styling to match other dashboards */}
+        <View style={styles.modernHeaderSection}>
+          <View style={styles.titleBlock}>
+            <Text
+              style={[
+                styles.modernTitle,
+                (isVerySmallScreen ? styles.modernTitleVerySmall : (isSmallScreen ? styles.modernTitleSmall : styles.modernTitleDefault))
+              ]}
+            >
+              {t('admin.super.pageTitle')}
+            </Text>
+            <Text
+              style={[
+                styles.modernSubtitle,
+                (isSmallScreen ? styles.modernSubtitleSmall : styles.modernSubtitleDefault)
+              ]}
+            >
+              {t('admin.super.pageSubtitle')}
+            </Text>
+          </View>
+          <View style={styles.headerActions}>
+            <Button text={t('admin.actions.createSchool')} onPress={() => setShowCreateSchoolModal(true)} />
+          </View>
+        </View>
 
         {/* Alerts Section */}
         {dashboardData.alerts.length > 0 && (
@@ -762,7 +783,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F9FAFB',
   },
   scrollView: {
     flex: 1,
@@ -824,29 +845,33 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     marginBottom: 20,
-    gap: 10,
   },
   statCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    width: (screenWidth - 60) / 3, // 3 cards per row with gaps
+    padding: 14,
+    alignItems: 'flex-start',
+    width: '48%',
+    borderTopWidth: 3,
     ...shadow(2),
   },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginTop: 8,
-    marginBottom: 4,
+  statHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
   },
-  statLabel: {
+  statTitle: {
     fontSize: 12,
+    fontWeight: '600',
     color: '#6B7280',
-    textAlign: 'center',
+    marginLeft: 8,
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: '800',
   },
 
   // System Health
@@ -1139,6 +1164,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Modern Google-like header section
+  modernHeaderSection: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    marginBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  titleBlock: {
+    flex: 1,
+    paddingRight: 12,
+    minWidth: 0,
+  },
+  modernTitle: {
+    fontWeight: '300',
+    letterSpacing: -0.5,
+    color: '#111827',
+    marginBottom: 4,
+  },
+  modernTitleDefault: { fontSize: 32, lineHeight: 40 },
+  modernTitleSmall: { fontSize: 28, lineHeight: 34 },
+  modernTitleVerySmall: { fontSize: 24, lineHeight: 30 },
+  modernSubtitle: {
+    color: '#6B7280',
+    opacity: 0.85,
+  },
+  modernSubtitleDefault: { fontSize: 14, lineHeight: 20 },
+  modernSubtitleSmall: { fontSize: 13, lineHeight: 20 },
+  headerActions: {
+    justifyContent: 'center',
+  },
+
   // Loading and Error States
   loadingContainer: {
     flex: 1,
@@ -1307,6 +1366,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  onboardingActionTextSecondary: {
+    color: '#8B5CF6',
   },
 });
 
