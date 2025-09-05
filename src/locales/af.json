@@ -135,6 +135,8 @@
     "network": "Netwerkfout",
     "unknown": "Onbekende fout",
     "reportsLoadFailed": "Kon nie verslae laai nie",
+    "parentProfileLoadFailed": "Kon nie ouerprofiel haal nie",
+    "childrenLoadFailed": "Kon nie kinddata haal nie",
     "timeout": "Versoek het uitgetel",
     "serverError": "Bediener fout",
     "notFound": "Nie gevind nie",
@@ -172,7 +174,8 @@
     "student": "Student",
     "principal": "Skoolhoof",
     "admin": "Administrateur",
-    "superadmin": "Super Administrateur"
+    "superadmin": "Super Administrateur",
+    "superadminShort": "Super Admin"
   },
   "dashboard": {
     "schoolStatisticsTitle": "Skoolstatistiek",
@@ -203,6 +206,8 @@
     "noDueDate": "Geen sperdatum",
     "overview": "Oorsig",
     "recentActivity": "Onlangse Aktiwiteit",
+    "recentActivityTeacherDescription": "Jou onlangse verslae, boodskappe, en studentinteraksies sal hier verskyn.",
+    "recentActivityAdminDescription": "Stelselaktiwiteit en gebruikerbestuurbewerkings sal hier gewys word.",
     "upcomingEvents": "Komende Gebeure",
     "quickActions": "Vinnige Aksies",
     "statistics": "Statistieke",
@@ -256,7 +261,16 @@
     "teacher": { "performanceRating": "Prestasiegradering" },
     "quickOverview": "Vinnige oorsig",
     "loading": "Laai jou paneelbord...",
+    "loadingTeacher": "Laai Onderwyserpaneel…",
     "loadingFailed": "Laai van paneelborddata het misluk",
+    "redirecting": {
+      "superadmin": "Herlei na Super Admin…",
+      "principal": "Herlei na Skoolhoofpaneel…"
+    },
+    "errors": {
+      "noSchoolAssignment": "Rekening nie aan 'n skool toegeken nie. Kontak asseblief jou administrateur.",
+      "invalidRole": "Ongeldige gebruikersrol: {{role}}. Kontak ondersteuning."
+    },
     "updates": {
       "recent": "Onlangse bywerkings",
       "newAssignmentTitle": "Nuwe opdrag gepos",
@@ -555,6 +569,7 @@
       "platformActivity": "Platform Aktiwiteit",
       "platformAlerts": "Platform Waarskuwings",
       "pendingApprovals": "Hangende Goedkeurings",
+      "helperSubtitle": "Platform-oorsig & bestuur",
       "onboarding": {
         "title": "Skool-Onboarding Versoeke",
         "noPendingTitle": "Geen hangende versoeke nie",

@@ -135,6 +135,8 @@
     "network": "Iphutha lenethiwekhi",
     "unknown": "Iphutha elingaziwa",
     "reportsLoadFailed": "Yehlulekile ukulayisha imibiko",
+    "parentProfileLoadFailed": "Yehlulekile ukuthola iphrofayela yomzali",
+    "childrenLoadFailed": "Yehlulekile ukuthola idatha yezingane",
     "timeout": "Isicelo siphelelwe isikhathi",
     "serverError": "Iphutha leseva",
     "notFound": "Akutholakali",
@@ -172,7 +174,8 @@
     "student": "Umfundi",
     "principal": "Uthishanhloko",
     "admin": "Umphathi",
-    "superadmin": "Umphathi Omkhulu"
+    "superadmin": "Umphathi Omkhulu",
+    "superadminShort": "Umphathi Omkhulu"
   },
   "dashboard": {
     "schoolStatisticsTitle": "Izibalo zesikole",
@@ -203,6 +206,8 @@
     "noDueDate": "Ayikho idethi yokugcina",
     "overview": "Isifingqo",
     "recentActivity": "Umsebenzi Wakamuva",
+    "recentActivityTeacherDescription": "Imibiko yakho yakamuva, imilayezo, nezimpendulo zabafundi izovela lapha.",
+    "recentActivityAdminDescription": "Umsebenzi wesistimu nezibuyekezo zokuphatha abasebenzisi zizovela lapha.",
     "upcomingEvents": "Imicimbi Ezayo",
     "quickActions": "Izenzo Ezisheshayo",
     "statistics": "Izibalo",
@@ -256,7 +261,16 @@
     "teacher": { "performanceRating": "Isilinganiso sokusebenza" },
     "quickOverview": "Uhlolojikelele olusheshayo",
     "loading": "Iyalayisha ideshibhodi yakho...",
+    "loadingTeacher": "Ilayisha Ideshibhodi Yothisha…",
     "loadingFailed": "Ihlulekile ukulayisha idatha yedeshibhodi",
+    "redirecting": {
+      "superadmin": "Idlulisa kuMphathi Omkhulu…",
+      "principal": "Idlulisa kuDeshibhodi kaThishanhloko…"
+    },
+    "errors": {
+      "noSchoolAssignment": "I-akhawunti ayikanikezwa isikole. Sicela uxhumane nomphathi wakho.",
+      "invalidRole": "Indima yomsebenzisi engavumelekile: {{role}}. Sicela uxhumane nokwesekwa."
+    },
     "updates": {
       "recent": "Izibuyekezo zakamuva",
       "newAssignmentTitle": "Umsebenzi omusha ushicilelwe",
@@ -555,6 +569,7 @@
       "platformActivity": "Umsebenzi weplathifomu",
       "platformAlerts": "Izexwayiso zeplathifomu",
       "pendingApprovals": "Ukuvunywa okusalele",
+      "helperSubtitle": "Uhlolojikelele lweplathifomu & ukuphatha",
       "onboarding": {
         "title": "Izicelo zokungenisa isikole",
         "noPendingTitle": "Azikho izicelo ezisalindile",

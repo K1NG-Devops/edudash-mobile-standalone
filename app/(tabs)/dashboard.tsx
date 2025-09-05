@@ -101,8 +101,28 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
     this.setState({ refreshing: false });
   };
 
-  componentDidMount() {
-    // Initial load will be handled by the render method when profile is available
+  async componentDidMount() {
+    // Check if we're already on a superadmin route to avoid infinite redirects (web-safe)
+    const currentPath = typeof window !== 'undefined' ? window.location?.pathname : undefined;
+    if (currentPath?.includes('super-admin-dashboard')) {
+      console.log('🌐 [Dashboard] Already on superadmin route, skipping redirect');
+      return; // Already on superadmin route, don't redirect
+    }
+    
+    // If profile loading is delayed on web, fast-path superadmin based on JWT metadata
+    try {
+      const { data } = await supabase.auth.getUser();
+      const mdRole = (data?.user as any)?.user_metadata?.role;
+      if (mdRole && String(mdRole).toLowerCase() === 'superadmin') {
+        console.log('🚀 [Dashboard] Redirecting superadmin to dedicated dashboard');
+        // Defer navigation to avoid setState during render warnings
+        setTimeout(() => {
+          try { router.replace('/screens/super-admin-dashboard' as Href); } catch {}
+        }, 100); // Slightly longer delay
+      }
+    } catch {
+      // non-fatal
+    }
   }
 
   fetchTenantInfo = async (userProfile: UserProfile) => {
@@ -145,14 +165,14 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
         // Removed debug statement: console.error('Error fetching parent profile:', parentError);
         this.setState({
           loading: false,
-          error: 'Unable to fetch parent profile',
+          error: i18n.t('errors.parentProfileLoadFailed'),
           tenantSlug: null
         });
         return;
       }
 
       // Store parent name for fallback display
-      const parentName = parentProfile.name || 'Teacher';
+      const parentName = parentProfile.name || i18n.t('roles.teacher');
       this.setState({ tenantSlug: parentName });
 
       // Fetch tenant info if available
@@ -196,7 +216,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
         // Removed debug statement: console.error('Error fetching children:', error);
         this.setState({
           loading: false,
-          error: 'Unable to fetch children data'
+          error: i18n.t('errors.childrenLoadFailed')
         });
         return;
       }
@@ -206,8 +226,8 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
           id: student.id,
           name: `${student.first_name} ${student.last_name}`,
           age: this.calculateAge(student.date_of_birth),
-          grade: student.classes?.name || 'Not Assigned',
-          teacher: student.classes?.users?.name || parentName || 'No Teacher Assigned',
+          grade: student.classes?.name || i18n.t('common.unassigned'),
+          teacher: student.classes?.users?.name || parentName || i18n.t('dashboard.parent.noTeacherAssigned'),
           emoji: '👤', // Default emoji for students
           attendance: 0, // Will be calculated from actual attendance data
         }));
@@ -225,14 +245,14 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
         this.setState({
           loading: false,
           selectedChildId: null,
-          error: 'No children found for this parent'
+          error: i18n.t('dashboard.parent.noChildrenDescription')
         });
       }
     } catch {
       // Removed debug statement: console.error('Unexpected error:', error);
       this.setState({
         loading: false,
-        error: 'An unexpected error occurred'
+        error: i18n.t('errors.unknown')
       });
     }
   };
@@ -518,11 +538,11 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
 
             {/* Recent Activity */}
             <ThemedCard>
-              <Text style={[styles.adminCardTitle, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>Recent Activity</Text>
+              <Text style={[styles.adminCardTitle, { color: this.props.isDark ? this.props.palette.text : '#1F2937' }]}>{i18n.t('dashboard.recentActivity')}</Text>
               <Text style={[styles.adminCardText, { color: this.props.isDark ? this.props.palette.textSecondary : '#6B7280' }]}>
                 {profile?.role === 'teacher'
-                  ? 'Your recent reports, messages, and student interactions will appear here.'
-                  : 'System activity and user management updates will be shown here.'
+                  ? i18n.t('dashboard.recentActivityTeacherDescription')
+                  : i18n.t('dashboard.recentActivityAdminDescription')
                 }
               </Text>
             </ThemedCard>
@@ -589,7 +609,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
     // As a last resort, show a lightweight teacher welcome
     return (
       <View style={[styles.loadingContainer, { backgroundColor: this.props.palette.background }]} >
-        <Text style={styles.loadingText}>Loading Teacher Dashboard…</Text>
+        <Text style={styles.loadingText}>{i18n.t('dashboard.loadingTeacher')}</Text>
       </View>
     );
   };
@@ -598,22 +618,56 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
     return (
       <SafeAreaView style={{ flex: 1 }} edges={['left','right']}>
         <AuthConsumer>
-          {({ profile, signOut }) => {
-          // Verify user has required data for school isolation
-          if (!profile) {
+          {({ profile, signOut, user, loading }) => {
+          // Web-safe guards to avoid indefinite spinners
+          // 1) Still loading auth state: show loading
+          if (loading) {
             return (
               <View style={[styles.loadingContainer, { backgroundColor: this.props.palette.background }]} >
-                <Text style={styles.loadingText}>Loading your dashboard...</Text>
+                <Text style={styles.loadingText}>{i18n.t('dashboard.loading')}</Text>
               </View>
             );
           }
 
+          // 2) Not authenticated: show a loading state to avoid redirect loops while session initializes
+          //    We intentionally do NOT redirect immediately, because sign-in flow may navigate here
+          //    before the auth listener sets `user`. The listener will flip `loading` and `user` shortly.
+          if (!user) {
+            return (
+              <View style={[styles.loadingContainer, { backgroundColor: this.props.palette.background }]} >
+                <Text style={styles.loadingText}>{i18n.t('dashboard.loading')}</Text>
+              </View>
+            );
+          }
+
+          // 3) If profile hasn’t loaded yet but JWT indicates superadmin, fast-path to Super Admin
+          if (!profile && user) {
+            const jwtRole = String(((user as any)?.user_metadata?.role) || (user as any)?.role || '').toLowerCase();
+            if (jwtRole === 'superadmin') {
+              setTimeout(() => {
+                try { router.replace('/screens/super-admin-dashboard' as Href); } catch {}
+              }, 0);
+              return (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>{i18n.t('dashboard.redirecting.superadmin')}</Text>
+                </View>
+              );
+            }
+            // Otherwise, continue to show a loading state until profile resolves
+            return (
+              <View style={[styles.loadingContainer, { backgroundColor: this.props.palette.background }]} >
+                <Text style={styles.loadingText}>{i18n.t('dashboard.loading')}</Text>
+              </View>
+            );
+          }
+
+          // At this point we have a profile
           // Verify school assignment for non-superadmin users
-          if (profile.role !== 'superadmin' && !profile.preschool_id) {
+          if (profile && profile.role !== 'superadmin' && !profile.preschool_id) {
             return (
               <View style={[styles.errorContainer, { backgroundColor: this.props.palette.background }]} >
                 <Text style={styles.errorText}>
-                  Account not assigned to a school. Please contact your administrator.
+                  {i18n.t('dashboard.errors.noSchoolAssignment')}
                 </Text>
               </View>
             );
@@ -632,7 +686,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
               }, 0);
               return (
                 <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Redirecting to Super Admin…</Text>
+                  <Text style={styles.loadingText}>{i18n.t('dashboard.redirecting.superadmin')}</Text>
                 </View>
               );
 
@@ -643,7 +697,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
               }, 0);
               return (
                 <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Redirecting to Principal Dashboard…</Text>
+                  <Text style={styles.loadingText}>{i18n.t('dashboard.redirecting.principal')}</Text>
                 </View>
               );
 
@@ -655,7 +709,7 @@ class DashboardScreen extends React.Component<DashboardProps, DashboardState> {
               return (
                 <View style={styles.errorContainer}>
                   <Text style={styles.errorText}>
-                    Invalid user role: {profile?.role || 'None'}. Please contact support.
+                    {i18n.t('dashboard.errors.invalidRole', { role: profile?.role || i18n.t('common.unknown') })}
                   </Text>
                 </View>
               );

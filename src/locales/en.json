@@ -135,6 +135,8 @@
     "network": "Network error",
     "unknown": "Unknown error",
     "reportsLoadFailed": "Failed to load reports",
+    "parentProfileLoadFailed": "Unable to fetch parent profile",
+    "childrenLoadFailed": "Unable to fetch children data",
     "timeout": "Request timed out",
     "serverError": "Server error",
     "notFound": "Not found",
@@ -172,7 +174,8 @@
     "student": "Student",
     "principal": "Principal",
     "admin": "Administrator",
-    "superadmin": "Super Administrator"
+    "superadmin": "Super Administrator",
+    "superadminShort": "Super Admin"
   },
   "dashboard": {
     "schoolStatisticsTitle": "School Statistics",
@@ -184,6 +187,8 @@
     "welcome": "Welcome, {{name}}",
     "overview": "Overview",
     "recentActivity": "Recent Activity",
+    "recentActivityTeacherDescription": "Your recent reports, messages, and student interactions will appear here.",
+    "recentActivityAdminDescription": "System activity and user management updates will be shown here.",
     "upcomingEvents": "Upcoming Events",
     "quickActions": "Quick Actions",
     "statistics": "Statistics",
@@ -256,7 +261,16 @@
     "teacher": { "performanceRating": "Performance Rating" },
     "quickOverview": "Quick Overview",
     "loading": "Loading your dashboard...",
+    "loadingTeacher": "Loading Teacher Dashboard…",
     "loadingFailed": "Failed to load dashboard data",
+    "redirecting": {
+      "superadmin": "Redirecting to Super Admin…",
+      "principal": "Redirecting to Principal Dashboard…"
+    },
+    "errors": {
+      "noSchoolAssignment": "Account not assigned to a school. Please contact your administrator.",
+      "invalidRole": "Invalid user role: {{role}}. Please contact support."
+    },
     "updates": {
       "recent": "Recent Updates",
       "newAssignmentTitle": "New assignment posted",
@@ -555,6 +569,7 @@
       "platformActivity": "Platform Activity",
       "platformAlerts": "Platform Alerts",
       "pendingApprovals": "Pending Approvals",
+      "helperSubtitle": "Platform overview & management",
       "onboarding": {
         "title": "School Onboarding Requests",
         "noPendingTitle": "No Pending Requests",
