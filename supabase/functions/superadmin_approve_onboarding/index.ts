@@ -324,7 +324,7 @@ function generateWelcomeEmailTemplate(emailData: {
                     
                     <!-- Login Button -->
                     <div style="text-align: center;">
-                        <a href="${WEB_BASE_URL}/sign-in" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                        <a href="${WEB_BASE_URL}/sign-in?email=${encodeURIComponent(adminEmail)}&temp=${encodeURIComponent(tempPassword)}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
                             🚀 Login to Your Dashboard
                         </a>
                     </div>

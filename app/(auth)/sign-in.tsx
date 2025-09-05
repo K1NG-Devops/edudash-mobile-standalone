@@ -29,7 +29,7 @@ export default function SignIn() {
   const params = useLocalSearchParams();
   const { t } = useT();
 
-  // Check for password reset success parameter
+  // Check for password reset success parameter and prefill credentials
   useEffect(() => {
     if (params.passwordReset === 'success') {
       setShowSuccessMessage(true);
@@ -40,7 +40,15 @@ export default function SignIn() {
 
       return () => clearTimeout(timer);
     }
-  }, [params.passwordReset]);
+    
+    // Check for email and temporary password parameters from onboarding approval email
+    if (params.email && typeof params.email === 'string') {
+      setEmail(decodeURIComponent(params.email));
+    }
+    if (params.temp && typeof params.temp === 'string') {
+      setPassword(decodeURIComponent(params.temp));
+    }
+  }, [params.passwordReset, params.email, params.temp]);
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
@@ -197,6 +205,8 @@ export default function SignIn() {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  onSubmitEditing={() => handleSignIn()}
+                  returnKeyType="done"
                 />
               </View>
 
@@ -209,6 +219,8 @@ export default function SignIn() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
+                  onSubmitEditing={() => handleSignIn()}
+                  returnKeyType="done"
                 />
                 <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
                   <Text style={styles.toggleText}>{showPassword ? t('auth.hidePassword', { defaultValue: 'Hide' }) : t('auth.showPassword', { defaultValue: 'Show' })}</Text>
