@@ -628,5 +628,68 @@
       "schoolCanNoLongerBypassCaps": "Abahloli base-{{name}} abasenakudlula imikhawulo ye-AI yanyanga zonke.",
       "updateFailed": "Kwehlulekile ukubuyekeza izilungiselelo."
     }
+  },
+  "pricing": {
+    "period": {
+      "month": "/inyanga",
+      "year": "/unyaka"
+    },
+    "tiers": {
+      "free": {
+        "title": "Ihlelo Lamahhala",
+        "description": "Izici eziyisisekelo ezinokukhangisa",
+        "trialInfo": "Mahhala njalo • Aludingi ikhadi"
+      },
+      "starter": {
+        "title": "Basic",
+        "description": "Ilungele ukuqala ngezemfundo ze-AI",
+        "trialInfo": "Isivivinyo sezinsuku eziyi-14 • Ungakhansela noma nini"
+      },
+      "basic": {
+        "title": "Basic",
+        "description": "Ilungele ukuqala ngezemfundo ze-AI",
+        "trialInfo": "Isivivinyo sezinsuku eziyi-14 • Ungakhansela noma nini"
+      },
+      "premium": {
+        "title": "Pro",
+        "description": "Izici ezithuthukisiwe ze-AI ezikoleni ezikhulayo",
+        "trialInfo": "Isivivinyo sezinsuku eziyi-14 • Ungakhansela noma nini"
+      },
+      "pro": {
+        "title": "Pro",
+        "description": "Izici ezithuthukisiwe ze-AI ezikoleni ezikhulayo",
+        "trialInfo": "Isivivinyo sezinsuku eziyi-14 • Ungakhansela noma nini"
+      },
+      "enterprise": {
+        "title": "Ibhizinisi",
+        "description": "Isixazululo esiphelele sezikhungo ezinkulu zemfundo",
+        "trialInfo": "Isivivinyo sezinsuku ezingama-30 • Izinkontileka ezenziwe ngokwezifiso ziyatholakala"
+      }
+    },
+    "features": {
+      "aiLessonsPerMonth": "{{count}} izifundo ze-AI ngenyanga",
+      "upToNStudents": "Kufika kwabafundi abangu-{{count}}",
+      "upToNStudentsPerSchool": "Kufika kwabafundi abangu-{{count}} ngesikole ngasinye",
+      "basicProgressTracking": "Ukulandela intuthuko okuyisisekelo",
+      "advancedProgressTracking": "Ukulandela intuthuko okuthuthukisiwe",
+      "parentTeacherMessaging": "Imiyalezo yomzali nothisha",
+      "mobileAppAccess": "Ukufinyelela uhlelo lweselula",
+      "adsOnNonLearningPages": "Kukhonjiswa izikhangiso kumakhasi angafundisi",
+      "noAds": "Azikho izikhangiso",
+      "unlimitedAiLessons": "Ukudala izifundo ze-AI okungenamkhawulo",
+      "advancedAnalytics": "Izibalo ezithuthukisiwe & imibiko",
+      "personalizedLearning": "Izindlela zokufunda ezenziwe ngokwezifiso",
+      "aiHomeworkGrading": "Ukubhalwa kwamamaki ekhaya nge-AI",
+      "cloudStorage": "Isitoreji sefu & ukugcina amakhophi",
+      "customBranding": "Ukubrandwa kwesikole okwenziwe ngokwezifiso",
+      "unlimitedEverything": "Konke okungenamkhawulo",
+      "multiSchoolManagement": "Ukuphathwa kwezikole eziningi",
+      "advancedAiTutoring": "Ukufundisa kwe-AI okuthuthukisiwe",
+      "predictiveAnalytics": "Izibalo eziyiziphetho",
+      "enterpriseSecurity": "Ukuphepha kwebhizinisi",
+      "customReportingDashboards": "Amaphaneli ombiko enziwe ngokwezifiso",
+      "apiAccessIntegrations": "Ukufinyelela ku-API & ukuhlanganiswa",
+      "dedicatedSupport": "Iqembu lokusekela elizinikele"
+    }
   }
 }

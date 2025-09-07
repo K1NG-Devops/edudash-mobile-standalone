@@ -16,6 +16,30 @@ const hasGoogleServices = fs.existsSync('./android/app/google-services.json');
 const buildProfile = process.env.EAS_BUILD_PROFILE || '';
 const isProd = buildProfile === 'production' || process.env.NODE_ENV === 'production';
 
+// Default EXPO_PUBLIC_ENABLE_* flags: false in dev, true in prod (only if dependent keys are present)
+function defaultFlag(key, { prod = true, dev = false, deps = [] } = {}) {
+  if (process.env[key] === undefined || process.env[key] === '') {
+    const depsOk = deps.length === 0 || deps.every((d) => !!process.env[d]);
+    process.env[key] = (isProd && depsOk ? prod : dev) ? 'true' : 'false';
+  }
+}
+
+// Analytics / PostHog (only enable by default in prod if key present)
+defaultFlag('EXPO_PUBLIC_ENABLE_POSTHOG', { prod: true, dev: false, deps: ['EXPO_PUBLIC_POSTHOG_KEY'] });
+defaultFlag('EXPO_PUBLIC_ENABLE_ANALYTICS', { prod: true, dev: false, deps: ['EXPO_PUBLIC_POSTHOG_KEY'] });
+
+// Ads (enable only if AdMob IDs exist)
+defaultFlag('EXPO_PUBLIC_ENABLE_ADS', { prod: true, dev: false, deps: ['EXPO_PUBLIC_ADMOB_ANDROID_APP_ID', 'EXPO_PUBLIC_ADMOB_IOS_APP_ID'] });
+
+// Push (dev off by default)
+defaultFlag('EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS', { prod: true, dev: false });
+
+// App features (safe defaults)
+['EXPO_PUBLIC_ENABLE_AI_FEATURES', 'EXPO_PUBLIC_ENABLE_STEM_ACTIVITIES', 'EXPO_PUBLIC_ENABLE_HOMEWORK_GRADING', 'EXPO_PUBLIC_ENABLE_LESSON_GENERATOR', 'EXPO_PUBLIC_ENABLE_PROGRESS_ANALYSIS', 'EXPO_PUBLIC_ENABLE_PREMIUM_FEATURES'].forEach((k) => defaultFlag(k, { prod: true, dev: false }));
+
+// Offline mode should be safe in dev too
+defaultFlag('EXPO_PUBLIC_ENABLE_OFFLINE_MODE', { prod: true, dev: true });
+
 export default {
   expo: {
     name: "EduDash Pro",

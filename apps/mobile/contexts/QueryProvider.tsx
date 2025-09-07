@@ -1,7 +1,6 @@
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PersistQueryClientProvider, persistQueryClient } from '@tanstack/react-query-persist-client'
-import type { Persister } from '@tanstack/query-persist-client-core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'

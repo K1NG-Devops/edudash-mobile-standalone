@@ -22,12 +22,14 @@ import { DesignSystem, getRoleColors, trackRevenue, formatCurrency } from '@/con
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { useAuth } from '@/contexts/SimpleWorkingAuth';
+import { useSubscription as useSubscriptionContext } from '@/contexts/SubscriptionContext';
 import { useOverageTrackingMultiple } from '@/hooks/useOverageTracking';
 import type { QuotaLimits } from '@/hooks/useOverageTracking';
 import { UsageWarningBanner, UsageProgressIndicator } from '@/components/overage/OverageComponents';
 import OverageBillingCard from '@/components/overage/OverageBillingCard';
 import { overageBillingService } from '@/lib/services/overageBillingService';
 import type { OverageBillingRecord, UsageQuota } from '@/lib/services/overageBillingService';
+import { useT } from '@/i18n';
 
 const { width } = Dimensions.get('window');
 
@@ -43,7 +45,7 @@ interface PricingPlan {
   color: readonly [ColorValue, ColorValue, ...ColorValue[]];
   popular: boolean;
   targetRoles: ('parent' | 'teacher' | 'principal')[];
-  value: 'free' | 'starter' | 'basic' | 'premium' | 'enterprise';
+  value: 'free' | 'starter' | 'basic' | 'premium' | 'pro' | 'enterprise';
   trialInfo?: string | null;
   realWorldBenefits: {
     parent: string[];
@@ -89,6 +91,9 @@ export const PricingComponent = ({
   const { user, session } = useAuth();
   const isProfessional = theme === 'professional';
   const { subscription, plans, isSubscriptionActive, createSubscription } = useSubscription();
+  const { subscription: subCtx } = useSubscriptionContext();
+  const isSuperAdmin = subCtx?.userRole === 'superadmin';
+  const { t } = useT();
   
   // Usage tracking is shown only for authenticated users; keep empty object when unauthenticated
   const overageStatuses: Record<string, any> = {};
@@ -150,23 +155,23 @@ export const PricingComponent = ({
   const [basePlans] = useState<PricingPlan[]>([
     {
       id: 'free-tier',
-      name: "Free Tier",
+      name: t('pricing.tiers.free.title'),
       price: "R0",
-      period: "/month",
-      description: "Basic features with ads",
+      period: t('pricing.period.month'),
+      description: t('pricing.tiers.free.description'),
       features: [
-        "✨ 5 AI lessons per month",
-        "👨‍👩‍👧‍👦 Up to 3 students",
-        "📊 Basic progress tracking",
-        "💬 Parent-teacher messaging",
-        "📱 Mobile app access",
-        "📱 Shows ads on non-learning pages"
+        `✨ ${t('pricing.features.aiLessonsPerMonth', { count: 5 })}`,
+        `👨‍👩‍👧‍👦 ${t('pricing.features.upToNStudents', { count: 3 })}`,
+        `📊 ${t('pricing.features.basicProgressTracking')}`,
+        `💬 ${t('pricing.features.parentTeacherMessaging')}`,
+        `📱 ${t('pricing.features.mobileAppAccess')}`,
+        `📱 ${t('pricing.features.adsOnNonLearningPages')}`
       ],
       color: DesignSystem.gradients.surfaceCard,
       popular: false,
       targetRoles: ['parent', 'teacher'],
       value: 'free',
-      trialInfo: "Always free • No credit card required",
+      trialInfo: t('pricing.tiers.free.trialInfo'),
       realWorldBenefits: {
         parent: [
           'Basic tracking of your child\'s progress',
@@ -186,23 +191,23 @@ export const PricingComponent = ({
     },
     {
       id: 'neural-starter',
-      name: "Neural Starter",
+      name: t('pricing.tiers.starter.title'),
       price: "R49",
-      period: "/month",
-      description: "Perfect for getting started with AI education",
+      period: t('pricing.period.month'),
+      description: t('pricing.tiers.starter.description'),
       features: [
-        "✨ 25 AI lessons per month",
-        "👨‍👩‍👧‍👦 Up to 15 students",
-        "📊 Advanced progress tracking",
-        "💬 Parent-teacher messaging",
-        "📱 Mobile app access",
-        "🚫 No ads"
+        `✨ ${t('pricing.features.aiLessonsPerMonth', { count: 25 })}`,
+        `👨‍👩‍👧‍👦 ${t('pricing.features.upToNStudents', { count: 15 })}`,
+        `📊 ${t('pricing.features.advancedProgressTracking')}`,
+        `💬 ${t('pricing.features.parentTeacherMessaging')}`,
+        `📱 ${t('pricing.features.mobileAppAccess')}`,
+        `🚫 ${t('pricing.features.noAds')}`
       ],
       color: DesignSystem.gradients.secondary,
       popular: true,
       targetRoles: ['parent', 'teacher'],
-      value: 'starter',
-      trialInfo: "14-day free trial • Cancel anytime",
+      value: 'basic',
+      trialInfo: t('pricing.tiers.starter.trialInfo'),
       realWorldBenefits: {
         parent: [
           'Track your child\'s daily progress',
@@ -222,24 +227,24 @@ export const PricingComponent = ({
     },
     {
       id: 'quantum-pro',
-      name: "Quantum Pro",
+      name: t('pricing.tiers.premium.title'),
       price: "R149",
-      period: "/month",
-      description: "Advanced AI features for growing schools",
+      period: t('pricing.period.month'),
+      description: t('pricing.tiers.premium.description'),
       features: [
-        "🚀 Unlimited AI lesson generation",
-        "👥 Up to 50 students per school",
-        "📈 Advanced analytics & insights",
-        "🎯 Personalized learning paths",
-        "🤖 AI homework grading",
-        "☁️ Cloud storage & backup",
-        "🎨 Custom school branding"
+        `🚀 ${t('pricing.features.unlimitedAiLessons')}`,
+        `👥 ${t('pricing.features.upToNStudentsPerSchool', { count: 50 })}`,
+        `📈 ${t('pricing.features.advancedAnalytics')}`,
+        `🎯 ${t('pricing.features.personalizedLearning')}`,
+        `🤖 ${t('pricing.features.aiHomeworkGrading')}`,
+        `☁️ ${t('pricing.features.cloudStorage')}`,
+        `🎨 ${t('pricing.features.customBranding')}`
       ],
       color: DesignSystem.gradients.secondary,
       popular: true,
       targetRoles: ['teacher', 'principal'],
-      value: 'premium',
-      trialInfo: "14-day free trial • Cancel anytime",
+      value: 'pro',
+      trialInfo: t('pricing.tiers.premium.trialInfo'),
       realWorldBenefits: {
         parent: [
           'Detailed insights into learning patterns',
@@ -263,25 +268,25 @@ export const PricingComponent = ({
     },
     {
       id: 'singularity',
-      name: "Enterprise",
+      name: t('pricing.tiers.enterprise.title'),
       price: "R999",
-      period: "/month",
-      description: "Complete solution for large educational institutions",
+      period: t('pricing.period.month'),
+      description: t('pricing.tiers.enterprise.description'),
       features: [
-        "♾️ Unlimited everything",
-        "🏢 Multi-school management",
-        "🧠 Advanced AI tutoring",
-        "📊 Predictive analytics",
-        "🌐 API access & integrations",
-        "👨‍💻 Dedicated support team",
-        "🔐 Enterprise security",
-        "📈 Custom reporting dashboards"
+        `♾️ ${t('pricing.features.unlimitedEverything')}`,
+        `🏢 ${t('pricing.features.multiSchoolManagement')}`,
+        `🧠 ${t('pricing.features.advancedAiTutoring')}`,
+        `📊 ${t('pricing.features.predictiveAnalytics')}`,
+        `🌐 ${t('pricing.features.apiAccessIntegrations')}`,
+        `👨‍💻 ${t('pricing.features.dedicatedSupport')}`,
+        `🔐 ${t('pricing.features.enterpriseSecurity')}`,
+        `📈 ${t('pricing.features.customReportingDashboards')}`
       ],
       color: DesignSystem.gradients.accent,
       popular: false,
       targetRoles: ['principal'],
       value: 'enterprise',
-      trialInfo: "30-day free trial • Custom contracts available",
+      trialInfo: t('pricing.tiers.enterprise.trialInfo'),
       realWorldBenefits: {
         parent: [
           'Premium family dashboard',
@@ -308,8 +313,11 @@ export const PricingComponent = ({
 
   // Compute displayed plans with DB pricing and promo-aware price for Quantum Pro
   const computedPricingPlans: PricingPlan[] = React.useMemo(() => {
-    const getDbPrice = (tier: 'free' | 'starter' | 'premium' | 'enterprise'): number | null => {
-      const p = plans.find(pl => pl.tier === tier);
+    const getDbPrice = (tier: 'free' | 'basic' | 'pro' | 'enterprise'): number | null => {
+      // Prefer new tier slugs; fall back to legacy if needed
+      const p = plans.find(pl => pl.tier === tier)
+        || (tier === 'basic' ? plans.find(pl => pl.tier === 'starter') : undefined)
+        || (tier === 'pro' ? plans.find(pl => pl.tier === 'premium') : undefined);
       if (!p) return null;
       return billingInterval === 'monthly' ? p.price_monthly : p.price_annual;
     };
@@ -319,17 +327,17 @@ export const PricingComponent = ({
       return fallback;
     };
 
-    const period = billingInterval === 'monthly' ? '/month' : '/year';
+    const period = billingInterval === 'monthly' ? t('pricing.period.month') : t('pricing.period.year');
 
     return basePlans.map(bp => {
       let price = bp.price;
       if (bp.id === 'free-tier') {
         price = toPriceStr(getDbPrice('free'), 'R0');
       } else if (bp.id === 'neural-starter') {
-        price = toPriceStr(getDbPrice('starter'), 'R49.00');
+        price = toPriceStr(getDbPrice('basic'), 'R49.00');
       } else if (bp.id === 'quantum-pro') {
-        const premium = typeof effectivePremiumPrice === 'number' ? effectivePremiumPrice : getDbPrice('premium');
-        price = toPriceStr(premium ?? null, 'R149.99');
+        const pro = typeof effectivePremiumPrice === 'number' ? effectivePremiumPrice : getDbPrice('pro');
+        price = toPriceStr(pro ?? null, 'R149.99');
       } else if (bp.id === 'singularity') {
         price = toPriceStr(getDbPrice('enterprise'), 'R999.00');
       }
@@ -726,17 +734,19 @@ export const PricingComponent = ({
                     ))}
                   </View>
                   
-                  <TouchableOpacity 
-                    style={[styles.selectPlanButton, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
-                    activeOpacity={0.7}
-                    accessibilityRole="button"
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    onPress={() => handleSelectPlan(plan)}
-                  >
-                    <Text style={styles.selectPlanText}>
-                      {plan.value === 'free' ? 'START FREE' : 'CHOOSE PLAN'}
-                    </Text>
-                  </TouchableOpacity>
+                  {!isSuperAdmin && (
+                    <TouchableOpacity 
+                      style={[styles.selectPlanButton, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      onPress={() => handleSelectPlan(plan)}
+                    >
+                      <Text style={styles.selectPlanText}>
+                        {plan.value === 'free' ? 'START FREE' : 'CHOOSE PLAN'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </LinearGradient>
               </View>
             ))}
@@ -802,22 +812,24 @@ export const PricingComponent = ({
               </View>
             </View>
             
-            <TouchableOpacity 
-              style={[styles.selectPlanButton, (creatingSubscription && selectedPlan === plan.id) && styles.selectPlanButtonLoading, Platform.OS === 'web' ? ({ cursor: creatingSubscription ? 'not-allowed' : 'pointer' } as any) : undefined]}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              onPress={() => handleSelectPlan(plan)}
-              disabled={creatingSubscription}
-            >
-              {creatingSubscription && selectedPlan === plan.id ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Text style={[styles.selectPlanText, isProfessional && ({ textShadowColor: 'transparent' } as any)]}>
-                  {plan.value === 'free' ? 'START FREE' : 'CHOOSE PLAN'}
-                </Text>
-              )}
-            </TouchableOpacity>
+            {!isSuperAdmin && (
+              <TouchableOpacity 
+                style={[styles.selectPlanButton, (creatingSubscription && selectedPlan === plan.id) && styles.selectPlanButtonLoading, Platform.OS === 'web' ? ({ cursor: creatingSubscription ? 'not-allowed' : 'pointer' } as any) : undefined]}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                onPress={() => handleSelectPlan(plan)}
+                disabled={creatingSubscription}
+              >
+                {creatingSubscription && selectedPlan === plan.id ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={[styles.selectPlanText, isProfessional && ({ textShadowColor: 'transparent' } as any)]}>
+                    {plan.value === 'free' ? 'START FREE' : 'CHOOSE PLAN'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
           </LinearGradient>
         </View>
       ))}
@@ -912,6 +924,9 @@ export const PricingComponent = ({
             <Text style={styles.pricingSubtitle}>
               Transparent pricing • No hidden fees • Cancel anytime
             </Text>
+            {isSuperAdmin && (
+              <Text style={[styles.pricingSubtitle, { marginTop: 6 }]}>SuperAdmin: All features unlocked — no purchase required</Text>
+            )}
           </Animated.View>
         </View>
       )}

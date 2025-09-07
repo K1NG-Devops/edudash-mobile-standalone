@@ -1,13 +1,17 @@
 // Utility for mapping plan tier slugs to human-friendly display names
 // Keep this in sync with pricing/plan naming used across the app and backend
 
-export type TierSlug = 'free' | 'starter' | 'premium' | 'enterprise';
+// Support both legacy slugs (starter/premium) and new slugs (basic/pro)
+export type TierSlug = 'free' | 'basic' | 'pro' | 'enterprise' | 'starter' | 'premium';
 
 const TIER_DISPLAY_NAMES: Record<TierSlug, string> = {
-  free: 'Free Tier',
-  starter: 'Neural Starter',
-  premium: 'Quantum Pro',
+  free: 'Free',
+  basic: 'Basic',
+  pro: 'Pro',
   enterprise: 'Enterprise',
+  // Legacy slugs map to new display names for backward compatibility
+  starter: 'Basic',
+  premium: 'Pro',
 };
 
 /**

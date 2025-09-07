@@ -8,7 +8,7 @@ const log = createLogger('subscription');
 // TYPES & INTERFACES
 // =====================================================
 
-export type PlanTier = 'free' | 'starter' | 'premium' | 'enterprise';
+export type PlanTier = 'free' | 'starter' | 'basic' | 'premium' | 'pro' | 'enterprise';
 export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'canceled' | 'paused' | 'expired';
 export type BillingInterval = 'monthly' | 'annual';
 export type PaymentProvider = 'paypal' | 'stripe' | 'payfast';
@@ -395,14 +395,16 @@ export class SubscriptionService {
 
       // Recognize common slugs and tiers
       const slugToName: Record<string, string> = {
-        'free-tier': 'Free Tier',
-        'neural-starter': 'Neural Starter',
-        'quantum-pro': 'Quantum Pro',
-        'singularity': 'Singularity',
-        free: 'Free Tier',
-        starter: 'Neural Starter',
-        premium: 'Quantum Pro',
-        enterprise: 'Singularity',
+        'free-tier': 'Free',
+        'neural-starter': 'Basic',
+        'quantum-pro': 'Pro',
+        'singularity': 'Enterprise',
+        free: 'Free',
+        starter: 'Basic',
+        basic: 'Basic',
+        premium: 'Pro',
+        pro: 'Pro',
+        enterprise: 'Enterprise',
       };
 
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -460,7 +462,7 @@ limits: { students: 3, ai_lessons_per_month: 5, ai_tutors: 0, schools: 1, storag
         },
         'neural-starter': {
           id: 'neural-starter',
-          name: 'Neural Starter',
+          name: 'Basic',
           tier: 'starter',
           price_monthly: 49,
           price_annual: Math.round(49 * 12 * 0.83),
@@ -474,7 +476,7 @@ limits: { students: 15, ai_lessons_per_month: 25, ai_tutors: 2, schools: 1, stor
         },
         'quantum-pro': {
           id: 'quantum-pro',
-          name: 'Quantum Pro',
+          name: 'Pro',
           tier: 'premium',
           price_monthly: 149,
           price_annual: Math.round(149 * 12 * 0.83),
@@ -1500,7 +1502,9 @@ limits: { students: null, ai_lessons_per_month: null, ai_tutors: null, schools: 
       const revenueByPlan: Record<PlanTier, number> = {
         free: 0,
         starter: 0,
+        basic: 0,
         premium: 0,
+        pro: 0,
         enterprise: 0
       };
 
@@ -1508,7 +1512,9 @@ limits: { students: null, ai_lessons_per_month: null, ai_tutors: null, schools: 
       const subscriberBreakdown: Record<PlanTier, number> = {
         free: 0,
         starter: 0,
+        basic: 0,
         premium: 0,
+        pro: 0,
         enterprise: 0
       };
 

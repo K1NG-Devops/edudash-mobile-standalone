@@ -153,14 +153,14 @@ export default function GlobalBottomNav() {
     { key: 'students', label: t('nav.students'), icon: 'graduationcap.fill', onPress: () => router.push('/screens/students' as any) },
     { key: 'activities', label: t('dashboard.upcomingEvents'), icon: 'figure.run', onPress: () => router.push('/(tabs)/activities' as any) },
 { key: 'messages', label: t('nav.messages'), icon: 'message.fill', onPress: () => router.push('/messages' as any) },
-    { key: 'manage', label: 'Billing', icon: 'creditcard.fill', onPress: () => router.push('/pricing' as any) },
+    { key: 'manage', label: 'Billing', icon: 'creditcard.fill', onPress: () => router.push('/screens/subscription-management' as any) },
   ];
 
   const parentTabs: TabItem[] = [
     { key: 'overview', label: t('nav.dashboard'), icon: 'rectangle.3.group', onPress: () => router.push('/(tabs)/dashboard' as any) },
     { key: 'activities', label: t('dashboard.upcomingEvents'), icon: 'figure.run', onPress: () => router.push('/(tabs)/activities' as any) },
     { key: 'messages', label: t('nav.messages'), icon: 'message.fill', onPress: () => router.push('/messages' as any) },
-    { key: 'manage', label: 'Billing', icon: 'creditcard.fill', onPress: () => router.push('/pricing' as any) },
+    { key: 'manage', label: 'Billing', icon: 'creditcard.fill', onPress: () => router.push('/screens/subscription-management' as any) },
     { key: 'settings', label: t('nav.settings'), icon: 'gear', onPress: () => router.push('/(tabs)/settings_new' as any) },
   ];
 
@@ -178,7 +178,7 @@ export default function GlobalBottomNav() {
     if (pathname.includes('/settings')) return 'settings';
     if (pathname.includes('/teachers')) return 'teachers';
     if (pathname.includes('/students')) return 'students';
-    if (pathname.includes('/pricing') || pathname.includes('/account/billing')) return 'manage';
+    if (pathname.includes('/screens/subscription-management') || pathname.includes('/account/billing') || pathname.includes('/pricing')) return 'manage';
     return '';
   };
 

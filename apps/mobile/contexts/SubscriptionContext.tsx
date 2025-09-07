@@ -144,10 +144,33 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
             let status: SubscriptionStatus = 'active';
             const userRole = baseUser?.role || 'parent';
 
-            // Step 2: try to read subscription columns (may not exist on some schemas)
-            const HAS_SUBSCRIPTION_COLUMNS = process.env.EXPO_PUBLIC_HAS_SUBSCRIPTION_COLUMNS === 'true';
-            if (HAS_SUBSCRIPTION_COLUMNS) {
-              try {
+            // Step 2: try to read platform_subscriptions (preferred) to determine tier & status
+            try {
+              const { data: ps } = await supabase
+                .from('platform_subscriptions')
+                .select('status, trial_end, current_period_end, plan:subscription_plans(tier)')
+                .eq('user_id', userId)
+                .in('status', ['trial','active','past_due'])
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (ps) {
+                const rawTier = String(ps.plan?.tier || 'free').toLowerCase();
+                // Map platform plan tiers to context tiers
+                // starter/basic/premium/pro -> premium; enterprise -> enterprise; default -> free
+                const mappedTier: SubscriptionTier = rawTier === 'enterprise' ? 'enterprise' : (['starter','basic','premium','pro'].includes(rawTier) ? 'premium' : 'free');
+                tier = mappedTier;
+                // Treat trial as active access while within trial window
+                const now = new Date();
+                const isTrialActive = ps.status === 'trial' && ps.trial_end && new Date(ps.trial_end) > now;
+                status = (isTrialActive || ps.status === 'active') ? 'active' : (ps.status as SubscriptionStatus);
+              }
+            } catch (_) {
+              // Fallback: try legacy columns on users if enabled
+              const HAS_SUBSCRIPTION_COLUMNS = process.env.EXPO_PUBLIC_HAS_SUBSCRIPTION_COLUMNS === 'true';
+              if (HAS_SUBSCRIPTION_COLUMNS) {
+                try {
                   const { data: subUser, error: subErr } = await supabase
                     .from('users')
                     .select('subscription_tier, subscription_status')
@@ -156,12 +179,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
                   if (!subErr && subUser) {
                     tier = (subUser.subscription_tier as SubscriptionTier) || tier;
                     status = (subUser.subscription_status as SubscriptionStatus) || status;
-                  } else if (subErr && subErr.code === '42703') {
-                    // Columns missing on this environment; stick to defaults silently
-                  } else if (subErr) {
-                    throw subErr;
                   }
-              } catch (_) { /* ignore */ }
+                } catch {}
+              }
             }
 
             // SuperAdmins get unlimited access regardless of tier
@@ -194,7 +214,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
 
             // Calculate current usage
             const currentUsage = usageLogs?.length || 0;
-            const monthlyLimit = isSuperAdmin ? -1 : AI_USAGE_LIMITS[tier]; // SuperAdmins get unlimited
+            const monthlyLimit = isSuperAdmin ? -1 : AI_USAGE_LIMITS[tier] ?? AI_USAGE_LIMITS.premium; // default to premium limits if mapped
             const remainingUsage = monthlyLimit === -1 ? -1 : Math.max(0, monthlyLimit - currentUsage);
 
             // Calculate next reset date (first day of next month)
@@ -208,7 +228,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
                 status,
                 planName: isSuperAdmin ? 'SuperAdmin (Unlimited)' : tier === 'free' ? 'Free Plan' : tier === 'premium' ? 'Premium Plan' : 'Enterprise Plan',
                 features: isSuperAdmin ? getAllFeatures() : getFeaturesByTier(tier),
-                isActive: status === 'active',
+                isActive: status === 'active', // 'active' includes in-trial access via mapping above
                 aiUsageLimit: monthlyLimit,
                 aiUsageUsed: currentUsage,
                 userRole: userRole,

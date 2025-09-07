@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { InterstitialManager } from '@/lib/ads/interstitialManager';
 import { onShowInterstitial } from '@/lib/ads/adEvents';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -15,23 +16,34 @@ const AdsBootstrapper: React.FC = () => {
     if (!enabled) return;
     if (Platform.OS === 'web') return;
 
+    // Expo Go does not ship the native Google Mobile Ads module; skip entirely
+    const isExpoGo = (Constants as any)?.appOwnership === 'expo';
+    if (isExpoGo) return;
+
     let RNGoogleAds: any;
     try {
       RNGoogleAds = require('react-native-google-mobile-ads');
     } catch {
-      return; // Native module not available (Expo Go / web)
+      return; // JS package not present
+    }
+
+    // Safeguard: skip if native module or required functions are not available (e.g., Expo Go)
+    const mobileAds = RNGoogleAds?.default?.();
+    const canConfigure = mobileAds && typeof mobileAds.setRequestConfiguration === 'function';
+    const canInitialize = mobileAds && typeof mobileAds.initialize === 'function';
+    if (!canConfigure || !canInitialize) {
+      return; // avoid calling undefined initialize in non-native environments
     }
 
     // Child-safe ad configuration
-    RNGoogleAds
-      .default()
+    mobileAds
       .setRequestConfiguration({
-        maxAdContentRating: RNGoogleAds.MaxAdContentRating.G,
+        maxAdContentRating: RNGoogleAds.MaxAdContentRating?.G ?? 'G',
         tagForChildDirectedTreatment: true,
         tagForUnderAgeOfConsent: true,
         testDeviceIdentifiers: process.env.NODE_ENV !== 'production' ? ['EMULATOR'] : [],
       })
-      .then(() => RNGoogleAds.default().initialize())
+      .then(() => mobileAds.initialize())
       .then(() => {
         // Preload first interstitial
         InterstitialManager.initialize();

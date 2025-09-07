@@ -91,7 +91,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
   {
     id: 'neural-starter-monthly',
-    name: 'Neural Starter',
+    name: 'Basic',
     price: 49,
     billingInterval: 'monthly',
     features: [
@@ -120,7 +120,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
   {
     id: 'neural-starter-annual',
-    name: 'Neural Starter',
+    name: 'Basic',
     price: 490,
     billingInterval: 'annual',
     features: [
@@ -150,7 +150,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
   {
     id: 'quantum-pro-monthly',
-    name: 'Quantum Pro',
+    name: 'Pro',
     price: 149,
     billingInterval: 'monthly',
     popular: true,
@@ -184,7 +184,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
   {
     id: 'quantum-pro-annual',
-    name: 'Quantum Pro',
+    name: 'Pro',
     price: 1490,
     billingInterval: 'annual',
     popular: true,
@@ -223,7 +223,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     price: 999,
     billingInterval: 'monthly',
     features: [
-      'Everything in Quantum Pro',
+'Everything in Pro',
       'UNLIMITED students & teachers',
       'School-wide analytics dashboard',
       'Curriculum management system',
@@ -250,7 +250,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     price: 9990,
     billingInterval: 'annual',
     features: [
-      'Everything in Quantum Pro',
+'Everything in Pro',
       'UNLIMITED students & teachers',
       'School-wide analytics dashboard',
       'Curriculum management system',

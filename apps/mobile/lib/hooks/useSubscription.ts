@@ -38,6 +38,7 @@ interface CreateSubscriptionParams {
   plan_id: string;
   billing_interval: BillingInterval;
   payment_provider: PaymentProvider;
+  skip_trial?: boolean; // optional: start billing immediately
   user_details?: {
     first_name?: string;
     last_name?: string;
@@ -117,6 +118,15 @@ export function useSubscription(): UseSubscriptionReturn {
     }
   }, []);
 
+  // Expose a refresh helper expected by screens/components
+  const refreshSubscription = useCallback(async () => {
+    try {
+      await fetchSubscription();
+    } catch (e) {
+      // non-fatal
+    }
+  }, [fetchSubscription]);
+
   // Create new subscription
   const createSubscription = useCallback(async (params: CreateSubscriptionParams): Promise<CreateSubscriptionResponse> => {
     if (!session || !user) {
@@ -136,6 +146,7 @@ export function useSubscription(): UseSubscriptionReturn {
       const apiBase = process.env.EXPO_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_BASE || '';
 
       const webhookBase = process.env.EXPO_PUBLIC_WEBHOOK_BASE || apiBase || appBase;
+      const paymentBase = process.env.EXPO_PUBLIC_PAYMENT_WEB_BASE || appBase;
 
       // Resolve function names for Supabase Edge Functions
       const fnCreate = process.env.EXPO_PUBLIC_SUBSCRIPTIONS_CREATE_FN || 'subscriptions-create';
@@ -147,8 +158,9 @@ export function useSubscription(): UseSubscriptionReturn {
         plan_id: params.plan_id,
         billing_interval: params.billing_interval,
         payment_provider: params.payment_provider,
-        return_url: `${appBase}/payment/success`,
-        cancel_url: `${appBase}/payment/cancel`,
+        skip_trial: params.skip_trial === true ? true : undefined,
+        return_url: `${paymentBase}/payment/success`,
+        cancel_url: `${paymentBase}/payment/cancel`,
         notify_url: `${(webhookBase || '').replace(/\/$/, '')}/${providerFn}`,
         user_details: {
           first_name: params.user_details?.first_name || user.user_metadata?.first_name || user.user_metadata?.name?.split(' ')[0] || 'User',
@@ -166,7 +178,7 @@ export function useSubscription(): UseSubscriptionReturn {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-'Authorization': `Bearer ${session!.access_token}` ,
+            'Authorization': `Bearer ${session!.access_token}` ,
           },
           body: JSON.stringify(requestBody)
         })
@@ -206,7 +218,7 @@ export function useSubscription(): UseSubscriptionReturn {
       }
       
       if (data.success) {
-        // Refresh subscription data
+        // Initial refresh before redirect
         await fetchSubscription();
 
         // If a redirect URL is provided, handle it per-platform
@@ -223,6 +235,14 @@ export function useSubscription(): UseSubscriptionReturn {
             } catch (e) {
               // Fallback to system handler
               try { await Linking.openURL(redirectUrl); } catch {}
+            }
+            // After the browser is dismissed, poll a few times to pick up ITN updates
+            const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+            for (let i = 0; i < 5; i++) {
+              try {
+                await delay(2000);
+                await fetchSubscription();
+              } catch {}
             }
           }
         }
@@ -245,29 +265,33 @@ export function useSubscription(): UseSubscriptionReturn {
       return { success: false, error: errorMessage };
     }
   }, [session, user, fetchSubscription]);
-
-  // Refresh subscription data
-  const refreshSubscription = useCallback(async () => {
-    setLoading(true);
-    await fetchSubscription();
-    setLoading(false);
-  }, [fetchSubscription]);
-
   // Cancel subscription
   const cancelSubscription = useCallback(async (): Promise<boolean> => {
     if (!subscription || !session) return false;
 
     try {
       setError(null);
-      // This would typically call a cancellation API endpoint
-      // For now, we'll implement this as a placeholder
-      
-      // In a real implementation:
-      // const response = await fetch(`/api/subscriptions/${subscription.id}/cancel`, {
-      //   method: 'POST',
-      //   headers: { 'Authorization': `Bearer ${session.access_token}` }
-      // });
-      
+
+      const apiBase = process.env.EXPO_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_BASE || '';
+      const fnCancel = process.env.EXPO_PUBLIC_SUBSCRIPTIONS_CANCEL_FN || 'subscriptions-cancel';
+      const sanitizedApiBase = (apiBase || '').replace(/\/$/, '');
+      const cancelPath = apiBase ? `${sanitizedApiBase}/${fnCancel}` : `${(process.env.EXPO_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || '')}/api/subscriptions/cancel`;
+
+      const res = await fetch(cancelPath, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ subscription_id: subscription.id }),
+      });
+
+      if (!res.ok) {
+        try {
+          const txt = await res.text();
+          log.error('Cancel endpoint failed:', res.status, txt);
+        } catch {}
+        setError('Failed to cancel subscription');
+        return false;
+      }
+
       await refreshSubscription();
       return true;
     } catch (err) {

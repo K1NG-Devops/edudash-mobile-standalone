@@ -14,12 +14,12 @@ export * from './PageHeader';
 export * from './EmptyState';
 export * from './FloatingButton';
 
-// Theme Components (using main app ThemeProvider from contexts/ThemeContext)
+// Theme Components: keep theme exports in src/design-system/theme only to avoid duplicate re-exports
 // export * from '../theme/ThemeProvider'; // Disabled - using main app theme
-export * from '../theme/ThemeToggle';
-export * from '../theme/NativeWindTheme';
+// export * from '../theme/ThemeToggle';
+// export * from '../theme/NativeWindTheme';
 
-// Tokens
-export * from '../tokens';
-export * from '../tokens/colors';
+// Tokens: keep token exports in src/design-system/tokens only to avoid duplicates
+// export * from '../tokens';
+// export * from '../tokens/colors';
 

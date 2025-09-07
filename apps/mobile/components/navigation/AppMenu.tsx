@@ -67,17 +67,19 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
         color: '#8B5CF6',
       },
       {
-        id: 'pricing',
-        title: 'Pricing & Plans',
-        subtitle: 'Upgrade or manage subscription',
+        id: 'subscription',
+        title: 'Usage & Billing',
+        subtitle: 'Subscription management',
         icon: 'creditcard.fill',
-        route: '/pricing',
+        route: '/screens/subscription-management',
         color: '#0EA5E9',
       },
     ];
 
     switch (role) {
-      case 'superadmin':
+      case 'superadmin': {
+        // SuperAdmin must not see pricing/purchase paths
+        const filtered = baseItems.filter(item => item.id !== 'pricing' && item.id !== 'subscription');
         return [
           {
             id: 'dashboard',
@@ -112,7 +114,7 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
             color: '#DC2626',
           },
           { id: 'divider1', title: '', divider: true },
-          ...baseItems,
+          ...filtered,
           { id: 'divider2', title: '', divider: true },
           {
             id: 'help',
@@ -123,6 +125,7 @@ export class AppMenu extends React.Component<AppMenuProps, AppMenuState> {
             color: '#6B7280',
           },
         ];
+      }
 
       case 'principal':
         return [

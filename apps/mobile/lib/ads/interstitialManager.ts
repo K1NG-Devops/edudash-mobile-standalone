@@ -52,9 +52,14 @@ class InterstitialManagerImpl {
       return; // native module not available (e.g., Expo Go)
     }
 
+    const mobileAds = RNGoogleAds?.default?.();
+    if (!mobileAds || typeof mobileAds.initialize !== 'function') {
+      return; // avoid calling undefined initialize when running in Expo Go
+    }
+
     try {
       // Request configuration should be set by the bootstrapper; keep here as best-effort fallback.
-      await RNGoogleAds.default().initialize();
+      await mobileAds.initialize();
     } catch {
       // ignore init failures; we can still attempt to load later
     }
@@ -75,7 +80,9 @@ class InterstitialManagerImpl {
       return;
     }
 
-    const { InterstitialAd, AdEventType } = RNGoogleAds;
+    const { InterstitialAd, AdEventType } = RNGoogleAds || {};
+
+    if (!InterstitialAd || !AdEventType) return; // native pieces unavailable
 
     try {
       this.interstitial = InterstitialAd.createForAdRequest(this.unitId, {

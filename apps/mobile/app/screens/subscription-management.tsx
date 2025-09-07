@@ -21,6 +21,7 @@ import { UsageTrackingService, UsageStats } from '@/lib/services/usageTrackingSe
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { CompactHeader } from '@/components/navigation/CompactHeader';
 import AdZone from '@/components/ui/AdZone';
+import UpgradeModal from '@/components/subscription/UpgradeModal';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -53,7 +54,8 @@ export default function SubscriptionManagementScreen() {
   const [billingHistory, setBillingHistory] = useState<BillingHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [billingLoading, setBillingLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'usage' | 'billing' | 'settings'>('overview');
+const [activeTab, setActiveTab] = useState<'overview' | 'usage' | 'billing' | 'settings'>('overview');
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   const isActive = isSubscriptionActive();
   const isTrial = isTrialActive();
@@ -167,8 +169,8 @@ export default function SubscriptionManagementScreen() {
     );
   };
 
-  const handleUpgrade = () => {
-    router.push('/pricing');
+const handleUpgrade = () => {
+    setShowUpgrade(true);
   };
 
   const statusInfo = getStatusInfo();
@@ -267,7 +269,7 @@ export default function SubscriptionManagementScreen() {
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity 
               style={[styles.secondaryButton, { backgroundColor: palette.surface }]}
-              onPress={() => router.push('/pricing')}
+onPress={() => setShowUpgrade(true)}
             >
               <Text style={[styles.secondaryButtonText, { color: palette.primary }]}>
                 Change Plan
@@ -493,7 +495,7 @@ export default function SubscriptionManagementScreen() {
 
         <TouchableOpacity 
           style={styles.settingItem}
-          onPress={() => router.push('/pricing')}
+onPress={() => setShowUpgrade(true)}
         >
           <IconSymbol name="crown.fill" size={24} color={palette.primary} />
           <Text style={[styles.settingItemText, { color: palette.text }]}>
@@ -502,14 +504,14 @@ export default function SubscriptionManagementScreen() {
           <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
         </TouchableOpacity>
 
-        {subscription && subscription.status === 'active' && (
+        {subscription && (subscription.status === 'active' || subscription.status === 'trial') && (
           <TouchableOpacity 
             style={styles.settingItem}
             onPress={handleCancelSubscription}
           >
             <IconSymbol name="xmark.circle" size={24} color="#EF4444" />
             <Text style={[styles.settingItemText, { color: '#EF4444' }]}>
-              Cancel Subscription
+              {subscription.status === 'trial' ? 'End Trial' : 'Cancel Subscription'}
             </Text>
             <IconSymbol name="chevron.right" size={16} color={palette.textSecondary} />
           </TouchableOpacity>
@@ -648,6 +650,14 @@ export default function SubscriptionManagementScreen() {
           <View />
         </AdZone>
       </ScrollView>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        visible={showUpgrade}
+        featureName={isFreeTier || isTrial ? 'Go Premium' : 'Change Plan'}
+        featureDescription={isFreeTier || isTrial ? 'Unlock unlimited AI lessons, homework grading, and advanced analytics.' : 'Switch between Basic, Pro, and Enterprise tiers.'}
+        onClose={() => setShowUpgrade(false)}
+      />
     </View>
   );
 }

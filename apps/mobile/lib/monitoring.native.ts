@@ -1,16 +1,42 @@
 // Native monitoring: React Native + Expo (Android/iOS)
 // This mirrors the previous implementation, separated to avoid bundling RN SDKs on web.
 
-import { Platform } from 'react-native'
+import { Platform, InteractionManager } from 'react-native'
+import Constants from 'expo-constants'
 
 let initialized = false
+let scheduled = false
+let retries = 0
+const MAX_RETRIES = 10
 
 function getBool(env?: string) {
   return env === 'true' || env === '1'
 }
 
+function runtimeReady() {
+  // ErrorUtils is set by RN runtime; Sentry touches it internally
+  // Guard to avoid "runtime not ready" crashes
+  // @ts-ignore
+  const eu = (global as any).ErrorUtils
+  return !!eu && typeof eu.setGlobalHandler === 'function'
+}
+
 export function initMonitoring() {
   if (initialized) return
+
+  if (!runtimeReady()) {
+    if (scheduled) return
+    scheduled = true
+    InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => {
+        scheduled = false
+        retries += 1
+        if (retries <= MAX_RETRIES) initMonitoring()
+      }, 100)
+    })
+    return
+  }
+
   initialized = true
 
   const enableSentry = getBool(process.env.EXPO_PUBLIC_ENABLE_SENTRY)
@@ -20,8 +46,11 @@ export function initMonitoring() {
   const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY
   const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com'
 
+  // Skip native monitoring SDKs in Expo Go (not available there)
+  const isExpoGo = (Constants as any)?.appOwnership === 'expo'
+
   // Sentry (native SDK)
-  if (enableSentry && sentryDsn && Platform.OS !== 'web') {
+  if (enableSentry && sentryDsn && Platform.OS !== 'web' && !isExpoGo) {
     try {
       const Sentry = require('@sentry/react-native')
       Sentry.init({
@@ -43,8 +72,8 @@ export function initMonitoring() {
     }
   }
 
-  // PostHog (native SDK). We skip on web entirely.
-  if (enablePostHog && posthogKey && Platform.OS !== 'web') {
+  // PostHog (native SDK). Skip on web and Expo Go entirely.
+  if (enablePostHog && posthogKey && Platform.OS !== 'web' && !isExpoGo) {
     try {
       const PostHog = require('posthog-react-native').default
       PostHog.init(posthogKey, {

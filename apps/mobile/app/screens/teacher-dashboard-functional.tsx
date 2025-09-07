@@ -495,7 +495,7 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
                         compact={true}
                         onUpgrade={() => setUpgradeModal({
                             visible: true,
-                            featureName: t('subscription.upgradeTitle', { defaultValue: 'Upgrade to Quantum Pro' }),
+                            featureName: t('subscription.upgradeTitle', { defaultValue: 'Upgrade to Pro' }),
                             description: t('subscription.upgradeDescription', { defaultValue: 'Unlock unlimited AI, homework grading and more.' })
                         })}
                     />
@@ -514,12 +514,12 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
 <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('dashboard.quickActions')}</Text>
                     <View style={styles.quickActionsGrid}>
                         {renderQuickAction(
-t('dashboard.actions.aiLessonGenerator'),
+ t('dashboard.actions.aiLessonGenerator'),
                             'plus.circle',
                             () => router.push('/screens/ai-lesson-generator'),
                             '#3B82F6',
                             'ai_lesson_generator',
-t('dashboard.actions.aiLessonGenerator_description')
+ t('dashboard.actions.aiLessonGenerator_description')
                         )}
                         {renderQuickAction(
 t('dashboard.actions.gradeHomework'),

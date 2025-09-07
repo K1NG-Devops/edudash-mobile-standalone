@@ -2,21 +2,22 @@
   "name": "@edudash/mobile",
   "private": true,
   "version": "1.0.1",
-  "main": "node_modules/expo-router/entry",
+  "main": "./index.js",
   "scripts": {
-    "start": "NODE_OPTIONS=--max-old-space-size=4096 expo start",
+    "start": "EXPO_USE_METRO_SERIALIZER_LEGACY=1 EXPO_NO_METRO_WORKSPACE_ROOT=1 NODE_OPTIONS=--max-old-space-size=4096 expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "ESLINT_USE_FLAT_CONFIG=0 eslint . --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "build:android": "eas build --platform android",
     "build:ios": "eas build --platform ios",
     "build:all": "eas build --platform all",
-    "dev": "expo start"
+    "dev": "EXPO_USE_METRO_SERIALIZER_LEGACY=1 EXPO_NO_METRO_WORKSPACE_ROOT=1 expo start -c"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.58.0",
+    "@babel/runtime": "^7.25.0",
     "@expo/config-plugins": "~10.1.1",
     "@expo/prebuild-config": "~9.0.0",
     "@expo/vector-icons": "^14.1.0",
@@ -26,6 +27,7 @@
     "@radix-ui/colors": "^3.0.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/datetimepicker": "^8.4.1",
+    "@react-native-community/slider": "4.5.6",
     "@react-native-picker/picker": "^2.11.1",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
@@ -34,6 +36,7 @@
     "@shopify/flash-list": "1.7.6",
     "@supabase/supabase-js": "^2.55.0",
     "@tanstack/query-async-storage-persister": "^5.45.0",
+    "@tanstack/query-persist-client-core": "^5.85.5",
     "@tanstack/query-sync-storage-persister": "^5.85.5",
     "@tanstack/react-query": "^5.45.0",
     "@tanstack/react-query-persist-client": "^5.85.5",
@@ -64,9 +67,11 @@
     "expo-linking": "~7.1.7",
     "expo-localization": "~16.1.6",
     "expo-notifications": "^0.31.4",
+    "expo-print": "~14.1.4",
     "expo-router": "~5.1.5",
     "expo-secure-store": "~14.2.4",
     "expo-sensors": "~14.1.4",
+    "expo-sharing": "~13.1.5",
     "expo-splash-screen": "~0.30.10",
     "expo-status-bar": "~2.2.3",
     "expo-symbols": "~0.4.5",
@@ -101,11 +106,11 @@
     "tailwindcss": "^3.4.17",
     "xstate": "^5.18.0",
     "zod": "^4.1.5",
-    "zustand": "^5.0.8",
-    "@react-native-community/slider": "4.5.6"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@expo/metro-runtime": "^5.0.4",
     "@expo/ngrok": "^4.1.3",
     "@storybook/addon-ondevice-actions": "^7.6.20",
     "@storybook/addon-ondevice-controls": "^7.6.20",
@@ -134,4 +139,3 @@
     "typescript": "~5.8.3"
   }
 }
-

@@ -27,15 +27,6 @@
       ],
       "@/design-system": [
         "src/design-system/index.ts"
-      ],
-      "@edudash/ui/*": [
-        "../../packages/ui/src/*"
-      ],
-      "@edudash/api/*": [
-        "../../packages/api/src/*"
-      ],
-      "@edudash/types/*": [
-        "../../packages/types/src/*"
       ]
     }
   },
@@ -52,7 +43,9 @@
     "archive/**",
     "legacy/_excluded/**",
     "app/api/**",
-    "app/_api/**"
+    "app/_api/**",
+    "src/design-system/components/__stories__/**",
+    "**/__stories__/**"
   ],
   "extends": "expo/tsconfig.base"
 }

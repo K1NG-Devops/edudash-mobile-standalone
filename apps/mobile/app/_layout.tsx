@@ -1,4 +1,3 @@
-import '@/lib/monitoring';
 import '../global.css'; // NativeWind styles
 import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary';
 import { AuthProvider, useAuth } from '@/contexts/SimpleWorkingAuth';
@@ -84,6 +83,15 @@ Notifications.setNotificationHandler({
 });
 
 export default function RootLayout() {
+  // Lazily import platform-specific monitoring to ensure RN runtime (ErrorUtils) is ready
+  useEffect(() => {
+    try {
+      // Be explicit about native import to avoid accidental web/neutral file resolution
+      // This file guards against Expo Go and only initializes supported SDKs
+      require('@/lib/monitoring.native');
+    } catch {}
+  }, []);
+
   const pathname = usePathname();
   // Hide global bottom nav on welcome, landing, auth, super-admin screens and pricing pages
   const hideBottomNav = (

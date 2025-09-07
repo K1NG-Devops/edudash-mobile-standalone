@@ -19,6 +19,7 @@ import en from '../locales/en.json';
 import af from '../locales/af.json';
 import zu from '../locales/zu.json';
 
+
 // Storage key for persisted language preference
 const LANGUAGE_STORAGE_KEY = 'app_language';
 
@@ -89,6 +90,7 @@ export async function initI18n(): Promise<void> {
       compatibilityJSON: 'v4' // For React Native compatibility
     });
   
+
   // Set up RTL if needed
   updateRTLSettings(initialLang);
 }

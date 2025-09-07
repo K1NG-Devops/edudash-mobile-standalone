@@ -53,7 +53,7 @@ export default function SignUpComplete() {
     },
     'starter': {
       id: 'neural-starter',
-      name: 'Neural Starter',
+      name: 'Basic',
       price: 'R49',
       period: '/month',
       features: [
@@ -69,7 +69,7 @@ export default function SignUpComplete() {
     },
     'premium': {
       id: 'quantum-pro',
-      name: 'Quantum Pro',
+      name: 'Pro',
       price: 'R149',
       period: '/month',
       features: [

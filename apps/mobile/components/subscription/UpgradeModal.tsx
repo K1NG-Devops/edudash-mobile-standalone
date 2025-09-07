@@ -12,8 +12,8 @@ import {
     Text,
     TouchableOpacity,
     View,
+    ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
 import { shadow } from '@/lib/ui/shadow';
 
 interface UpgradeModalProps {
@@ -37,6 +37,17 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
     const isDark = theme.isDark;
 
     const [premiumPrice, setPremiumPrice] = React.useState<number | null>(null);
+    const [submitting, setSubmitting] = React.useState(false);
+    const [skipTrial, setSkipTrial] = React.useState(false);
+
+    // Role-aware tier selection in modal
+    const userRole = subscription?.userRole as string | undefined;
+    const defaultTier = React.useMemo(() => {
+        if (userRole === 'parent') return 'basic' as const;
+        if (userRole === 'principal') return 'pro' as const;
+        return 'pro' as const; // teacher or unknown
+    }, [userRole]);
+    const [selectedTier, setSelectedTier] = React.useState<'basic' | 'pro' | 'enterprise'>(defaultTier);
     React.useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -61,6 +72,20 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
         warning: '#F59E0B',
     };
 
+    const priceForTier = (tier: 'basic' | 'pro' | 'enterprise'): number => {
+        const p = plans.find(pl => pl.tier === tier)
+            || (tier === 'basic' ? plans.find(pl => pl.tier === 'starter') : undefined)
+            || (tier === 'pro' ? plans.find(pl => pl.tier === 'premium') : undefined)
+            || (tier === 'enterprise' ? plans.find(pl => pl.tier === 'enterprise') : undefined);
+        return p?.price_monthly ?? (tier === 'basic' ? 49 : tier === 'pro' ? 149.99 : 999);
+    };
+
+    const planIdFallbackForTier = (tier: 'basic' | 'pro' | 'enterprise'): string => {
+        if (tier === 'basic') return 'neural-starter';
+        if (tier === 'pro') return 'quantum-pro';
+        return 'singularity';
+    };
+
     const handleUpgrade = async () => {
         if (onUpgrade) {
             onUpgrade();
@@ -69,27 +94,32 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
         }
 
         try {
-            // Prefer creating a subscription directly for the Premium tier
-            const premiumPlan = plans.find(p => p.tier === 'premium');
-            const planId = premiumPlan?.id || 'quantum-pro'; // slug fallback supported by service
+            setSubmitting(true);
+            // Resolve selected plan by tier (prefer new tier names; fallback to legacy tiers; final fallback to slug)
+            const selectedPlan = plans.find(p => p.tier === selectedTier)
+                || (selectedTier === 'basic' ? plans.find(p => p.tier === 'starter') : undefined)
+                || (selectedTier === 'pro' ? plans.find(p => p.tier === 'premium') : undefined)
+                || (selectedTier === 'enterprise' ? plans.find(p => p.tier === 'enterprise') : undefined);
+
+            const planId = selectedPlan?.id || planIdFallbackForTier(selectedTier);
 
             const result = await createSubscription({
                 plan_id: planId,
                 billing_interval: 'monthly',
                 payment_provider: 'payfast',
+                skip_trial: skipTrial === true,
             });
 
-            // createSubscription will redirect if a payment_url/approval_url is returned (web)
             if (!result.success) {
-                // Fallback: open pricing/manage screen so the user can pick another plan
-                router.push('/pricing' as any);
+                // Do NOT navigate away; surface the error inline
+                Alert.alert('Payment Error', result.error || 'Failed to initiate payment. Please try again.');
+                return;
             }
+            // Success path is handled in hook (redirect to payment_url/approval_url when provided)
         } catch (err) {
-            // Final fallback if anything unexpected happens
-            Alert.alert('Upgrade', 'Redirecting to pricing…');
-            try { router.push('/pricing' as any); } catch {}
+            Alert.alert('Upgrade', 'We could not start your upgrade. Please try again.');
         } finally {
-            onClose();
+            setSubmitting(false);
         }
     };
 
@@ -172,14 +202,75 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                             </View>
                         </View>
 
+                        {/* Role-specific plan options */}
+                        <View style={styles.benefitsSection}>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Choose your plan</Text>
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                {/* Basic for parents/teachers */}
+                                {(['teacher','parent'].includes(userRole || 'teacher')) && (
+                                    <TouchableOpacity
+                                        onPress={() => setSelectedTier('basic')}
+                                        style={[styles.pricingCard, { backgroundColor: selectedTier === 'basic' ? `${colors.success}10` : colors.background, borderColor: selectedTier === 'basic' ? colors.success : colors.border }]}
+                                        accessibilityRole="button"
+                                    >
+                                        <Text style={[styles.pricingTitle, { color: selectedTier === 'basic' ? colors.success : colors.text }]}>Basic</Text>
+                                        <Text style={[styles.pricingPrice, { color: colors.text }]}>R{Number(priceForTier('basic')).toFixed(2)}</Text>
+                                        <Text style={[styles.pricingPeriod, { color: colors.textSecondary }]}>per month</Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* Pro for teachers/principals */}
+                                {(['teacher','principal'].includes(userRole || 'teacher')) && (
+                                    <TouchableOpacity
+                                        onPress={() => setSelectedTier('pro')}
+                                        style={[styles.pricingCard, { backgroundColor: selectedTier === 'pro' ? `${colors.premium}10` : colors.background, borderColor: selectedTier === 'pro' ? colors.premium : colors.border }]}
+                                        accessibilityRole="button"
+                                    >
+                                        <Text style={[styles.pricingTitle, { color: selectedTier === 'pro' ? colors.premium : colors.text }]}>Pro</Text>
+                                        <Text style={[styles.pricingPrice, { color: colors.text }]}>R{Number(priceForTier('pro')).toFixed(2)}</Text>
+                                        <Text style={[styles.pricingPeriod, { color: colors.textSecondary }]}>per month</Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* Enterprise for principals */}
+                                {(userRole === 'principal') && (
+                                    <TouchableOpacity
+                                        onPress={() => setSelectedTier('enterprise')}
+                                        style={[styles.pricingCard, { backgroundColor: selectedTier === 'enterprise' ? `${colors.warning}10` : colors.background, borderColor: selectedTier === 'enterprise' ? colors.warning : colors.border }]}
+                                        accessibilityRole="button"
+                                    >
+                                        <Text style={[styles.pricingTitle, { color: selectedTier === 'enterprise' ? colors.warning : colors.text }]}>Enterprise</Text>
+                                        <Text style={[styles.pricingPrice, { color: colors.text }]}>R{Number(priceForTier('enterprise')).toFixed(2)}</Text>
+                                        <Text style={[styles.pricingPeriod, { color: colors.textSecondary }]}>per month</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
+
                         {/* Premium Benefits */}
                         <View style={styles.benefitsSection}>
-                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Unlock with Quantum Pro</Text>
+                            {/* Start now (skip trial) toggle */}
+                            <View style={[styles.planCard, { backgroundColor: colors.background, borderColor: colors.border, marginBottom: 12 }]}>
+                                <TouchableOpacity
+                                  accessibilityRole="button"
+                                  onPress={() => setSkipTrial(v => !v)}
+                                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                                >
+                                  <View style={{ flex: 1, paddingRight: 12 }}>
+                                    <Text style={[styles.planName, { color: colors.text }]}>Start now (skip free trial)</Text>
+                                    <Text style={[styles.planUsage, { color: colors.textSecondary }]}>Charge the first month immediately and enable the plan today.</Text>
+                                  </View>
+                                  <View style={{ width: 44, height: 28, borderRadius: 16, backgroundColor: skipTrial ? colors.success : '#475569', justifyContent: 'center', padding: 3 }}>
+                                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', transform: [{ translateX: skipTrial ? 16 : 0 }] }} />
+                                  </View>
+                                </TouchableOpacity>
+                            </View>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Unlock with Pro</Text>
                             <View style={[styles.premiumCard, { backgroundColor: `${colors.premium}10`, borderColor: colors.premium }]}>
                                 <View style={styles.premiumHeader}>
                                     <IconSymbol name="star.fill" size={24} color={colors.premium} />
-                                    <Text style={[styles.premiumTitle, { color: colors.premium }]}>Quantum Pro</Text>
-<Text style={[styles.premiumPrice, { color: colors.text }]}>R{Number(premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed(2)}/month</Text>
+                                    <Text style={[styles.premiumTitle, { color: colors.premium }]}>Pro</Text>
+<Text style={[styles.premiumPrice, { color: colors.text }]}>R{Number(premiumPrice ?? (plans.find(p => p.tier === 'pro')?.price_monthly ?? plans.find(p => p.tier === 'premium')?.price_monthly) ?? 149.99).toFixed(2)}/month</Text>
                                 </View>
 
                                 <View style={styles.featuresList}>
@@ -193,51 +284,30 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                             </View>
                         </View>
 
-                        {/* Pricing Comparison */}
-                        <View style={styles.pricingSection}>
-                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Choose Your Plan</Text>
-
-                            <View style={styles.pricingCards}>
-                                {/* Free Plan */}
-                                <View style={[styles.pricingCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                                    <Text style={[styles.pricingTitle, { color: colors.text }]}>Free</Text>
-                                    <Text style={[styles.pricingPrice, { color: colors.text }]}>R0</Text>
-                                    <Text style={[styles.pricingPeriod, { color: colors.textSecondary }]}>forever</Text>
-                                    <View style={styles.pricingFeatures}>
-                                        <Text style={[styles.pricingFeature, { color: colors.textSecondary }]}>• 5 AI requests/month</Text>
-                                        <Text style={[styles.pricingFeature, { color: colors.textSecondary }]}>• Basic lessons</Text>
-                                        <Text style={[styles.pricingFeature, { color: colors.textSecondary }]}>• Class management</Text>
-                                    </View>
-                                </View>
-
-                                {/* Premium Plan */}
-                                <View style={[styles.pricingCard, styles.recommendedCard, { backgroundColor: `${colors.premium}10`, borderColor: colors.premium }]}>
-                                    <View style={[styles.recommendedBadge, { backgroundColor: colors.premium }]}>
-                                        <Text style={styles.recommendedText}>RECOMMENDED</Text>
-                                    </View>
-                                    <Text style={[styles.pricingTitle, { color: colors.premium }]}>Premium</Text>
-<Text style={[styles.pricingPrice, { color: colors.text }]}>R{Number(premiumPrice ?? plans.find(p => p.tier === 'premium')?.price_monthly ?? 149.99).toFixed(2)}</Text>
-                                    <Text style={[styles.pricingPeriod, { color: colors.textSecondary }]}>per month</Text>
-                                    <View style={styles.pricingFeatures}>
-                                        <Text style={[styles.pricingFeature, { color: colors.text }]}>• Unlimited AI requests</Text>
-                                        <Text style={[styles.pricingFeature, { color: colors.text }]}>• AI homework grading</Text>
-                                        <Text style={[styles.pricingFeature, { color: colors.text }]}>• Premium STEM activities</Text>
-                                        <Text style={[styles.pricingFeature, { color: colors.text }]}>• Advanced analytics</Text>
-                                        <Text style={[styles.pricingFeature, { color: colors.text }]}>• Priority support</Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
+                        
                     </ScrollView>
 
                     {/* Action Buttons */}
                     <View style={styles.actions}>
-                        <TouchableOpacity
-                            style={[styles.upgradeButton, { backgroundColor: colors.premium }]}
-                            onPress={handleUpgrade}
-                        >
-                            <Text style={styles.upgradeButtonText}>Upgrade to Quantum Pro</Text>
-                        </TouchableOpacity>
+                        {subscription?.userRole === 'superadmin' ? (
+                          <View style={[styles.upgradeButton, { backgroundColor: `${colors.premium}25` }] }>
+                            <Text style={styles.upgradeButtonText}>SuperAdmin: All features unlocked</Text>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                              style={[styles.upgradeButton, { backgroundColor: colors.premium, opacity: submitting ? 0.8 : 1 }]}
+                              onPress={handleUpgrade}
+                              disabled={submitting}
+                          >
+                              {submitting ? (
+                                <ActivityIndicator color="#FFFFFF" />
+                              ) : (
+                                <Text style={styles.upgradeButtonText}>
+                                  {selectedTier === 'basic' ? 'Upgrade to Basic' : selectedTier === 'pro' ? 'Upgrade to Pro' : 'Contact Sales'}
+                                </Text>
+                              )}
+                          </TouchableOpacity>
+                        )}
                         <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
                             <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
                                 Maybe Later

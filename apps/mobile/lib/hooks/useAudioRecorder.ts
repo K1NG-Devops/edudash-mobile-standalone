@@ -30,7 +30,7 @@ export const useAudioRecorder = () => {
 
   const recording = useRef<any>(null);
   const sound = useRef<any>(null);
-  const durationTimer = useRef<NodeJS.Timeout | null>(null);
+  const durationTimer = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -152,7 +152,7 @@ export const useAudioRecorder = () => {
 
       // Clear timer
       if (durationTimer.current) {
-        clearInterval(durationTimer.current);
+        clearInterval(durationTimer.current as unknown as number);
         durationTimer.current = null;
       }
 
@@ -196,7 +196,7 @@ export const useAudioRecorder = () => {
       }
       
       if (durationTimer.current) {
-        clearInterval(durationTimer.current);
+        clearInterval(durationTimer.current as unknown as number);
         durationTimer.current = null;
       }
 

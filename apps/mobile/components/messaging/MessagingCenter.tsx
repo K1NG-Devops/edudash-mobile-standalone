@@ -1256,7 +1256,7 @@ const MessagingCenter: React.FC<MessagingCenterProps> = ({
               <IconSymbol name="xmark" size={18} color={colors.text} />
             </TouchableOpacity>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Message Settings</Text>
-            <View style={styles.modalCloseButton} /> {/* Spacer */}
+            <View style={styles.modalCloseButton} />
           </View>
 
           {/* Settings Content */}

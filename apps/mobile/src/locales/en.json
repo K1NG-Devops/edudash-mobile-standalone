@@ -628,5 +628,68 @@
       "schoolCanNoLongerBypassCaps": "{{name}} testers can no longer bypass monthly AI caps.",
       "updateFailed": "Could not update settings."
     }
+  },
+  "pricing": {
+    "period": {
+      "month": "/month",
+      "year": "/year"
+    },
+    "tiers": {
+      "free": {
+        "title": "Free Tier",
+        "description": "Basic features with ads",
+        "trialInfo": "Always free • No credit card required"
+      },
+      "starter": {
+        "title": "Basic",
+        "description": "Perfect for getting started with AI education",
+        "trialInfo": "14-day free trial • Cancel anytime"
+      },
+      "basic": {
+        "title": "Basic",
+        "description": "Perfect for getting started with AI education",
+        "trialInfo": "14-day free trial • Cancel anytime"
+      },
+      "premium": {
+        "title": "Pro",
+        "description": "Advanced AI features for growing schools",
+        "trialInfo": "14-day free trial • Cancel anytime"
+      },
+      "pro": {
+        "title": "Pro",
+        "description": "Advanced AI features for growing schools",
+        "trialInfo": "14-day free trial • Cancel anytime"
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "description": "Complete solution for large educational institutions",
+        "trialInfo": "30-day free trial • Custom contracts available"
+      }
+    },
+    "features": {
+      "aiLessonsPerMonth": "{{count}} AI lessons per month",
+      "upToNStudents": "Up to {{count}} students",
+      "upToNStudentsPerSchool": "Up to {{count}} students per school",
+      "basicProgressTracking": "Basic progress tracking",
+      "advancedProgressTracking": "Advanced progress tracking",
+      "parentTeacherMessaging": "Parent-teacher messaging",
+      "mobileAppAccess": "Mobile app access",
+      "adsOnNonLearningPages": "Shows ads on non-learning pages",
+      "noAds": "No ads",
+      "unlimitedAiLessons": "Unlimited AI lesson generation",
+      "advancedAnalytics": "Advanced analytics & insights",
+      "personalizedLearning": "Personalized learning paths",
+      "aiHomeworkGrading": "AI homework grading",
+      "cloudStorage": "Cloud storage & backup",
+      "customBranding": "Custom school branding",
+      "unlimitedEverything": "Unlimited everything",
+      "multiSchoolManagement": "Multi-school management",
+      "advancedAiTutoring": "Advanced AI tutoring",
+      "predictiveAnalytics": "Predictive analytics",
+      "enterpriseSecurity": "Enterprise security",
+      "customReportingDashboards": "Custom reporting dashboards",
+      "apiAccessIntegrations": "API access & integrations",
+      "dedicatedSupport": "Dedicated support team"
+    }
   }
 }

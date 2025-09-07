@@ -247,12 +247,20 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
             </View>
 
             {isTrial && daysUntilExpiry !== null && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Trial ends:</Text>
-                <Text style={[styles.detailValue, { color: '#f59e0b' }]}>
-                  {daysUntilExpiry > 0 ? `${daysUntilExpiry} days` : 'Today'}
-                </Text>
-              </View>
+              <>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Trial ends:</Text>
+                  <Text style={[styles.detailValue, { color: '#f59e0b' }]}>
+                    {daysUntilExpiry > 0 ? `${daysUntilExpiry} days` : 'Today'}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Billing starts:</Text>
+                  <Text style={styles.detailValue}>
+                    {subscription.trial_end ? new Date(subscription.trial_end).toLocaleDateString() : new Date(subscription.current_period_start).toLocaleDateString()} · R{subscription.amount}/{subscription.billing_interval === 'monthly' ? 'month' : 'year'}
+                  </Text>
+                </View>
+              </>
             )}
 
             {!isTrial && (

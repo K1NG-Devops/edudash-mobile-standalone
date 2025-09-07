@@ -628,5 +628,68 @@
       "schoolCanNoLongerBypassCaps": "Toetsers by {{name}} kan nie meer maandelikse KI-limiete omseil nie.",
       "updateFailed": "Kon nie instellings bywerk nie."
     }
+  },
+  "pricing": {
+    "period": {
+      "month": "/maand",
+      "year": "/jaar"
+    },
+    "tiers": {
+      "free": {
+        "title": "Gratis Vlak",
+        "description": "Basiese funksies met advertensies",
+        "trialInfo": "Altyd gratis • Geen kredietkaart nodig"
+      },
+      "starter": {
+        "title": "Basic",
+        "description": "Perfek om met KI-onderwys te begin",
+        "trialInfo": "14-dae gratis proef • Kanselleer enige tyd"
+      },
+      "basic": {
+        "title": "Basic",
+        "description": "Perfek om met KI-onderwys te begin",
+        "trialInfo": "14-dae gratis proef • Kanselleer enige tyd"
+      },
+      "premium": {
+        "title": "Pro",
+        "description": "Gevorderde KI-funksies vir groeiende skole",
+        "trialInfo": "14-dae gratis proef • Kanselleer enige tyd"
+      },
+      "pro": {
+        "title": "Pro",
+        "description": "Gevorderde KI-funksies vir groeiende skole",
+        "trialInfo": "14-dae gratis proef • Kanselleer enige tyd"
+      },
+      "enterprise": {
+        "title": "Onderneming",
+        "description": "Volledige oplossing vir groot onderwysinstellings",
+        "trialInfo": "30-dae gratis proef • Pasgemaakte kontrakte beskikbaar"
+      }
+    },
+    "features": {
+      "aiLessonsPerMonth": "{{count}} KI-lesse per maand",
+      "upToNStudents": "Tot {{count}} studente",
+      "upToNStudentsPerSchool": "Tot {{count}} studente per skool",
+      "basicProgressTracking": "Basiese vorderingopsporing",
+      "advancedProgressTracking": "Gevorderde vorderingopsporing",
+      "parentTeacherMessaging": "Ouer-onderwyser-boodskappe",
+      "mobileAppAccess": "Toegang tot mobiele app",
+      "adsOnNonLearningPages": "Wys advertensies op nie-leerbladsye",
+      "noAds": "Geen advertensies",
+      "unlimitedAiLessons": "Onbeperkte KI-lesgenerering",
+      "advancedAnalytics": "Gevorderde ontledings & insigte",
+      "personalizedLearning": "Gepersonaliseerde leerpaaie",
+      "aiHomeworkGrading": "KI-huiswerk-nasien",
+      "cloudStorage": "Wolkberging & rugsteun",
+      "customBranding": "Pasgemaakte skoolbranding",
+      "unlimitedEverything": "Onbeperkte alles",
+      "multiSchoolManagement": "Bestuur van veelvuldige skole",
+      "advancedAiTutoring": "Gevorderde KI-tutoring",
+      "predictiveAnalytics": "Voorspellende ontledings",
+      "enterpriseSecurity": "Ondernemingssekuriteit",
+      "customReportingDashboards": "Pasgemaakte verslagdoeningpaneelborde",
+      "apiAccessIntegrations": "API-toegang & integrasies",
+      "dedicatedSupport": "Toegewyde ondersteuning span"
+    }
   }
 }

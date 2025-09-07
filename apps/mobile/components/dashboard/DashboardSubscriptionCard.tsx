@@ -60,13 +60,15 @@ export const DashboardSubscriptionCard: React.FC<DashboardSubscriptionCardProps>
   const resolveMonthlyLimit = (): number => {
     const tier = (subscription?.plan as any)?.tier as
       | 'free'
-      | 'starter'
-      | 'premium'
+      | 'basic'
+      | 'pro'
       | 'enterprise'
+      | 'starter' // legacy
+      | 'premium' // legacy
       | undefined;
     if (tier === 'enterprise') return -1; // unlimited
-    if (tier === 'premium') return 100;
-    if (tier === 'starter') return 20;
+    if (tier === 'pro' || tier === 'premium') return 100;
+    if (tier === 'basic' || tier === 'starter') return 20;
     // Treat null subscription or unknown tier as free
     return 5;
   };

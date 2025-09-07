@@ -90,7 +90,9 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     ];
 
     switch (role) {
-      case 'superadmin':
+      case 'superadmin': {
+        // SuperAdmin must not see subscription management in the sidebar
+        const filtered = commonItems.filter(item => item.id !== 'subscription');
         return [
           {
             id: 'dashboard',
@@ -133,9 +135,10 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             color: '#DC2626',
           },
           { id: 'divider1', title: '', divider: true },
-          ...commonItems,
+          ...filtered,
           { id: 'divider2', title: '', divider: true },
         ];
+      }
 
       case 'preschool_admin':
         return [

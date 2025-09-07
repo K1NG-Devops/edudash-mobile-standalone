@@ -1,16 +1,36 @@
 // Monitoring bootstrap: Sentry + PostHog
 // This file is imported for its side-effects at app startup
 
-import { Platform } from 'react-native'
+import { Platform, InteractionManager } from 'react-native'
 
 let initialized = false
+let scheduled = false
 
 function getBool(env?: string) {
   return env === 'true' || env === '1'
 }
 
+function runtimeReady() {
+  // @ts-ignore
+  const eu = (global as any).ErrorUtils
+  return !!eu && typeof eu.setGlobalHandler === 'function'
+}
+
 export function initMonitoring() {
   if (initialized) return
+
+  if (!runtimeReady()) {
+    if (scheduled) return
+    scheduled = true
+    InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => {
+        scheduled = false
+        initMonitoring()
+      }, 100)
+    })
+    return
+  }
+
   initialized = true
 
   const enableSentry = getBool(process.env.EXPO_PUBLIC_ENABLE_SENTRY)
