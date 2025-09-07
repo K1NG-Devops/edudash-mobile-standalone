@@ -802,4 +802,53 @@ export class SchoolAdminDataService {
       return { success: false, error: message };
     }
   }
+
+  /**
+   * Assign an existing student to a class (principal/admin only)
+   */
+  static async assignStudentToClass(params: {
+    adminAuthUserId: string; // auth_user_id of the admin/principal
+    studentId: string;
+    classId: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      // 1) Verify admin/principal permissions
+      const admin = await this.getAdminProfile(params.adminAuthUserId);
+      if (!admin || !admin.preschool_id) {
+        return { success: false, error: 'Access denied' };
+      }
+
+      // 2) Ensure student belongs to the same preschool
+      const { data: student, error: sErr } = await supabase
+        .from('students')
+        .select('id, preschool_id')
+        .eq('id', params.studentId)
+        .maybeSingle();
+      if (sErr || !student) return { success: false, error: sErr?.message || 'Student not found' };
+      if (student.preschool_id !== admin.preschool_id) return { success: false, error: 'Student not in your preschool' };
+
+      // 3) Ensure class belongs to the same preschool
+      const { data: klass, error: cErr } = await supabase
+        .from('classes')
+        .select('id, preschool_id')
+        .eq('id', params.classId)
+        .maybeSingle();
+      if (cErr || !klass) return { success: false, error: cErr?.message || 'Class not found' };
+      if (klass.preschool_id !== admin.preschool_id) return { success: false, error: 'Class not in your preschool' };
+
+      // 4) Assign student to class
+      const { error: uErr } = await supabase
+        .from('students')
+        .update({ class_id: params.classId, updated_at: new Date().toISOString() } as any)
+        .eq('id', params.studentId);
+      if (uErr) return { success: false, error: uErr.message };
+
+      // Note: student counts are derived in UI via count queries; no need to mutate class counters here.
+      return { success: true };
+    } catch (e: any) {
+      const msg = typeof e?.message === 'string' ? e.message : 'Unexpected error';
+      log.error('❌ [SchoolAdmin] assignStudentToClass error:', e);
+      return { success: false, error: msg };
+    }
+  }
 }
