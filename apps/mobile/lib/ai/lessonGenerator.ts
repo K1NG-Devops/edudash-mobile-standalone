@@ -242,6 +242,7 @@ export class LessonGeneratorService {
       if (params.lesson.activities.length > 0) {
         const activities = params.lesson.activities.map((activity, index) => ({
           lesson_id: lessonData.id,
+          preschool_id: params.preschoolId,
           title: activity.title,
           description: activity.description,
           activity_type: 'interactive',
@@ -263,7 +264,7 @@ export class LessonGeneratorService {
         lessonId: lessonData.id
       };
     } catch (error) {
-      log.error('Error saving generated lesson:', error);
+      // logging removed to avoid console noise in production builds
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to save lesson'

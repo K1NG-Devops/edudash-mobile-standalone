@@ -525,19 +525,19 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
               {this.renderQuickAction(
                 i18n.t('dashboard.actions.aiLessonGenerator'),
                 'plus.circle',
-                () => router.push('/screens/ai/lesson-generator' as any),
+                () => router.push('/screens/ai-lesson-generator' as any),
                 '#3B82F6'
               )}
               {this.renderQuickAction(
                 i18n.t('dashboard.actions.gradeHomework'),
                 'doc.badge.plus',
-                () => router.push('/screens/ai-homework-grader-live' as any),
+                () => router.push('/screens/homework' as any),
                 '#10B981'
               )}
               {this.renderQuickAction(
                 i18n.t('dashboard.actions.stemActivities'),
                 'lightbulb',
-                () => router.push('/screens/ai/stem-activities' as any),
+                () => router.push('/screens/ai-tutoring' as any),
                 '#F59E0B'
               )}
               {this.renderQuickAction(
@@ -561,7 +561,7 @@ export class TeacherDashboardInner extends React.Component<TeacherDashboardProps
             {lessons.slice(0, 3).map(lesson => this.renderLessonCard(lesson))}
             <TouchableOpacity
               style={styles.viewAllButton}
-              onPress={() => router.push('/(tabs)/lessons')}
+              onPress={() => router.push('/screens/lessons')}
             >
               <Text style={styles.viewAllText}>{i18n.t('dashboard.viewAllLessons')}</Text>
               <IconSymbol name="chevron.right" size={16} color="#3B82F6" />

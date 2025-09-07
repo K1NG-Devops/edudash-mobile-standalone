@@ -522,28 +522,28 @@ export const TeacherDashboardInner: React.FC<TeacherDashboardProps> = ({ profile
  t('dashboard.actions.aiLessonGenerator_description')
                         )}
                         {renderQuickAction(
-t('dashboard.actions.gradeHomework'),
+ t('dashboard.actions.gradeHomework'),
                             'doc.badge.plus',
-                            () => router.push('/screens/ai-homework-grader-live'),
+                            () => router.push('/screens/homework'),
                             '#10B981',
                             'homework_grader',
-t('dashboard.actions.gradeHomework_description')
+ t('dashboard.actions.gradeHomework_description')
                         )}
                         {renderQuickAction(
-t('dashboard.actions.stemActivities'),
+ t('dashboard.actions.stemActivities'),
                             'lightbulb',
-                            () => router.push('/(tabs)/activities'),
+                            () => router.push('/screens/ai-tutoring'),
                             '#F59E0B',
                             'stem_activities',
-t('dashboard.actions.stemActivities_description')
+ t('dashboard.actions.stemActivities_description')
                         )}
                         {renderQuickAction(
-t('dashboard.actions.progressAnalysis'),
+ t('dashboard.actions.progressAnalysis'),
                             'chart.bar',
                             () => router.push('/screens/analytics'),
                             '#8B5CF6',
                             'progress_analysis',
-t('dashboard.actions.progressAnalysis_description')
+ t('dashboard.actions.progressAnalysis_description')
                         )}
                     </View>
                 </View>
