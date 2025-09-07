@@ -224,3 +224,10 @@ scripts/**/*benchmark*.ts
 *.notes
 *.note
 TODO*
+
+# Turborepo
+.turbo/
+
+# Native build outputs (platform-specific)
+android/**/build/
+ios/**/build/
