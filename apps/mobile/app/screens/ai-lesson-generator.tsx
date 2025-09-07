@@ -138,7 +138,14 @@ export default function AILessonGeneratorScreen() {
         Alert.alert('Saved (id unknown)', 'Lesson saved but ID could not be determined.')
       }
       setSavedLessonId(lessonId)
-      Alert.alert('Saved', 'Lesson saved successfully.')
+      Alert.alert(
+        'Saved',
+        'Lesson saved successfully.',
+        [
+          { text: 'View lessons', onPress: () => router.push('/screens/lessons') },
+          { text: 'OK', style: 'default' }
+        ]
+      )
       try { requestShowInterstitial({ reason: 'lesson-saved' }) } catch {}
     } catch (e: any) {
       Alert.alert('Save failed', e?.message || 'Unknown error')
